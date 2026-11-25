@@ -8,7 +8,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', besucher: '#5b8a72', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
@@ -56,6 +56,17 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
     }
   }
 
+  // Möbel
+  for (const m of extra.moebel || []) if (m.art === 'stuhl') stuhl(ctx, ox + m.x * k, oy + m.y * k, k);
+
+  // Besucher
+  for (const b of extra.besucher || []) if (b.sichtbar) {
+    const cx = ox + (b.x + 0.5) * k, cy = oy + (b.y + 0.5) * k, r = Math.max(5, k * 0.32);
+    ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * 0.3, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = FARBEN.besucher; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+
   // Beschriftung der Räume
   const schrift = Math.max(11, Math.min(18, k * 0.75));
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -96,6 +107,10 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
         ctx.font = `500 ${schrift}px system-ui, sans-serif`; ctx.fillStyle = FARBEN.auswahl;
         ctx.fillText(`${bx - ax - 1} × ${by - ay - 1}`, ox + (ax + bx + 1) / 2 * k, oy + (ay + by + 1) / 2 * k);
       }
+    } else if (v.art === 'stuhl') {
+      ctx.globalAlpha = 0.55;
+      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) stuhl(ctx, ox + x * k, oy + y * k, k);
+      ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = FARBEN.vorschauAbriss;
       ctx.fillRect(ox + ax * k, oy + ay * k, (bx - ax + 1) * k, (by - ay + 1) * k);
@@ -197,4 +212,10 @@ function figur(ctx, cx, cy, k, f, angehoben, schrift) {
   const b = ctx.measureText(f.name).width + 8;
   ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(cx - b / 2, cy + r + 3, b, n + 4);
   ctx.fillStyle = FARBEN.text; ctx.fillText(f.name, cx, cy + r + 5 + n / 2);
+}
+
+function stuhl(ctx, px, py, k) {
+  const r = k * 0.15;
+  ctx.fillStyle = FARBEN.stuhlSitz; ctx.fillRect(px + r, py + r * 1.6, k - 2 * r, k - r * 2.6);
+  ctx.fillStyle = FARBEN.stuhlLehne; ctx.fillRect(px + r, py + r, k - 2 * r, r * 0.9);
 }

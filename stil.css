@@ -38,3 +38,17 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .anzeige b { font-variant-numeric: tabular-nums; }
 .punkt { width: 12px; height: 12px; border-radius: 50%; }
 .punkt.hauptamt { background: #2d69be; } .punkt.ehrenamt { background: #d08a1e; }
+.anzeige.datum { font-weight: 600; }
+.hinweis:empty { display: none; }
+.laeuft button { pointer-events: none; opacity: .6; }
+.laeuft .rueckblick button { pointer-events: auto; opacity: 1; }
+.rueckblick { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(20,20,18,.45); padding: 16px; }
+.rueckblick[hidden] { display: none; }
+.rueckblick .inhalt { width: min(420px, 100%); max-height: 100%; overflow: auto; }
+.rueckblick .unter { margin: -6px 0 6px; color: #6b665b; font-size: 14px; }
+.rueckblick h3 { margin: 14px 0 4px; font-size: 15px; font-weight: 600; }
+.rueckblick table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.rueckblick td { padding: 5px 0; border-bottom: 1px solid #e2dccd; }
+.rueckblick .zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rueckblick .summe td { font-weight: 600; border-bottom: 0; }
+.rueckblick .zeile { margin-top: 16px; }

@@ -7,6 +7,10 @@ export const RAUMTYPEN = [
     name: 'Gottesdienstraum',
     minGroesse: [5, 15],
     farbe: '#d8cdea',
+    // Mindestbesetzung, damit die Woche beendet werden kann:
+    // wer den Raum leiten kann (später: Ausbildung statt fester Personen) und wie viele Stühle mindestens stehen.
+    leitung: ['pastor'],
+    minStuehle: 3,
     kosten: null,
     moebel: [],
     erweiterungen: []

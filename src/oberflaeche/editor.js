@@ -1,29 +1,36 @@
-// Bedienung: Werkzeuge, Ziehen mit Finger/Maus, Raum-Maske, Rückgängig, Speichern.
+// Bedienung: Spielansicht (Management) und Editor. Nimmt Eingaben entgegen und ruft die Spiellogik auf.
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
+import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { neuerZustand, wandRechteck, abriss, tuerUmschalten, erkenneRaeume, pruefeRaum, raumTypVon, typZuweisen, idx } from '../kern/karte.js';
-import { zeichne } from '../ansicht/zeichnen.js';
 import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten } from '../kern/personen.js';
+import { moebelAnlegen, moebelSetzen, moebelEntfernen, moebelPruefen, moebelBei } from '../kern/moebel.js';
+import { raumBereitschaft, kannWocheBeenden, wocheBeenden } from '../kern/runde.js';
+import { sonntagDerWoche } from '../kern/kalender.js';
+import { weg } from '../kern/wege.js';
+import { zeichne } from '../ansicht/zeichnen.js';
 
 const SPEICHER = 'churchsim-editor';
 const VERSION = 2;
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
   tuer: 'Tippe auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
+  stuhl: 'Tippe oder zieh, um Stühle aufzustellen. Tippe auf einen Stuhl, um ihn zu entfernen.',
   abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
   raum: 'Tippe in einen Raum, um seine Funktion festzulegen.'
 };
+const LAUFTEMPO = 7;      // Kästchen pro Sekunde
+const ABSTAND_MS = 260;   // Abstand zwischen zwei Besuchern
 
 let z = laden() || neuerZustand();
-personenAnlegen(z);
+personenAnlegen(z); moebelAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
 let raeume = auswerten();
 let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
+let besucher = [], ablauf = null;
 const verlauf = [];
 
-const leinwand = document.getElementById('karte');
-const ctx = leinwand.getContext('2d');
-const flaeche = document.getElementById('flaeche');
-const hinweis = document.getElementById('hinweis');
-const maske = document.getElementById('maske');
+const $ = id => document.getElementById(id);
+const leinwand = $('karte'), ctx = leinwand.getContext('2d'), flaeche = $('flaeche');
+const maske = $('maske'), rueckblick = $('rueckblick');
 let ansicht = { k: 16, ox: 0, oy: 0 };
 
 function auswerten() {
@@ -31,7 +38,6 @@ function auswerten() {
   for (const r of liste) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); }
   return { liste, gruppe };
 }
-
 function speichern() {
   try { localStorage.setItem(SPEICHER, JSON.stringify({ version: VERSION, zustand: z })); } catch (e) {}
 }
@@ -42,12 +48,11 @@ function laden() {
   } catch (e) {}
   return null;
 }
-
 function aendern(fn) {
   verlauf.push(JSON.stringify(z));
   if (verlauf.length > 60) verlauf.shift();
   fn();
-  personenPruefen(z);
+  moebelPruefen(z); personenPruefen(z);
   raeume = auswerten(); speichern(); malen();
 }
 
@@ -60,51 +65,62 @@ function groesseAnpassen() {
   ansicht = { k, ox: Math.floor((b - z.w * k) / 2), oy: Math.floor((h - z.h * k) / 2) };
   malen();
 }
-
-function malen() {
-  ctx.clearRect(0, 0, leinwand.width, leinwand.height);
-  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, auswahl, raster: editorOffen, personen: figuren(), tragen });
-  anzeigenAktualisieren();
-}
-
 function figuren() {
   return z.personen.map(p => ({ ...daten(p), x: p.x, y: p.y, getragen: tragen && tragen.person === p })).filter(f => f.art);
 }
+function malen() {
+  ctx.clearRect(0, 0, leinwand.width, leinwand.height);
+  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, auswahl, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
+  anzeigenAktualisieren();
+}
+
+// ---- Anzeigen in der Spiel-Leiste ----
 function anzeigenAktualisieren() {
   const v = verfuegbarkeit(z, raeume);
-  document.getElementById('anzHauptamt').textContent = `${v.hauptamt.frei}/${v.hauptamt.gesamt}`;
-  document.getElementById('anzEhrenamt').textContent = `${v.ehrenamt.frei}/${v.ehrenamt.gesamt}`;
+  $('anzHauptamt').textContent = `${v.hauptamt.frei}/${v.hauptamt.gesamt}`;
+  $('anzEhrenamt').textContent = `${v.ehrenamt.frei}/${v.ehrenamt.gesamt}`;
+  const s = ablauf ? ablauf.beendet : sonntagDerWoche(z.woche); // während des Gottesdienstes noch der laufende Sonntag
+  $('sonntag').textContent = `${s.name} · ${s.datum}`;
+  const kann = kannWocheBeenden(z, raeume);
+  $('wocheBeenden').disabled = !kann || !!ablauf;
+  $('spielHinweis').textContent = kann || ablauf ? '' : wasFehlt();
 }
-function punktAus(e) {
-  const r = leinwand.getBoundingClientRect();
-  return { px: e.clientX - r.left, py: e.clientY - r.top };
+function wasFehlt() {
+  const gd = raumBereitschaft(z, raeume).filter(b => b.typ.id === 'gottesdienst');
+  if (!gd.length) return 'Für den Gottesdienst fehlt ein fertiger Gottesdienstraum.';
+  const b = gd[0], typ = b.typ, teile = [];
+  if (b.fehlt.includes('leitung')) teile.push('der Pastor im Gottesdienstraum');
+  if (b.fehlt.includes('stuehle')) teile.push(`mindestens ${typ.minStuehle} Stühle (bisher ${b.stuehle.length})`);
+  return `Für den Gottesdienst fehlt: ${teile.join(' und ')}.`;
 }
-// Figur unter dem Finger finden (etwas großzügiger als ein Kästchen, damit man sie gut trifft)
+
+// ---- Eingaben auf der Karte ----
+function punktAus(e) { const r = leinwand.getBoundingClientRect(); return { px: e.clientX - r.left, py: e.clientY - r.top }; }
+function feldAus(e) {
+  const { px, py } = punktAus(e);
+  const x = Math.floor((px - ansicht.ox) / ansicht.k), y = Math.floor((py - ansicht.oy) / ansicht.k);
+  return { x: Math.max(0, Math.min(z.w - 1, x)), y: Math.max(0, Math.min(z.h - 1, y)) };
+}
 function figurBei(e) {
-  const { px, py } = punktAus(e), k = ansicht.k, reichweite = Math.max(22, k * 1.1);
-  let beste = null, abstand = reichweite;
+  const { px, py } = punktAus(e), k = ansicht.k;
+  let beste = null, abstand = Math.max(22, k * 1.1);
   for (const p of z.personen) {
     const d = Math.hypot(ansicht.ox + (p.x + 0.5) * k - px, ansicht.oy + (p.y + 0.5) * k - py);
     if (d < abstand) { abstand = d; beste = p; }
   }
   return beste;
 }
-
-function feldAus(e) {
-  const r = leinwand.getBoundingClientRect();
-  const x = Math.floor((e.clientX - r.left - ansicht.ox) / ansicht.k);
-  const y = Math.floor((e.clientY - r.top - ansicht.oy) / ansicht.k);
-  return { x: Math.max(0, Math.min(z.w - 1, x)), y: Math.max(0, Math.min(z.h - 1, y)) };
-}
+const personAuf = (x, y) => z.personen.some(p => p.x === x && p.y === y);
 
 leinwand.addEventListener('pointerdown', e => {
+  if (ablauf) return;
   if (!editorOffen) {
     const p = figurBei(e);
     if (p) { leinwand.setPointerCapture(e.pointerId); tragen = { person: p, ...punktAus(e) }; malen(); }
     return;
   }
   const f = feldAus(e);
-  if (werkzeug === 'wand' || werkzeug === 'abriss') {
+  if (werkzeug === 'wand' || werkzeug === 'abriss' || werkzeug === 'stuhl') {
     leinwand.setPointerCapture(e.pointerId);
     ziehen = { x0: f.x, y0: f.y, x1: f.x, y1: f.y, art: werkzeug };
     malen();
@@ -126,12 +142,14 @@ leinwand.addEventListener('pointerup', e => {
   const f = feldAus(e);
   if (ziehen) {
     const v = ziehen; ziehen = null;
-    aendern(() => v.art === 'wand' ? wandRechteck(z, v.x0, v.y0, v.x1, v.y1) : abriss(z, v.x0, v.y0, v.x1, v.y1));
+    if (v.art === 'wand') aendern(() => wandRechteck(z, v.x0, v.y0, v.x1, v.y1));
+    else if (v.art === 'abriss') aendern(() => { abriss(z, v.x0, v.y0, v.x1, v.y1); moebelEntfernen(z, v.x0, v.y0, v.x1, v.y1); });
+    else if (v.x0 === v.x1 && v.y0 === v.y1 && moebelBei(z, v.x0, v.y0)) aendern(() => moebelEntfernen(z, v.x0, v.y0, v.x0, v.y0));
+    else aendern(() => moebelSetzen(z, 'stuhl', v.x0, v.y0, v.x1, v.y1, personAuf));
     return;
   }
   if (werkzeug === 'tuer') {
-    const t = z.zellen[idx(z, f.x, f.y)];
-    if (t) aendern(() => tuerUmschalten(z, f.x, f.y));
+    if (z.zellen[idx(z, f.x, f.y)]) aendern(() => tuerUmschalten(z, f.x, f.y));
   } else if (werkzeug === 'raum') {
     const nr = raeume.gruppe[idx(z, f.x, f.y)];
     if (nr >= 0) { auswahl = nr; maskeOeffnen(); } else maskeSchliessen();
@@ -139,17 +157,16 @@ leinwand.addEventListener('pointerup', e => {
 });
 leinwand.addEventListener('pointercancel', () => { ziehen = null; tragen = null; malen(); });
 
-// Raum-Maske
+// ---- Raum-Maske ----
 function maskeOeffnen() {
   const r = raeume.liste[auswahl];
-  const innen = maske.querySelector('.inhalt');
   const zeilen = RAUMTYPEN.map(t => {
     const p = pruefeRaum(z, r, t), aktiv = r.typ && r.typ.id === t.id;
     const status = p.includes('groesse') ? `zu klein, mind. ${t.minGroesse[0]} × ${t.minGroesse[1]}` : `mind. ${t.minGroesse[0]} × ${t.minGroesse[1]}`;
     return `<button class="typ${aktiv ? ' aktiv' : ''}" data-typ="${t.id}" ${p.includes('groesse') ? 'disabled' : ''}>
       <span class="farbe" style="background:${t.farbe}"></span><span><b>${t.name}</b><small>${status}</small></span></button>`;
   }).join('');
-  innen.innerHTML = `<h2>Raumfunktion</h2>
+  maske.querySelector('.inhalt').innerHTML = `<h2>Raumfunktion</h2>
     ${r.tueren === 0 ? '<p class="warnung">Dieser Raum hat noch keine Tür.</p>' : ''}
     <div class="typen">${zeilen}</div>
     <div class="zeile">${r.typ ? '<button data-typ="">Funktion entfernen</button>' : ''}<button data-zu>Schließen</button></div>`;
@@ -167,38 +184,93 @@ maske.addEventListener('click', e => {
   }
 });
 
-// Werkzeugleiste
+// ---- Woche beenden: Besucher laufen ein, dann Wochenrückblick ----
+function wocheStarten() {
+  if (ablauf || !kannWocheBeenden(z, raeume)) return;
+  const beendet = sonntagDerWoche(z.woche);
+  const ergebnis = wocheBeenden(z, raeume);
+  speichern();
+  const g = GRUNDSTUECK, gehweg = GEHWEGE.find(w => w.w > w.h && w.y >= g.y + g.h);
+  const plaetze = ergebnis.angebote.flatMap(a => a.plaetze);
+  const blockiert = (x, y) => !!moebelBei(z, x, y) || personAuf(x, y);
+  const jetzt = performance.now();
+  besucher = plaetze.map((ziel, i) => {
+    const start = { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
+    return { pfad: weg(z, start, ziel, blockiert) || [ziel], beginn: jetzt + i * ABSTAND_MS, x: start.x, y: start.y, sichtbar: false };
+  });
+  ablauf = { beendet, ergebnis };
+  document.body.classList.add('laeuft');
+  requestAnimationFrame(schritt);
+}
+function schritt(t) {
+  let fertig = true;
+  for (const b of besucher) {
+    const strecke = (t - b.beginn) / 1000 * LAUFTEMPO, n = b.pfad.length - 1;
+    if (strecke < 0) { fertig = false; continue; }
+    b.sichtbar = true;
+    if (strecke >= n) { b.x = b.pfad[n].x; b.y = b.pfad[n].y; continue; }
+    fertig = false;
+    const i = Math.floor(strecke), a = b.pfad[i], c = b.pfad[i + 1], f = strecke - i;
+    b.x = a.x + (c.x - a.x) * f; b.y = a.y + (c.y - a.y) * f;
+  }
+  malen();
+  if (fertig) setTimeout(rueckblickZeigen, 600); else requestAnimationFrame(schritt);
+}
+const euro = n => `${n.toLocaleString('de-DE')} €`;
+function rueckblickZeigen() {
+  const { beendet, ergebnis: e } = ablauf;
+  const saldo = e.finanzen.einnahmen - e.finanzen.ausgaben;
+  const angebote = e.angebote.length
+    ? e.angebote.map(a => `<tr><td>${a.name}</td><td class="zahl">${a.besucher}</td></tr>`).join('')
+    : '<tr><td>Keine Besucher</td><td class="zahl">0</td></tr>';
+  rueckblick.querySelector('.inhalt').innerHTML = `
+    <h2>Wochenrückblick</h2><p class="unter">${beendet.name} · ${beendet.datum}</p>
+    <h3>Finanzen</h3>
+    <table><tr><td>Einnahmen</td><td class="zahl">${euro(e.finanzen.einnahmen)}</td></tr>
+      <tr><td>Ausgaben</td><td class="zahl">${euro(e.finanzen.ausgaben)}</td></tr>
+      <tr class="summe"><td>Saldo</td><td class="zahl">${euro(saldo)}</td></tr></table>
+    <h3>Besucher</h3><table>${angebote}</table>
+    <h3>Neue Ehrenamtliche</h3><table><tr><td>Dazugekommen</td><td class="zahl">${e.neueEhrenamtliche}</td></tr></table>
+    <div class="zeile"><button id="weiter" class="haupt">Weiter</button></div>`;
+  rueckblick.hidden = false;
+  $('weiter').addEventListener('click', () => {
+    rueckblick.hidden = true; besucher = []; ablauf = null;
+    document.body.classList.remove('laeuft'); malen();
+  });
+}
+$('wocheBeenden').addEventListener('click', wocheStarten);
+
+// ---- Werkzeugleiste und Modi ----
 document.querySelectorAll('[data-werkzeug]').forEach(b => b.addEventListener('click', () => {
   werkzeug = b.dataset.werkzeug;
   document.querySelectorAll('[data-werkzeug]').forEach(x => x.setAttribute('aria-pressed', x === b));
-  hinweis.textContent = HINWEISE[werkzeug];
+  $('hinweis').textContent = HINWEISE[werkzeug];
   maskeSchliessen();
 }));
-document.getElementById('zurueck').addEventListener('click', () => {
+$('zurueck').addEventListener('click', () => {
   if (!verlauf.length) return;
   z = JSON.parse(verlauf.pop()); raeume = auswerten(); speichern(); maskeSchliessen();
 });
-const neuKnopf = document.getElementById('neu');
+const neuKnopf = $('neu');
 let neuTimer = null;
 neuKnopf.addEventListener('click', () => {
   if (neuKnopf.dataset.sicher) {
     clearTimeout(neuTimer); delete neuKnopf.dataset.sicher; neuKnopf.textContent = 'Neu';
-    aendern(() => { z = neuerZustand(); }); maskeSchliessen();
+    aendern(() => { z = neuerZustand(); personenAnlegen(z); }); maskeSchliessen();
   } else {
     neuKnopf.dataset.sicher = '1'; neuKnopf.textContent = 'Wirklich leeren?';
     neuTimer = setTimeout(() => { delete neuKnopf.dataset.sicher; neuKnopf.textContent = 'Neu'; }, 3000);
   }
 });
-
-// Editor öffnen und schließen: die normale Leiste (HUD) und die Bauwerkzeuge wechseln sich ab.
 function editorUmschalten(offen) {
+  if (ablauf) return;
   editorOffen = offen; ziehen = null; tragen = null;
   document.body.classList.toggle('modus-editor', offen);
   document.body.classList.toggle('modus-spiel', !offen);
   maskeSchliessen();
 }
-document.getElementById('editorAuf').addEventListener('click', () => editorUmschalten(true));
-document.getElementById('editorZu').addEventListener('click', () => editorUmschalten(false));
+$('editorAuf').addEventListener('click', () => editorUmschalten(true));
+$('editorZu').addEventListener('click', () => editorUmschalten(false));
 
 new ResizeObserver(groesseAnpassen).observe(flaeche);
-hinweis.textContent = HINWEISE[werkzeug];
+$('hinweis').textContent = HINWEISE[werkzeug];

@@ -5,7 +5,7 @@ import { WELT, GRUNDSTUECK } from '../inhalte/umgebung.js';
 export const LEER = 0, WAND = 1, TUER = 2;
 
 export function neuerZustand() {
-  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {} };
+  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {}, moebel: [], personen: [], woche: 0 };
 }
 export function idx(z, x, y) { return y * z.w + x; }
 function imFeld(z, x, y) { return x >= 0 && y >= 0 && x < z.w && y < z.h; }

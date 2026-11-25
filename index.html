@@ -9,15 +9,17 @@
 <body class="modus-spiel">
 <header class="leiste hud">
   <div class="anzeigen">
+    <div class="anzeige datum" id="sonntag"></div>
     <div class="anzeige"><span class="punkt hauptamt"></span>Hauptamtliche <b id="anzHauptamt">0/0</b> verfügbar</div>
     <div class="anzeige"><span class="punkt ehrenamt"></span>Ehrenamtliche <b id="anzEhrenamt">0/0</b> verfügbar</div>
   </div>
-  <div class="werkzeuge"><button id="editorAuf">Bauen</button></div>
+  <div class="werkzeuge"><button id="editorAuf">Bauen</button><button id="wocheBeenden" class="haupt">Woche beenden</button></div>
 </header>
 <header class="leiste editor">
   <div class="werkzeuge" role="toolbar" aria-label="Werkzeuge">
     <button data-werkzeug="wand" aria-pressed="true">Wand</button>
     <button data-werkzeug="tuer" aria-pressed="false">Tür</button>
+    <button data-werkzeug="stuhl" aria-pressed="false">Stuhl</button>
     <button data-werkzeug="abriss" aria-pressed="false">Abriss</button>
     <button data-werkzeug="raum" aria-pressed="false">Raum festlegen</button>
   </div>
@@ -28,9 +30,11 @@
   </div>
 </header>
 <p id="hinweis" class="hinweis editor"></p>
+<p id="spielHinweis" class="hinweis hud"></p>
 <main id="flaeche" class="flaeche">
   <canvas id="karte"></canvas>
   <div id="maske" class="maske" hidden><div class="inhalt"></div></div>
+  <div id="rueckblick" class="rueckblick" hidden><div class="inhalt"></div></div>
 </main>
 <script type="module" src="src/oberflaeche/editor.js"></script>
 </body>

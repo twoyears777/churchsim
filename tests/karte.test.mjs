@@ -51,3 +51,36 @@ import { personenAnlegen, versetzen, verfuegbarkeit, personenPruefen, startPlatz
   assert.deepEqual({ x: pastor.x, y: pastor.y }, startPlatz());
 }
 console.log('Mitarbeiter-Tests bestanden.');
+
+// Möbel, Runden, Wege
+import { moebelSetzen, moebelPruefen } from '../src/kern/moebel.js';
+import { kannWocheBeenden, wocheBeenden } from '../src/kern/runde.js';
+import { weg } from '../src/kern/wege.js';
+import { sonntagDerWoche } from '../src/kern/kalender.js';
+{
+  const z6 = neuerZustand(); personenAnlegen(z6);
+  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z6); for (const r of raeume) { r.typ = raumTypVon(z6, r); r.probleme = pruefeRaum(z6, r, r.typ); } return { liste: raeume, gruppe }; };
+  wandRechteck(z6, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z6, G.x + 2, G.y + 5);
+  typZuweisen(z6, erkenneRaeume(z6).raeume[0], 'gottesdienst');
+  assert.equal(kannWocheBeenden(z6, aus()), false);
+  versetzen(z6, z6.personen[0], G.x + 4, G.y + 5);
+  assert.equal(kannWocheBeenden(z6, aus()), false);                 // Pastor da, aber keine Stühle
+  assert.equal(moebelSetzen(z6, 'stuhl', G.x + 8, G.y + 4, G.x + 9, G.y + 4), 2);
+  assert.equal(kannWocheBeenden(z6, aus()), false);                 // nur 2 Stühle
+  moebelSetzen(z6, 'stuhl', G.x + 10, G.y + 4, G.x + 10, G.y + 4);
+  moebelSetzen(z6, 'stuhl', 0, 0, 2, 2);                            // außerhalb: nichts
+  moebelSetzen(z6, 'stuhl', G.x + 30, G.y + 20, G.x + 30, G.y + 20); // draußen auf der Wiese: erlaubt, zählt aber nicht
+  assert.equal(z6.moebel.length, 4);
+  assert.equal(kannWocheBeenden(z6, aus()), true);
+  const rb = wocheBeenden(z6, aus());
+  assert.equal(rb.angebote[0].besucher, 3); assert.equal(z6.woche, 1);
+  assert.equal(sonntagDerWoche(0).name, '1. Advent'); assert.equal(sonntagDerWoche(1).name, '2. Advent');
+  const pfad = weg(z6, { x: G.tor.x, y: G.y + G.h + 1 }, rb.angebote[0].plaetze[0], (x, y) => z6.moebel.some(m => m.x === x && m.y === y));
+  assert.ok(pfad && pfad.length > 5);
+  assert.ok(pfad.some(p => p.x === G.x + 2 && p.y === G.y + 5));    // läuft durch die Tür
+  const raus = pfad.findIndex(p => aufGrundstueck(p.x, p.y));        // betritt das Grundstück nur durchs Tor
+  assert.ok(pfad[raus].y === G.y + G.h - 1 && pfad[raus].x >= G.tor.x && pfad[raus].x < G.tor.x + G.tor.breite);
+  wandRechteck(z6, G.x + 8, G.y + 4, G.x + 8, G.y + 4); moebelPruefen(z6);
+  assert.equal(z6.moebel.length, 3);
+}
+console.log('Runden-Tests bestanden.');
