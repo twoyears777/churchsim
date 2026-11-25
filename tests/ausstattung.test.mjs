@@ -24,7 +24,7 @@ function gemeinde(zufall) {
   typZuweisen(z, raumBei(z, G.x + 5, G.y + 5), 'gottesdienst'); veranstaltungEinstellen(z, raumBei(z, G.x + 5, G.y + 5), 'gottesdienst');
   moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 3);
   versetzen(z, z.personen[0], G.x + 4, G.y + 5);
-  z.besucher = Array.from({ length: 10 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', zufriedenheit: 100, kaffeeWert: 0, besuche: 0 }));
+  z.besucher = Array.from({ length: 10 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', zufriedenheit: 100, kaffeeWert: 0, besuche: 0, lobpreis: 0.5 }));   // (Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; eigene Tests in veranstaltungen.test.mjs)
   z.bekanntheit = 0;
   z.ortRuhig = true;                                 // Test-Schalter: keine Passanten, keine Seelsorge-Anfragen
   return z;
@@ -137,10 +137,11 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   assert.strictEqual(musikBonus(10), 0.15);
   assert.strictEqual(musikBonus(0), 0.05);
 }
-// Lobpreisteam: Haltung + 5 % der aktuellen Haltung (bei 50: +3, gerundet), zusätzlich zu Sitzplatz und Gottesdienst
+// Lobpreisteam: Haltung + 5 % der aktuellen Haltung bei 100 % Lobpreis-Vorliebe (bei 50: +3, gerundet), zusätzlich zu Sitzplatz und Gottesdienst
 {
   const zufall = saat(9), z = gemeinde(zufall);
   z.besucher = z.besucher.slice(0, 1);
+  z.besucher[0].lobpreis = 1;   // liebt Lobpreis: voller Bonus (bei 50 % gäbe es 0, siehe veranstaltungen.test.mjs)
   moebelSetzen(z, 'gitarre', G.x + 12, G.y + 6, G.x + 12, G.y + 6);
   const ea = personHinzufuegen(z, { name: 'Erna Musik', kuerzel: 'E', art: 'ehrenamt' });
   versetzen(z, ea, G.x + 13, G.y + 6);

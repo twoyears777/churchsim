@@ -5,7 +5,7 @@ import { NEUGIER } from '../inhalte/ort.js';
 import { ZWEITER_BESUCH } from '../inhalte/veranstaltungen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, BEKANNTHEIT,
-  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
+  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, LOBPREIS_MUSIK } from '../inhalte/besucher.js';
 
 export function namenZiehen(anzahl, zufall = Math.random) {
   const toepfe = { a: [], w: [] }, ergebnis = [];
@@ -73,15 +73,25 @@ export function kaffeeVorliebe(b) {
   h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
   return Math.round((h % 1001) / 10) / 100;   // 0,00 … 1,00
 }
-// Chance für eine bestimmte Veranstaltung: × Lobpreis-Vorliebe beim Lobpreisgottesdienst, × 0,5 beim 2. Besuch derselben Woche,
-// × Besucher-Faktor des Kirchenjahres (o.faktor, z. B. Heiligabend ×3), höchstens 100 %
+// Chance für eine bestimmte Veranstaltung: × Lobpreis-Vorliebe beim Lobpreisgottesdienst, × Musik-Faktor beim normalen
+// Gottesdienst (o.musik: true = Lobpreisteam spielt, false = keine Musik, nicht angegeben = ohne Wirkung),
+// × 0,5 beim 2. Besuch derselben Woche, × Besucher-Faktor des Kirchenjahres (o.faktor, z. B. Heiligabend ×3), höchstens 100 %
 export function besuchChance(b, o = {}) {
   let c = kommChance(b);
   if (o.art === 'lobpreis') c *= lobpreisVorliebe(b);
+  else if (typeof o.musik === 'boolean') c = Math.min(1, c * musikFaktor(b, o.musik));
   if (o.woche !== undefined && b.besuchtWoche === o.woche) c *= ZWEITER_BESUCH;
   if (o.faktor) c = Math.min(1, c * o.faktor);   // Feste und Zeiten im Kirchenjahr (höchstens 100 %)
   return c;
 }
+
+// Wie gern jemand zum normalen Gottesdienst mit (musik = true) oder ohne Musik kommt: 0 % Vorliebe mit Musik × 0,5, 100 % × 1,5
+export function musikFaktor(b, musik) {
+  const v = lobpreisVorliebe(b);
+  return musik ? LOBPREIS_MUSIK.mitMusik + v : LOBPREIS_MUSIK.ohneMusik - v;
+}
+// Wie das Lobpreisteam bei jemandem ankommt: −1 (0 % Vorliebe) … 0 (50 %) … +1 (100 %); mal den Bonus des Teams
+export function musikWirkung(b) { return LOBPREIS_MUSIK.haltungFaktor * lobpreisVorliebe(b) - 1; }
 
 // Neue Besucher pro Woche: Bekanntheit ÷ 10, der Rest als Chance (15 → 1 sicher + 50 % auf einen zweiten)
 export function neueBesucherZahl(bekanntheit, zufall = Math.random) {

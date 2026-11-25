@@ -7,7 +7,7 @@ import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, ty
 import { neuesSpiel, spielStarten, spielAnlegen } from '../src/kern/spiel.js';
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, programmVon, gottesdienstRaeume, termineDerWoche, prognose } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelAbreissen } from '../src/kern/moebel.js';
-import { versetzen } from '../src/kern/personen.js';
+import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
 import { besuchChance, kommChance, lobpreisVorliebe } from '../src/kern/besucher.js';
 import { TAG_MIN, WOCHE_MIN } from '../src/kern/zeit.js';
 import { besucherPositionen } from '../src/kern/bewegung.js';
@@ -130,13 +130,65 @@ console.log('Ausfall-Tests bestanden.');
   veranstaltungEinstellen(z, raumBei(z), 'lobpreis', 1);
   terminEinstellen(z, raumBei(z), 1, 6, 'abend');
   const nr = raumBei(z).nr;
-  assert.equal(prognose(z, aus(z), nr, 0).erwartet, 10);
+  // Normaler Gottesdienst ohne Lobpreisteam (Gitarre, aber kein Musiker): Fans × 0,5 → 50 %, × 1,2 Adventszeit = 60 %;
+  // die anderen × 1,5 → höchstens 100 %. 5 × 0,6 + 5 × 1 = 8
+  assert.ok(Math.abs(prognose(z, aus(z), nr, 0).erwartet - 8) < 1e-9);
   assert.equal(prognose(z, aus(z), nr, 1).erwartet, 5);   // nur die Lobpreis-Fans
   const p = { id: 'b77', voll: 'Erna Muster' };
   assert.equal(lobpreisVorliebe(p), lobpreisVorliebe({ ...p }));
   assert.ok(lobpreisVorliebe(p) >= 0 && lobpreisVorliebe(p) <= 1);
 }
 console.log('Prognose-Tests bestanden.');
+
+// Lobpreis-Vorliebe beim normalen Gottesdienst (Spielprinzip 25.11.): mit Musik × (0,5 + v), ohne × (1,5 − v), höchstens 100 %
+{
+  const b = v => ({ id: 'x', voll: 'X Y', zufriedenheit: 60, lobpreis: v });
+  const nah = (a, c) => Math.abs(a - c) < 1e-9;
+  assert.ok(nah(besuchChance(b(0.9), { art: 'gottesdienst', musik: true }), 0.84));    // Beispiel aus dem Spielprinzip
+  assert.ok(nah(besuchChance(b(0.9), { art: 'gottesdienst', musik: false }), 0.36));
+  assert.ok(nah(besuchChance(b(0), { art: 'gottesdienst', musik: true }), 0.3));
+  assert.ok(nah(besuchChance(b(0), { art: 'gottesdienst', musik: false }), 0.9));
+  assert.ok(nah(besuchChance(b(0.5), { art: 'gottesdienst', musik: true }), 0.6));     // 50 %: keine Änderung
+  assert.ok(nah(besuchChance(b(0.5), { art: 'gottesdienst', musik: false }), 0.6));
+  assert.equal(besuchChance({ ...b(1), zufriedenheit: 90 }, { art: 'gottesdienst', musik: true }), 1);   // höchstens 100 %
+  assert.ok(nah(besuchChance(b(0.9), { art: 'gottesdienst' }), 0.6));                  // ohne Angabe: keine Wirkung
+  // Lobpreisgottesdienst: wie bisher nur × Vorliebe, kein zusätzlicher Musik-Faktor
+  assert.ok(nah(besuchChance(b(0.5), { art: 'lobpreis', musik: true }), 0.3));
+}
+// Im Spiel: Mit Lobpreisteam kommen beim normalen Gottesdienst die Fans sicher, ohne Lobpreisteam die anderen
+{
+  const z = gemeinde(), r = raumBei(z);
+  ausstatten(z);
+  veranstaltungEinstellen(z, r, 'gottesdienst');
+  z.besucher.forEach(x => { x.zufriedenheit = 60; });
+  const nr = raumBei(z).nr;
+  // ohne Musiker: Fans 60 % × 0,5 = 30 %, × 1,2 Advent = 36 %; die anderen 60 % × 1,5 = 90 %, × 1,2 → höchstens 100 %
+  // → 5 × 0,36 + 5 × 1 = 6,8
+  assert.ok(Math.abs(prognose(z, aus(z), nr, 0).erwartet - 6.8) < 1e-9);
+  const ea = personHinzufuegen(z, { name: 'Erna Musik', kuerzel: 'E', art: 'ehrenamt' });
+  versetzen(z, ea, G.x + 15, G.y + 6);
+  assert.equal(gottesdienstRaeume(z, aus(z))[0].ausstattung.musik, true, 'Lobpreisteam spielt');
+  // mit Musiker: genau andersherum (Fans 100 %, die anderen 36 %) → wieder 6,8
+  assert.ok(Math.abs(prognose(z, aus(z), nr, 0).erwartet - 6.8) < 1e-9);
+  zeitVorruecken(z, aus(z), SO + 10 * 60 + 1 - z.minuten, () => 0.5);   // Zufall 0,5: kommt, wer über 50 % liegt
+  const L = z.laeufe.find(x => x.gaeste);
+  assert.deepEqual(L.gaeste.map(g => g.id).sort(), ['t0', 't1', 't2', 't3', 't4']);
+}
+// Haltung durch das Lobpreisteam nach Vorliebe: 100 % → +5 %, 50 % → 0, 0 % → −5 % der aktuellen Haltung
+{
+  const z = gemeinde(), r = raumBei(z);
+  ausstatten(z);
+  veranstaltungEinstellen(z, r, 'gottesdienst');
+  const ea = personHinzufuegen(z, { name: 'Erna Musik', kuerzel: 'E', art: 'ehrenamt' });
+  versetzen(z, ea, G.x + 15, G.y + 6);
+  z.besucher = z.besucher.slice(0, 3);
+  [1, 0.5, 0].forEach((v, i) => { z.besucher[i].lobpreis = v; z.besucher[i].zufriedenheit = 60; });
+  zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
+  const [fan, halb, muffel] = z.besucher.map(x => x.zufriedenheit);
+  assert.equal(fan - halb, 3);      // 60 × 5 % = 3
+  assert.equal(halb - muffel, 3);   // −3
+}
+console.log('Lobpreis-Musik-Tests bestanden.');
 
 // Bekanntheit: langsam (Gottesdienst +0,6) und mit Protokoll; Wochenverlauf
 {

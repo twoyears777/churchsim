@@ -19,7 +19,7 @@ import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
 import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, musikLevel, musikErfahrungDazu, instrumenteImRaum } from './moebel.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
-import { werKommt, kommChance, besuchChance, lobpreisVorliebe, kaffeeVorliebe, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
+import { werKommt, kommChance, besuchChance, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
 import { zeitpunkt, slotBeginn, WOCHE_MIN } from './zeit.js';
 import { NEUGIER } from '../inhalte/ort.js';
@@ -291,7 +291,9 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
   // Wer gerade bei einer anderen Veranstaltung ist (nicht schon auf dem Heimweg), kann nicht kommen.
   const woanders = new Set(z.laeufe.filter(x => x !== L && x.phase !== 'ende' && x.gaeste).flatMap(x => x.gaeste.map(g => g.id)));
   const anzahl = termineDerWoche(z, raeume, L.woche).filter(t => t.art).length || 1;
-  const kommen = werKommt(z, zufall, { art: L.art, woche: L.woche, ausschluss: woanders, neuAnteil: 1 / anzahl, faktor: terminFaktoren(L).besucher });
+  // Spielt im Raum gerade ein Lobpreisteam? Das wissen die Leute, wenn sie sich auf den Weg machen (wirkt beim normalen Gottesdienst).
+  const kommen = werKommt(z, zufall, { art: L.art, woche: L.woche, ausschluss: woanders, neuAnteil: 1 / anzahl, faktor: terminFaktoren(L).besucher,
+    musik: info.g.ausstattung.musik });
   for (let i = kommen.length - 1; i > 0; i--) { const j = Math.floor(zufall() * (i + 1)); [kommen[i], kommen[j]] = [kommen[j], kommen[i]]; }
   const tuer = raumTuer(z, info.g.raum);
   L.ankunft = z.minuten;
@@ -375,8 +377,9 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     if (!b) continue;
     if (!g.sitz) { zufriedenheitAendern(b, AENDERUNG.heimgeschickt); continue; }
     anwesend.push(b); b.besuche++; b.zuletzt = L.woche; b.besuchtWoche = L.woche;
-    // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: + musikHaltung (z. B. 5 %) der aktuellen Haltung
-    const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0));
+    // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
+    // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
+    const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
     zufriedenheitAendern(b, AENDERUNG.sitzplatz + haltungFuer(L.art, b) + (g.bonus || 0) + musik);
     if (g.kaffee && g.kaffee.ergebnis === 'keinPlatz') zufriedenheitAendern(b, AENDERUNG.kaffeeNein);   // sonst: beim Bedienen (kirchkaffee.js)
     g.zufriedenheit = b.zufriedenheit;
@@ -410,7 +413,7 @@ export function prognose(z, raeume, raumNr = null, platz = 0) {
   // Kirchenjahr: Fest an dem Tag oder Zeit (z. B. Adventszeit) – Besucher und Kollekte × Faktor
   const kj = terminFaktoren({ woche, plan });
   const neu = Math.min(z.bekanntheit / BEKANNTHEIT.teiler / anzahl * kj.besucher, moeglich);
-  const chance = b => besuchChance(b, { art, woche, faktor: kj.besucher });
+  const chance = b => besuchChance(b, { art, woche, faktor: kj.besucher, musik: g ? g.ausstattung.musik : undefined });
   const erwartet = z.besucher.reduce((s, b) => s + chance(b), 0) + neu + neugierige.length * NEUGIER.kommChance;
   const anteil = erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
   // Fällt der Termin wegen eines geplanten Sonderevents aus?

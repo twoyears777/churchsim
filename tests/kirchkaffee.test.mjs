@@ -45,7 +45,7 @@ function gemeinde({ stationen = 1, stuehle = 3 } = {}) {
 }
 const bis = (z, aus, minute, zufall = () => 0) => { while (z.minuten < minute) zeitVorruecken(z, aus(), Math.min(1, minute - z.minuten), zufall); };
 const besucherMitKaffee = (z, n, wert = 1) => {
-  z.besucher = Array.from({ length: n }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', zufriedenheit: 100, kaffeeWert: wert, besuche: 0 }));
+  z.besucher = Array.from({ length: n }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', zufriedenheit: 100, kaffeeWert: wert, besuche: 0, lobpreis: 0.5 }));   // (Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; eigene Tests in veranstaltungen.test.mjs)
 };
 
 // Kaffee-Wert: fest, 0–1, ersetzt das Ja/Nein

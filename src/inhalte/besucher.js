@@ -7,6 +7,11 @@ export const MIN_CHANCE = 0.1;            // Chance zu kommen = Zufriedenheit in
 // Kaffee: Jeder Mensch hat einen festen Kaffee-Wert 0–100 % (wie die Lobpreis-Vorliebe). Er ersetzt seit 25.11. das Ja/Nein:
 // Nach dem Gottesdienst und beim Vorbeilaufen am offenen Kirchkaffee will er mit dieser Chance einen Kaffee.
 
+// Lobpreis-Vorliebe und Musik (Spielprinzip von Lukas, 25.11.; v = Vorliebe 0–1):
+// Normaler Gottesdienst mit Lobpreisteam: Chance zu kommen × (mitMusik + v); ohne Lobpreisteam: × (ohneMusik − v); höchstens 100 %.
+// Haltung durch das Lobpreisteam (Gottesdienst und Lobpreisgottesdienst): Bonus × (haltungFaktor × v − 1), kann ins Minus gehen.
+export const LOBPREIS_MUSIK = { mitMusik: 0.5, ohneMusik: 1.5, haltungFaktor: 2 };
+
 // Änderung der Zufriedenheit nach jedem Gottesdienst
 export const AENDERUNG = {
   sitzplatz: 5,          // Sitzplatz bekommen
