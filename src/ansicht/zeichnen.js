@@ -88,7 +88,9 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
     const b = r.box, cx = ox + (b.minX + b.maxX + 1) / 2 * k, cy = oy + b.minY * k + Math.max(schrift * 1.2, k * 1.1); // oben im Raum, damit Figuren frei bleiben
     ctx.font = `500 ${schrift}px system-ui, sans-serif`;
     ctx.fillStyle = FARBEN.text;
-    ctx.fillText(r.typ ? r.typ.name : 'Ohne Funktion', cx, cy - (r.probleme.length ? schrift * 0.7 : 0));
+    const name = r.typ ? r.typ.name : 'Ohne Funktion', ny = cy - (r.probleme.length ? schrift * 0.7 : 0);
+    ctx.fillText(name, cx, ny);
+    if (r.veranstaltungFehlt) warnsymbol(ctx, cx + ctx.measureText(name).width / 2 + schrift * 0.75, ny, schrift * 0.9);
     if (r.probleme.length) {
       ctx.font = `400 ${schrift * 0.85}px system-ui, sans-serif`;
       ctx.fillStyle = FARBEN.fehler;
@@ -112,6 +114,16 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
     const fx = Math.floor((t.px - ox) / k), fy = Math.floor((t.py - oy) / k);
     ctx.strokeStyle = FARBEN.auswahl; ctx.lineWidth = 2; ctx.strokeRect(ox + fx * k + 1, oy + fy * k + 1, k - 2, k - 2);
     if (f) figur(ctx, t.px, t.py, k, f, true, schrift);
+  }
+
+  // Preis neben dem Mauszeiger beim Bauen (z. B. Stuhl)
+  const ps = extra.preisSchild;
+  if (ps) {
+    ctx.font = `600 12px system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(ps.text).width + 10, x = ps.px + 14, y = ps.py + 14;
+    ctx.fillStyle = ps.zuTeuer ? FARBEN.fehler : 'rgba(43,42,39,0.9)'; ctx.fillRect(x, y, w, 20);
+    ctx.fillStyle = '#fff'; ctx.fillText(ps.text, x + 5, y + 10);
+    ctx.textAlign = 'center';
   }
 
   // Vorschau beim Ziehen
@@ -235,4 +247,15 @@ function stuhl(ctx, px, py, k) {
   const r = k * 0.15;
   ctx.fillStyle = FARBEN.stuhlSitz; ctx.fillRect(px + r, py + r * 1.6, k - 2 * r, k - r * 2.6);
   ctx.fillStyle = FARBEN.stuhlLehne; ctx.fillRect(px + r, py + r, k - 2 * r, r * 0.9);
+}
+
+// Kleines Warndreieck mit Ausrufezeichen, Mittelpunkt (cx, cy)
+function warnsymbol(ctx, cx, cy, g) {
+  ctx.save();
+  ctx.fillStyle = '#e0a21a'; ctx.strokeStyle = '#5a3d00'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx, cy - g * 0.55); ctx.lineTo(cx + g * 0.6, cy + g * 0.45); ctx.lineTo(cx - g * 0.6, cy + g * 0.45); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a2a00'; ctx.font = `700 ${g * 0.7}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('!', cx, cy + g * 0.08);
+  ctx.restore();
 }

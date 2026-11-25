@@ -32,7 +32,7 @@ let z = laden() || neuerZustand();
 personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
 let raeume = auswerten();
 let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
-let besucher = [], ablauf = null, stuhlStart = null, schwebe = null, klickStart = null;
+let besucher = [], ablauf = null, stuhlStart = null, schwebe = null, klickStart = null, maus = null;
 const verlauf = [];
 
 const $ = id => document.getElementById(id);
@@ -47,6 +47,7 @@ function auswerten() {
     r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ);
     const v = veranstaltungVon(z, r);
     r.veranstaltungText = moeglicheVeranstaltungen(r.typ).length ? (v ? v.name : 'Keine Veranstaltung') : null;
+    r.veranstaltungFehlt = !!r.veranstaltungText && !v;   // Warnsymbol auf der Karte
   }
   return { liste, gruppe };
 }
@@ -83,7 +84,9 @@ function figuren() {
 function malen() {
   ctx.clearRect(0, 0, leinwand.width, leinwand.height);
   const konflikte = ziehen && ziehen.art === 'wand' ? wandKonflikte(z, ziehen.x0, ziehen.y0, ziehen.x1, ziehen.y1) : [];
-  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, konflikte, auswahl, schwebe: editorOffen && !ziehen ? schwebe : null, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
+  const stuhlPreis = MOEBEL.find(m => m.id === 'stuhl').kosten;
+  const preisSchild = editorOffen && werkzeug === 'stuhl' && maus ? { ...maus, text: euro(stuhlPreis), zuTeuer: !kannBezahlen(z, stuhlPreis) } : null;
+  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, konflikte, auswahl, schwebe: editorOffen && !ziehen ? schwebe : null, preisSchild, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
   anzeigenAktualisieren();
 }
 
@@ -202,6 +205,8 @@ leinwand.addEventListener('pointerdown', e => {
 leinwand.addEventListener('pointermove', e => {
   if (e.buttons & 2) { abbrechen(); return; }
   mauszeiger(e);
+  maus = punktAus(e);
+  if (editorOffen && werkzeug === 'stuhl') malen();
   if (editorOffen && !ziehen) { const f = feldAus(e); if (!schwebe || f.x !== schwebe.x || f.y !== schwebe.y) { schwebe = f; malen(); } }
   if (tragen) {
     const a = punktAus(e);
@@ -246,7 +251,7 @@ leinwand.addEventListener('pointerup', e => {
   }
 });
 leinwand.addEventListener('pointercancel', abbrechen);
-leinwand.addEventListener('pointerleave', () => { if (schwebe) { schwebe = null; malen(); } });
+leinwand.addEventListener('pointerleave', () => { maus = null; if (schwebe) schwebe = null; malen(); });
 function abbrechen() { if (ziehen || tragen) { ziehen = null; tragen = null; malen(); } }
 
 // Mauszeiger zeigt, was man tun kann
@@ -421,6 +426,7 @@ function editorUmschalten(offen) {
 $('editorAuf').addEventListener('click', () => editorUmschalten(true));
 $('editorZu').addEventListener('click', () => editorUmschalten(false));
 
+$('preisStuhl').textContent = euro(MOEBEL.find(m => m.id === 'stuhl').kosten);
 new ResizeObserver(groesseAnpassen).observe(flaeche);
 $('hinweis').textContent = HINWEISE[werkzeug];
 aktualisierungStarten(() => !!ablauf || !!ziehen || !!tragen);

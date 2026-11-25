@@ -87,3 +87,5 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 /* Zahl neben der Überschrift nur bei zugeklapptem Bereich */
 .seitenleiste summary .zugeklappt { display: none; float: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .seitenleiste details:not([open]) summary .zugeklappt { display: inline; }
+.preis { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,.14); font-size: 13px; font-variant-numeric: tabular-nums; }
+button[aria-pressed="true"] .preis { background: rgba(0,0,0,.1); }
