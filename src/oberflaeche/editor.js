@@ -216,7 +216,7 @@ function wocheStarten() {
   const jetzt = performance.now(), namen = namenZiehen(plaetze.length);
   besucher = plaetze.map((ziel, i) => {
     const start = { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
-    return { name: namen[i], pfad: weg(z, start, ziel, blockiert) || [ziel], beginn: jetzt + i * ABSTAND_MS, x: start.x, y: start.y, sichtbar: false };
+    return { name: namen[i].vorname, vollerName: namen[i].voll, pfad: weg(z, start, ziel, blockiert) || [ziel], beginn: jetzt + i * ABSTAND_MS, x: start.x, y: start.y, sichtbar: false };
   });
   ablauf = { beendet, ergebnis };
   document.body.classList.add('laeuft');

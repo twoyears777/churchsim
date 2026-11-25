@@ -58,7 +58,7 @@ import { kannWocheBeenden, wocheBeenden } from '../src/kern/runde.js';
 import { weg } from '../src/kern/wege.js';
 import { wandKonflikte, wandBauen } from '../src/kern/bauen.js';
 import { namenZiehen } from '../src/kern/besucher.js';
-import { VORNAMEN } from '../src/inhalte/namen.js';
+import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL } from '../src/inhalte/namen.js';
 import { sonntagDerWoche } from '../src/kern/kalender.js';
 {
   const z6 = neuerZustand(); personenAnlegen(z6);
@@ -90,8 +90,12 @@ import { sonntagDerWoche } from '../src/kern/kalender.js';
   assert.ok(wandBauen(z6, G.x + 25, G.y + 10, G.x + 30, G.y + 15));
 }
 {
-  const n = namenZiehen(VORNAMEN.length);
-  assert.equal(new Set(n).size, VORNAMEN.length);              // keine doppelten, solange die Liste reicht
-  assert.equal(namenZiehen(VORNAMEN.length + 5).length, VORNAMEN.length + 5);
+  const n = namenZiehen(300);
+  assert.equal(n.length, 300);
+  assert.ok(n.every(x => x.vorname && x.nachname && x.voll === `${x.vorname} ${x.nachname}`));
+  const wortspiel = n.filter(x => NAMEN_WORTSPIEL.includes(x.voll)).length / n.length;
+  assert.ok(wortspiel > 0.2 && wortspiel < 0.47, 'Mischung etwa ein Drittel Wortspiel');
+  const kurz = namenZiehen(10);
+  assert.equal(new Set(kurz.map(x => x.voll)).size, 10);       // in kleiner Woche keine Doppelten
 }
 console.log('Runden-Tests bestanden.');
