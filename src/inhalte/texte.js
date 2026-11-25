@@ -162,7 +162,8 @@ export const TEXTE = {
     eintrag: { gottesdienst: () => 'Gottesdienst', zufrieden: n => `${n} sehr zufriedene Besucher`, seelsorge: () => 'Seelsorge' },
     wirkung: 'Was sie bewirkt',
     neue: (teiler, wert) => `Neue Besucher pro Woche: Bekanntheit ÷ ${teiler} → jetzt ca. ${wert}`,
-    neugier: (grund, wert, faktor) => `Passanten am Tor werden neugierig: ${grund} + halbe Bekanntheit → jetzt ${wert} (mit Plakat ${faktor}×)`
+    neugier: (grund, wert, faktor) => `Passanten am Tor werden neugierig: ${grund} + halbe Bekanntheit → jetzt ${wert} (mit Plakat ${faktor}×)`,
+    neugierDazu: (gelaende, schaukasten) => `Darin enthalten: Gelände +${gelaende}, Schaukasten +${schaukasten}`   // ENTWURF (25.11.)
   },
 
   // ---- Finanz-Fenster (Spielprinzip 25.11.2026) – ENTWURF von Claude, Lukas formuliert selbst ----
@@ -396,12 +397,52 @@ export const TEXTE = {
   hinweiseAussen: {
     strasse: 'Zieh ein Rechteck, um Straße zu bauen. Die Straße muss im Tor beginnen.',
     parkplatz: 'Tippe, um einen Parkplatz zu bauen (R dreht ihn). Er zählt, wenn er an einer Straße liegt, die bis zum Tor führt.',
-    bushaltestelle: 'Die Bushaltestelle steht am Gehweg neben dem Tor.'
+    bushaltestelle: 'Die Bushaltestelle steht am Gehweg neben dem Tor.',
+    // ---- Wege und Außendeko (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
+    weg: 'Zieh ein Rechteck, um einen Weg anzulegen. Wege machen das Gelände schöner.',
+    busch: 'Tippe, um einen Busch zu pflanzen. Außendeko macht Passanten neugieriger.',
+    hecke: 'Tippe, um ein Stück Hecke zu pflanzen.',
+    blumenbeet: 'Tippe, um ein Blumenbeet anzulegen.',
+    bank: 'Tippe, um eine Bank aufzustellen.',
+    laterne: 'Tippe, um eine Laterne aufzustellen.',
+    baum: 'Tippe, um einen Baum zu pflanzen (2 × 2 Kästchen).',
+    schaukasten: 'Tippe, um einen Schaukasten aufzustellen. In der Spielansicht wählst du per Klick, wofür er wirbt.'
   },
   aussenMeldung: {
     innen: 'Straße und Parkplätze gehören nach draußen, nicht in einen Raum.',
     bekanntheit: n => `Parkplätze kannst du ab Bekanntheit ${n} bauen.`,
-    strasseGeld: 'Das Geld hat nicht für die ganze Straße gereicht.'
+    strasseGeld: 'Das Geld hat nicht für die ganze Straße gereicht.',
+    // ---- ENTWÜRFE von Claude (Wege und Außendeko, 25.11.) ----
+    innenDeko: 'Außendeko gehört nach draußen, nicht in einen Raum.',
+    bekanntheitTeil: (name, n) => `${name}: erst ab Bekanntheit ${n}.`,
+    tor: 'Direkt im Tor muss der Weg frei bleiben.',
+    wegGeld: 'Das Geld hat nicht für den ganzen Weg gereicht.'
+  },
+  // Bauleisten-Kärtchen: was ein Stück Außendeko fürs Gelände bringt – ENTWURF
+  gelaendeKarte: n => `+${String(n).replace('.', ',')} Gelände`,
+
+  // ---- Gelände und Schaukasten (Spielprinzip „Wege und Außendeko“, 25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
+  gelaende: {
+    titel: 'Gelände',
+    stand: (wert, max) => `${wert} von ${max}`,
+    info: 'Wege und Außendeko machen das Gelände schöner. Je schöner es ist, desto öfter werden Passanten am Tor neugierig.',
+    teil: (anzahl, name, punkte) => `${anzahl}× ${name}: ${punkte}`,
+    gekappt: (summe, max) => `Zusammen ${summe} Punkte – es zählen höchstens ${max}.`,
+    keine: 'Noch keine Außendeko. Du findest sie unter Bauen → Außen.',
+    wirkung: p => `Passanten werden um ${p} öfter neugierig (Gelände ÷ 10).`,
+    schaukasten: 'Schaukasten',
+    aushang: (art, raum, termin, p) => `Wirbt für: ${art} (${raum}, ${termin}) · +${p} Neugier`,
+    keinAushang: 'Kein Schaukasten mit Aushang.'
+  },
+  schaukasten: {
+    titel: 'Schaukasten',
+    info: p => `Wähle eine regelmäßige Veranstaltung, für die der Schaukasten wirbt. Solange sie eingestellt ist, werden Passanten um ${p} öfter neugierig. Der Aushang ist kostenlos und bleibt hängen, bis du ihn änderst.`,
+    jetzt: 'Hängt gerade aus',
+    leer: 'Der Schaukasten ist leer.',
+    keine: 'Noch keine regelmäßige Veranstaltung eingestellt. Stelle zuerst in einem Gottesdienstraum eine Veranstaltung ein.',
+    eintrag: (art, raum, termin) => `${art} · ${raum} · ${termin}`,
+    abnehmen: 'Aushang abnehmen',
+    doppelt: 'Wirbt schon ein anderer Schaukasten für dieselbe Veranstaltung, zählt sie nur einmal.'
   },
 
   // ---- Einzugsgebiet (Bekanntheit-Fenster) – erste Texte von Lukas freigegeben, übrige ENTWÜRFE von Claude ----

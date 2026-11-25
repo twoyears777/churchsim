@@ -11,6 +11,8 @@ import { platzImGebiet } from './einzugsgebiet.js';
 import { passantKommt, offenesKirchkaffee } from './kirchkaffee.js';
 import { feiertagAmTag } from './kalender.js';
 import { FEIERTAG_PASSANTEN } from '../inhalte/kirchenjahr.js';
+import { gelaende, schaukastenNeugier } from './gelaende.js';
+import { erkenneRaeume } from './karte.js';
 
 const G = GRUNDSTUECK;
 const TOR_X = G.tor.x + G.tor.breite / 2 - 0.5;                        // Mitte des Tors
@@ -51,9 +53,13 @@ function tagPlanen(z, tag, zufall) {
   }
 }
 
-// Chance, am Tor neugierig zu werden: 5 % + halbe Bekanntheit; mit Plakat 3×, höchstens 100 %
-export function neugierChance(z, mitPlakat = !!z.plakat) {
-  const c = NEUGIER.grund + z.bekanntheit * NEUGIER.proBekanntheit;
+// Chance, am Tor neugierig zu werden: 5 % + halbe Bekanntheit + Gelände ÷ 10 + 10 je Schaukasten-Aushang (Prozentpunkte);
+// mit Plakat 3×, höchstens 100 %
+export function neugierTeile(z, gruppe = erkenneRaeume(z).gruppe) {
+  return { grund: NEUGIER.grund, bekanntheit: z.bekanntheit * NEUGIER.proBekanntheit, gelaende: gelaende(z, gruppe).neugier, schaukasten: schaukastenNeugier(z, gruppe) };
+}
+export function neugierChance(z, mitPlakat = !!z.plakat, gruppe) {
+  const t = neugierTeile(z, gruppe), c = t.grund + t.bekanntheit + t.gelaende + t.schaukasten;
   return Math.min(1, c * (mitPlakat ? PLAKAT.faktor : 1));
 }
 // Am Tor: Passanten (noch nie da gewesen) werden nach neugierChance neugierig.

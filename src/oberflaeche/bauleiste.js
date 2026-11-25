@@ -61,7 +61,7 @@ export function bauleisteAktualisieren() {
   for (const el of document.querySelectorAll('.bauleiste [data-preis]')) {
     const m = arten.find(x => x.id === el.dataset.preis), karte = el.closest('button');
     if (!m) { el.textContent = ''; continue; }
-    el.textContent = m.gesperrt ? T.abBekanntheit(m.abBekanntheit) : euro(m.kosten);
+    el.textContent = m.gesperrt ? T.abBekanntheit(m.abBekanntheit) : euro(m.kosten) + (m.gelaende ? ' · ' + TEXTE.gelaendeKarte(m.gelaende) : '');   // Außendeko: + Gelände-Punkte
     karte.classList.toggle('zu-teuer', !m.leistbar);
     karte.classList.toggle('gesperrt', !!m.gesperrt);
   }

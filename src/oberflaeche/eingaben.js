@@ -15,8 +15,8 @@ const HINWEISE = {
 };
 const hinweisFuer = id => HINWEISE[id || 'keinWerkzeug'];   // ohne gewähltes Werkzeug: eigener Hinweis
 const leinwand = $('karte');
-const istMoebelWerkzeug = () => ui.werkzeug !== 'strasse' && ui.spiel.moebelArten().some(m => m.id === ui.werkzeug);
-const ZIEH_WERKZEUGE = ['wand', 'abriss', 'strasse'];   // Rechteck ziehen
+const ZIEH_WERKZEUGE = ['wand', 'abriss', 'strasse', 'weg'];   // Rechteck ziehen
+const istMoebelWerkzeug = () => !ZIEH_WERKZEUGE.includes(ui.werkzeug) && ui.spiel.moebelArten().some(m => m.id === ui.werkzeug);
 
 // ---- Pixel → Kästchen, und was liegt dort? ----
 function punktAus(e) { const r = leinwand.getBoundingClientRect(); return { px: e.clientX - r.left, py: e.clientY - r.top }; }
@@ -38,6 +38,7 @@ const figurBei = e => naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id
 const besucherBei = e => naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
 const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
 const stuhlBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'stuhl' ? m : null; };
+const schaukastenBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'schaukasten' ? m : null; };
 
 // Nach jedem Befehl: speichern, Anzeigen auffrischen, neu zeichnen
 function fertig() { ui.speichern(); ui.anzeigeErzwingen(); ui.malen(); }
@@ -60,7 +61,7 @@ function rechtsklick() {
 function mauszeiger(e) {
   let c = 'default';
   if (ui.tragen) c = 'grabbing';
-  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
+  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || schaukastenBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
       || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) ? 'pointer' : 'default'; }
   else if (!ui.werkzeug) c = 'default';                       // nichts zum Bauen gewählt
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
@@ -117,6 +118,8 @@ function loslassen(e) {
     if (m) return fensterOeffnen({ art: 'maschine', x: m.x, y: m.y });
     const st = stuhlBei(f);                                          // Stuhl → Verbessern-Menü (statt Raum-Fenster)
     if (st) return fensterOeffnen({ art: 'stuhl', x: st.x, y: st.y });
+    const sk = schaukastenBei(f);                                    // Schaukasten → Aushang wählen
+    if (sk) return fensterOeffnen({ art: 'schaukasten', x: sk.x, y: sk.y });
     const nr = spiel.veranstaltungsraumBei(f.x, f.y);
     if (nr !== null) return fensterOeffnen({ art: 'raum', nr });
     const kk = spiel.kirchkaffeeBei(f.x, f.y);
@@ -134,6 +137,11 @@ function loslassen(e) {
       if (r.ergebnis === 'geld') kurzerHinweis(r.gebaut ? TEXTE.aussenMeldung.strasseGeld : TEXTE.nichtGenugGeld('Straße', euro(spiel.moebelArten().find(m => m.id === 'strasse').kosten)));
       else if (r.ergebnis === 'platz' && spiel.raumNrBei(v.x0, v.y0) >= 0) kurzerHinweis(TEXTE.aussenMeldung.innen);
     }
+    else if (v.art === 'weg') {
+      const r = spiel.wegBauen(v.x0, v.y0, v.x1, v.y1), typ = spiel.moebelArten().find(m => m.id === 'weg');
+      if (r.ergebnis === 'geld') kurzerHinweis(r.gebaut ? TEXTE.aussenMeldung.wegGeld : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten)));
+      else if (r.ergebnis === 'platz' && spiel.raumNrBei(v.x0, v.y0) >= 0) kurzerHinweis(TEXTE.aussenMeldung.innenDeko);
+    }
     else spiel.abreissen(v.x0, v.y0, v.x1, v.y1);
     return fertig();
   }
@@ -146,8 +154,9 @@ function loslassen(e) {
     if (ergebnis === 'geld') {
       kurzerHinweis(typ.id === 'stuhl' ? `Nicht genug Geld für einen Stuhl (${euro(typ.kosten)}).` : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten)));
     } else if (ergebnis === 'grenze') kurzerHinweis(TEXTE.grenze[ui.werkzeug]);
-    else if (ergebnis === 'innen') kurzerHinweis(TEXTE.aussenMeldung.innen);
-    else if (ergebnis === 'bekanntheit') kurzerHinweis(TEXTE.aussenMeldung.bekanntheit(typ.abBekanntheit));
+    else if (ergebnis === 'innen') kurzerHinweis(typ.gelaende ? TEXTE.aussenMeldung.innenDeko : TEXTE.aussenMeldung.innen);
+    else if (ergebnis === 'bekanntheit') kurzerHinweis(typ.id === 'parkplatz' ? TEXTE.aussenMeldung.bekanntheit(typ.abBekanntheit) : TEXTE.aussenMeldung.bekanntheitTeil(typ.name, typ.abBekanntheit));
+    else if (ergebnis === 'tor') kurzerHinweis(TEXTE.aussenMeldung.tor);
     return fertig();
   }
   if (ui.werkzeug === 'tuer') { spiel.tuerUmschalten(f.x, f.y); return fertig(); }
@@ -158,7 +167,7 @@ function loslassen(e) {
 }
 
 // Parkplatz drehen (quer ↔ längs)
-const drehbar = () => { const m = ui.spiel.moebelArten().find(x => x.id === ui.werkzeug); return !!(m && m.groesse); };
+const drehbar = () => { const m = ui.spiel.moebelArten().find(x => x.id === ui.werkzeug); return !!(m && m.drehbar); };   // Baum 2×2: nicht drehbar
 function drehen() { if (drehbar()) { ui.dreh = !ui.dreh; ui.malen(); } }
 
 function editorUmschalten(offen) {

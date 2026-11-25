@@ -29,7 +29,20 @@ export const MOEBEL = [
   // Außen (Spielprinzip Einzugsgebiet, 25.11.): nur draußen auf dem Grundstück, nicht in Räumen. Man kann darüber laufen.
   // groesse: [Breite, Länge] in Kästchen (lässt sich drehen). Preise sind PLATZHALTER von Claude.
   { id: 'strasse', kategorie: 'aussen', name: 'Straße', kosten: 2, aussen: true },
-  { id: 'parkplatz', kategorie: 'aussen', name: 'Parkplatz', kosten: 15, aussen: true, groesse: [2, 1] }
+  { id: 'parkplatz', kategorie: 'aussen', name: 'Parkplatz', kosten: 15, aussen: true, groesse: [2, 1] },
+
+  // Außendeko (Spielprinzip „Wege und Außendeko“, von Lukas freigegeben 25.11.): nur draußen auf dem Grundstück.
+  // gelaende: so viele Punkte bringt ein Stück für den Wert „Gelände“ (siehe inhalte/gelaende.js).
+  // abBekanntheit: erst ab dieser Bekanntheit kaufbar. hindernis: Figuren laufen darum herum (über den Weg kann man laufen).
+  // Namen sind Platzhalter (ENTWURF), Punkte, Preise und Freischaltung von Lukas freigegeben.
+  { id: 'weg', kategorie: 'aussen', name: 'Weg', kosten: 1, aussen: true, gelaende: 0.5 },
+  { id: 'busch', kategorie: 'aussen', name: 'Busch', kosten: 5, aussen: true, hindernis: true, gelaende: 2 },
+  { id: 'hecke', kategorie: 'aussen', name: 'Hecke', kosten: 3, aussen: true, hindernis: true, gelaende: 1 },
+  { id: 'blumenbeet', kategorie: 'aussen', name: 'Blumenbeet', kosten: 8, aussen: true, hindernis: true, gelaende: 3 },
+  { id: 'bank', kategorie: 'aussen', name: 'Bank', kosten: 15, aussen: true, hindernis: true, gelaende: 2 },
+  { id: 'laterne', kategorie: 'aussen', name: 'Laterne', kosten: 12, aussen: true, hindernis: true, gelaende: 2, abBekanntheit: 10 },
+  { id: 'baum', kategorie: 'aussen', name: 'Baum', kosten: 20, aussen: true, hindernis: true, gelaende: 4, abBekanntheit: 10, groesse: [2, 2] },
+  { id: 'schaukasten', kategorie: 'aussen', name: 'Schaukasten', kosten: 40, aussen: true, hindernis: true, gelaende: 5, abBekanntheit: 15 }
 ];
 
 // Stühle verbessern: Stufe 1 ist der gekaufte Stuhl. upgrade = Preis für den Schritt auf diese Stufe.

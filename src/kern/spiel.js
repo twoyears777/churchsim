@@ -11,7 +11,7 @@ import { neuerZustand, LEER, WAND, TUER, idx, erkenneRaeume, pruefeRaum, raumTyp
 import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
-  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand, instrumenteImRaum } from './moebel.js';
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand, instrumenteImRaum, istHindernis } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht } from './finanzen.js';
@@ -33,7 +33,9 @@ import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
-import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance } from './ort.js';
+import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance, neugierTeile } from './ort.js';
+import { gelaende, aushaenge, aushangGilt, aushangSetzen } from './gelaende.js';
+import { GELAENDE, SCHAUKASTEN } from '../inhalte/gelaende.js';
 import { seelsorgeAnlegen, anfrageOffen, anfrageInfo, ablehnen as seelsorgeAblehnen, raten as seelsorgeRaten,
   schliessen as seelsorgeZu, stufeInfo, seelsorgePositionen, seelsorgeUnterwegs } from './seelsorge.js';
 import { STAMMGAST_AB_BESUCHEN, PLAKAT, NEUGIER } from '../inhalte/ort.js';
@@ -154,6 +156,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
   const kopie = x => JSON.parse(JSON.stringify(x));
   const raumNr = (x, y) => (x >= 0 && y >= 0 && x < z.w && y < z.h ? raeume.gruppe[idx(z, x, y)] : -1);
   const personAuf = (x, y) => z.personen.some(p => p.x === x && p.y === y);
+  // Ab welcher Bekanntheit ein Möbel kaufbar ist (Parkplatz aus einzugsgebiet.js, Außendeko aus moebel.js), sonst null
+  const abBekanntheit = typ => typ.id === 'parkplatz' ? PARKPLATZ.abBekanntheit : typ.abBekanntheit || null;
+  // Vor dem Tor (unterste Reihe des Grundstücks im Tor) darf nichts stehen, um das man herumlaufen müsste – sonst kommt niemand herein
+  const vorDemTor = (x, y) => y === GRUNDSTUECK.y + GRUNDSTUECK.h - 1 && x >= GRUNDSTUECK.tor.x && x < GRUNDSTUECK.tor.x + GRUNDSTUECK.tor.breite;
 
   // Bauen mit Rückgängig. Gemerkt wird nur das Gebaute (Wände, Räume, Möbel, wo Mitarbeiter stehen) und das Geld dafür –
   // die Zeit, die Besucher und das Kaffeegeld laufen beim Rückgängigmachen nicht zurück.
@@ -166,6 +172,21 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     if (verlauf.length > 60) verlauf.shift();
     raeume = raeumeAuswerten(z);
     return ergebnis;
+  }
+
+  function flaecheBauen(art, x0, y0, x1, y1) {
+    const typ = MOEBEL.find(m => m.id === art);
+    const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
+    let gebaut = 0, geld = false;
+    aendern(() => {
+      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
+        if (moebelAuf(z, x, y) || raumNr(x, y) >= 0) continue;
+        if (!kannBezahlen(z, typ.kosten)) { geld = true; continue; }
+        if (kaufen(z, art, x, y) === 'ok') gebaut++;
+      }
+    });
+    if (!gebaut) verlauf.pop();                              // nichts gebaut: kein leerer Rückgängig-Schritt
+    return { gebaut, ergebnis: geld ? 'geld' : gebaut ? 'ok' : 'platz' };
   }
 
   const spiel = {
@@ -193,7 +214,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     abreissen(x0, y0, x1, y1) { aendern(() => { abriss(z, x0, y0, x1, y1); moebelAbreissen(z, x0, y0, x1, y1); }); },
     tuerUmschalten(x, y) { return z.zellen[idx(z, x, y)] ? aendern(() => tuerSchalten(z, x, y)) : false; },
     // → 'ok' | 'geld' | 'platz' | 'belegt' | 'grenze' (z. B. schon eine Kanzel im Raum)
-    //   | 'innen' (Straße/Parkplatz nur draußen) | 'bekanntheit' (Parkplatz erst ab Bekanntheit …)
+    //   | 'innen' (Straße/Parkplatz/Außendeko nur draußen) | 'bekanntheit' (Parkplatz, Laterne … erst ab Bekanntheit …)
+    //   | 'tor' (Außendeko, um die man herumlaufen muss, nicht direkt im Tor)
     // dreh: Parkplatz längs statt quer
     moebelKaufen(art, x, y, dreh = false) {
       const typ = MOEBEL.find(m => m.id === art);
@@ -201,27 +223,16 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const f = felderVon(art, x, y, dreh);
       if (f.some(c => moebelAuf(z, c.x, c.y))) return 'belegt';
       if (typ.aussen && f.some(c => raumNr(c.x, c.y) >= 0)) return 'innen';
-      if (art === 'parkplatz' && z.bekanntheit < PARKPLATZ.abBekanntheit) return 'bekanntheit';
+      if (abBekanntheit(typ) && z.bekanntheit < abBekanntheit(typ)) return 'bekanntheit';
+      if (istHindernis(art) && typ.aussen && f.some(c => vorDemTor(c.x, c.y))) return 'tor';
       if (grenzeErreicht(z, raeume.liste[raumNr(x, y)], art)) return 'grenze';
       if (!kannBezahlen(z, typ.kosten)) return 'geld';
-      return aendern(() => kaufen(z, art, x, y, typ.aussen ? () => false : personAuf, dreh));   // auf Straße/Parkplatz darf jemand stehen
+      return aendern(() => kaufen(z, art, x, y, istHindernis(art) ? personAuf : () => false, dreh));   // auf Straße/Parkplatz/Weg darf jemand stehen
     },
-    // Straße als Rechteck ziehen: jedes freie Kästchen draußen bekommt ein Straßenstück, solange das Geld reicht.
+    // Straße oder Weg als Rechteck ziehen: jedes freie Kästchen draußen bekommt ein Stück, solange das Geld reicht.
     // → { gebaut, ergebnis: 'ok' | 'geld' (nicht alles bezahlbar) | 'platz' (nichts frei) }
-    strasseBauen(x0, y0, x1, y1) {
-      const typ = MOEBEL.find(m => m.id === 'strasse');
-      const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
-      let gebaut = 0, geld = false;
-      aendern(() => {
-        for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
-          if (moebelAuf(z, x, y) || raumNr(x, y) >= 0) continue;
-          if (!kannBezahlen(z, typ.kosten)) { geld = true; continue; }
-          if (kaufen(z, 'strasse', x, y) === 'ok') gebaut++;
-        }
-      });
-      if (!gebaut) verlauf.pop();                              // nichts gebaut: kein leerer Rückgängig-Schritt
-      return { gebaut, ergebnis: geld ? 'geld' : gebaut ? 'ok' : 'platz' };
-    },
+    strasseBauen(x0, y0, x1, y1) { return flaecheBauen('strasse', x0, y0, x1, y1); },
+    wegBauen(x0, y0, x1, y1) { return flaecheBauen('weg', x0, y0, x1, y1); },
     // Bushaltestelle kaufen bzw. ausbauen → 'ok' | 'max' | 'bekanntheit' | 'geld'
     busAusbauen() { return busAusbauen(z); },
     // Überregionale Werbekampagne → 'ok' | 'gekauft' | 'bekanntheit' | 'geld'
@@ -275,6 +286,15 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       z.plakat = { gekauft: z.minuten };
       buchen(z, 'ausgaben', 'plakat', PLAKAT.preis);
       return 'ok';
+    },
+    // Schaukasten: für eine regelmäßige Veranstaltung werben (raumNummer + platz) oder Aushang abnehmen (raumNummer = null).
+    // Kostenlos. → 'ok' | 'keine' (kein Schaukasten oder dort keine Veranstaltung eingestellt)
+    aushangSetzen(x, y, nr, platz = 0) {
+      const m = moebelAuf(z, x, y);
+      if (nr === null) return aushangSetzen(z, m, null);
+      const r = raeume.liste[nr];
+      if (!r) return 'keine';
+      return aushangSetzen(z, m, Math.min(...r.zellen), platz);
     },
     // Öffnungszeiten des Kirchkaffees: hinzufügen → 'ok' | 'voll' | 'belegt' | 'zeit' | 'keine'; entfernen → 'ok' | 'keine'
     schichtHinzufuegen(nr, tag, slot) {
@@ -352,7 +372,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung, anteil: m.art === 'kaffeemaschine' ? (m.fuellung || 0) / fassung(m.art) : null,
           stufe: m.art === 'stuhl' ? stuhlStufe(m).stufe : null, dreh: !!m.dreh, felder: felder(m),
           // Straße/Parkplatz: führt es bis zum Tor? (sonst zählt der Parkplatz nicht)
-          angeschlossen: m.art === 'strasse' || m.art === 'parkplatz' ? park.angeschlossen.has(`${m.x},${m.y}`) : null })),
+          angeschlossen: m.art === 'strasse' || m.art === 'parkplatz' ? park.angeschlossen.has(`${m.x},${m.y}`) : null,
+          aushang: m.art === 'schaukasten' ? aushangGilt(z, m.aushang) : null })),   // Schaukasten: hängt ein Aushang?
         plakat: !!z.plakat,
         bus: { stufe: z.bus || 0, ...BUSHALTESTELLE_ORT },
         personen: z.personen.map(p => {
@@ -416,8 +437,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         verlauf: [...(z.bekanntheitVerlauf || []).map(p => ({ woche: p.woche + 1, wert: p.wert })), { woche: zp.woche + 1, wert: z.bekanntheit, jetzt: true }],
         protokoll: (z.bekanntheitLog || []).map(e => { const t = zeitpunkt(e.minuten); return { woche: t.woche + 1, tag: t.tag, quelle: e.quelle, wert: e.wert, anzahl: e.anzahl }; }),
         wirkung: { neueProWoche: z.bekanntheit / BEKANNTHEIT.teiler, teiler: BEKANNTHEIT.teiler,
-          neugier: neugierChance(z, false), neugierPlakat: neugierChance(z, true), neugierGrund: NEUGIER.grund, proBekanntheit: NEUGIER.proBekanntheit,
-          plakatFaktor: PLAKAT.faktor, plakat: !!z.plakat }
+          neugier: neugierChance(z, false, raeume.gruppe), neugierPlakat: neugierChance(z, true, raeume.gruppe), neugierGrund: NEUGIER.grund, proBekanntheit: NEUGIER.proBekanntheit,
+          plakatFaktor: PLAKAT.faktor, plakat: !!z.plakat, teile: neugierTeile(z, raeume.gruppe) }
       };
     },
     // Fenster „Kirchenjahr“: aktuelle Zeit, heute (Fest/Feiertag), kommende Feste mit Faktoren und Plänen, alle Zeiten
@@ -470,16 +491,17 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     moebelArten() {
       return MOEBEL.map(m => ({ id: m.id, name: m.name, kosten: m.kosten, max: m.max || null, leistbar: kannBezahlen(z, m.kosten),
         kategorie: m.kategorie || null, auchIn: m.auchIn ? [...m.auchIn] : [], groesse: m.groesse ? [...m.groesse] : null, aussen: !!m.aussen,
-        abBekanntheit: m.id === 'parkplatz' ? PARKPLATZ.abBekanntheit : null,
-        gesperrt: m.id === 'parkplatz' && z.bekanntheit < PARKPLATZ.abBekanntheit }));
+        drehbar: !!(m.groesse && m.groesse[0] !== m.groesse[1]), gelaende: m.gelaende || null,
+        abBekanntheit: abBekanntheit(m), gesperrt: !!abBekanntheit(m) && z.bekanntheit < abBekanntheit(m) }));
     },
     // Welche Kästchen würde dieses Möbel hier belegen, und ginge das? (Vorschau beim Bauen)
     moebelVorschau(art, x, y, dreh = false) {
       const typ = MOEBEL.find(m => m.id === art);
       if (!typ) return null;
       const f = felderVon(art, x, y, dreh);
-      const geht = f.every(c => c.x >= 0 && c.y >= 0 && c.x < z.w && c.y < z.h && z.zellen[idx(z, c.x, c.y)] === LEER && !moebelAuf(z, c.x, c.y) && (typ.aussen || !personAuf(c.x, c.y))
-        && (!typ.aussen || raumNr(c.x, c.y) < 0)) && f.every(c => c.x >= GRUNDSTUECK.x && c.y >= GRUNDSTUECK.y && c.x < GRUNDSTUECK.x + GRUNDSTUECK.w && c.y < GRUNDSTUECK.y + GRUNDSTUECK.h);
+      const hin = istHindernis(art);
+      const geht = f.every(c => c.x >= 0 && c.y >= 0 && c.x < z.w && c.y < z.h && z.zellen[idx(z, c.x, c.y)] === LEER && !moebelAuf(z, c.x, c.y) && (!hin || !personAuf(c.x, c.y))
+        && (!typ.aussen || raumNr(c.x, c.y) < 0) && !(hin && typ.aussen && vorDemTor(c.x, c.y))) && f.every(c => c.x >= GRUNDSTUECK.x && c.y >= GRUNDSTUECK.y && c.x < GRUNDSTUECK.x + GRUNDSTUECK.w && c.y < GRUNDSTUECK.y + GRUNDSTUECK.h);
       return { felder: f, geht };
     },
     // Einzugsgebiet (Bekanntheit-Fenster, Bushaltestelle): Stand, woraus die Grenze besteht, Maßnahmen
@@ -505,6 +527,28 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     torInfo() {
       return { plakat: !!z.plakat, preis: PLAKAT.preis, faktor: PLAKAT.faktor, leistbar: kannBezahlen(z, PLAKAT.preis),
         chance: Math.round(neugierChance(z) * 100), chanceOhne: Math.round(neugierChance(z, false) * 100), chanceMit: Math.round(neugierChance(z, true) * 100) };
+    },
+    // Bekanntheit-Fenster, Abschnitt „Gelände“: Wert, Teile, Wirkung auf die Neugier, was in den Schaukästen hängt
+    gelaendeInfo() {
+      const g = gelaende(z, raeume.gruppe);
+      const name = (nr, platz) => { const r = raeume.liste[nr], e = r ? programmVon(z, r)[platz] : null;
+        return { raumName: r && r.typ ? r.typ.name : null, art: e ? e.art : null, artName: e ? (VERANSTALTUNGEN.find(v => v.id === e.art) || {}).name || null : null, tag: e ? e.tag : null, slot: e ? e.slot : null }; };
+      return { ...g, teile: g.teile.map(t => ({ ...t })), proPunkt: GELAENDE.neugierProPunkt, schaukastenNeugier: SCHAUKASTEN.neugier,
+        schaukaesten: z.moebel.filter(m => m.art === 'schaukasten').length,
+        aushaenge: aushaenge(z, raeume.gruppe).map(a => ({ platz: a.platz, ...name(a.raumNr, a.platz) })), slots: SLOTS.map(s => ({ ...s })) };
+    },
+    // Menü eines Schaukastens: aktueller Aushang und welche regelmäßigen Veranstaltungen man wählen kann
+    schaukastenInfo(x, y) {
+      const m = moebelAuf(z, x, y);
+      if (!m || m.art !== 'schaukasten') return null;
+      const gilt = aushangGilt(z, m.aushang), nrJetzt = gilt ? raeume.gruppe[m.aushang.zelle] : null;
+      const auswahl = [];
+      for (const r of raeume.liste.filter(r => r.typ && moeglicheVeranstaltungen(r.typ).length)) programmVon(z, r).forEach((e, platz) => {
+        if (!e.art) return;
+        auswahl.push({ raumNr: r.nr, raumName: r.typ.name, platz, art: e.art, artName: (VERANSTALTUNGEN.find(v => v.id === e.art) || {}).name, tag: e.tag, slot: e.slot,
+          aktiv: gilt && nrJetzt === r.nr && m.aushang.platz === platz });
+      });
+      return { x: m.x, y: m.y, aushang: gilt, neugier: SCHAUKASTEN.neugier, auswahl, slots: SLOTS.map(s => ({ ...s })) };
     },
     // Menü eines Stuhls im Editor: Stufe, Wirkung, nächste Stufe, alle im Raum verbessern
     stuhlInfo(x, y) {

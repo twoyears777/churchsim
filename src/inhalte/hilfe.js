@@ -6,6 +6,7 @@
 //   - { punkte: [ … ] } (wird eine Aufzählung).
 // **so** wird fett gedruckt.
 // Ein paar Zahlen (Raumgrößen, Besuche bis zum Ehrenamt) kommen direkt aus den Spielwerten, damit die Hilfe nicht veraltet.
+import { GELAENDE, SCHAUKASTEN } from './gelaende.js';
 import { RAUMTYPEN } from './raumtypen.js';
 import { EHRENAMT_AB_BESUCHEN } from './besucher.js';
 import { EINZUGSGEBIET, PARKPLATZ } from './einzugsgebiet.js';
@@ -35,7 +36,7 @@ export const HILFE = {
           '**Wand:** Zieh ein Rechteck – daraus werden die Wände eines Raums.',
           '**Tür:** Klicke auf eine Wand, um eine Tür zu setzen oder wieder zu entfernen. Jeder Raum braucht eine Tür.',
           '**Abriss:** Zieh über einen Bereich, um Wände und Möbel abzureißen. Möbel bekommst du voll erstattet.',
-          '**Außen:** Straße, Parkplätze und Bushaltestelle (siehe „Einzugsgebiet“). Parkplätze dreht man mit R.',
+          '**Außen:** Straße, Parkplätze und Bushaltestelle (siehe „Einzugsgebiet“). Parkplätze dreht man mit R. Dazu Wege und Außendeko (siehe „Bekanntheit, Passanten und Pforte“).',   // Zusatz ENTWURF 25.11.
           'Unter der Maus zeigt ein grüner oder roter Umriss, ob ein Möbel dort passt.',
           '**Rückgängig** nimmt den letzten Schritt zurück, **Neu** fängt das Grundstück neu an.',
           'Gebaut werden kann nur auf dem eigenen Grundstück.'
@@ -118,7 +119,10 @@ export const HILFE = {
       titel: 'Bekanntheit, Passanten und Pforte',
       inhalt: [
         'Die **Bekanntheit** (oben) wächst durch Gottesdienste, sehr zufriedene Besucher und gute Seelsorge. Sie bestimmt, wie viele neue Besucher pro Woche kommen. Klick auf die Bekanntheit zeigt, woher sie kommt und wie sie sich entwickelt.',
-        'Vor dem Grundstück laufen **Passanten** vorbei. Manche bleiben am Tor stehen und werden neugierig – dann kommen sie vielleicht zur nächsten Veranstaltung. Klick auf die **Pforte**, um ein Plakat aufzuhängen: Dann bleiben Passanten öfter stehen.'
+        'Vor dem Grundstück laufen **Passanten** vorbei. Manche bleiben am Tor stehen und werden neugierig – dann kommen sie vielleicht zur nächsten Veranstaltung. Klick auf die **Pforte**, um ein Plakat aufzuhängen: Dann bleiben Passanten öfter stehen.',
+        // ENTWURF von Claude (Wege und Außendeko, 25.11.) – Lukas formuliert selbst
+        `**Gelände:** Wege und Außendeko (Busch, Hecke, Baum, Blumenbeet, Bank, Laterne, Schaukasten) unter Bauen → Außen machen das Gelände schöner. Jedes Stück bringt Punkte, höchstens ${GELAENDE.max}. Passanten werden um Gelände ÷ 10 Prozentpunkte öfter neugierig.`,
+        `**Schaukasten:** Klick in der Spielansicht auf einen Schaukasten und wähle eine regelmäßige Veranstaltung. Solange sie eingestellt ist, werden Passanten um ${Math.round(SCHAUKASTEN.neugier * 100)} Prozentpunkte öfter neugierig.`
       ]
     },
     {

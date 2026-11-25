@@ -37,7 +37,7 @@ function malen() {
   const moebelTyp = spiel.moebelArten().find(m => m.id === ui.werkzeug);
   const preisSchild = ui.editorOffen && moebelTyp && ui.maus ? { ...ui.maus, text: euro(moebelTyp.kosten), zuTeuer: !moebelTyp.leistbar } : null;
   // Umriss unter der Maus beim Aufstellen (grün/rot), z. B. der 2 Kästchen lange Parkplatz
-  const geist = ui.editorOffen && moebelTyp && ui.werkzeug !== 'strasse' && ui.schwebe && !z ? spiel.moebelVorschau(ui.werkzeug, ui.schwebe.x, ui.schwebe.y, ui.dreh) : null;
+  const geist = ui.editorOffen && moebelTyp && ui.werkzeug !== 'strasse' && ui.werkzeug !== 'weg' && ui.schwebe && !z ? spiel.moebelVorschau(ui.werkzeug, ui.schwebe.x, ui.schwebe.y, ui.dreh) : null;
   const f = ui.fenster, auswahl = f && (f.art === 'raum' || f.art === 'raumtyp' || f.art === 'kaffee') ? f.nr : null;
   zeichne(ctx, karte, ui.ansicht, {
     vorschau, konflikte: vorschau && vorschau.konflikte || [], auswahl, preisSchild, geist, raster: ui.editorOffen,

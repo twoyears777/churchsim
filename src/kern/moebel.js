@@ -16,7 +16,9 @@ export function moebelBei(z, x, y) {
   return z.moebel.find(m => m.x === x && m.y === y) || z.moebel.find(m => typVon(m.art).groesse && felder(m).some(f => f.x === x && f.y === y)) || null;
 }
 // Steht hier etwas, um das Figuren herumlaufen müssen? (Über Straße und Parkplatz kann man laufen.)
-export function hindernisBei(z, x, y) { const m = moebelBei(z, x, y); return !!m && !typVon(m.art).aussen; }
+// Außendeko wie Busch, Baum oder Bank ist ein Hindernis (hindernis: true); über Straße, Parkplatz und Weg läuft man.
+export const istHindernis = art => { const t = typVon(art); return !t.aussen || !!t.hindernis; };
+export function hindernisBei(z, x, y) { const m = moebelBei(z, x, y); return !!m && istHindernis(m.art); }
 
 export function moebelSetzen(z, art, x0, y0, x1, y1, istBesetzt = () => false) {
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];

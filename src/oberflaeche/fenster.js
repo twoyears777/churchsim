@@ -26,7 +26,7 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
     kirchenjahr: kirchenjahrFenster, fest: festFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('sehr-breit', f.art === 'finanzen');
@@ -367,9 +367,43 @@ function bekanntheitFenster() {
     <h3>${T.verlauf}</h3><p class="unter">${T.verlaufInfo}</p>${kurve}
     <h3>${T.letzte}</h3>${protokoll}
     <h3>${T.wirkung}</h3><ul class="quellen"><li>${T.neue(w.teiler, dez(w.neueProWoche))}</li>
-      <li>${T.neugier(prozent(w.neugierGrund), prozent(w.neugier), w.plakatFaktor)}</li></ul>
+      <li>${T.neugier(prozent(w.neugierGrund), prozent(w.neugier), w.plakatFaktor)}</li>
+      ${w.teile.gelaende || w.teile.schaukasten ? `<li>${T.neugierDazu(prozent(w.teile.gelaende), prozent(w.teile.schaukasten))}</li>` : ''}</ul>
+    ${gelaendeAbschnitt()}
     ${einzugsgebietAbschnitt()}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Gelände: Wert, woraus er besteht, Wirkung auf die Neugier, Aushänge der Schaukästen (ENTWURF 25.11.)
+const terminKurz = (tag, slot, slots) => TEXTE.raum.termin(TEXTE.tage[tag], TEXTE.raum.slots[slot], `${String(slots.find(x => x.id === slot).stunde).padStart(2, '0')}:00`);
+function gelaendeAbschnitt() {
+  const G = TEXTE.gelaende, g = ui.spiel.gelaendeInfo();
+  const teile = g.teile.length ? `<ul class="quellen">${g.teile.map(t => `<li>${G.teil(t.anzahl, esc(t.name), dez(t.punkte))}</li>`).join('')}</ul>
+      ${g.summe > g.max ? `<p class="unter">${G.gekappt(dez(g.summe), g.max)}</p>` : ''}` : `<p class="leer">${G.keine}</p>`;
+  const aushaenge = g.aushaenge.length
+    ? `<ul class="quellen">${g.aushaenge.map(a => `<li>${G.aushang(esc(a.artName || ''), esc(a.raumName || ''), terminKurz(a.tag, a.slot, g.slots), prozent(g.schaukastenNeugier))}</li>`).join('')}</ul>`
+    : `<p class="leer">${G.keinAushang}</p>`;
+  return `<h3>${G.titel}</h3>
+    <p class="unter staerker">${G.stand(dez(g.wert), g.max)}</p>
+    <div class="balken"><span style="width:${Math.min(100, Math.round(g.wert / g.max * 100))}%"></span></div>
+    <p class="unter">${G.info}</p>${teile}
+    <p class="unter">${G.wirkung(prozent(g.neugier))}</p>
+    ${g.schaukaesten ? `<h3>${G.schaukasten}</h3>${aushaenge}` : ''}`;
+}
+
+// Schaukasten: regelmäßige Veranstaltung wählen, für die er wirbt (ENTWURF 25.11.)
+function schaukastenFenster(f) {
+  const S = TEXTE.schaukasten, s = ui.spiel.schaukastenInfo(f.x, f.y);
+  if (!s) return null;
+  const liste = s.auswahl.length
+    ? `<div class="typen">${s.auswahl.map(a => `<button class="typ${a.aktiv ? ' aktiv' : ''}" data-aushang="${a.raumNr}:${a.platz}">
+        <span><b>${esc(a.artName || '')}</b><small>${esc(a.raumName)} · ${terminKurz(a.tag, a.slot, s.slots)}${a.aktiv ? ` · ${S.jetzt}` : ''}</small></span></button>`).join('')}</div>`
+    : `<p class="leer">${S.keine}</p>`;
+  return `<h2>${S.titel}</h2><p>${S.info(prozent(s.neugier))}</p>
+    ${s.aushang ? '' : `<p class="unter">${S.leer}</p>`}
+    ${liste}
+    <p class="unter">${S.doppelt}</p>
+    <div class="zeile">${s.aushang ? `<button data-aushang-weg>${S.abnehmen}</button>` : ''}<button data-zu>Schließen</button></div>`;
 }
 
 // Einzugsgebiet: Stand, woraus die Grenze besteht, Maßnahmen (Parkplatz, Bushaltestelle, Werbekampagne)
@@ -569,6 +603,8 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-verbessern')) spiel.stuhlVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-alle-verbessern')) spiel.alleStuehleVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();
+    else if (b.dataset.aushang) { const [nr, platz] = b.dataset.aushang.split(':').map(Number); spiel.aushangSetzen(f.x, f.y, nr, platz); }
+    else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);
     else if (b.hasAttribute('data-bus-ausbauen')) spiel.busAusbauen();
     else if (b.hasAttribute('data-werbekampagne')) spiel.werbekampagneKaufen();
     else if (b.dataset.typ !== undefined) { spiel.raumTypSetzen(f.nr, b.dataset.typ); fensterSchliessen(); }

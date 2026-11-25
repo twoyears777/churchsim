@@ -23,6 +23,10 @@ export const FARBEN = {
   // Außen (Einzugsgebiet) – Platzhalter
   strasse: '#6a6d72', strasseRand: '#55585c', parkLinie: '#f2efe6', nichtAngeschlossen: 'rgba(200,55,45,0.45)',
   busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
+  // Wege und Außendeko (25.11.) – Platzhalter
+  weg: '#d8c8a4', wegFuge: 'rgba(120,95,55,0.25)', busch: '#4e8a3c', buschHell: '#6aa850', heckeDunkel: '#3f7433',
+  beet: '#7a5634', bank: '#9a6b3f', bankFuss: '#4a4b50', laterne: '#3d3f45', laterneLicht: '#ffe9a0',
+  schaukasten: '#5a5f68', schaukastenGlas: '#e9eef2', aushang: '#fff6d6',
   geisterOk: 'rgba(60,160,80,0.9)', geisterNein: 'rgba(200,55,45,0.9)',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e',
@@ -60,8 +64,9 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   }
   // Straße und Parkplätze liegen auf dem Boden – vor dem Zaun und den Möbeln zeichnen
   for (const m of z.moebel) {
-    if (m.art !== 'strasse' && m.art !== 'parkplatz') continue;
+    if (m.art !== 'strasse' && m.art !== 'parkplatz' && m.art !== 'weg') continue;
     const px = ox + m.x * k, py = oy + m.y * k;
+    if (m.art === 'weg') { weg(ctx, px, py, k); continue; }
     if (m.art === 'strasse') strasse(ctx, px, py, k); else parkplatz(ctx, px, py, k, m.dreh);
     if (extra.raster && m.angeschlossen === false) {             // im Editor: zählt (noch) nicht – keine Straße bis zum Tor
       ctx.fillStyle = FARBEN.nichtAngeschlossen;
@@ -102,8 +107,9 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   // Möbel
   for (const m of z.moebel) {
     const px = ox + m.x * k, py = oy + m.y * k;
-    if (m.art === 'strasse' || m.art === 'parkplatz') continue;
-    if (m.art === 'stuhl') stuhl(ctx, px, py, k, m.stufe || 1);
+    if (m.art === 'strasse' || m.art === 'parkplatz' || m.art === 'weg') continue;
+    if (AUSSENDEKO[m.art]) AUSSENDEKO[m.art](ctx, px, py, k, m);
+    else if (m.art === 'stuhl') stuhl(ctx, px, py, k, m.stufe || 1);
     else if (m.art === 'theke') theke(ctx, px, py, k);
     else if (m.art === 'tisch') tisch(ctx, px, py, k);
     else if (m.art === 'kanzel') kanzel(ctx, px, py, k);
@@ -219,8 +225,8 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
         ctx.font = `500 ${schrift}px system-ui, sans-serif`; ctx.fillStyle = FARBEN.auswahl;
         ctx.fillText(`${bx - ax - 1} × ${by - ay - 1}`, ox + (ax + bx + 1) / 2 * k, oy + (ay + by + 1) / 2 * k);
       }
-    } else if (v.art === 'strasse') {
-      ctx.fillStyle = 'rgba(90,93,98,0.55)';
+    } else if (v.art === 'strasse' || v.art === 'weg') {
+      ctx.fillStyle = v.art === 'weg' ? 'rgba(216,200,164,0.7)' : 'rgba(90,93,98,0.55)';
       ctx.fillRect(ox + ax * k, oy + ay * k, (bx - ax + 1) * k, (by - ay + 1) * k);
     } else {
       ctx.fillStyle = FARBEN.vorschauAbriss;
@@ -476,6 +482,59 @@ function bushaltestelle(ctx, { k, ox, oy }, b) {
   ctx.fillText('H', sx, sy - k * 0.28);
 }
 
+// ---- Wege und Außendeko (Platzhalter-Grafik, 25.11.) ----
+function weg(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.weg; ctx.fillRect(px, py, k, k);
+  ctx.strokeStyle = FARBEN.wegFuge; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px, py + k / 2); ctx.lineTo(px + k, py + k / 2); ctx.moveTo(px + k / 2, py); ctx.lineTo(px + k / 2, py + k / 2);
+  ctx.moveTo(px + k * 0.25, py + k / 2); ctx.lineTo(px + k * 0.25, py + k); ctx.moveTo(px + k * 0.75, py + k / 2); ctx.lineTo(px + k * 0.75, py + k); ctx.stroke();
+}
+function rund(ctx, cx, cy, r, farbe) { ctx.fillStyle = farbe; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); }
+const AUSSENDEKO = {
+  busch(ctx, px, py, k) {
+    rund(ctx, px + k * 0.55, py + k * 0.58, k * 0.38, FARBEN.schatten);
+    rund(ctx, px + k * 0.5, py + k * 0.52, k * 0.38, FARBEN.busch);
+    rund(ctx, px + k * 0.38, py + k * 0.42, k * 0.16, FARBEN.buschHell); rund(ctx, px + k * 0.62, py + k * 0.5, k * 0.12, FARBEN.buschHell);
+  },
+  hecke(ctx, px, py, k) {
+    ctx.fillStyle = FARBEN.heckeDunkel; ctx.fillRect(px + k * 0.04, py + k * 0.12, k * 0.92, k * 0.76);
+    ctx.fillStyle = FARBEN.busch; ctx.fillRect(px + k * 0.1, py + k * 0.18, k * 0.8, k * 0.6);
+    rund(ctx, px + k * 0.32, py + k * 0.4, k * 0.1, FARBEN.buschHell); rund(ctx, px + k * 0.66, py + k * 0.55, k * 0.1, FARBEN.buschHell);
+  },
+  blumenbeet(ctx, px, py, k) {
+    ctx.fillStyle = FARBEN.beet; ctx.fillRect(px + k * 0.08, py + k * 0.08, k * 0.84, k * 0.84);
+    const b = FARBEN.bluete;
+    [[0.28, 0.3, 0], [0.7, 0.28, 1], [0.5, 0.52, 2], [0.26, 0.72, 1], [0.72, 0.72, 0]].forEach(([x, y, f]) => {
+      rund(ctx, px + k * x, py + k * y, k * 0.11, FARBEN.blattHell); rund(ctx, px + k * x, py + k * y, k * 0.07, b[f]);
+    });
+  },
+  bank(ctx, px, py, k) {
+    ctx.fillStyle = FARBEN.bankFuss; ctx.fillRect(px + k * 0.14, py + k * 0.62, k * 0.08, k * 0.22); ctx.fillRect(px + k * 0.78, py + k * 0.62, k * 0.08, k * 0.22);
+    ctx.fillStyle = FARBEN.bank; ctx.fillRect(px + k * 0.08, py + k * 0.44, k * 0.84, k * 0.2);
+    ctx.fillStyle = FARBEN.stuhlLehne; ctx.fillRect(px + k * 0.08, py + k * 0.2, k * 0.84, k * 0.14);
+  },
+  laterne(ctx, px, py, k) {
+    rund(ctx, px + k * 0.5, py + k * 0.3, k * 0.3, 'rgba(255,233,160,0.35)');
+    ctx.fillStyle = FARBEN.laterne; ctx.fillRect(px + k * 0.45, py + k * 0.3, k * 0.1, k * 0.6); ctx.fillRect(px + k * 0.3, py + k * 0.84, k * 0.4, k * 0.08);
+    rund(ctx, px + k * 0.5, py + k * 0.28, k * 0.14, FARBEN.laterneLicht);
+    ctx.strokeStyle = FARBEN.laterne; ctx.lineWidth = Math.max(1, k * 0.05); ctx.stroke();
+  },
+  baum(ctx, px, py, k) {   // 2 × 2 Kästchen
+    rund(ctx, px + k * 1.1, py + k * 1.15, k * 0.9, FARBEN.schatten);
+    rund(ctx, px + k, py + k, k * 0.9, FARBEN.baum);
+    rund(ctx, px + k * 0.75, py + k * 0.78, k * 0.4, FARBEN.baumHell); rund(ctx, px + k * 1.3, py + k * 1.1, k * 0.3, FARBEN.baumHell);
+  },
+  schaukasten(ctx, px, py, k, m) {
+    ctx.fillStyle = FARBEN.bankFuss; ctx.fillRect(px + k * 0.2, py + k * 0.72, k * 0.08, k * 0.2); ctx.fillRect(px + k * 0.72, py + k * 0.72, k * 0.08, k * 0.2);
+    ctx.fillStyle = FARBEN.schaukasten; ctx.fillRect(px + k * 0.06, py + k * 0.12, k * 0.88, k * 0.62);
+    ctx.fillStyle = FARBEN.schaukastenGlas; ctx.fillRect(px + k * 0.13, py + k * 0.19, k * 0.74, k * 0.48);
+    if (m && m.aushang !== false) {   // mit Aushang (in der Bauleiste immer gefüllt)
+      ctx.fillStyle = FARBEN.aushang; ctx.fillRect(px + k * 0.22, py + k * 0.24, k * 0.3, k * 0.38);
+      ctx.fillStyle = FARBEN.plakatRand; ctx.fillRect(px + k * 0.26, py + k * 0.3, k * 0.22, k * 0.05); ctx.fillRect(px + k * 0.58, py + k * 0.26, k * 0.22, k * 0.16);
+    }
+  }
+};
+
 // ---- Symbolbilder für die Bauleiste: zeichnet ein Werkzeug oder Möbel in ein Quadrat der Größe g ----
 export function symbolZeichnen(ctx, id, g) {
   ctx.clearRect(0, 0, g, g);
@@ -484,6 +543,9 @@ export function symbolZeichnen(ctx, id, g) {
     kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
   if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();
+  if (id === 'weg') return weg(ctx, p, p, k);
+  if (id === 'baum') return AUSSENDEKO.baum(ctx, p, p, k / 2);
+  if (AUSSENDEKO[id]) return AUSSENDEKO[id](ctx, p, p, k);
   if (moebel[id]) return moebel[id](ctx, p, p, k);
   if (id === 'wand') {
     ctx.fillStyle = FARBEN.boden; ctx.fillRect(p, p, k, k);
