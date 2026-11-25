@@ -1,6 +1,8 @@
 // Darstellung: malt den Zustand der Karte auf die Zeichenfläche. Ändert selbst nichts.
 import { WAND, TUER, idx } from '../kern/karte.js';
 import { ART_FARBE } from '../inhalte/mitarbeiter.js';
+import { MOEBEL } from '../inhalte/moebel.js';
+const FASSUNG = (MOEBEL.find(m => m.id === 'kaffeemaschine') || {}).fassung || 1;
 import { GRUNDSTUECK, STRASSEN, GEHWEGE, NACHBARN, BAEUME } from '../inhalte/umgebung.js';
 
 // Platzhalter-Farben – das Design legt Lukas fest.
@@ -8,7 +10,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
@@ -63,14 +65,19 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
   }
 
   // Möbel
-  for (const m of extra.moebel || []) if (m.art === 'stuhl') stuhl(ctx, ox + m.x * k, oy + m.y * k, k);
+  for (const m of extra.moebel || []) {
+    const px = ox + m.x * k, py = oy + m.y * k;
+    if (m.art === 'stuhl') stuhl(ctx, px, py, k);
+    else if (m.art === 'theke') theke(ctx, px, py, k);
+    else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.fuellung || 0);
+  }
 
   // Besucher
   for (const b of extra.besucher || []) if (b.sichtbar) {
     const cx = ox + (b.x + 0.5) * k, cy = oy + (b.y + 0.5) * k, r = Math.max(5, k * 0.32);
     ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * 0.3, r, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = FARBEN.besucher; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = b.id === extra.markiert ? FARBEN.auswahl : '#fff'; ctx.lineWidth = b.id === extra.markiert ? 3 : 1.5; ctx.stroke();
   }
   // Vornamen klein neben den Besuchern
   ctx.font = `500 11px system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -260,4 +267,18 @@ function warnsymbol(ctx, cx, cy, g) {
   ctx.fillStyle = '#3a2a00'; ctx.font = `700 ${g * 0.7}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('!', cx, cy + g * 0.08);
   ctx.restore();
+}
+
+function theke(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.theke; ctx.fillRect(px, py, k, k);
+  ctx.fillStyle = FARBEN.thekeHell; ctx.fillRect(px, py + k * 0.15, k, k * 0.35);
+}
+
+// Kaffeemaschine mit kleinem Füllstand-Streifen (braun = Kaffee drin)
+function kaffeemaschine(ctx, px, py, k, fuellung) {
+  const r = k * 0.12;
+  ctx.fillStyle = FARBEN.maschine; ctx.fillRect(px + r, py + r, k - 2 * r, k - 2 * r);
+  ctx.fillStyle = '#d9d9d9'; ctx.fillRect(px + k * 0.3, py + k * 0.25, k * 0.4, k * 0.25);
+  ctx.fillStyle = fuellung > 0 ? FARBEN.maschineKaffee : '#b3261e';
+  ctx.fillRect(px + k * 0.3, py + k * 0.6, k * 0.4 * (fuellung > 0 ? Math.min(1, fuellung / FASSUNG) : 1), k * 0.14);
 }

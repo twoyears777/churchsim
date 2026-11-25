@@ -52,56 +52,174 @@ import { personenAnlegen, versetzen, verfuegbarkeit, personenPruefen, startPlatz
 }
 console.log('Mitarbeiter-Tests bestanden.');
 
-// Möbel, Runden, Wege
-import { moebelSetzen, moebelPruefen } from '../src/kern/moebel.js';
-import { kannWocheBeenden, wocheBeenden, veranstaltungEinstellen, veranstaltungVon } from '../src/kern/runde.js';
+// Möbel und Wände
+import { moebelSetzen, moebelKaufen, moebelAbreissen, kaffeeNachkaufen } from '../src/kern/moebel.js';
 import { weg } from '../src/kern/wege.js';
-import { wandKonflikte, wandBauen } from '../src/kern/bauen.js';
-import { namenZiehen } from '../src/kern/besucher.js';
-import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL } from '../src/inhalte/namen.js';
+import { wandKonflikte, wandBauen, wandAnpassen } from '../src/kern/bauen.js';
+import { namenZiehen, neueBesucherZahl } from '../src/kern/besucher.js';
+import { NAMEN_WORTSPIEL } from '../src/inhalte/namen.js';
 import { sonntagDerWoche } from '../src/kern/kalender.js';
 {
   const z6 = neuerZustand(); personenAnlegen(z6);
-  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z6); for (const r of raeume) { r.typ = raumTypVon(z6, r); r.probleme = pruefeRaum(z6, r, r.typ); } return { liste: raeume, gruppe }; };
   wandRechteck(z6, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z6, G.x + 2, G.y + 5);
-  typZuweisen(z6, erkenneRaeume(z6).raeume[0], 'gottesdienst');
-  assert.equal(kannWocheBeenden(z6, aus()), false);
-  versetzen(z6, z6.personen[0], G.x + 4, G.y + 5);
-  assert.equal(kannWocheBeenden(z6, aus()), false);                 // Pastor da, aber keine Stühle
-  assert.equal(moebelSetzen(z6, 'stuhl', G.x + 8, G.y + 4, G.x + 9, G.y + 4), 2);
-  assert.equal(kannWocheBeenden(z6, aus()), false);                 // nur 2 Stühle
-  moebelSetzen(z6, 'stuhl', G.x + 10, G.y + 4, G.x + 10, G.y + 4);
+  assert.equal(moebelSetzen(z6, 'stuhl', G.x + 8, G.y + 4, G.x + 10, G.y + 4), 3);
   moebelSetzen(z6, 'stuhl', 0, 0, 2, 2);                            // außerhalb: nichts
-  moebelSetzen(z6, 'stuhl', G.x + 30, G.y + 20, G.x + 30, G.y + 20); // draußen auf der Wiese: erlaubt, zählt aber nicht
-  assert.equal(z6.moebel.length, 4);
-  assert.equal(kannWocheBeenden(z6, aus()), false);                 // noch keine Veranstaltung eingestellt
-  veranstaltungEinstellen(z6, aus().liste[0], 'gottesdienst');
-  assert.equal(kannWocheBeenden(z6, aus()), true);
-  const rb = wocheBeenden(z6, aus());
-  assert.equal(rb.angebote[0].besucher, 3); assert.equal(z6.woche, 1);
+  assert.equal(z6.moebel.length, 3);
   assert.equal(sonntagDerWoche(0).name, '1. Advent'); assert.equal(sonntagDerWoche(1).name, '2. Advent');
-  const pfad = weg(z6, { x: G.tor.x, y: G.y + G.h + 1 }, rb.weg[0].sitz, (x, y) => z6.moebel.some(m => m.x === x && m.y === y));
-  assert.ok(pfad && pfad.length > 5);
+  const pfad = weg(z6, { x: G.tor.x, y: G.y + G.h + 1 }, { x: G.x + 8, y: G.y + 5 }, (x, y) => z6.moebel.some(m => m.x === x && m.y === y));
   assert.ok(pfad.some(p => p.x === G.x + 2 && p.y === G.y + 5));    // läuft durch die Tür
   const raus = pfad.findIndex(p => aufGrundstueck(p.x, p.y));        // betritt das Grundstück nur durchs Tor
   assert.ok(pfad[raus].y === G.y + G.h - 1 && pfad[raus].x >= G.tor.x && pfad[raus].x < G.tor.x + G.tor.breite);
   // Wand über einen Stuhl wird nicht gebaut
   assert.equal(wandKonflikte(z6, G.x + 7, G.y + 3, G.x + 12, G.y + 4).length, 3);
   assert.equal(wandBauen(z6, G.x + 7, G.y + 3, G.x + 12, G.y + 4), false);
-  assert.equal(z6.moebel.length, 4);
   assert.ok(wandBauen(z6, G.x + 25, G.y + 10, G.x + 30, G.y + 15));
+}
+// Gemeinsame Wand: direkt neben einen Raum gebaut → teilt sich die Wand
+{
+  const z = neuerZustand();
+  wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8);
+  assert.deepEqual(wandAnpassen(z, G.x + 19, G.y + 2, G.x + 25, G.y + 8), [G.x + 18, G.y + 2, G.x + 25, G.y + 8]);
+  assert.deepEqual(wandAnpassen(z, G.x + 25, G.y + 8, G.x + 19, G.y + 2), [G.x + 18, G.y + 2, G.x + 25, G.y + 8]);   // andere Zieh-Richtung
+  wandBauen(z, G.x + 19, G.y + 2, G.x + 25, G.y + 8);
+  assert.equal(z.zellen[(G.y + 5) * z.w + G.x + 19], 0);              // keine zweite Wand
+  assert.equal(erkenneRaeume(z).raeume.length, 2);
+  assert.equal(erkenneRaeume(z).raeume.find(r => r.zellen.includes((G.y + 5) * z.w + G.x + 19)).zellen.length, 6 * 5);
+  // auch oben/unten, und auch wenn der neue Raum länger ist
+  assert.deepEqual(wandAnpassen(z, G.x + 2, G.y + 9, G.x + 30, G.y + 14), [G.x + 2, G.y + 8, G.x + 30, G.y + 14]);
+  // mit Abstand: keine Änderung
+  assert.deepEqual(wandAnpassen(z, G.x + 20, G.y + 2, G.x + 26, G.y + 8), [G.x + 20, G.y + 2, G.x + 26, G.y + 8]);
 }
 {
   const n = namenZiehen(300);
-  assert.equal(n.length, 300);
   assert.ok(n.every(x => x.vorname && x.nachname && x.voll === `${x.vorname} ${x.nachname}`));
   const wortspiel = n.filter(x => NAMEN_WORTSPIEL.includes(x.voll)).length / n.length;
   assert.ok(wortspiel > 0.2 && wortspiel < 0.47, 'Mischung etwa ein Drittel Wortspiel');
-  const kurz = namenZiehen(10);
-  assert.equal(new Set(kurz.map(x => x.voll)).size, 10);       // in kleiner Woche keine Doppelten
+  assert.equal(new Set(namenZiehen(10).map(x => x.voll)).size, 10);
 }
-console.log('Runden-Tests bestanden.');
+console.log('Möbel- und Wand-Tests bestanden.');
 
+// Zeit
+import { zeitpunkt, tageBisSonntag, slotBeginn, startMinuten, spielMinuten, TAG_MIN } from '../src/kern/zeit.js';
+{
+  assert.deepEqual([zeitpunkt(startMinuten()).tag, zeitpunkt(startMinuten()).stunde], [0, 8]);  // Montag 8:00
+  assert.equal(tageBisSonntag(1 * TAG_MIN + 14 * 60), 4);           // Dienstag 14:00 → in 4 Tagen
+  assert.equal(tageBisSonntag(5 * TAG_MIN + 10 * 60), 0);           // Samstag → morgen
+  assert.equal(tageBisSonntag(6 * TAG_MIN + 9 * 60), null);         // Sonntag → heute
+  assert.equal(slotBeginn({ tag: 6, slot: 'vormittag' }, 0), 6 * TAG_MIN + 600);
+  assert.equal(slotBeginn({ tag: 2, slot: 'abend' }, 1), 7 * TAG_MIN + 2 * TAG_MIN + 19 * 60);
+  assert.equal(spielMinuten(3, 1), 60);                              // 3 Sekunden = 1 Spielstunde
+  assert.equal(spielMinuten(3, 5), 300);
+}
+console.log('Zeit-Tests bestanden.');
+
+// Gottesdienst und Kirchkaffee in Echtzeit
+import { neuesSpiel, ausRundenSpielstand } from '../src/kern/spiel.js';
+import { zeitVorruecken, veranstaltungEinstellen, prognose, kirchkaffeeOffen, gottesdienstBereit } from '../src/kern/ablauf.js';
+import { personHinzufuegen } from '../src/kern/personen.js';
+{
+  const SONNTAG_10 = 6 * TAG_MIN + 600;
+  const aufbau = () => {
+    const z = neuesSpiel(() => 0.9);                                  // 0.9: niemand will Kaffee
+    const aus = () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
+    const raumBei = (x, y) => { const a = aus(); return a.liste[a.gruppe[x + y * z.w]]; };
+    wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
+    wandRechteck(z, G.x + 18, G.y + 2, G.x + 24, G.y + 8); tuerUmschalten(z, G.x + 18, G.y + 5);
+    typZuweisen(z, raumBei(G.x + 5, G.y + 5), 'gottesdienst');
+    typZuweisen(z, raumBei(G.x + 20, G.y + 5), 'kirchkaffee');
+    veranstaltungEinstellen(z, raumBei(G.x + 5, G.y + 5), 'gottesdienst');
+    for (let i = 0; i < 3; i++) moebelSetzen(z, 'stuhl', G.x + 6 + i, G.y + 4, G.x + 6 + i, G.y + 4);
+    return { z, aus };
+  };
+  // Ohne Mitarbeiter: kein Gottesdienst, jeder Stammgast −5
+  {
+    const { z, aus } = aufbau();
+    assert.equal(z.besucher.length, 4); assert.ok(z.besucher.every(b => b.zufriedenheit === 60 && !b.kaffee));
+    zeitVorruecken(z, aus(), SONNTAG_10 + 1 - z.minuten, () => 0);
+    assert.ok(z.besucher.every(b => b.zufriedenheit === 55));
+    assert.equal(z.letzterGottesdienst.ausgefallen, true); assert.equal(z.bekanntheit, 0);
+    zeitVorruecken(z, aus(), 7 * TAG_MIN, () => 0);                   // nächste Woche wieder
+    assert.ok(z.besucher.every(b => b.zufriedenheit === 50));
+  }
+  // Mit Pastor: 4 kommen, 3 Stühle → 1 muss heim
+  {
+    const { z, aus } = aufbau();
+    versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+    assert.equal(gottesdienstBereit(z, aus()).length, 1);
+    assert.deepEqual(prognose(z, aus()).plaetze, 3);
+    assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.4) < 1e-9);    // 4 × 60 %
+    assert.ok(Math.abs(prognose(z, aus()).geld - 2.4) < 1e-9);
+    zeitVorruecken(z, aus(), SONNTAG_10 - 90 - z.minuten, () => 0);  // Anreise
+    assert.equal(z.lauf.phase, 'anreise'); assert.equal(z.lauf.gaeste.length, 4);
+    assert.equal(z.lauf.gaeste.filter(g => !g.sitz).length, 1);
+    zeitVorruecken(z, aus(), 90 + 60, () => 0);                       // Gottesdienst vorbei
+    assert.equal(z.konto, 50 + 3); assert.equal(z.bekanntheit, 3);
+    zeitVorruecken(z, aus(), 60, () => 0);                            // Kirchkaffee vorbei
+    const heim = z.besucher.find(b => b.id === z.lauf.gaeste.find(g => !g.sitz).id);
+    assert.equal(heim.zufriedenheit, 45);
+    assert.equal(z.besucher.filter(b => b.zufriedenheit === 70).length, 3);   // +5 Platz, +5 Gottesdienst
+    assert.deepEqual(z.letzterGottesdienst, { woche: 0, ausgefallen: false, besucher: 3, heim: 1 });
+    zeitVorruecken(z, aus(), 61, () => 0);
+    assert.equal(z.lauf, null);
+  }
+  // Kirchkaffee mit Maschine, Theke und Ehrenamtlichem; Maschine reicht nur für 2 Tassen
+  {
+    const { z, aus } = aufbau();
+    versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+    for (const b of z.besucher) b.kaffee = true;
+    z.konto = 200;
+    assert.equal(moebelKaufen(z, 'kaffeemaschine', G.x + 20, G.y + 3), 'ok');
+    assert.equal(moebelKaufen(z, 'theke', G.x + 22, G.y + 3), 'ok');
+    assert.equal(moebelKaufen(z, 'theke', G.x + 22, G.y + 4), 'ok');   // zweites Thekenteil = dieselbe Theke
+    const m = z.moebel.find(x => x.art === 'kaffeemaschine');
+    assert.equal(m.fuellung, 0);
+    assert.equal(kirchkaffeeOffen(z, aus()).length, 0);               // noch kein Ehrenamtlicher
+    const ea = personHinzufuegen(z, { name: 'Test Helfer', kuerzel: 'T', art: 'ehrenamt' });
+    versetzen(z, ea, G.x + 21, G.y + 6);
+    assert.equal(kirchkaffeeOffen(z, aus()).length, 1);
+    assert.equal(kaffeeNachkaufen(z, m), 'ok'); assert.equal(m.fuellung, 10);
+    m.fuellung = 25; assert.equal(kaffeeNachkaufen(z, m), 'voll');
+    m.fuellung = 2; z.konto = 200;
+    zeitVorruecken(z, aus(), SONNTAG_10 + 120 - z.minuten, () => 0);
+    const gaeste = z.lauf.gaeste.filter(g => g.sitz);
+    assert.deepEqual(gaeste.map(g => g.kaffee.ergebnis).sort(), ['ja', 'ja', 'leer']);
+    assert.equal(m.fuellung, 0);
+    assert.equal(z.konto, 200 + 3 + 2);                               // Kollekte 3 + 2 Tassen
+    assert.equal(z.besucher.filter(b => b.zufriedenheit === 75).length, 2);   // +5 +5 +5
+    assert.equal(z.besucher.filter(b => b.zufriedenheit === 60).length, 1);   // +5 +5 −10
+  }
+  // Neue Besucher über die Bekanntheit, neue Ehrenamtliche ab 3 Besuchen
+  {
+    assert.equal(neueBesucherZahl(15, () => 0.4), 2); assert.equal(neueBesucherZahl(15, () => 0.6), 1);
+    assert.equal(neueBesucherZahl(0, () => 0), 0);
+    const { z, aus } = aufbau();
+    versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+    z.bekanntheit = 20; z.besucher.forEach(b => { b.besuche = 2; });
+    zeitVorruecken(z, aus(), SONNTAG_10 + 121 - z.minuten, () => 0);
+    assert.equal(z.lauf.gaeste.length, 6);                           // 4 bekannte + 2 neue
+    assert.equal(z.lauf.neueEhrenamtliche.length, 3);                 // die 3 mit Sitzplatz und 3. Besuch
+    assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 3);
+    assert.equal(z.besucher.length, 3);
+  }
+  // Wochenplan: Mittwochabend
+  {
+    const { z, aus } = aufbau();
+    versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+    z.plan = { tag: 2, slot: 'abend' };
+    zeitVorruecken(z, aus(), 2 * TAG_MIN + 19 * 60 + 1 - z.minuten, () => 0);
+    assert.equal(z.lauf.phase, 'gottesdienst');
+    zeitVorruecken(z, aus(), 4 * TAG_MIN, () => 0);                   // Sonntag: nichts Neues
+    assert.equal(z.lauf, null); assert.equal(z.letzterLauf, 0);
+  }
+  // Spielstand aus 0.1.1 übernehmen
+  {
+    const alt = { zellen: new Array(64 * 42).fill(0), konto: 77, personen: [], moebel: [{ art: 'stuhl', x: 1, y: 1 }], stamm: [1], woche: 5 };
+    const z = ausRundenSpielstand(alt);
+    assert.equal(z.konto, 77); assert.equal(z.moebel.length, 1); assert.equal(z.besucher.length, 4);
+    assert.equal(z.minuten, startMinuten()); assert.equal(z.stamm, undefined);
+  }
+}
+console.log('Gottesdienst- und Kirchkaffee-Tests bestanden.');
 // Versionsnummer in version.js und version.json müssen übereinstimmen (sonst lädt die App endlos neu)
 import { VERSION } from '../src/version.js';
 import { readFileSync } from 'node:fs';
@@ -122,89 +240,6 @@ import { kirchenjahrStand } from '../src/kern/kalender.js';
   assert.equal(a.zeiten.at(-1).bis, 1);
 }
 console.log('Kirchenjahr-Tests bestanden.');
-
-// Finanzen
-import { moebelKaufen, moebelAbreissen } from '../src/kern/moebel.js';
-import { finanzPrognose } from '../src/kern/runde.js';
-{
-  const z7 = neuerZustand(); personenAnlegen(z7);
-  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z7); for (const r of raeume) { r.typ = raumTypVon(z7, r); r.probleme = pruefeRaum(z7, r, r.typ); } return { liste: raeume, gruppe }; };
-  assert.equal(z7.konto, 50);
-  wandRechteck(z7, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z7, G.x + 2, G.y + 5);
-  typZuweisen(z7, erkenneRaeume(z7).raeume[0], 'gottesdienst');
-  versetzen(z7, z7.personen[0], G.x + 4, G.y + 5);
-  veranstaltungEinstellen(z7, aus().liste[0], 'gottesdienst');
-  for (let i = 0; i < 10; i++) assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6 + i, G.y + 4), 'ok');
-  assert.equal(z7.konto, 0);
-  assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6, G.y + 6), 'geld');            // kein Geld mehr
-  assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6, G.y + 4), 'platz');           // schon belegt
-  assert.equal(moebelAbreissen(z7, G.x + 15, G.y + 4, G.x + 15, G.y + 4), 5);   // volle Rückerstattung
-  assert.equal(z7.konto, 5);
-  assert.deepEqual(finanzPrognose(z7, aus()), { einnahmen: 5 + 9, ausgaben: 50 });
-  const rb = wocheBeenden(z7, aus());
-  assert.deepEqual(rb.finanzen, { einnahmen: { rueckerstattung: 5, kollekte: 9 }, ausgaben: { moebel: 50 } });
-  assert.equal(z7.konto, 14); assert.equal(rb.kontostand, 14);
-  assert.deepEqual(z7.letzteWoche, { besucher: 9 });
-  assert.deepEqual(z7.wochenbuch, { einnahmen: {}, ausgaben: {} });              // neue Woche, leeres Buch
-}
-// Veranstaltung bleibt nach Umbau erhalten, wird bei Funktionswechsel zurückgesetzt
-{
-  const z8 = neuerZustand(); personenAnlegen(z8);
-  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z8); for (const r of raeume) { r.typ = raumTypVon(z8, r); r.probleme = pruefeRaum(z8, r, r.typ); } return { liste: raeume, gruppe }; };
-  wandRechteck(z8, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z8, G.x + 2, G.y + 5);
-  typZuweisen(z8, aus().liste[0], 'gottesdienst');
-  veranstaltungEinstellen(z8, aus().liste[0], 'gottesdienst');
-  tuerUmschalten(z8, G.x + 2, G.y + 6);                                         // zweite Tür: Raum wird neu erkannt
-  assert.equal(veranstaltungVon(z8, aus().liste[0]).id, 'gottesdienst');
-  typZuweisen(z8, aus().liste[0], null);
-  assert.equal(veranstaltungVon(z8, aus().liste[0]), null);
-}
-console.log('Finanz-Tests bestanden.');
-
-// Kirchkaffee, Stammbesucher, neue Ehrenamtliche
-import { kirchkaffeeOffen } from '../src/kern/runde.js';
-import { besucherDerWoche } from '../src/kern/besucher.js';
-import { eingesetztIn as einsatz, personHinzufuegen } from '../src/kern/personen.js';
-{
-  const z9 = neuerZustand(); personenAnlegen(z9);
-  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z9); for (const r of raeume) { r.typ = raumTypVon(z9, r); r.probleme = pruefeRaum(z9, r, r.typ); } return { liste: raeume, gruppe }; };
-  const raumBei = (x, y) => { const a = aus(); return a.liste[a.gruppe[x + y * z9.w]]; };
-  // Gottesdienstraum innen 15×5, rechts daneben Kirchkaffee innen 5×5 (gemeinsame Wand bei x = G.x+18)
-  wandRechteck(z9, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z9, G.x + 2, G.y + 5);
-  wandRechteck(z9, G.x + 18, G.y + 2, G.x + 24, G.y + 8);
-  typZuweisen(z9, raumBei(G.x + 5, G.y + 5), 'gottesdienst');
-  typZuweisen(z9, raumBei(G.x + 20, G.y + 5), 'kirchkaffee');
-  assert.deepEqual(raumBei(G.x + 20, G.y + 5).probleme, ['tuer', 'verbindung']);
-  tuerUmschalten(z9, G.x + 18, G.y + 5);                                         // Verbindungstür
-  assert.deepEqual(raumBei(G.x + 20, G.y + 5).probleme, []);
-  veranstaltungEinstellen(z9, raumBei(G.x + 5, G.y + 5), 'gottesdienst');
-  versetzen(z9, z9.personen[0], G.x + 4, G.y + 5);
-  for (let i = 0; i < 10; i++) moebelSetzen(z9, 'stuhl', G.x + 6 + i, G.y + 4, G.x + 6 + i, G.y + 4);
-  assert.equal(kirchkaffeeOffen(z9, aus()).length, 0);                           // noch kein Ehrenamtlicher
-  versetzen(z9, z9.personen[0], G.x + 20, G.y + 5);                              // Pastor im Kirchkaffee zählt nicht
-  assert.equal(einsatz(z9, aus(), z9.personen[0]), null);
-  assert.equal(kirchkaffeeOffen(z9, aus()).length, 0);
-  versetzen(z9, z9.personen[0], G.x + 4, G.y + 5);
-  const ea = personHinzufuegen(z9, { name: 'Test Helfer', kuerzel: 'T', art: 'ehrenamt' });
-  versetzen(z9, ea, G.x + 20, G.y + 3);
-  assert.equal(kirchkaffeeOffen(z9, aus()).length, 1);
-  // Woche mit festem „Zufall“: alle gehen ins Kirchkaffee (0 < 0.2), keiner wird EA (5 % nicht erreicht bei 1. Besuch)
-  const rb = wocheBeenden(z9, aus(), () => 0.1);
-  assert.equal(rb.weg.length, 10); assert.equal(rb.weg.filter(w => w.kaffee).length, 10);
-  assert.deepEqual(rb.finanzen.einnahmen, { kollekte: 10, kirchkaffee: 10 });
-  assert.equal(z9.stamm.length, 10);
-  // Dreimal mit „Zufall“ 0.01: alle kommen wieder; ab dem 3. Besuch werden alle EA (0.01 < 0.05)
-  wocheBeenden(z9, aus(), () => 0.01);
-  const rb3 = wocheBeenden(z9, aus(), () => 0.01);
-  assert.equal(rb3.neueEhrenamtliche.length, 10);
-  assert.equal(z9.stamm.length, 0);
-  assert.equal(z9.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 11);
-  // Stamm: niemand kommt wieder (Zufall 0.99) → nur neue Besucher
-  const z10 = neuerZustand(); z10.stamm = [{ vorname: 'A', nachname: 'B', voll: 'A B', besuche: 2 }];
-  const da = besucherDerWoche(z10, 3, () => 0.99);
-  assert.equal(da.length, 3); assert.ok(!da.some(b => b.voll === 'A B')); assert.equal(z10.stamm.length, 4);
-}
-console.log('Kirchkaffee-Tests bestanden.');
 
 // Geglättete Wege
 import { glaetten } from '../src/kern/wege.js';

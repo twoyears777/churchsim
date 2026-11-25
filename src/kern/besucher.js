@@ -1,6 +1,7 @@
-// Besucher bekommen Namen aus den Namenslisten (gemischt, möglichst ohne Doppelte in derselben Woche).
+// Spiellogik der Besucher: feste Personen mit Zufriedenheit und Kaffeewunsch.
 import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte/namen.js';
-import { WIEDERKOMMEN, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
+import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, KAFFEE_ANTEIL, BEKANNTHEIT,
+  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 
 export function namenZiehen(anzahl, zufall = Math.random) {
   const toepfe = { a: [], w: [] }, ergebnis = [];
@@ -16,33 +17,48 @@ export function namenZiehen(anzahl, zufall = Math.random) {
   return ergebnis;
 }
 
-// Stammbesucher: Die Gemeinde merkt sich jeden Besucher mit Namen und Anzahl der Gottesdienstbesuche.
-export function stammAnlegen(z) { if (!Array.isArray(z.stamm)) z.stamm = []; }
-
-// Wer kommt diese Woche? Bekannte Besucher kommen mit WIEDERKOMMEN-Wahrscheinlichkeit wieder,
-// freie Plätze füllen neue Besucher. Jeder Anwesende bekommt einen Besuch gutgeschrieben.
-export function besucherDerWoche(z, plaetze, zufall = Math.random) {
-  stammAnlegen(z);
-  let wieder = z.stamm.filter(() => zufall() < WIEDERKOMMEN);
-  while (wieder.length > plaetze) wieder.splice(Math.floor(zufall() * wieder.length), 1);
-  const vergeben = new Set(z.stamm.map(b => b.voll));
-  const neue = [];
-  for (const n of namenZiehen(plaetze - wieder.length + 20, zufall)) {
-    if (neue.length >= plaetze - wieder.length) break;
-    if (vergeben.has(n.voll) && vergeben.size < NAMEN_ALLTAEGLICH.length + NAMEN_WORTSPIEL.length) continue;   // Namen möglichst nicht doppelt
-    vergeben.add(n.voll);
-    neue.push({ ...n, besuche: 0 });
+export function besucherAnlegen(z, zufall = Math.random) {
+  if (typeof z.bekanntheit !== 'number') z.bekanntheit = 0;
+  if (!Array.isArray(z.besucher)) {
+    z.besucher = [];
+    for (let i = 0; i < START_STAMMGAESTE; i++) neuerBesucher(z, START_ZUFRIEDENHEIT, zufall);
   }
-  while (neue.length < plaetze - wieder.length) { const [n] = namenZiehen(1, zufall); neue.push({ ...n, besuche: 0 }); }
-  z.stamm.push(...neue);
-  const da = [...wieder, ...neue];
-  for (const b of da) b.besuche++;
-  return da;
 }
 
-// Wer aus den Anwesenden wird Ehrenamtlicher? Wird aus dem Stamm genommen und zurückgegeben.
+// Neue Person: Name möglichst nicht doppelt, Kaffeewunsch einmal ausgelost.
+export function neuerBesucher(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
+  const vergeben = new Set([...z.besucher.map(b => b.voll), ...(z.personen || []).map(p => p.daten && p.daten.name)]);
+  let name = null;
+  for (const n of namenZiehen(30, zufall)) if (!vergeben.has(n.voll)) { name = n; break; }
+  if (!name) [name] = namenZiehen(1, zufall);
+  const b = { id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, kaffee: zufall() < KAFFEE_ANTEIL, besuche: 0 };
+  z.besucher.push(b);
+  return b;
+}
+
+// Chance, dass jemand zum Gottesdienst kommt
+export function kommChance(b) { return Math.max(MIN_CHANCE, b.zufriedenheit / 100); }
+
+// Neue Besucher pro Woche: Bekanntheit ÷ 10, der Rest als Chance (15 → 1 sicher + 50 % auf einen zweiten)
+export function neueBesucherZahl(bekanntheit, zufall = Math.random) {
+  const s = bekanntheit / BEKANNTHEIT.teiler, n = Math.floor(s);
+  return n + (zufall() < s - n ? 1 : 0);
+}
+
+// Wer kommt diesmal? Bekannte Besucher nach ihrer Chance, dazu die neuen Besucher.
+export function werKommt(z, zufall = Math.random) {
+  const bekannte = z.besucher.filter(b => zufall() < kommChance(b));
+  const neue = [];
+  for (let i = neueBesucherZahl(z.bekanntheit, zufall); i > 0; i--) neue.push(neuerBesucher(z, NEU_ZUFRIEDENHEIT, zufall));
+  return [...bekannte, ...neue];
+}
+
+export function zufriedenheitAendern(b, wert) { b.zufriedenheit = Math.max(0, Math.min(100, b.zufriedenheit + wert)); }
+export function bekanntheitAendern(z, wert) { z.bekanntheit = Math.max(0, Math.min(100, z.bekanntheit + wert)); }
+
+// Wer aus den Anwesenden wird Ehrenamtlicher? Wird aus den Besuchern genommen und zurückgegeben.
 export function ehrenamtWerden(z, anwesende, zufall = Math.random) {
   const werden = anwesende.filter(b => b.besuche >= EHRENAMT_AB_BESUCHEN && zufall() < EHRENAMT_QUOTE);
-  z.stamm = z.stamm.filter(b => !werden.includes(b));
+  z.besucher = z.besucher.filter(b => !werden.includes(b));
   return werden;
 }

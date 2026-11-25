@@ -17,7 +17,9 @@
   <div class="werkzeuge" role="toolbar" aria-label="Werkzeuge">
     <button data-werkzeug="wand" aria-pressed="true">Wand</button>
     <button data-werkzeug="tuer" aria-pressed="false">Tür</button>
-    <button data-werkzeug="stuhl" aria-pressed="false">Stuhl <small class="preis" id="preisStuhl"></small></button>
+    <button data-werkzeug="stuhl" aria-pressed="false">Stuhl <small class="preis" id="preis-stuhl"></small></button>
+    <button data-werkzeug="kaffeemaschine" aria-pressed="false">Kaffeemaschine <small class="preis" id="preis-kaffeemaschine"></small></button>
+    <button data-werkzeug="theke" aria-pressed="false">Theke <small class="preis" id="preis-theke"></small></button>
     <button data-werkzeug="abriss" aria-pressed="false">Abriss</button>
     <button data-werkzeug="raum" aria-pressed="false">Raum festlegen</button>
   </div>
@@ -54,7 +56,9 @@
     <details open>
       <summary>Besucher <span class="zugeklappt" id="besucherKurz">0</span></summary>
       <table class="finanzen">
-        <tr><td>Letzte Woche</td><td class="zahl" id="besucherLetzteWoche">–</td></tr>
+        <tr><td id="textLetzter"></td><td class="zahl" id="besucherLetzter">–</td></tr>
+        <tr><td id="textHeim"></td><td class="zahl" id="besucherHeim">–</td></tr>
+        <tr><td id="textStamm"></td><td class="zahl" id="besucherStamm">–</td></tr>
       </table>
     </details>
   </aside>
@@ -62,18 +66,24 @@
   <main id="flaeche" class="flaeche">
     <canvas id="karte"></canvas>
 
+    <div class="oben hud">
+      <span class="wert"><small id="textKonto"></small><b id="kontoOben">0 €</b></span>
+      <span class="wert"><small id="textBekanntheit"></small><b id="bekanntheit">0</b></span>
+      <span class="tempo" role="group" aria-label="Zeit">
+        <button data-tempo="0"></button><button data-tempo="1"></button><button data-tempo="2"></button><button data-tempo="5"></button>
+      </span>
+    </div>
     <div class="datum hud">
-      <div class="datumText"><b id="sonntag"></b><small id="zeit"></small></div>
+      <div class="datumText"><b id="uhr"></b><small id="countdown"></small><small id="sonntag"></small></div>
       <svg id="rad" viewBox="-50 -50 100 100" width="64" height="64" role="img" aria-label="Kirchenjahr"></svg>
     </div>
     <div class="unten-mitte hud"><button id="editorAuf">Bauen</button></div>
     <div class="unten-rechts hud">
       <p id="spielHinweis" class="spielHinweis"></p>
-      <button id="wocheBeenden" class="haupt">Woche beenden</button>
+      <button id="zuruecksetzen" class="klein-knopf"></button>
     </div>
 
     <div id="maske" class="maske" hidden><div class="inhalt"></div></div>
-    <div id="rueckblick" class="rueckblick" hidden><div class="inhalt"></div></div>
   </main>
 </div>
 <script type="module" src="src/oberflaeche/editor.js"></script>

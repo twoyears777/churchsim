@@ -3,6 +3,33 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.2
+
+**Echtzeit**
+- Keine Runden mehr: Die Zeit läuft durch (1 Spielstunde = 3 Sekunden), Knöpfe Pause, x1, x2, x5
+- Oben: Woche, Tag, Uhrzeit und Countdown bis Sonntag; Kontostand und Bekanntheit
+- Gottesdienst findet jede Woche automatisch im eingetragenen Slot statt (1 Stunde), danach 1 Stunde Kirchkaffee
+- Einnahmen werden sofort gutgeschrieben; „Woche beenden“ und Wochenrückblick entfallen
+- Test-Knopf „Spiel auf Start zurücksetzen“
+
+**Besucher**
+- Besucher sind feste Personen mit Zufriedenheit und Kaffeewunsch; Start mit 4 Stammgästen
+- Wie viele kommen, hängt von Zufriedenheit und Bekanntheit ab; ohne Mitarbeiter im Raum kein Gottesdienst
+- Stühle begrenzen nur die Plätze – wer keinen bekommt, geht wieder heim (wird angezeigt)
+- Besucher anklicken: Kärtchen mit Bedürfnissen und Zufriedenheit
+
+**Gottesdienstraum**
+- Raum-Fenster bleibt nach der Auswahl offen
+- Veranstaltungen als Kacheln (was sie bringen, welche Bedingungen), Wochenplan, Mitarbeiter im Raum, Wochen-Prognose
+
+**Kirchkaffee**
+- Neue Möbel Kaffeemaschine (50 €) und Theke (20 €); je Maschine 1 Ehrenamtlicher und 1 Theke
+- Ehrenamtlicher macht Tasse für Tasse Kaffee, je 1 €; Maschine anklicken: Füllstand, Kaffee nachkaufen (3 € für 10 Tassen)
+- Der automatische 1 € pro Gast entfällt
+
+**Editor**
+- Baut man direkt neben einen Raum, teilen sich die Räume eine Wand
+
 ## 0.1.1
 
 **Management**

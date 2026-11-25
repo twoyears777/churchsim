@@ -35,18 +35,6 @@ button:focus-visible { outline: 2px solid #8fb4ea; outline-offset: 2px; }
 button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .punkt.hauptamt { background: #2d69be; } .punkt.ehrenamt { background: #d08a1e; }
 .hinweis:empty { display: none; }
-.laeuft button { pointer-events: none; opacity: .6; }
-.laeuft .rueckblick button { pointer-events: auto; opacity: 1; }
-.rueckblick { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(20,20,18,.45); padding: 16px; }
-.rueckblick[hidden] { display: none; }
-.rueckblick .inhalt { width: min(420px, 100%); max-height: 100%; overflow: auto; }
-.rueckblick .unter { margin: -6px 0 6px; color: #6b665b; font-size: 14px; }
-.rueckblick h3 { margin: 14px 0 4px; font-size: 15px; font-weight: 600; }
-.rueckblick table { width: 100%; border-collapse: collapse; font-size: 15px; }
-.rueckblick td { padding: 5px 0; border-bottom: 1px solid #e2dccd; }
-.rueckblick .zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rueckblick .summe td { font-weight: 600; border-bottom: 0; }
-.rueckblick .zeile { margin-top: 16px; }
 .inhalt .unter { margin: -6px 0 6px; color: #6b665b; font-size: 14px; }
 .inhalt h3 { margin: 14px 0 4px; font-size: 15px; font-weight: 600; }
 .inhalt .leer { margin: 0 0 12px; color: #6b665b; font-style: italic; }
@@ -83,9 +71,37 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .kontoEditor { display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 15px; }
 .kontoEditor b { font-variant-numeric: tabular-nums; }
 .hinweis.warnung { color: #ffb4a8; }
-.rueckblick td.einzug { padding-left: 12px; }
 /* Zahl neben der Überschrift nur bei zugeklapptem Bereich */
 .seitenleiste summary .zugeklappt { display: none; float: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .seitenleiste details:not([open]) summary .zugeklappt { display: inline; }
 .preis { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,.14); font-size: 13px; font-variant-numeric: tabular-nums; }
 button[aria-pressed="true"] .preis { background: rgba(0,0,0,.1); }
+
+/* 0.1.2 – Platzhalter-Design */
+.oben { position: absolute; top: 10px; left: 12px; display: flex; align-items: center; gap: 14px;
+  background: rgba(43,42,39,.9); border-radius: 12px; padding: 6px 8px 6px 14px; }
+.oben .wert { display: flex; flex-direction: column; line-height: 1.2; }
+.oben .wert small { color: #c9c4b8; font-size: 12px; }
+.oben .wert b { font-variant-numeric: tabular-nums; }
+.tempo { display: flex; gap: 4px; }
+.tempo button { min-height: 36px; padding: 0 10px; }
+.modus-editor .oben { display: none; }
+.klein-knopf { min-height: 32px; font-size: 13px; padding: 0 10px; opacity: .85; }
+.maske.breit { width: min(520px, calc(100% - 24px)); max-height: calc(100% - 84px); overflow: auto; border-radius: 12px; }
+.kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.kachel { display: block; text-align: left; padding: 10px 12px; height: auto; border-radius: 10px; background: #fff; border: 1px solid #cfc9bb; }
+.kachel.aktiv { border: 2px solid #2d69be; }
+.kachel ul { margin: 2px 0 6px; padding-left: 18px; font-size: 13px; }
+.kachel .klein { display: block; margin-top: 6px; font-size: 12px; color: #6b665b; text-transform: uppercase; letter-spacing: .03em; }
+div.kachel { margin-bottom: 6px; }
+.klein-kachel small { display: block; color: #6b665b; font-size: 13px; }
+li.ok, td.ok { color: #2e7d32; } li.fehlt, td.fehlt { color: #b3261e; }
+.wochenplan { border-collapse: separate; border-spacing: 3px; font-size: 13px; }
+.wochenplan th { font-weight: 600; text-align: center; }
+.wochenplan th.slot { text-align: left; padding-right: 6px; }
+.wochenplan th.slot small { display: block; font-weight: 400; color: #6b665b; }
+.planfeld { min-height: 30px; width: 38px; padding: 0; border-radius: 6px; }
+.inhalt .planfeld.aktiv { background: #2d69be; border-color: #2d69be; }
+.balken { height: 12px; border-radius: 6px; background: #e2dccd; overflow: hidden; margin: 4px 0; }
+.balken span { display: block; height: 100%; background: #2d69be; }
+.finanzen.hell td { border-bottom: 1px solid #e2dccd; padding: 5px 0; }

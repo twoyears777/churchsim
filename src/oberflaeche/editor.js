@@ -1,44 +1,51 @@
 // Bedienung: Spielansicht (Management) und Editor. Nimmt Eingaben entgegen und ruft die Spiellogik auf.
+// Die Uhr läuft in Echtzeit: Mehrmals pro Sekunde rückt die Spielzeit vor, die Spiellogik entscheidet,
+// was passiert (Anreise, Gottesdienst, Kirchkaffee), und hier wird nur gezeigt und gezeichnet.
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
-import { neuerZustand, wandRechteck, abriss, tuerUmschalten, erkenneRaeume, pruefeRaum, raumTypVon, typZuweisen, idx } from '../kern/karte.js';
-import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from '../kern/personen.js';
-import { moebelAnlegen, moebelPruefen, moebelBei, moebelKaufen, moebelAbreissen } from '../kern/moebel.js';
-import { finanzenAnlegen, kannBezahlen, summe } from '../kern/finanzen.js';
-import { EINNAHMEN, AUSGABEN } from '../inhalte/finanzen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
-import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose, kirchkaffeeOffen, moeglicheVeranstaltungen, veranstaltungVon, veranstaltungEinstellen } from '../kern/runde.js';
 import { KEINE_VERANSTALTUNG } from '../inhalte/veranstaltungen.js';
+import { TEMPI, SLOTS, DAUER, LAUFTEMPO, ABSTAND } from '../inhalte/zeit.js';
+import { NACHKAUFEN } from '../inhalte/kirchkaffee.js';
+import { TEXTE } from '../inhalte/texte.js';
+import { wandRechteck, abriss, tuerUmschalten, erkenneRaeume, pruefeRaum, raumTypVon, typZuweisen, idx } from '../kern/karte.js';
+import { personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from '../kern/personen.js';
+import { moebelPruefen, moebelBei, moebelKaufen, moebelAbreissen, kaffeeNachkaufen, fassung } from '../kern/moebel.js';
+import { kannBezahlen, buchen } from '../kern/finanzen.js';
+import { neuesSpiel, spielAnlegen, ausRundenSpielstand } from '../kern/spiel.js';
+import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, veranstaltungVon,
+  veranstaltungEinstellen, prognose, finanzPrognose, terminDieseWoche } from '../kern/ablauf.js';
+import { zeitpunkt, uhrzeit, tageBisSonntag, spielMinuten } from '../kern/zeit.js';
 import { sonntagDerWoche, kirchenjahrStand } from '../kern/kalender.js';
 import { weg, glaetten } from '../kern/wege.js';
-import { wandBauen, wandKonflikte } from '../kern/bauen.js';
-import { stammAnlegen } from '../kern/besucher.js';
+import { wandBauen, wandKonflikte, wandAnpassen } from '../kern/bauen.js';
 import { zeichne } from '../ansicht/zeichnen.js';
 import { aktualisierungStarten } from './aktualisieren.js';
 
 const SPEICHER = 'churchsim-editor';
-const VERSION = 2;
+const VERSION = 3;   // Spielstand-Format (3 = Echtzeit). Ältere Spielstände (2 = Runden) werden übernommen.
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
   tuer: 'Tippe auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
   stuhl: 'Tippe um einen Stuhl aufzustellen',
+  ...TEXTE.hinweise,
   abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
   raum: 'Tippe in einen Raum, um seine Funktion festzulegen.'
 };
-const LAUFTEMPO = 7;      // Kästchen pro Sekunde
-const ABSTAND_MS = 260;   // Abstand zwischen zwei Besuchern
+const MOEBEL_WERKZEUGE = MOEBEL.map(m => m.id);
 
-let z = laden() || neuerZustand();
-personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); stammAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
+let z = laden() || neuesSpiel();
 let raeume = auswerten();
-let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
-let besucher = [], ablauf = null, stuhlStart = null, schwebe = null, klickStart = null, maus = null;
+let werkzeug = 'wand', ziehen = null, editorOffen = false, tragen = null;
+let fenster = null;            // geöffnetes Fenster: { art: 'raumtyp'|'raum'|'maschine'|'besucher'|'person', … }
+let stuhlStart = null, schwebe = null, klickStart = null, maus = null;
 const verlauf = [];
 
 const $ = id => document.getElementById(id);
 const euro = n => `${n.toLocaleString('de-DE')} €`;
+const zahl1 = n => n.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const leinwand = $('karte'), ctx = leinwand.getContext('2d'), flaeche = $('flaeche');
-const maske = $('maske'), rueckblick = $('rueckblick');
+const maske = $('maske');
 let ansicht = { k: 16, ox: 0, oy: 0 };
 
 function auswerten() {
@@ -49,11 +56,12 @@ function auswerten() {
     r.veranstaltungText = moeglicheVeranstaltungen(r.typ).length ? (v ? v.name : 'Keine Veranstaltung') : null;
     r.veranstaltungFehlt = !!r.veranstaltungText && !v;   // Warnsymbol auf der Karte
   }
-  // Kirchkaffee: geöffnet oder geschlossen unter dem Namen anzeigen
-  const offen = kirchkaffeeOffen(z, { liste, gruppe });
-  for (const r of liste) if (r.typ && r.typ.id === 'kirchkaffee' && !r.probleme.length)
-    r.veranstaltungText = offen.includes(r) ? 'Geöffnet' : 'Geschlossen – kein Ehrenamtlicher';
+  kirchkaffeeBeschriften({ liste, gruppe });
   return { liste, gruppe };
+}
+// Kirchkaffee: geöffnet oder warum geschlossen – unter dem Raumnamen
+function kirchkaffeeBeschriften(r) {
+  for (const k of kirchkaffeeZustand(z, r)) k.raum.veranstaltungText = k.stationen.length ? TEXTE.kirchkaffee.offen : TEXTE.kirchkaffee[k.fehlt];
 }
 function speichern() {
   try { localStorage.setItem(SPEICHER, JSON.stringify({ version: VERSION, zustand: z })); } catch (e) {}
@@ -61,16 +69,37 @@ function speichern() {
 function laden() {
   try {
     const d = JSON.parse(localStorage.getItem(SPEICHER));
-    if (d && d.version === VERSION && d.zustand && d.zustand.zellen) return d.zustand;
+    if (d && d.zustand && d.zustand.zellen) {
+      if (d.version === VERSION) return spielAnlegen(d.zustand);
+      if (d.version === 2) return ausRundenSpielstand(d.zustand);
+    }
   } catch (e) {}
   return null;
 }
+
+// Bauen mit Rückgängig. Gemerkt wird nur das Gebaute (Wände, Räume, Möbel, wo Mitarbeiter stehen) und das Geld dafür –
+// die Zeit, die Besucher und das Kaffeegeld laufen beim Rückgängigmachen nicht zurück.
+const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen'];
 function aendern(fn) {
-  verlauf.push(JSON.stringify(z));
-  if (verlauf.length > 60) verlauf.shift();
+  const vorher = JSON.stringify(BAU.map(k => z[k])), kontoVor = z.konto;
   fn();
   moebelPruefen(z); personenPruefen(z);
-  raeume = auswerten(); speichern(); malen();
+  verlauf.push({ bau: vorher, geld: z.konto - kontoVor });
+  if (verlauf.length > 60) verlauf.shift();
+  nachAenderung();
+}
+function nachAenderung() { raeume = auswerten(); speichern(); anzeigeErzwingen(); malen(); }
+function rueckgaengig() {
+  const e = verlauf.pop();
+  if (!e) return;
+  const [zellen, raumTyp, veranstaltung, moebel, personen] = JSON.parse(e.bau);
+  for (const m of moebel) { const jetzt = moebelBei(z, m.x, m.y); if (jetzt && jetzt.art === m.art && 'fuellung' in jetzt) m.fuellung = jetzt.fuellung; }
+  Object.assign(z, { zellen, raumTyp, veranstaltung, moebel });
+  for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt) { p.x = alt.x; p.y = alt.y; } }
+  if (e.geld < 0) buchen(z, 'einnahmen', 'rueckerstattung', -e.geld);
+  if (e.geld > 0) buchen(z, 'ausgaben', 'moebel', e.geld);
+  personenPruefen(z); fenster = null; maske.hidden = true;
+  nachAenderung();
 }
 
 function groesseAnpassen() {
@@ -82,25 +111,132 @@ function groesseAnpassen() {
   ansicht = { k, ox: Math.floor((b - z.w * k) / 2), oy: Math.floor((h - z.h * k) / 2) };
   malen();
 }
-function figuren() {
-  return z.personen.map(p => ({ ...daten(p), x: p.x, y: p.y, getragen: tragen && tragen.person === p })).filter(f => f.art);
+
+// ---- Figuren in Bewegung: Besucher und Ehrenamtliche im Kirchkaffee ----
+// Wo jemand gerade ist, wird aus der Spielzeit berechnet. So laufen alle bei x5 schneller und stehen bei Pause still.
+const wegSpeicher = new Map();
+function strecke(schluessel, von, nach) {
+  if (!wegSpeicher.has(schluessel)) {
+    const blockiert = (x, y) => !!moebelBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
+    const pfad = glaetten(z, weg(z, von, nach, blockiert), blockiert) || [von, nach];
+    let laenge = 0;
+    for (let i = 0; i < pfad.length - 1; i++) laenge += Math.hypot(pfad[i + 1].x - pfad[i].x, pfad[i + 1].y - pfad[i].y);
+    wegSpeicher.set(schluessel, { pfad, laenge });
+  }
+  return wegSpeicher.get(schluessel);
 }
+function punktAufWeg({ pfad }, d) {
+  for (let i = 0; i < pfad.length - 1; i++) {
+    const a = pfad[i], c = pfad[i + 1], len = Math.hypot(c.x - a.x, c.y - a.y);
+    if (d <= len) { const f = len ? d / len : 1; return { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f, unterwegs: true }; }
+    d -= len;
+  }
+  const e = pfad[pfad.length - 1];
+  return { x: e.x, y: e.y, unterwegs: false };
+}
+function strasse(i) {
+  const g = GRUNDSTUECK, gehweg = GEHWEGE.find(w => w.w > w.h && w.y >= g.y + g.h);
+  return { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
+}
+// Ein Besucher geht nacheinander Wegstücke: von der Straße zum Stuhl (oder bis zur Tür und wieder heim),
+// nach dem Gottesdienst zum Stehplatz im Kirchkaffee und am Ende nach Hause.
+function besucherFiguren() {
+  const L = z.lauf, t = z.minuten;
+  if (!L || !L.gaeste) return [];
+  return L.gaeste.map((g, i) => {
+    const s = `${L.woche}:${i}:`, start = strasse(i), t0 = L.ankunft + i * ABSTAND;
+    if (t < t0) return null;
+    const hin = strecke(s + 'hin', start, g.sitz || g.tuer);
+    let ort = punktAufWeg(hin, (t - t0) * LAUFTEMPO), sitzt = !!g.sitz && !ort.unterwegs, ziel = g.sitz;
+    if (!g.sitz) {   // kein Stuhl frei: wieder nach Hause
+      const t1 = t0 + hin.laenge / LAUFTEMPO;
+      if (t >= t1) { const zurueck = strecke(s + 'heim', g.tuer, start); ort = punktAufWeg(zurueck, (t - t1) * LAUFTEMPO); if (!ort.unterwegs) return null; }
+      return { id: g.id, name: g.name, ...ort, sitzt: false, sichtbar: true };
+    }
+    const kaffeeBeginn = L.beginn + DAUER.gottesdienst + i * 0.5;
+    if (g.kaffee && g.kaffee.platz && t >= kaffeeBeginn && !L.ausgefallen) {
+      ort = punktAufWeg(strecke(s + 'kaffee', g.sitz, g.kaffee.platz), (t - kaffeeBeginn) * LAUFTEMPO);
+      sitzt = false; ziel = g.kaffee.platz;
+    }
+    if (L.phase === 'ende') {
+      const t2 = L.ende + i * ABSTAND * 0.5;
+      if (t >= t2) {
+        const von = L.ausgefallen ? { x: Math.round(ort.x), y: Math.round(ort.y) } : ziel;
+        ort = punktAufWeg(strecke(s + 'ende', von, start), (t - t2) * LAUFTEMPO);
+        if (!ort.unterwegs) return null;
+        sitzt = false;
+      }
+    }
+    return { id: g.id, name: g.name, ...ort, sitzt, sichtbar: true };
+  }).filter(Boolean);
+}
+// Ehrenamtlicher an der Kaffeemaschine: holt Tasse für Tasse an der Maschine und bringt sie zur Theke.
+function eaPosition(p) {
+  const L = z.lauf;
+  if (!L || L.phase !== 'kirchkaffee' || !L.stationen) return null;
+  const si = L.stationen.findIndex(s => s.ea === p.id);
+  if (si < 0) return null;
+  const st = L.stationen[si], t = z.minuten;
+  const zeiten = L.gaeste.filter(g => g.kaffee && g.kaffee.station === si).map(g => g.kaffee.zeit).sort((a, b) => a - b);
+  const zwischen = (a, b, f) => ({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
+  const start = L.beginn + DAUER.gottesdienst;
+  if (!zeiten.length || t >= zeiten[zeiten.length - 1]) return t - start < 5 ? zwischen(p, st.standTheke, (t - start) / 5) : st.standTheke;
+  const takt = zeiten.length > 1 ? zeiten[1] - zeiten[0] : 5;
+  const j = zeiten.findIndex(h => t <= h), anfang = zeiten[j] - takt;
+  if (t < anfang) return t - start < 5 ? zwischen(p, st.standTheke, (t - start) / 5) : st.standTheke;
+  const f = (t - anfang) / takt;
+  if (f < 0.35) return zwischen(st.standTheke, st.standMaschine, f / 0.35);
+  if (f < 0.65) return st.standMaschine;
+  return zwischen(st.standMaschine, st.standTheke, (f - 0.65) / 0.35);
+}
+function figuren() {
+  return z.personen.map(p => {
+    const d = daten(p); if (!d) return null;
+    const pos = tragen && tragen.person === p ? null : eaPosition(p);
+    return { ...d, x: pos ? pos.x : p.x, y: pos ? pos.y : p.y, getragen: tragen && tragen.person === p };
+  }).filter(Boolean);
+}
+
 function malen() {
   ctx.clearRect(0, 0, leinwand.width, leinwand.height);
-  const konflikte = ziehen && ziehen.art === 'wand' ? wandKonflikte(z, ziehen.x0, ziehen.y0, ziehen.x1, ziehen.y1) : [];
-  const stuhlPreis = MOEBEL.find(m => m.id === 'stuhl').kosten;
-  const preisSchild = editorOffen && werkzeug === 'stuhl' && maus ? { ...maus, text: euro(stuhlPreis), zuTeuer: !kannBezahlen(z, stuhlPreis) } : null;
-  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, konflikte, auswahl, schwebe: editorOffen && !ziehen ? schwebe : null, preisSchild, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
+  const vorschau = ziehen && ziehen.art === 'wand' ? (([x0, y0, x1, y1]) => ({ ...ziehen, x0, y0, x1, y1 }))(wandAnpassen(z, ziehen.x0, ziehen.y0, ziehen.x1, ziehen.y1)) : ziehen;
+  const konflikte = vorschau && vorschau.art === 'wand' ? wandKonflikte(z, vorschau.x0, vorschau.y0, vorschau.x1, vorschau.y1) : [];
+  const moebelTyp = MOEBEL.find(m => m.id === werkzeug);
+  const preisSchild = editorOffen && moebelTyp && maus ? { ...maus, text: euro(moebelTyp.kosten), zuTeuer: !kannBezahlen(z, moebelTyp.kosten) } : null;
+  const auswahl = fenster && (fenster.art === 'raum' || fenster.art === 'raumtyp') ? fenster.nr : null;
+  zeichne(ctx, z, raeume, ansicht, { vorschau, konflikte, auswahl, schwebe: editorOffen && !ziehen ? schwebe : null, preisSchild,
+    raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher: besucherFiguren(),
+    markiert: fenster && fenster.art === 'besucher' ? fenster.id : null });
   anzeigenAktualisieren();
 }
 
-// ---- Anzeigen: Seitenleiste, Datum mit Kirchenjahr-Rad, Hinweis ----
+// ---- Die Uhr ----
+let letzteZeit = performance.now(), letztesSpeichern = 0;
+function schleife(t) {
+  const sekunden = Math.min(0.25, (t - letzteZeit) / 1000);   // nach langer Abwesenheit nicht sprunghaft weiter
+  letzteZeit = t;
+  if (z.tempo > 0) {
+    const vorher = z.personen.length;
+    zeitVorruecken(z, raeume, spielMinuten(sekunden, z.tempo));
+    if (z.personen.length !== vorher) raeume = auswerten();   // neue Ehrenamtliche
+    else kirchkaffeeBeschriften(raeume);
+    if (!z.lauf) wegSpeicher.clear();
+    malen();
+    if (t - letztesSpeichern > 2000) { letztesSpeichern = t; speichern(); }
+  }
+  requestAnimationFrame(schleife);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') speichern(); });
+
+// ---- Anzeigen: Leiste oben, Seitenleiste, Datum mit Kirchenjahr-Rad, Hinweis, offenes Fenster ----
 const ART_TEXT_MEHRZAHL = { hauptamt: 'listeHauptamt', ehrenamt: 'listeEhrenamt' };
 const LEERTEXT = { hauptamt: 'Noch keine Hauptamtlichen', ehrenamt: 'Noch keine Ehrenamtlichen' };
-let letzteAnzeige = '';
+let letzteAnzeige = '', letzteAnzeigeZeit = 0;
+function anzeigeErzwingen() { letzteAnzeigeZeit = 0; }
 function anzeigenAktualisieren() {
-  // Während Besucher einlaufen, bleibt die Seitenleiste beim alten Stand – sie springt erst nach dem Wochenrückblick um.
-  if (ablauf) { $('wocheBeenden').disabled = true; $('spielHinweis').textContent = ''; return; }
+  const jetzt = performance.now();
+  if (jetzt - letzteAnzeigeZeit < 100) return;   // höchstens 10-mal pro Sekunde
+  letzteAnzeigeZeit = jetzt;
   const v = verfuegbarkeit(z, raeume);
   $('anzHauptamt').textContent = `${v.hauptamt.frei}/${v.hauptamt.gesamt}`;
   $('anzEhrenamt').textContent = `${v.ehrenamt.frei}/${v.ehrenamt.gesamt}`;
@@ -120,33 +256,35 @@ function anzeigenAktualisieren() {
       }
     }
   }
-  $('kontostand').textContent = euro(z.konto);
-  $('kontoEditor').textContent = euro(z.konto);
-  $('kontoKurz').textContent = euro(z.konto);
-  const letzte = z.letzteWoche ? z.letzteWoche.besucher : null;
-  $('besucherLetzteWoche').textContent = letzte === null ? '–' : letzte;
-  $('besucherKurz').textContent = letzte === null ? '–' : letzte;
+  for (const id of ['kontostand', 'kontoEditor', 'kontoKurz', 'kontoOben']) $(id).textContent = euro(z.konto);
+  $('bekanntheit').textContent = z.bekanntheit;
+  const lg = z.letzterGottesdienst;
+  $('besucherLetzter').textContent = lg ? lg.besucher : '–';
+  $('besucherKurz').textContent = lg ? lg.besucher : '–';
+  $('besucherHeim').textContent = lg ? lg.heim : '–';
+  $('besucherStamm').textContent = z.besucher.length;
   const f = finanzPrognose(z, raeume);
   $('progEinnahmen').textContent = euro(f.einnahmen);
   $('progAusgaben').textContent = euro(f.ausgaben);
-  const woche = ablauf ? ablauf.woche : z.woche;   // während des Gottesdienstes noch der laufende Sonntag
-  const s = sonntagDerWoche(woche);
-  $('sonntag').textContent = `${s.name} · ${s.datum}`;
-  radZeichnen(kirchenjahrStand(woche));
-  const kann = kannWocheBeenden(z, raeume);
-  $('wocheBeenden').disabled = !kann || !!ablauf;
-  $('spielHinweis').textContent = kann || ablauf ? '' : wasFehlt();
+  // Zeit
+  const zp = zeitpunkt(z.minuten), s = sonntagDerWoche(zp.woche), stand = kirchenjahrStand(zp.woche);
+  $('uhr').textContent = TEXTE.zeitAnzeige(zp.woche + 1, TEXTE.tage[zp.tag], uhrzeit(z.minuten));
+  $('countdown').textContent = TEXTE.countdown(tageBisSonntag(z.minuten));
+  $('sonntag').textContent = `${s.name} · ${s.datum} · ${stand.aktuell.name}`;
+  radZeichnen(stand);
+  document.querySelectorAll('[data-tempo]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.tempo) === z.tempo)));
+  $('spielHinweis').textContent = hinweisText();
+  fensterAktualisieren();
 }
 document.querySelector('.seitenleiste').addEventListener('click', e => {
   const li = e.target.closest('li[data-person]');
-  if (li && !ablauf) karteOeffnen(z.personen.find(p => p.id === li.dataset.person));
+  if (li) fensterOeffnen({ art: 'person', id: li.dataset.person });
 });
 
 // Kirchenjahr-Rad: Abschnitte wie Tortenstücke, Zeiger wie bei einer Uhr (oben = 1. Advent, im Uhrzeigersinn)
 let letztesRad = '';
 function radZeichnen(stand) {
   const schluessel = stand.fortschritt.toFixed(4);
-  $('zeit').textContent = stand.aktuell.name;
   if (schluessel === letztesRad) return;
   letztesRad = schluessel;
   const punkt = (a, r) => [Math.sin(a * 2 * Math.PI) * r, -Math.cos(a * 2 * Math.PI) * r].map(n => n.toFixed(2)).join(' ');
@@ -160,15 +298,21 @@ function radZeichnen(stand) {
     <circle r="5" fill="#d6362b"/>`;
 }
 
-function wasFehlt() {
-  const gd = raumBereitschaft(z, raeume).filter(b => b.typ.id === 'gottesdienst');
-  if (!gd.length) return 'Für den Gottesdienst fehlt ein fertiger Gottesdienstraum.';
+// Hinweis unten rechts: was gerade läuft, wer heimgehen musste, oder was für den Gottesdienst fehlt
+function hinweisText() {
+  const L = z.lauf;
+  if (L && L.phase !== 'ende') {
+    const heim = L.gaeste && L.phase !== 'anreise' ? L.gaeste.filter(g => !g.sitz).length : 0;
+    return TEXTE.laeuft[L.phase] + (heim ? ' ' + TEXTE.heimgeschickt(heim) : '');
+  }
+  if (L && L.ausgefallen) return TEXTE.ausgefallen;
+  if (L && z.letzterGottesdienst && z.letzterGottesdienst.heim) return TEXTE.heimgeschickt(z.letzterGottesdienst.heim);
+  const gd = gottesdienstRaeume(z, raeume).filter(b => b.typ.id === 'gottesdienst');
+  if (!gd.length) return TEXTE.fehltRaum;
   const mit = gd.filter(b => b.veranstaltung && b.veranstaltung.id === 'gottesdienst');
-  if (!mit.length) return 'Für den Gottesdienst fehlt: Im Gottesdienstraum ist noch kein Gottesdienst eingestellt (Raum anklicken).';
-  const b = mit[0], v = b.veranstaltung, teile = [];
-  if (b.fehlt.includes('leitung')) teile.push('der Pastor im Gottesdienstraum');
-  if (b.fehlt.includes('stuehle')) teile.push(`mindestens ${v.minStuehle} Stühle (bisher ${b.stuehle.length})`);
-  return `Für den Gottesdienst fehlt: ${teile.join(' und ')}.`;
+  if (!mit.length) return TEXTE.fehltVeranstaltung;
+  if (!mit.some(b => b.bereit)) return TEXTE.fehltLeitung;
+  return '';
 }
 
 // ---- Eingaben auf der Karte ----
@@ -178,26 +322,28 @@ function feldAus(e) {
   const x = Math.floor((px - ansicht.ox) / ansicht.k), y = Math.floor((py - ansicht.oy) / ansicht.k);
   return { x: Math.max(0, Math.min(z.w - 1, x)), y: Math.max(0, Math.min(z.h - 1, y)) };
 }
-function figurBei(e) {
+function naechste(e, liste, radius) {
   const { px, py } = punktAus(e), k = ansicht.k;
-  let beste = null, abstand = Math.max(22, k * 1.1);
-  for (const p of z.personen) {
+  let beste = null, abstand = radius;
+  for (const p of liste) {
     const d = Math.hypot(ansicht.ox + (p.x + 0.5) * k - px, ansicht.oy + (p.y + 0.5) * k - py);
     if (d < abstand) { abstand = d; beste = p; }
   }
   return beste;
 }
+const figurBei = e => naechste(e, z.personen, Math.max(22, ansicht.k * 1.1));
+const besucherBei = e => naechste(e, besucherFiguren(), Math.max(12, ansicht.k * 0.6));
 const personAuf = (x, y) => z.personen.some(p => p.x === x && p.y === y);
+const maschineBei = f => { const m = moebelBei(z, f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
 
 leinwand.addEventListener('contextmenu', e => e.preventDefault());
 leinwand.addEventListener('mousedown', e => { if (e.button === 2) abbrechen(); });   // Rechtsklick während gedrückter linker Taste
 leinwand.addEventListener('pointerdown', e => {
   if (e.button === 2) { abbrechen(); return; }        // Rechtsklick bricht Ziehen ab
-  if (ablauf) return;
   if (!editorOffen) {
     const p = figurBei(e);
     if (p) { leinwand.setPointerCapture(e.pointerId); const a = punktAus(e); tragen = { person: p, ...a, start: a, bewegt: false }; malen(); }
-    else klickStart = feldAus(e);
+    else klickStart = { feld: feldAus(e), besucher: besucherBei(e) };
     return;
   }
   const f = feldAus(e);
@@ -212,7 +358,7 @@ leinwand.addEventListener('pointermove', e => {
   if (e.buttons & 2) { abbrechen(); return; }
   mauszeiger(e);
   maus = punktAus(e);
-  if (editorOffen && werkzeug === 'stuhl') malen();
+  if (editorOffen && MOEBEL_WERKZEUGE.includes(werkzeug)) malen();
   if (editorOffen && !ziehen) { const f = feldAus(e); if (!schwebe || f.x !== schwebe.x || f.y !== schwebe.y) { schwebe = f; malen(); } }
   if (tragen) {
     const a = punktAus(e);
@@ -226,34 +372,41 @@ leinwand.addEventListener('pointermove', e => {
 leinwand.addEventListener('pointerup', e => {
   if (tragen) {
     const f = feldAus(e), p = tragen.person, bewegt = tragen.bewegt; tragen = null;
-    if (!bewegt) { karteOeffnen(p); return; }   // nur angetippt: Charakter-Karte
+    if (!bewegt) { fensterOeffnen({ art: 'person', id: p.id }); return; }   // nur angetippt: Charakter-Karte
     if (p.x !== f.x || p.y !== f.y) aendern(() => versetzen(z, p, f.x, f.y)); else malen();
     return;
   }
   if (!editorOffen) {
-    // Spielansicht: Klick auf einen Raum mit Veranstaltungen öffnet das Raum-Fenster
+    // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Raum mit Veranstaltungen → Raum-Fenster
     const f = feldAus(e), s = klickStart; klickStart = null;
-    if (s && s.x === f.x && s.y === f.y) { const r = raumMitVeranstaltung(f); if (r) raumFensterOeffnen(r); }
+    if (!s || s.feld.x !== f.x || s.feld.y !== f.y) return;
+    if (s.besucher) return fensterOeffnen({ art: 'besucher', id: s.besucher.id });
+    const m = maschineBei(f);
+    if (m) return fensterOeffnen({ art: 'maschine', x: m.x, y: m.y });
+    const r = raumMitVeranstaltung(f);
+    if (r) fensterOeffnen({ art: 'raum', nr: r.nr });
     return;
   }
   const f = feldAus(e);
   if (ziehen) {
     const v = ziehen; ziehen = null;
-    if (v.art === 'wand') { if (!wandKonflikte(z, v.x0, v.y0, v.x1, v.y1).length) aendern(() => wandBauen(z, v.x0, v.y0, v.x1, v.y1)); else malen(); }
-    else aendern(() => { abriss(z, v.x0, v.y0, v.x1, v.y1); moebelAbreissen(z, v.x0, v.y0, v.x1, v.y1); });
+    if (v.art === 'wand') {
+      const [x0, y0, x1, y1] = wandAnpassen(z, v.x0, v.y0, v.x1, v.y1);
+      if (!wandKonflikte(z, x0, y0, x1, y1).length) aendern(() => wandBauen(z, x0, y0, x1, y1)); else malen();
+    } else aendern(() => { abriss(z, v.x0, v.y0, v.x1, v.y1); moebelAbreissen(z, v.x0, v.y0, v.x1, v.y1); });
     return;
   }
-  if (werkzeug === 'stuhl') {
+  if (MOEBEL_WERKZEUGE.includes(werkzeug)) {
     if (!stuhlStart || stuhlStart.x !== f.x || stuhlStart.y !== f.y) return;   // nur Tippen, kein Ziehen
     if (moebelBei(z, f.x, f.y)) return;                               // entfernen nur per Abriss
-    const preis = MOEBEL.find(m => m.id === 'stuhl').kosten;
-    if (!kannBezahlen(z, preis)) { kurzerHinweis(`Nicht genug Geld für einen Stuhl (${euro(preis)}).`); return; }
-    aendern(() => moebelKaufen(z, 'stuhl', f.x, f.y, personAuf));
+    const typ = MOEBEL.find(m => m.id === werkzeug);
+    if (!kannBezahlen(z, typ.kosten)) { kurzerHinweis(werkzeug === 'stuhl' ? `Nicht genug Geld für einen Stuhl (${euro(typ.kosten)}).` : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten))); return; }
+    aendern(() => moebelKaufen(z, werkzeug, f.x, f.y, personAuf));
   } else if (werkzeug === 'tuer') {
     if (z.zellen[idx(z, f.x, f.y)]) aendern(() => tuerUmschalten(z, f.x, f.y));
   } else if (werkzeug === 'raum') {
     const nr = raeume.gruppe[idx(z, f.x, f.y)];
-    if (nr >= 0) { auswahl = nr; maskeOeffnen(); } else maskeSchliessen();
+    if (nr >= 0) fensterOeffnen({ art: 'raumtyp', nr }); else fensterSchliessen();
   }
 });
 leinwand.addEventListener('pointercancel', abbrechen);
@@ -263,18 +416,17 @@ function abbrechen() { if (ziehen || tragen) { ziehen = null; tragen = null; mal
 // Mauszeiger zeigt, was man tun kann
 function mauszeiger(e) {
   let c = 'default';
-  if (ablauf) c = 'default';
-  else if (tragen) c = 'grabbing';
-  else if (!editorOffen) c = figurBei(e) ? 'grab' : raumMitVeranstaltung(feldAus(e)) ? 'pointer' : 'default';
+  if (tragen) c = 'grabbing';
+  else if (!editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || raumMitVeranstaltung(f) ? 'pointer' : 'default'; }
   else c = werkzeug === 'tuer' || werkzeug === 'raum' ? 'pointer' : 'crosshair';
   if (leinwand.style.cursor !== c) leinwand.style.cursor = c;
 }
 
 // Escape: erst Ziehen abbrechen, dann Fenster schließen, dann Editor schließen
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape' || ablauf) return;
+  if (e.key !== 'Escape') return;
   if (ziehen || tragen) return abbrechen();
-  if (!maske.hidden) return maskeSchliessen();
+  if (!maske.hidden) return fensterSchliessen();
   if (editorOffen) editorUmschalten(false);
 });
 
@@ -286,171 +438,209 @@ function kurzerHinweis(text) {
   hinweisTimer = setTimeout(() => { h.textContent = HINWEISE[werkzeug]; h.classList.remove('warnung'); }, 3000);
 }
 
-// ---- Raum-Maske ----
-function maskeOeffnen() {
-  const r = raeume.liste[auswahl];
+// ---- Fenster ----
+// Ein Fenster wird bei Änderungen neu aufgebaut (z. B. Füllstand, Prognose), aber nur, wenn sich der Inhalt geändert hat.
+let letzterFensterInhalt = '';
+function fensterOeffnen(f) { fenster = f; letzterFensterInhalt = ''; anzeigeErzwingen(); malen(); }
+function fensterSchliessen() { fenster = null; maske.hidden = true; letzterFensterInhalt = ''; malen(); }
+function fensterAktualisieren() {
+  if (!fenster) { maske.hidden = true; return; }
+  const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte }[fenster.art]();
+  if (inhalt === null) { fenster = null; maske.hidden = true; return; }
+  maske.classList.toggle('breit', fenster.art === 'raum');
+  if (inhalt !== letzterFensterInhalt) { letzterFensterInhalt = inhalt; maske.querySelector('.inhalt').innerHTML = inhalt; }
+  maske.hidden = false;
+}
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Raumfunktion festlegen (Editor)
+function raumTypFenster() {
+  const r = raeume.liste[fenster.nr];
+  if (!r) return null;
   const zeilen = RAUMTYPEN.map(t => {
     const p = pruefeRaum(z, r, t), aktiv = r.typ && r.typ.id === t.id;
     const status = p.includes('groesse') ? `zu klein, mind. ${t.minGroesse[0]} × ${t.minGroesse[1]}` : `mind. ${t.minGroesse[0]} × ${t.minGroesse[1]}`;
     return `<button class="typ${aktiv ? ' aktiv' : ''}" data-typ="${t.id}" ${p.includes('groesse') ? 'disabled' : ''}>
       <span class="farbe" style="background:${t.farbe}"></span><span><b>${t.name}</b><small>${status}</small></span></button>`;
   }).join('');
-  maske.querySelector('.inhalt').innerHTML = `<h2>Raumfunktion</h2>
+  return `<h2>Raumfunktion</h2>
     ${r.tueren === 0 ? '<p class="warnung">Dieser Raum hat noch keine Tür.</p>' : ''}
     <div class="typen">${zeilen}</div>
     <div class="zeile">${r.typ ? '<button data-typ="">Funktion entfernen</button>' : ''}<button data-zu>Schließen</button></div>`;
-  maske.hidden = false; malen();
 }
-// ---- Charakter-Karte eines Mitarbeiters ----
+
+// Charakter-Karte eines Mitarbeiters
 const ART_TEXT = { hauptamt: 'Hauptamtlich', ehrenamt: 'Ehrenamtlich' };
-function karteOeffnen(p) {
-  const d = daten(p), raum = eingesetztIn(z, raeume, p);
-  maske.querySelector('.inhalt').innerHTML = `<h2>${d.name}</h2>
+function personenKarte() {
+  const p = z.personen.find(x => x.id === fenster.id), d = p && daten(p);
+  if (!d) return null;
+  const raum = eingesetztIn(z, raeume, p);
+  return `<h2>${esc(d.name)}</h2>
     <p class="unter">${ART_TEXT[d.art]} · ${raum ? 'Im Einsatz: ' + raum.typ.name : 'Verfügbar'}</p>
     <h3>Skills</h3><p class="leer">Skills folgen später</p>
     <div class="zeile"><button data-zu>Schließen</button></div>`;
-  auswahl = null; maske.hidden = false; malen();
 }
-// ---- Raum-Fenster in der Spielansicht: Veranstaltung einstellen ----
+
+// Raum-Fenster in der Spielansicht (Gottesdienstraum): Veranstaltung, Wochenplan, Mitarbeiter, Prognose
 function raumMitVeranstaltung(f) {
   const nr = raeume.gruppe[idx(z, f.x, f.y)], r = nr >= 0 ? raeume.liste[nr] : null;
   return r && moeglicheVeranstaltungen(r.typ).length ? r : null;
 }
-function raumFensterOeffnen(r) {
-  const aktuell = veranstaltungVon(z, r);
-  const knopf = (id, name) => `<button class="typ${(aktuell ? aktuell.id : '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}"><span><b>${name}</b></span></button>`;
-  maske.querySelector('.inhalt').innerHTML = `<h2>${r.typ.name}</h2>
-    <h3>Veranstaltung</h3>
-    <div class="typen">${moeglicheVeranstaltungen(r.typ).map(v => knopf(v.id, v.name)).join('')}${knopf('', KEINE_VERANSTALTUNG)}</div>
+function raumFenster() {
+  const r = raeume.liste[fenster.nr];
+  if (!r || !moeglicheVeranstaltungen(r.typ).length) return null;
+  const T = TEXTE.raum, aktuell = veranstaltungVon(z, r), info = gottesdienstRaeume(z, raeume).find(g => g.raum === r);
+  const erfuellt = { 'Pastor im Raum': !!(info && info.leitung) };
+  const kachel = (id, name, k) => `<button class="kachel${(aktuell ? aktuell.id : '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}">
+      <b>${name}</b>
+      <span class="klein">${TEXTE.bringt}</span><ul>${k.bringt.map(t => `<li>${t}</li>`).join('')}</ul>
+      <span class="klein">${TEXTE.bedingungen}</span><ul>${k.bedingungen.map(t => `<li class="${t in erfuellt ? (erfuellt[t] ? 'ok' : 'fehlt') : ''}">${t}</li>`).join('')}</ul></button>`;
+  const kacheln = moeglicheVeranstaltungen(r.typ).map(v => kachel(v.id, v.name, TEXTE.veranstaltungKacheln[v.id])).join('')
+    + kachel('', KEINE_VERANSTALTUNG, TEXTE.veranstaltungKacheln.keine);
+  let plan = '';
+  if (aktuell) {
+    const kopf = TEXTE.tageKurz.map(t => `<th>${t}</th>`).join('');
+    const reihen = SLOTS.map(s => `<tr><th class="slot">${T.slots[s.id]}<small>${String(s.stunde).padStart(2, '0')}:00</small></th>${
+      TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${z.plan.tag === tag && z.plan.slot === s.id ? ' aktiv' : ''}" data-plan="${tag}:${s.id}" aria-label="${TEXTE.tage[tag]} ${T.slots[s.id]}"></button></td>`).join('')}</tr>`).join('');
+    plan = `<h3>${T.wochenplan}</h3><p class="unter">${T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>`;
+  }
+  const leute = info ? info.imRaum : [];
+  const mitarbeiter = leute.length
+    ? leute.map(p => { const d = daten(p); return `<div class="kachel klein-kachel"><b>${esc(d.name)}</b><small>${ART_TEXT[d.art]} · ${T.skillsSpaeter}</small></div>`; }).join('')
+    : `<p class="warnung">${T.keinMitarbeiter}</p>`;
+  let vorschau = '';
+  if (aktuell) {
+    const p = prognose(z, raeume);
+    vorschau = `<h3>${terminDieseWoche(z) ? T.prognose : T.prognoseNaechste}</h3>
+      ${p.bereit ? '' : `<p class="warnung">${T.prognoseFaelltAus}</p>`}
+      <table class="finanzen hell">
+        <tr><td>${T.prognoseBesucher}</td><td class="zahl">${T.ca(zahl1(p.erwartet))}</td></tr>
+        <tr><td>${T.prognosePlaetze}</td><td class="zahl">${p.plaetze}</td></tr>
+        <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(p.geld)))}</td></tr>
+        <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(p.ehrenamt))}</td></tr></table>`;
+  }
+  return `<h2>${r.typ.name}</h2>
+    <h3>${T.veranstaltung}</h3><div class="kacheln">${kacheln}</div>
+    ${plan}
+    <h3>${T.mitarbeiter}</h3>${mitarbeiter}
+    ${vorschau}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
-  auswahl = r.nr; maske.hidden = false; malen();
 }
-function maskeSchliessen() { maske.hidden = true; auswahl = null; malen(); }
+
+// Kaffeemaschine: Füllstand und Kaffee nachkaufen
+function maschinenFenster() {
+  const m = maschineBei(fenster);
+  if (!m) return null;
+  const T = TEXTE.maschine, max = fassung(m.art), n = m.fuellung || 0;
+  const nr = raeume.gruppe[idx(z, m.x, m.y)], raum = nr >= 0 ? raeume.liste[nr] : null, imKaffee = raum && raum.typ && raum.typ.id === 'kirchkaffee';
+  const zuVoll = n + NACHKAUFEN.tassen > max, keinGeld = !kannBezahlen(z, NACHKAUFEN.preis);
+  return `<h2>${T.titel}</h2>
+    <div class="balken"><span style="width:${Math.round(n / max * 100)}%"></span></div>
+    <p class="unter">${T.fuellstand(n, max)}</p>
+    ${n === 0 ? `<p class="warnung">${T.leer}</p>` : ''}
+    ${imKaffee ? '' : `<p class="warnung">${T.nichtImKaffee}</p>`}
+    <div class="typen"><button data-nachkaufen ${zuVoll || keinGeld ? 'disabled' : ''}>${T.nachkaufen(NACHKAUFEN.preis, NACHKAUFEN.tassen)}</button></div>
+    ${zuVoll ? `<p class="unter">${T.voll}</p>` : keinGeld ? `<p class="unter">${T.keinGeld}</p>` : ''}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Besucher-Kärtchen: Bedürfnisse und Zufriedenheit
+function besucherKarte() {
+  const b = z.besucher.find(x => x.id === fenster.id);
+  if (!b) return null;
+  const T = TEXTE.karte, L = z.lauf, g = L && L.gaeste ? L.gaeste.find(x => x.id === b.id) : null;
+  const status = s => `<td class="zahl ${s === true ? 'ok' : s === false ? 'fehlt' : ''}">${s === true ? T.erfuellt : s === false ? T.nichtErfuellt : T.offen}</td>`;
+  let sitz = null, kaffee = null, gd = null;
+  if (g) {
+    sitz = !!g.sitz;
+    gd = L.ausgefallen || !g.sitz ? false : L.phase !== 'anreise' ? true : null;
+    if (g.kaffee && g.kaffee.ergebnis) kaffee = g.kaffee.ergebnis === 'ja';
+    else if (!g.sitz || L.ausgefallen || (L.phase === 'ende' && !g.kaffee)) kaffee = false;
+  }
+  return `<h2>${esc(b.voll)}</h2>
+    <p class="unter">${b.besuche ? T.besuche(b.besuche) : T.neu}</p>
+    <h3>${T.zufriedenheit}</h3>
+    <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>
+    <h3>${T.beduerfnisse}</h3>
+    <table class="finanzen hell">
+      <tr><td>${T.sitzplatz}</td>${status(sitz)}</tr>
+      <tr><td>${T.kaffee}</td>${b.kaffee ? status(kaffee) : `<td class="zahl">${T.keinKaffee}</td>`}</tr>
+      <tr><td>${T.gottesdienst}</td>${status(gd)}</tr>
+    </table>
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
 maske.addEventListener('click', e => {
   const b = e.target.closest('button');
-  if (!b) return;
-  if (b.hasAttribute('data-zu')) return maskeSchliessen();
-  if (b.dataset.veranstaltung !== undefined) {
-    const r = raeume.liste[auswahl];
-    aendern(() => veranstaltungEinstellen(z, r, b.dataset.veranstaltung || null));
-    return maskeSchliessen();
+  if (!b || b.disabled) return;
+  if (b.hasAttribute('data-zu')) return fensterSchliessen();
+  if (b.dataset.veranstaltung !== undefined) {           // Fenster bleibt offen
+    const r = raeume.liste[fenster.nr];
+    return aendern(() => veranstaltungEinstellen(z, r, b.dataset.veranstaltung || null));
+  }
+  if (b.dataset.plan) {
+    const [tag, slot] = b.dataset.plan.split(':');
+    z.plan = { tag: Number(tag), slot };
+    return nachAenderung();
+  }
+  if (b.hasAttribute('data-nachkaufen')) {
+    const m = maschineBei(fenster);
+    if (m) kaffeeNachkaufen(z, m);
+    return nachAenderung();
   }
   if (b.dataset.typ !== undefined) {
-    const r = raeume.liste[auswahl];
+    const r = raeume.liste[fenster.nr];
     aendern(() => typZuweisen(z, r, b.dataset.typ || null));
-    maskeSchliessen();
+    fensterSchliessen();
   }
 });
 
-// ---- Woche beenden: Besucher laufen ein, dann Wochenrückblick ----
-function wocheStarten() {
-  if (ablauf || !kannWocheBeenden(z, raeume)) return;
-  const beendet = sonntagDerWoche(z.woche);
-  const ergebnis = wocheBeenden(z, raeume);
-  speichern();
-  const g = GRUNDSTUECK, gehweg = GEHWEGE.find(w => w.w > w.h && w.y >= g.y + g.h);
-  const blockiert = (x, y) => !!moebelBei(z, x, y) || personAuf(x, y);
-  const jetzt = performance.now();
-  // Phase 1: alle laufen vom Tor auf ihre Stühle. Phase 2 (nach dem Gottesdienst): einige gehen ins Kirchkaffee.
-  besucher = ergebnis.weg.map((w, i) => {
-    const start = { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
-    return { name: w.name, vollerName: w.voll, pfad: glaetten(z, weg(z, start, w.sitz, blockiert), blockiert) || [w.sitz], beginn: jetzt + i * ABSTAND_MS,
-      x: start.x, y: start.y, sichtbar: false, kaffee: w.kaffee, sitz: w.sitz };
-  });
-  ablauf = { beendet, ergebnis, woche: ergebnis.woche, phase: 1 };
-  document.body.classList.add('laeuft');
-  requestAnimationFrame(schritt);
+// ---- Zeit-Knöpfe und Zurücksetzen ----
+document.querySelectorAll('[data-tempo]').forEach(b => {
+  b.textContent = TEXTE.tempo[b.dataset.tempo];
+  b.addEventListener('click', () => { z.tempo = Number(b.dataset.tempo); speichern(); anzeigeErzwingen(); malen(); });
+});
+function zuruecksetzen() {
+  z = neuesSpiel(); verlauf.length = 0; wegSpeicher.clear(); fenster = null;
+  nachAenderung();
 }
-function schritt(t) {
-  let fertig = true;
-  for (const b of besucher) {
-    let strecke = (t - b.beginn) / 1000 * LAUFTEMPO;
-    if (strecke < 0) { fertig = false; continue; }
-    b.sichtbar = true;
-    let angekommen = true;
-    for (let i = 0; i < b.pfad.length - 1; i++) {
-      const a = b.pfad[i], c = b.pfad[i + 1], len = Math.hypot(c.x - a.x, c.y - a.y);
-      if (strecke <= len) { const f = len ? strecke / len : 1; b.x = a.x + (c.x - a.x) * f; b.y = a.y + (c.y - a.y) * f; angekommen = false; break; }
-      strecke -= len;
-    }
-    if (angekommen) { const e = b.pfad[b.pfad.length - 1]; b.x = e.x; b.y = e.y; b.sitzt = true; continue; }
-    fertig = false;
-  }
-  malen();
-  if (!fertig) { requestAnimationFrame(schritt); return; }
-  const zumKaffee = besucher.filter(b => b.kaffee);
-  if (ablauf.phase === 1 && zumKaffee.length) {
-    // kurze Pause (der Gottesdienst), dann gehen die Kirchkaffee-Gäste los
-    ablauf.phase = 2;
-    setTimeout(() => {
-      const jetzt = performance.now(), blockiert = (x, y) => !!moebelBei(z, x, y) || personAuf(x, y);
-      zumKaffee.forEach((b, i) => { b.pfad = glaetten(z, weg(z, b.sitz, b.kaffee, blockiert), blockiert) || [b.kaffee]; b.beginn = jetzt + i * ABSTAND_MS; b.sitzt = false; });
-      requestAnimationFrame(schritt);
-    }, 1200);
-    return;
-  }
-  setTimeout(rueckblickZeigen, 600);
-}
-function rueckblickZeigen() {
-  const { beendet, ergebnis: e } = ablauf;
-  const ein = e.finanzen.einnahmen, aus = e.finanzen.ausgaben, saldo = summe(ein) - summe(aus);
-  const zeilen = (teil, namen) => Object.keys(namen).filter(k => k in teil || k === Object.keys(namen)[0])
-    .map(k => `<tr><td class="einzug">${namen[k]}</td><td class="zahl">${euro(teil[k] || 0)}</td></tr>`).join('');
-  const angebote = e.angebote.length
-    ? e.angebote.map(a => `<tr><td>${a.name}</td><td class="zahl">${a.besucher}</td></tr>`).join('')
-    : '<tr><td>Keine Besucher</td><td class="zahl">0</td></tr>';
-  rueckblick.querySelector('.inhalt').innerHTML = `
-    <h2>Wochenrückblick</h2><p class="unter">${beendet.name} · ${beendet.datum}</p>
-    <h3>Finanzen</h3>
-    <table><tr><td>Einnahmen</td><td class="zahl">${euro(summe(ein))}</td></tr>${zeilen(ein, EINNAHMEN)}
-      <tr><td>Ausgaben</td><td class="zahl">${euro(summe(aus))}</td></tr>${zeilen(aus, AUSGABEN)}
-      <tr class="summe"><td>Saldo</td><td class="zahl">${euro(saldo)}</td></tr>
-      <tr><td>Kontostand</td><td class="zahl">${euro(e.kontostand)}</td></tr></table>
-    <h3>Besucher</h3><table>${angebote}</table>
-    <h3>Neue Ehrenamtliche</h3><table><tr><td>Dazugekommen</td><td class="zahl">${e.neueEhrenamtliche.length}</td></tr>
-      ${e.neueEhrenamtliche.map(n => `<tr><td class="einzug">${n}</td><td></td></tr>`).join('')}</table>
-    <div class="zeile"><button id="weiter" class="haupt">Weiter</button></div>`;
-  rueckblick.hidden = false;
-  $('weiter').addEventListener('click', () => {
-    rueckblick.hidden = true; besucher = []; ablauf = null;
-    document.body.classList.remove('laeuft'); malen();
+// Zweimal klicken zum Bestätigen (wie beim Knopf „Neu“)
+function sicherKnopf(knopf, text, sicherText, aktion) {
+  let timer = null;
+  knopf.textContent = text;
+  knopf.addEventListener('click', () => {
+    if (knopf.dataset.sicher) { clearTimeout(timer); delete knopf.dataset.sicher; knopf.textContent = text; aktion(); return; }
+    knopf.dataset.sicher = '1'; knopf.textContent = sicherText;
+    timer = setTimeout(() => { delete knopf.dataset.sicher; knopf.textContent = text; }, 3000);
   });
 }
-$('wocheBeenden').addEventListener('click', wocheStarten);
+sicherKnopf($('zuruecksetzen'), TEXTE.zuruecksetzen, TEXTE.zuruecksetzenSicher, zuruecksetzen);
+sicherKnopf($('neu'), 'Neu', 'Wirklich leeren?', zuruecksetzen);
 
 // ---- Werkzeugleiste und Modi ----
 document.querySelectorAll('[data-werkzeug]').forEach(b => b.addEventListener('click', () => {
   werkzeug = b.dataset.werkzeug;
   document.querySelectorAll('[data-werkzeug]').forEach(x => x.setAttribute('aria-pressed', x === b));
   $('hinweis').textContent = HINWEISE[werkzeug];
-  maskeSchliessen();
+  fensterSchliessen();
 }));
-$('zurueck').addEventListener('click', () => {
-  if (!verlauf.length) return;
-  z = JSON.parse(verlauf.pop()); raeume = auswerten(); speichern(); maskeSchliessen();
-});
-const neuKnopf = $('neu');
-let neuTimer = null;
-neuKnopf.addEventListener('click', () => {
-  if (neuKnopf.dataset.sicher) {
-    clearTimeout(neuTimer); delete neuKnopf.dataset.sicher; neuKnopf.textContent = 'Neu';
-    aendern(() => { z = neuerZustand(); personenAnlegen(z); }); maskeSchliessen();
-  } else {
-    neuKnopf.dataset.sicher = '1'; neuKnopf.textContent = 'Wirklich leeren?';
-    neuTimer = setTimeout(() => { delete neuKnopf.dataset.sicher; neuKnopf.textContent = 'Neu'; }, 3000);
-  }
-});
+$('zurueck').addEventListener('click', rueckgaengig);
 function editorUmschalten(offen) {
-  if (ablauf) return;
   editorOffen = offen; ziehen = null; tragen = null;
   document.body.classList.toggle('modus-editor', offen);
   document.body.classList.toggle('modus-spiel', !offen);
-  maskeSchliessen();
+  fensterSchliessen();
 }
 $('editorAuf').addEventListener('click', () => editorUmschalten(true));
 $('editorZu').addEventListener('click', () => editorUmschalten(false));
 
-$('preisStuhl').textContent = euro(MOEBEL.find(m => m.id === 'stuhl').kosten);
+for (const m of MOEBEL) { const el = $('preis-' + m.id); if (el) el.textContent = euro(m.kosten); }
+$('textBekanntheit').textContent = TEXTE.bekanntheit;
+$('textKonto').textContent = TEXTE.kontostand;
+$('textLetzter').textContent = TEXTE.besucherLetzter;
+$('textHeim').textContent = TEXTE.besucherHeim;
+$('textStamm').textContent = TEXTE.besucherStamm;
 new ResizeObserver(groesseAnpassen).observe(flaeche);
 $('hinweis').textContent = HINWEISE[werkzeug];
-aktualisierungStarten(() => !!ablauf || !!ziehen || !!tragen);
+aktualisierungStarten(() => !!(z.lauf && z.lauf.phase !== 'ende') || !!ziehen || !!tragen);
+requestAnimationFrame(schleife);

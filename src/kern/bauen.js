@@ -1,6 +1,6 @@
 // Bauen mit Rücksicht auf Möbel: Wände werden nicht über Möbel gebaut (nichts wird aus Versehen ersetzt).
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
-import { wandRechteck } from './karte.js';
+import { wandRechteck, LEER, idx, aufGrundstueck } from './karte.js';
 import { moebelBei } from './moebel.js';
 
 // Welche Kästchen der geplanten Wand sind von Möbeln belegt?
@@ -14,7 +14,23 @@ export function wandKonflikte(z, x0, y0, x1, y1) {
   return konflikte;
 }
 export function wandBauen(z, x0, y0, x1, y1) {
+  [x0, y0, x1, y1] = wandAnpassen(z, x0, y0, x1, y1);
   if (wandKonflikte(z, x0, y0, x1, y1).length) return false;
   wandRechteck(z, x0, y0, x1, y1);
   return true;
+}
+
+// Gemeinsame Wände: Zieht man ein Rechteck direkt neben eine bestehende Wand, wird diese Seite
+// auf die bestehende Wand verschoben – die Räume teilen sich dann eine Wand (statt zwei Wände nebeneinander).
+export function wandAnpassen(z, x0, y0, x1, y1) {
+  let [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
+  if (bx - ax < 2 || by - ay < 2) return [ax, ay, bx, by];
+  const wand = (x, y) => aufGrundstueck(x, y) && z.zellen[idx(z, x, y)] !== LEER;
+  const zaehle = (von, bis, fn) => { let n = 0; for (let i = von; i <= bis; i++) if (fn(i)) n++; return n; };
+  // Eine Seite rückt nach außen, wenn direkt daneben auf mindestens 2 Kästchen schon Wand steht (und auf der Seite selbst nicht).
+  const links = zaehle(ay + 1, by - 1, y => wand(ax - 1, y) && !wand(ax, y)) >= 2;
+  const rechts = zaehle(ay + 1, by - 1, y => wand(bx + 1, y) && !wand(bx, y)) >= 2;
+  const oben = zaehle(ax + 1, bx - 1, x => wand(x, ay - 1) && !wand(x, ay)) >= 2;
+  const unten = zaehle(ax + 1, bx - 1, x => wand(x, by + 1) && !wand(x, by)) >= 2;
+  return [ax - (links ? 1 : 0), ay - (oben ? 1 : 0), bx + (rechts ? 1 : 0), by + (unten ? 1 : 0)];
 }
