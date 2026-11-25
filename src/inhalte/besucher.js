@@ -18,9 +18,11 @@ export const AENDERUNG = {
 
 // Bekanntheit der Gemeinde (0–100)
 export const BEKANNTHEIT = {
-  proGottesdienst: 3,    // pro stattfindendem Gottesdienst
-  sehrZufrieden: 80,     // ab dieser Zufriedenheit ...
-  proSehrZufriedenem: 1, // ... gibt es pro anwesendem Besucher so viel Bekanntheit
+  // 25.11.: alle Werte ÷ 5, damit die Bekanntheit sehr langsam wächst (vorher 3 / 1)
+  proGottesdienst: 0.6,    // pro stattfindendem Gottesdienst
+  sehrZufrieden: 80,       // ab dieser Zufriedenheit ...
+  proSehrZufriedenem: 0.2, // ... gibt es pro anwesendem Besucher so viel Bekanntheit
+  protokoll: 10,           // so viele letzte Änderungen merkt sich das Spiel fürs Bekanntheit-Fenster
   teiler: 10             // neue Besucher pro Woche im Schnitt = Bekanntheit ÷ 10
 };
 

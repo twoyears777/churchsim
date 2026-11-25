@@ -10,7 +10,7 @@ export const SEELSORGE = {
   bonusProStufe: 0.05,                      // höhere Stufe: pro Stufe über 1 geht ein Rat um 5 Prozentpunkte öfter gut aus
   hoechsteChance: 0.95,
   ablehnen: -5,                             // Haltung, wenn der Pastor ablehnt
-  gut: { haltung: 10, bekanntheit: 1 },     // Standard, wenn ein Rat gut ausgeht
+  gut: { haltung: 10, bekanntheit: 0.2 },   // Standard (Bekanntheit am 25.11. ÷ 5, vorher 1), wenn ein Rat gut ausgeht
   schlecht: { haltung: -10 },               // Standard, wenn er schlecht ausgeht
   erfahrung: { gespraech: 1, gutExtra: 1 }  // +1 pro angenommenem Gespräch, +1 extra, wenn es gut ausgeht
 };

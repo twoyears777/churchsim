@@ -24,9 +24,9 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster }[f.art](f);
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
-  m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen' || f.art === 'changelog');
+  m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
 }
@@ -204,6 +204,35 @@ function menschenFenster(f) {
       <td>${T.status[m.status]}</td></tr>`).join('');
   return `<h2>${T.titel}</h2>
     ${liste.length ? `<table class="menschen"><tr>${kopf}</tr>${zeilen}</table>` : `<p class="leer">${T.leer}</p>`}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Bekanntheit: woher, Verlauf (Kurve + letzte Änderungen), was sie bewirkt. Alle Zahlen kommen vom Spiel.
+const dez = n => n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+const prozent = n => (Math.round(n * 1000) / 10).toLocaleString('de-DE') + ' %';
+function bekanntheitFenster() {
+  const T = TEXTE.bekanntheitFenster, b = ui.spiel.bekanntheitInfo(), q = b.quellen, w = b.wirkung;
+  // Kurve: x = Woche, y = Bekanntheit; die y-Achse passt sich an (mindestens bis 10), damit kleine Werte sichtbar sind
+  const V = b.verlauf, W = 300, H = 110, oben = Math.max(10, Math.ceil(Math.max(...V.map(p => p.wert)) / 5) * 5);
+  const px = i => V.length < 2 ? W / 2 : 24 + i * (W - 34) / (V.length - 1), py = v => 8 + (H - 26) * (1 - v / oben);
+  const linie = V.map((p, i) => `${px(i).toFixed(1)},${py(p.wert).toFixed(1)}`).join(' ');
+  const schritt = Math.max(1, Math.ceil(V.length / 8));
+  const kurve = `<svg class="kurve" viewBox="0 0 ${W} ${H}" role="img" aria-label="${T.verlaufInfo}">
+    <line x1="24" y1="${py(0)}" x2="${W - 10}" y2="${py(0)}" stroke="#cfc9bb"/><line x1="24" y1="${py(oben)}" x2="${W - 10}" y2="${py(oben)}" stroke="#e2dccf"/>
+    <text x="20" y="${py(0) + 4}" font-size="10" text-anchor="end" fill="#6b665b">0</text><text x="20" y="${py(oben) + 4}" font-size="10" text-anchor="end" fill="#6b665b">${oben}</text>
+    <polyline points="${linie}" fill="none" stroke="#2d69be" stroke-width="2"/>
+    ${V.map((p, i) => `<circle cx="${px(i).toFixed(1)}" cy="${py(p.wert).toFixed(1)}" r="${p.jetzt ? 4 : 2.5}" fill="#2d69be"><title>${T.woche(p.woche)}: ${dez(p.wert)}</title></circle>`).join('')}
+    ${V.map((p, i) => i % schritt && i !== V.length - 1 ? '' : `<text x="${px(i).toFixed(1)}" y="${H - 4}" font-size="10" text-anchor="middle" fill="#6b665b">${p.woche}</text>`).join('')}
+  </svg>`;
+  const protokoll = b.protokoll.length
+    ? `<ul class="protokoll">${b.protokoll.map(e => `<li><span>${T.woche(e.woche)} · ${TEXTE.tageKurz[e.tag]} · ${T.eintrag[e.quelle](e.anzahl)}</span><b>${e.wert > 0 ? '+' : '−'}${dez(Math.abs(e.wert))}</b></li>`).join('')}</ul>`
+    : `<p class="leer">${T.keine}</p>`;
+  return `<h2>${T.titel}</h2><p class="unter staerker">${T.stand(dez(b.wert), b.max)}</p>
+    <h3>${T.woher}</h3><ul class="quellen"><li>${T.quellen.gottesdienst(dez(q.gottesdienst))}</li><li>${T.quellen.zufrieden(dez(q.zufrieden), q.zufriedenAb)}</li><li>${T.quellen.seelsorge(dez(q.seelsorge))}</li></ul>
+    <h3>${T.verlauf}</h3><p class="unter">${T.verlaufInfo}</p>${kurve}
+    <h3>${T.letzte}</h3>${protokoll}
+    <h3>${T.wirkung}</h3><ul class="quellen"><li>${T.neue(w.teiler, dez(w.neueProWoche))}</li>
+      <li>${T.neugier(prozent(w.neugierGrund), prozent(w.neugier), w.plakatFaktor)}</li></ul>
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 

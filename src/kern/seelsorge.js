@@ -123,7 +123,7 @@ export function raten(z, nr, zufall = Math.random) {
     spende: gut ? rat.spendeGut || 0 : 0, kosten: rat.kosten || 0, neugierig: false, neueStufe: null
   };
   if (p) zufriedenheitAendern(p, e.haltung);
-  bekanntheitAendern(z, e.bekanntheit);
+  bekanntheitAendern(z, e.bekanntheit, 'seelsorge');
   if (e.kosten) buchen(z, 'ausgaben', 'seelsorge', e.kosten);
   if (e.spende) buchen(z, 'einnahmen', 'spende', e.spende);
   // Ein Passant, bei dem das Gespräch gut ausgeht, wird neugierig auf die Gemeinde.

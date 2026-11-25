@@ -27,6 +27,7 @@ export function anzeigenEinrichten() {
   $('textStamm').textContent = TEXTE.besucherStamm;
   $('menschenAuf').textContent = TEXTE.menschen.knopf;
   $('menschenAuf').addEventListener('click', () => fensterOeffnen({ art: 'menschen' }));
+  $('bekanntheitAuf').addEventListener('click', () => fensterOeffnen({ art: 'bekanntheit' }));
   $('versionAuf').textContent = TEXTE.changelog.version(VERSION);
   $('versionAuf').addEventListener('click', () => fensterOeffnen({ art: 'changelog' }));
 }
@@ -40,7 +41,7 @@ export function anzeigenAktualisieren() {
   $('anzEhrenamt').textContent = `${l.verfuegbarkeit.ehrenamt.frei}/${l.verfuegbarkeit.ehrenamt.gesamt}`;
   personenListen(l.personen);
   for (const id of ['kontostand', 'kontoEditor', 'kontoKurz', 'kontoOben']) $(id).textContent = euro(l.konto);
-  $('bekanntheit').textContent = l.bekanntheit;
+  $('bekanntheit').textContent = Math.round(l.bekanntheit);
   const lg = l.letzterGottesdienst;
   $('besucherLetzter').textContent = lg ? lg.besucher : '–';
   $('besucherKurz').textContent = lg ? lg.besucher : '–';

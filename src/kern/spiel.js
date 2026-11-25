@@ -23,7 +23,9 @@ import { besucherPositionen, kaffeePosition } from './bewegung.js';
 import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance } from './ort.js';
 import { seelsorgeAnlegen, anfrageOffen, anfrageInfo, ablehnen as seelsorgeAblehnen, raten as seelsorgeRaten,
   schliessen as seelsorgeZu, stufeInfo, seelsorgePositionen, seelsorgeUnterwegs } from './seelsorge.js';
-import { STAMMGAST_AB_BESUCHEN, PLAKAT } from '../inhalte/ort.js';
+import { STAMMGAST_AB_BESUCHEN, PLAKAT, NEUGIER } from '../inhalte/ort.js';
+import { BEKANNTHEIT } from '../inhalte/besucher.js';
+import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
@@ -254,6 +256,20 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         beschaeftigt: !!(z.lauf && z.lauf.phase !== 'ende') || anfrageOffen(z),
         seelsorge: anfrageInfo(z),   // offene Seelsorge-Anfrage (sonst null)
         meldung: ortMeldung(z)       // z. B. jemand ist neugierig am Tor stehen geblieben
+      };
+    },
+    // Bekanntheit-Fenster: woher sie kommt, wie sie sich entwickelt hat und was sie bewirkt
+    bekanntheitInfo() {
+      const zp = zeitpunkt(z.minuten);
+      return {
+        wert: z.bekanntheit, max: 100,
+        quellen: { gottesdienst: BEKANNTHEIT.proGottesdienst, zufrieden: BEKANNTHEIT.proSehrZufriedenem, zufriedenAb: BEKANNTHEIT.sehrZufrieden,
+          seelsorge: SEELSORGE.gut.bekanntheit },
+        verlauf: [...(z.bekanntheitVerlauf || []).map(p => ({ woche: p.woche + 1, wert: p.wert })), { woche: zp.woche + 1, wert: z.bekanntheit, jetzt: true }],
+        protokoll: (z.bekanntheitLog || []).map(e => { const t = zeitpunkt(e.minuten); return { woche: t.woche + 1, tag: t.tag, quelle: e.quelle, wert: e.wert, anzahl: e.anzahl }; }),
+        wirkung: { neueProWoche: z.bekanntheit / BEKANNTHEIT.teiler, teiler: BEKANNTHEIT.teiler,
+          neugier: neugierChance(z, false), neugierPlakat: neugierChance(z, true), neugierGrund: NEUGIER.grund, proBekanntheit: NEUGIER.proBekanntheit,
+          plakatFaktor: PLAKAT.faktor, plakat: !!z.plakat }
       };
     },
     zelle(x, y) { const t = x >= 0 && y >= 0 && x < z.w && y < z.h ? z.zellen[idx(z, x, y)] : null; return t === WAND ? 'wand' : t === TUER ? 'tuer' : t === LEER ? 'leer' : null; },

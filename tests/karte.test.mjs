@@ -154,7 +154,8 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     assert.equal(z.lauf.phase, 'anreise'); assert.equal(z.lauf.gaeste.length, 4);
     assert.equal(z.lauf.gaeste.filter(g => !g.sitz).length, 1);
     zeitVorruecken(z, aus(), 180 + 60, () => 0);                       // Gottesdienst vorbei
-    assert.equal(z.konto, 50 + 6); assert.equal(z.bekanntheit, 3);
+    assert.equal(z.konto, 50 + 6); assert.equal(z.bekanntheit, 0.6);
+    assert.deepEqual(z.bekanntheitLog.map(e => [e.quelle, e.wert]), [['gottesdienst', 0.6]]);   // fürs Bekanntheit-Fenster gemerkt
     zeitVorruecken(z, aus(), 60, () => 0);                            // Kirchkaffee vorbei
     const heim = z.besucher.find(b => b.id === z.lauf.gaeste.find(g => !g.sitz).id);
     assert.equal(heim.zufriedenheit, 45);

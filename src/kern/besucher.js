@@ -76,7 +76,17 @@ export function werKommt(z, zufall = Math.random) {
 }
 
 export function zufriedenheitAendern(b, wert) { b.zufriedenheit = Math.max(0, Math.min(100, b.zufriedenheit + wert)); }
-export function bekanntheitAendern(z, wert) { z.bekanntheit = Math.max(0, Math.min(100, z.bekanntheit + wert)); }
+// Bekanntheit ändern und merken, woher es kam (fürs Bekanntheit-Fenster). quelle: 'gottesdienst' | 'zufrieden' | 'seelsorge'.
+// Auf eine Nachkommastelle gerundet, damit sich keine Rechenkrümel ansammeln.
+export function bekanntheitAendern(z, wert, quelle = null, anzahl = null) {
+  const vorher = z.bekanntheit;
+  z.bekanntheit = Math.round(Math.max(0, Math.min(100, z.bekanntheit + wert)) * 10) / 10;
+  const wirklich = Math.round((z.bekanntheit - vorher) * 10) / 10;
+  if (!quelle || !wirklich) return;
+  if (!Array.isArray(z.bekanntheitLog)) z.bekanntheitLog = [];
+  z.bekanntheitLog.unshift({ minuten: z.minuten, quelle, wert: wirklich, anzahl });
+  z.bekanntheitLog.length = Math.min(z.bekanntheitLog.length, BEKANNTHEIT.protokoll);
+}
 
 // Wer aus den Anwesenden wird Ehrenamtlicher? Wird aus den Besuchern genommen und zurückgegeben.
 export function ehrenamtWerden(z, anwesende, zufall = Math.random) {

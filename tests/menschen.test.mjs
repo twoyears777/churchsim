@@ -101,7 +101,7 @@ console.log('Neugier-Tests bestanden.');
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
   assert.equal(raten(z, 0, () => 0.69), 'ok');                       // 0,69 < 70 %
   assert.equal(z.seelsorge.anfrage.ergebnis.gut, true);
-  assert.equal(b.zufriedenheit, 65); assert.equal(z.bekanntheit, 1); assert.equal(z.seelsorge.punkte, 2);
+  assert.equal(b.zufriedenheit, 65); assert.equal(z.bekanntheit, 0.2); assert.equal(z.seelsorge.punkte, 2);
   schliessen(z);
   // schlechter Ausgang: −10, 1 Punkt → Stufe 2 erreicht
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
@@ -154,7 +154,7 @@ console.log('Seelsorge-Tests bestanden.');
   const zufall = saat(5), { z, aus } = gemeinde(zufall);
   z.seelsorge.punkte = 25;
   const n = laufen(z, aus, 30 * WOCHE_MIN, zufall);
-  assert.ok(n / 30 > 2.3 && n / 30 < 3.4, `Anfragen pro Woche: ${n / 30}`);
+  assert.ok(n / 30 > 2.3 && n / 30 < 3.8, `Anfragen pro Woche: ${n / 30}`);   // 3 + Anfangsschub; Zufall streut (12 Läufe: 2,4–3,7)
 }
 {
   // Anfangsschub: 1. Anfrage doppelt so oft, wird kleiner, ab der 11. normal

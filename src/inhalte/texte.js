@@ -103,6 +103,27 @@ export const TEXTE = {
     neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst'
   },
 
+  // ---- Fenster „Bekanntheit“ (Klick oben auf Bekanntheit; Entwürfe von Claude, von Lukas freigegeben 25.11.) ----
+  bekanntheitFenster: {
+    titel: 'Bekanntheit',
+    stand: (wert, max) => `${wert} von ${max}`,
+    woher: 'Woher sie kommt',
+    quellen: {
+      gottesdienst: n => `Gottesdienst: +${n} pro Gottesdienst`,
+      zufrieden: (n, ab) => `Sehr zufriedene Besucher (Haltung ab ${ab}): +${n} pro Person im Gottesdienst`,
+      seelsorge: n => `Gute Seelsorge: +${n} (je nach Ratschlag)`
+    },
+    verlauf: 'Verlauf',
+    verlaufInfo: 'Bekanntheit am Ende jeder Woche',
+    woche: n => `Woche ${n}`,
+    letzte: 'Letzte Änderungen',
+    keine: 'Noch keine Änderungen.',
+    eintrag: { gottesdienst: () => 'Gottesdienst', zufrieden: n => `${n} sehr zufriedene Besucher`, seelsorge: () => 'Seelsorge' },
+    wirkung: 'Was sie bewirkt',
+    neue: (teiler, wert) => `Neue Besucher pro Woche: Bekanntheit ÷ ${teiler} → jetzt ca. ${wert}`,
+    neugier: (grund, wert, faktor) => `Passanten am Tor werden neugierig: ${grund} + halbe Bekanntheit → jetzt ${wert} (mit Plakat ${faktor}×)`
+  },
+
   // ---- Versionsnummer unten links und Fenster „Changelog“ (Lukas' Wahl, 25.11.) ----
   changelog: {
     version: v => `Version ${v}`,
@@ -136,7 +157,7 @@ export const TEXTE = {
     keinGeld: 'Nicht genug Geld.',
     folgen: {
       haltung: n => `Haltung ${n > 0 ? '+' : '−'}${Math.abs(n)}`,
-      bekanntheit: n => `Bekanntheit ${n > 0 ? '+' : '−'}${Math.abs(n)}`,
+      bekanntheit: n => `Bekanntheit ${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString('de-DE')}`,
       spende: euro => `Spende +${euro}`,
       kosten: euro => `Kosten −${euro}`,
       neugierig: 'jetzt neugierig auf die Gemeinde'

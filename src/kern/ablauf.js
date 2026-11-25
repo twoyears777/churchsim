@@ -154,6 +154,10 @@ export function seelsorgeGesperrt(z) {
 function wochenbuchPruefen(z) {
   const w = zeitpunkt(z.minuten).woche;
   if (z.buchWoche !== w) { z.buchWoche = w; z.wochenbuch = { einnahmen: {}, ausgaben: {} }; }
+  // Bekanntheit am Ende jeder Woche merken (Kurve im Bekanntheit-Fenster); alte Spielstände beginnen ab jetzt
+  if (!Array.isArray(z.bekanntheitVerlauf)) z.bekanntheitVerlauf = [];
+  const V = z.bekanntheitVerlauf;
+  if (w > 0 && !V.some(p => p.woche === w - 1)) V.push({ woche: w - 1, wert: z.bekanntheit });
 }
 
 // Der nächste anstehende Termin (noch nicht begonnen)
@@ -235,7 +239,7 @@ function gottesdienstEnde(z, raeume) {
   for (const g of sitzend) { const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte; g.bonus = w.haltung; }
   const betrag = Math.round(summeKollekte * zeitFaktor(z.plan));
   if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag);
-  bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst);
+  bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
   // Kaffeegäste auf die Stationen verteilen; jeder bekommt einen Stehplatz möglichst nah an seiner Theke.
   const zustand = kirchkaffeeZustand(z, raeume), stationen = zustand.flatMap(k => k.stationen);
   const plaetze = stehplaetze(z, zustand), wollen = sitzend.filter(g => (z.besucher.find(b => b.id === g.id) || {}).kaffee);
@@ -276,7 +280,8 @@ function abschliessen(z, raeume, zufall = Math.random) {
     if (b.kaffee) zufriedenheitAendern(b, g.kaffee && g.kaffee.ergebnis === 'ja' ? AENDERUNG.kaffeeJa : AENDERUNG.kaffeeNein);
     g.zufriedenheit = b.zufriedenheit;
   }
-  bekanntheitAendern(z, anwesend.filter(b => b.zufriedenheit >= BEKANNTHEIT.sehrZufrieden).length * BEKANNTHEIT.proSehrZufriedenem);
+  const sehr = anwesend.filter(b => b.zufriedenheit >= BEKANNTHEIT.sehrZufrieden).length;
+  bekanntheitAendern(z, sehr * BEKANNTHEIT.proSehrZufriedenem, 'zufrieden', sehr);
   const neueEA = ehrenamtWerden(z, anwesend, zufall).map(b =>
     personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
       herkunft: { besuche: b.besuche, zufriedenheit: b.zufriedenheit, kaffee: b.kaffee, zuletzt: b.zuletzt } }));
