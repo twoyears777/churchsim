@@ -391,3 +391,25 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
   }
 }
 console.log('Sitzplatz- und Trinkgeld-Tests bestanden.');
+
+// Zwei Theken, die sich berühren (nebeneinander oder untereinander): trotzdem arbeiten beide Ehrenamtlichen
+for (const lage of ['untereinander', 'nebeneinander']) {
+  const { z, aus, eas, maschinen } = gemeinde({ stationen: 0, stuehle: 12 });
+  for (let i = 0; i < 2; i++) {
+    const [mx, my, tx, ty] = lage === 'untereinander' ? [G.x + 20, G.y + 3 + i, G.x + 22, G.y + 3 + i] : [G.x + 20 + i, G.y + 3, G.x + 20 + i, G.y + 5];
+    assert.equal(moebelKaufen(z, 'kaffeemaschine', mx, my), 'ok');
+    assert.equal(moebelKaufen(z, 'theke', tx, ty), 'ok');
+    const ea = personHinzufuegen(z, { name: `Helfer ${i + 1}`, kuerzel: 'H', art: 'ehrenamt' });
+    versetzen(z, ea, G.x + 24 + i, G.y + 8);
+    eas.push(ea);
+  }
+  besucherMitKaffee(z, 12);
+  for (const m of maschinen()) m.fuellung = 30;
+  const bedient = new Set();
+  while (z.minuten < SO + 14 * 60) {
+    zeitVorruecken(z, aus(), 1, () => 0);
+    for (const [id, m] of Object.entries(z.kaffee.ma)) if (m.aufgabe && m.aufgabe.art === 'bedienen') bedient.add(id);
+  }
+  assert.deepEqual([...bedient].sort(), eas.map(e => e.id).sort(), lage);
+}
+console.log('Tests zu zwei Theken, die sich berühren, bestanden.');

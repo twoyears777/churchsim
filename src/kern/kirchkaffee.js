@@ -18,6 +18,7 @@ import { buchen, kannBezahlen } from './finanzen.js';
 import { zufriedenheitAendern } from './besucher.js';
 import { weg, glaetten } from './wege.js';
 import { punktAufWeg, strasse } from './bewegung.js';
+import { umherPosition } from './umherlaufen.js';
 import { slotBeginn, zeitpunkt } from './zeit.js';
 import { LAUFTEMPO, SLOTS, DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
@@ -49,12 +50,26 @@ function thekenGruppen(teile) {
 }
 const frei = (z, zellen, p) => zellen.has(idx(z, p.x, p.y)) && z.zellen[idx(z, p.x, p.y)] === LEER && !moebelBei(z, p.x, p.y);
 // Freies Kästchen direkt neben einem Möbel, möglichst nah am Ziel (ausser: dieses Kästchen nur, wenn es kein anderes gibt)
-function standplatz(z, raum, m, ziel, ausser = null) {
+// belegt: Kästchen (idx), auf denen schon ein anderer Kirchkaffee-Mitarbeiter steht
+function standplatz(z, raum, m, ziel, ausser = null, belegt = new Set()) {
   const zellen = new Set(raum.zellen);
-  let liste = NACHBARN.map(([dx, dy]) => ({ x: m.x + dx, y: m.y + dy })).filter(p => frei(z, zellen, p));
+  let liste = NACHBARN.map(([dx, dy]) => ({ x: m.x + dx, y: m.y + dy })).filter(p => frei(z, zellen, p) && !belegt.has(idx(z, p.x, p.y)));
   if (ausser && liste.some(p => p.x !== ausser.x || p.y !== ausser.y)) liste = liste.filter(p => p.x !== ausser.x || p.y !== ausser.y);
   liste.sort((a, b) => Math.hypot(a.x - ziel.x, a.y - ziel.y) - Math.hypot(b.x - ziel.x, b.y - ziel.y));
   return liste[0] || null;
+}
+
+// Standplatz an der Theke: am liebsten einer, bei dem an der Theke noch ein Platz für den Kunden frei bleibt (sonst stünde der Mitarbeiter auf der
+// Kundenseite und niemand könnte bestellen). Danach lieber nicht derselbe wie an der Maschine, dann möglichst nah an ihr.
+function thekenPlatz(z, raum, t, m, standMaschine, belegt) {
+  const zellen = new Set(raum.zellen), gleich = (a, b) => a.x === b.x && a.y === b.y;
+  const kundeOk = p => NACHBARN.some(([dx, dy]) => { const g = { x: t.x + dx, y: t.y + dy };
+    return frei(z, zellen, g) && !belegt.has(idx(z, g.x, g.y)) && !gleich(g, standMaschine) && !gleich(g, p); });
+  const liste = NACHBARN.map(([dx, dy]) => ({ x: t.x + dx, y: t.y + dy }))
+    .filter(p => frei(z, zellen, p) && (gleich(p, standMaschine) || !belegt.has(idx(z, p.x, p.y))))
+    .map(p => ({ p, wert: (kundeOk(p) ? 0 : 10) + (gleich(p, standMaschine) ? 1 : 0) + Math.hypot(p.x - m.x, p.y - m.y) / 100 }));
+  liste.sort((a, b) => a.wert - b.wert);
+  return liste.length ? liste[0].p : null;
 }
 
 // Alle fertigen Kirchkaffee-Räume mit ihren Stationen. fehlt: null | 'keinEhrenamt' | 'keineMaschine' | 'keineTheke'
@@ -62,21 +77,32 @@ export function kirchkaffeeZustand(z, raeume) {
   return raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee' && !r.probleme.length).map(r => {
     const maschinen = moebelImRaum(z, r, 'kaffeemaschine'), theken = thekenGruppen(moebelImRaum(z, r, 'theke'));
     const eas = z.personen.filter(p => eingesetztIn(z, raeume, p) === r);
-    const offen = [...theken], stationen = [];
+    // Jede Station bekommt ein eigenes Thekenteil. Berühren sich zwei Theken, können trotzdem zwei Mitarbeiter
+    // daran arbeiten (früher zählten sie als eine Theke – dann stand der zweite Mitarbeiter nur herum).
+    const genutzt = new Set(), stehen = new Set(), stationen = [];
     for (const m of maschinen) {
-      if (stationen.length >= eas.length || !offen.length) break;
-      let beste = null;   // nächstgelegene freie Theke zur Maschine
-      for (const g of offen) for (const t of g) {
-        const d = Math.abs(t.x - m.x) + Math.abs(t.y - m.y);
-        if (!beste || d < beste.d) beste = { d, g, t };
+      if (stationen.length >= eas.length) break;
+      let beste = null;   // nächstgelegenes freies Thekenteil zur Maschine; bei gleicher Entfernung lieber eine eigene Theke
+      for (const g of theken) {
+        const schonBenutzt = g.some(t => genutzt.has(t));
+        for (const t of g) {
+          if (genutzt.has(t)) continue;
+          const d = Math.abs(t.x - m.x) + Math.abs(t.y - m.y) + (schonBenutzt ? 0.5 : 0);
+          if (!beste || d < beste.d) beste = { d, g, t };
+        }
       }
-      offen.splice(offen.indexOf(beste.g), 1);
+      if (!beste) break;
+      genutzt.add(beste.t);
       const ea = eas[stationen.length];
       // Zwei verschiedene Standplätze (wo möglich), damit man ihn zwischen Theke und Maschine laufen sieht
-      const standMaschine = standplatz(z, r, m, beste.t) || { x: ea.x, y: ea.y };
-      const standTheke = standplatz(z, r, beste.t, m, standMaschine) || { x: ea.x, y: ea.y };
-      stationen.push({ maschine: m, theke: beste.t, thekeTeile: beste.g, ea, raum: r, standMaschine, standTheke });
+      const standMaschine = standplatz(z, r, m, beste.t, null, stehen) || { x: ea.x, y: ea.y };
+      stehen.add(idx(z, standMaschine.x, standMaschine.y));
+      const standTheke = thekenPlatz(z, r, beste.t, m, standMaschine, stehen) || { x: ea.x, y: ea.y };
+      stehen.add(idx(z, standTheke.x, standTheke.y));
+      stationen.push({ maschine: m, theke: beste.t, gruppe: beste.g, ea, raum: r, standMaschine, standTheke });
     }
+    // Für die Schlange: die Thekenteile der eigenen Theke, die keine andere Station benutzt
+    for (const st of stationen) { st.thekeTeile = st.gruppe.filter(t => t === st.theke || !genutzt.has(t)); delete st.gruppe; }
     const fehlt = !eas.length ? 'keinEhrenamt' : !maschinen.length ? 'keineMaschine' : !theken.length ? 'keineTheke' : null;
     return { raum: r, maschinen, stationen, fehlt };
   });
@@ -215,10 +241,9 @@ function kuerzeste(K, stationen) {
 // Ein Kunde kommt: stellt sich an der kürzesten Schlange an. ab = ab wann er losgeht; start = wo er losgeht.
 // lauf: Kennung des Gottesdienst-Ablaufs (oder null bei Passanten). → true, wenn er sich anstellen konnte
 function kundeAnlegen(z, stationen, wer, start, ab, lauf, heimweg) {
-  const K = z.kaffee, s = kuerzeste(K, stationen);
+  const K = z.kaffee, s = kuerzeste(K, stationen.filter(x => plaetzeFuer(z, stationen, x).length));   // nur Stationen, an denen man anstehen kann
   if (!s) return false;
   const plaetze = plaetzeFuer(z, stationen, s);
-  if (!plaetze.length) return false;
   const nr = schlangeVon(K, s.ea.id).length, ziel = plaetze[Math.min(nr, plaetze.length - 1)];
   K.kunden.push({ id: wer.id, name: wer.name, ea: s.ea.id, lauf, nr, phase: 'schlange', ab, heimweg,
     bew: gehen(z, start, ziel, ab), stehBis: null });
@@ -340,7 +365,9 @@ function abbrechen(z, id) {
 function stationSchritt(z, stationen, s, t, zufall) {
   const K = z.kaffee, p = s.ea, id = p.id;
   const m = K.ma[id] || (K.ma[id] = { heim: { x: p.x, y: p.y }, bew: stehen(p, t), aufgabe: null });
-  const a = m.aufgabe, da = angekommen(m.bew, t), hier = posBei(m.bew, t);
+  const a = m.aufgabe, da = angekommen(m.bew, t);
+  // Steht er frei an seinem Platz, läuft er ein wenig umher (umherlaufen.js) – dann geht er von dort aus los
+  const hier = !a && istBei(m.bew, m.heim, t) ? umherPosition(z, s.raum, p, t) : posBei(m.bew, t);
   const maschine = s.maschine, geh = (ziel, gerade) => { m.bew = gehen(z, hier, ziel, t, gerade); };
 
   if (a && a.art === 'bedienen') {
@@ -463,10 +490,10 @@ export function kaffeeKundenPositionen(z) {
     return { id: k.id, name: k.name, x: p.x, y: p.y, sitzt: k.phase === 'sitzt' && !p.unterwegs };
   }).filter(Boolean);
 }
-// Wo ist ein Ehrenamtlicher gerade? (null = an seinem Platz)
+// Wo ist ein Ehrenamtlicher gerade? (null = frei an seinem Platz)
 export function kaffeeMitarbeiterPosition(z, p) {
   const m = z.kaffee && z.kaffee.ma[p.id];
-  if (!m) return null;
+  if (!m || (!m.aufgabe && istBei(m.bew, m.heim, z.minuten))) return null;   // frei an seinem Platz: läuft umher wie alle
   const q = posBei(m.bew, z.minuten);
   return { x: q.x, y: q.y };
 }

@@ -12,3 +12,11 @@ export const START_EHRENAMTLICHE = [
 
 // Platzhalter-Farben der Figuren – Design legt Lukas fest.
 export const ART_FARBE = { hauptamt: '#2d69be', ehrenamt: '#d08a1e' };
+
+// Umherlaufen (Wunsch von Lukas, 25.11.): Mitarbeiter stehen nicht starr, sondern gehen ab und zu ein Kästchen
+// weiter und wieder zurück – nur in ihrem Raum, nur auf freie Kästchen. Zahlen sind Platzhalter von Claude.
+export const UMHERLAUFEN = {
+  takt: 30,        // Spielminuten zwischen zwei Schritten (bei x1 ca. 6 Sekunden), je Person etwas verschieden
+  tempo: 0.5,      // so schnell wie normales Gehen × tempo (gemütlich schlendern)
+  ruhe: 0.3        // Chance, dass jemand einen Schritt auslässt und einfach stehen bleibt
+};

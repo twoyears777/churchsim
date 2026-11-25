@@ -36,6 +36,7 @@ import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
+import { umherPosition } from './umherlaufen.js';
 import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance, neugierTeile } from './ort.js';
 import { gelaende, aushaenge, aushangGilt, aushangSetzen } from './gelaende.js';
 import { GELAENDE, SCHAUKASTEN } from '../inhalte/gelaende.js';
@@ -386,7 +387,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         bus: { stufe: z.bus || 0, ...BUSHALTESTELLE_ORT },
         personen: z.personen.map(p => {
           const d = daten(p); if (!d) return null;
-          const pos = kaffeeMitarbeiterPosition(z, p) || p;
+          // Im Kirchkaffee beschäftigt → dort; Pastor im Seelsorge-Gespräch → an seinem Platz; sonst ein wenig umherlaufen
+          const nr = typeof p.x === 'number' ? raeume.gruppe[idx(z, p.x, p.y)] : -1;
+          const pos = kaffeeMitarbeiterPosition(z, p) || (p.id === 'pastor' && z.seelsorge && z.seelsorge.gang ? p
+            : umherPosition(z, nr >= 0 ? raeume.liste[nr] : null, p));
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
         }).filter(Boolean),
         // Gottesdienst-Besucher, Passanten (ohne den, der gerade zum Pastor geht) und wer zur Seelsorge läuft

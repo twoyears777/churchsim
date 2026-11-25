@@ -34,7 +34,8 @@ function naechste(e, liste, radius) {
   }
   return beste;
 }
-const figurBei = e => naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id, x: p.feldX, y: p.feldY })), Math.max(22, ui.ansicht.k * 1.1));
+const figurBei = e => naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id, x: p.x, y: p.y })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
+  Math.max(22, ui.ansicht.k * 1.1));
 const besucherBei = e => naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
 const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
 const stuhlBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'stuhl' ? m : null; };
