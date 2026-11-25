@@ -5,7 +5,7 @@
 import { SEELSORGE, SITUATIONEN } from '../inhalte/seelsorge.js';
 import { TAG_MIN } from './zeit.js';
 import { kannBezahlen, buchen } from './finanzen.js';
-import { zufriedenheitAendern, bekanntheitAendern } from './besucher.js';
+import { zufriedenheitAendern, bekanntheitAendern, kommChance } from './besucher.js';
 import { mensch } from './ort.js';
 import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { moebelBei } from './moebel.js';
@@ -114,10 +114,9 @@ export function raten(z, nr, zufall = Math.random) {
   if (!A || A.phase !== 'frage' || !rat) return 'keine';
   if (rat.kosten && !kannBezahlen(z, rat.kosten)) return 'geld';
   const p = mensch(z, A.id), vorher = stufe(S.punkte);
-  const chance = Math.min(SEELSORGE.hoechsteChance, rat.chance + SEELSORGE.bonusProStufe * (vorher - 1));
-  const gut = zufall() < chance;
+  const gut = zufall() < chanceVon(rat, vorher);
   const e = {
-    rat: nr, gut,
+    rat: nr, gut, haltungVorher: p ? p.zufriedenheit : null, haltungNachher: null, kommChance: null,
     haltung: gut ? (rat.haltungGut ?? SEELSORGE.gut.haltung) : SEELSORGE.schlecht.haltung,
     bekanntheit: gut ? (rat.bekanntheitGut ?? SEELSORGE.gut.bekanntheit) : 0,
     spende: gut ? rat.spendeGut || 0 : 0, kosten: rat.kosten || 0, neugierig: false, neueStufe: null
@@ -127,7 +126,10 @@ export function raten(z, nr, zufall = Math.random) {
   if (e.kosten) buchen(z, 'ausgaben', 'seelsorge', e.kosten);
   if (e.spende) buchen(z, 'einnahmen', 'spende', e.spende);
   // Ein Passant, bei dem das Gespräch gut ausgeht, wird neugierig auf die Gemeinde.
-  if (gut && p && z.ort && z.ort.leute.includes(p) && !p.neugierig) { p.neugierig = true; e.neugierig = true; }
+  const passant = !!(p && z.ort && z.ort.leute.includes(p));
+  if (gut && passant && !p.neugierig) { p.neugierig = true; e.neugierig = true; }
+  // Vorher → nachher, und bei Besuchern: mit welcher Chance sie jetzt zur nächsten Veranstaltung kommen
+  if (p) { e.haltungNachher = p.zufriedenheit; if (!passant) e.kommChance = Math.round(kommChance(p) * 100); }
   S.punkte += SEELSORGE.erfahrung.gespraech + (gut ? SEELSORGE.erfahrung.gutExtra : 0);
   const nachher = stufe(S.punkte);
   if (nachher > vorher) e.neueStufe = nachher;
@@ -151,8 +153,25 @@ export function anfrageInfo(z) {
   if (!A) return null;
   const p = mensch(z, A.id), sit = situation(z);
   if (!p || !sit) { z.seelsorge.anfrage = null; z.seelsorge.gang = null; return null; }              // Person gibt es nicht mehr
+  const st = stufe(z.seelsorge.punkte), E = SEELSORGE.einschaetzung;
+  const chancen = sit.raete.map(r => chanceVon(r, st)), beste = chancen.indexOf(Math.max(...chancen));
   return { id: p.id, voll: p.voll, vorname: p.vorname, situation: sit.id, phase: A.phase, ergebnis: A.ergebnis,
-    raete: sit.raete.map(r => ({ kosten: r.kosten || 0, leistbar: !r.kosten || kannBezahlen(z, r.kosten) })) };
+    besuche: p.besuche || 0, haltung: p.zufriedenheit,
+    raete: sit.raete.map((r, i) => ({ kosten: r.kosten || 0, leistbar: !r.kosten || kannBezahlen(z, r.kosten),
+      // Was der Pastor auf seiner Stufe erkennt: beste (Stufe 2), Einschätzung (ab 3), genaue Chance in % (ab 4)
+      beste: st >= E.besteAb && st < E.alleAb && i === beste,
+      einschaetzung: st >= E.alleAb ? einschaetzen(chancen[i]) : null,
+      prozent: st >= E.prozentAb ? Math.round(chancen[i] * 100) : null })) };
+}
+
+// Chance, dass ein Rat gut ausgeht: Grundchance + Bonus je Stufe über 1, höchstens 95 %
+export function chanceVon(rat, st) {
+  return Math.min(SEELSORGE.hoechsteChance, rat.chance + SEELSORGE.bonusProStufe * (st - 1));
+}
+// 'gut' | 'unsicher' | 'riskant'
+export function einschaetzen(chance) {
+  const E = SEELSORGE.einschaetzung;
+  return chance >= E.gutAb - 1e-9 ? 'gut' : chance >= E.unsicherAb - 1e-9 ? 'unsicher' : 'riskant';
 }
 
 // Wo läuft die Person gerade, die zum Pastor will (oder wieder heim)? Aus der Spielzeit berechnet.

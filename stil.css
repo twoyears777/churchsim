@@ -130,6 +130,9 @@ table.menschen tr[data-mensch]:hover td { background: #ebe5d6; }
 .inhalt .staerker { color: #2b2a27; font-weight: 600; }
 .inhalt p.ok { color: #2e7d32; } .inhalt p.fehlt { color: #b3261e; }
 .rat small { display: block; margin-top: 2px; }
+/* Seelsorge: Einschätzung des Pastors zu einem Rat (je nach Stufe) */
+.rat .urteil { display: block; margin-top: 3px; font-style: normal; font-size: 13px; font-weight: 600; }
+.urteil.gut { color: #2e7d32; } .urteil.unsicher { color: #a86b00; } .urteil.riskant { color: #b3261e; }
 .meldung { background: rgba(45,105,190,.92); color: #fff; }
 /* Raum-Fenster: Veranstaltung 1, 2 */
 .kachel > span:not(.klein) { display: block; font-size: 13px; }

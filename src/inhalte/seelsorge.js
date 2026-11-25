@@ -12,7 +12,10 @@ export const SEELSORGE = {
   ablehnen: -5,                             // Haltung, wenn der Pastor ablehnt
   gut: { haltung: 10, bekanntheit: 0.2 },   // Standard (Bekanntheit am 25.11. ÷ 5, vorher 1), wenn ein Rat gut ausgeht
   schlecht: { haltung: -10 },               // Standard, wenn er schlecht ausgeht
-  erfahrung: { gespraech: 1, gutExtra: 1 }  // +1 pro angenommenem Gespräch, +1 extra, wenn es gut ausgeht
+  erfahrung: { gespraech: 1, gutExtra: 1 }, // +1 pro angenommenem Gespräch, +1 extra, wenn es gut ausgeht
+  // Einschätzung der Ratschläge (von Lukas freigegeben 25.11.): mit der Stufe sieht der Pastor mehr.
+  // Ab Stufe 2 wird der passendste Rat markiert, ab Stufe 3 jeder Rat eingeschätzt, ab Stufe 4 die genaue Chance gezeigt.
+  einschaetzung: { besteAb: 2, alleAb: 3, prozentAb: 4, gutAb: 0.65, unsicherAb: 0.40 }   // „passt gut“ ab 65 %, „unsicher“ 40–64 %, darunter „riskant“
 };
 
 // Situationen: je 3 Ratschläge mit der Chance (Stufe 1), dass sie gut ausgehen.

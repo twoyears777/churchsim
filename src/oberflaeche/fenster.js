@@ -55,7 +55,9 @@ function personenKarte(f) {
     const s = p.seelsorge, T = TEXTE.seelsorge.karte;
     skills = `<p class="unter staerker">${T.titel(s.stufe)}</p>
       <div class="balken"><span style="width:${s.bis === null ? 100 : Math.round((s.punkte - s.von) / (s.bis - s.von) * 100)}%"></span></div>
-      <p class="unter">${s.bis === null ? T.hoechste : T.fortschritt(s.punkte, s.bis, s.stufe + 1)}</p>`;
+      <p class="unter">${s.bis === null ? T.hoechste : T.fortschritt(s.punkte, s.bis, s.stufe + 1)}</p>
+      ${T.kann[s.stufe] ? `<p class="unter">${T.jetzt(T.kann[s.stufe])}</p>` : ''}
+      ${T.kann[s.stufe + 1] ? `<p class="unter">${T.ab(s.stufe + 1, T.kann[s.stufe + 1])}</p>` : ''}`;
   }
   return `<h2>${esc(p.name)}</h2>
     <p class="unter">${ART_TEXT[p.art]} · ${p.einsatz ? 'Im Einsatz: ' + p.einsatz : 'Verfügbar'}</p>
@@ -270,20 +272,27 @@ function seelsorgeFenster(f) {
   const a = ui.spiel.lage().seelsorge;
   if (!a) return null;
   const T = TEXTE.seelsorge, sit = T.situationen[a.situation], name = esc(a.vorname);
+  const wer = `<p class="unter">${T.person(TEXTE.menschen.status[a.status] || '', a.besuche, a.haltung)}</p>`;
+  // Einschätzung des Pastors zu einem Rat (je nach Stufe: nichts, „passt“-Markierung, Einschätzung, Prozent)
+  const urteil = k => {
+    const teile = [k.beste && T.beste, k.einschaetzung && T.einschaetzung[k.einschaetzung], k.prozent !== null && T.prozent(k.prozent)].filter(Boolean);
+    return teile.length ? `<em class="urteil ${k.einschaetzung || (k.beste ? 'gut' : '')}">${teile.join(' · ')}</em>` : '';
+  };
   let inhalt;
   if (a.phase === 'frage' && !f.angenommen) {
-    inhalt = `<p class="unter staerker">${T.anfrage(esc(a.voll))}</p><p>${sit.anfrage(name)}</p>
+    inhalt = `<p class="unter staerker">${T.anfrage(esc(a.voll))}</p>${wer}<p>${sit.anfrage(name)}</p>
       <div class="zeile"><button data-ablehnen>${T.ablehnen}</button><button class="haupt" data-annehmen>${T.annehmen}</button></div>`;
   } else if (a.phase === 'frage') {
-    inhalt = `<p>${sit.anfrage(name)}</p><div class="typen">${sit.raete.map((r, i) => {
+    inhalt = `${wer}<p>${sit.anfrage(name)}</p><div class="typen">${sit.raete.map((r, i) => {
       const k = a.raete[i];
-      return `<button class="typ rat" data-rat="${i}" ${k.leistbar ? '' : 'disabled'}><span>„${r.text}“${k.kosten ? `<small>${T.folgen.kosten(euro(k.kosten))}${k.leistbar ? '' : ' · ' + T.keinGeld}</small>` : ''}</span></button>`;
+      return `<button class="typ rat" data-rat="${i}" ${k.leistbar ? '' : 'disabled'}><span>„${r.text}“${urteil(k)}${k.kosten ? `<small>${T.folgen.kosten(euro(k.kosten))}${k.leistbar ? '' : ' · ' + T.keinGeld}</small>` : ''}</span></button>`;
     }).join('')}</div>`;
   } else if (a.phase === 'abgelehnt') {
     inhalt = `<p>${T.abgelehnt(name)}</p><div class="zeile"><button data-seelsorge-zu>${T.schliessen}</button></div>`;
   } else {
     const e = a.ergebnis, F = T.folgen, rat = sit.raete[e.rat];
-    const folgen = [e.haltung && F.haltung(e.haltung), e.bekanntheit && F.bekanntheit(e.bekanntheit),
+    const haltung = e.haltungVorher !== null && e.haltungVorher !== undefined ? T.haltungVorherNachher(e.haltungVorher, e.haltungNachher) : e.haltung && F.haltung(e.haltung);
+    const folgen = [haltung, e.kommChance !== null && e.kommChance !== undefined && T.kommt(e.kommChance), e.bekanntheit && F.bekanntheit(e.bekanntheit),
       e.spende && F.spende(euro(e.spende)), e.kosten && F.kosten(euro(e.kosten)), e.neugierig && F.neugierig].filter(Boolean);
     inhalt = `<p class="unter">„${rat.text}“</p>
       <p class="${e.gut ? 'ok' : 'fehlt'}">${(e.gut ? rat.gut : rat.schlecht)(name)}</p>

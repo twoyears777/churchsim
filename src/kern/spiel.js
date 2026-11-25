@@ -108,6 +108,12 @@ function statusVon(z, b) {
   return b.stamm || b.besuche >= STAMMGAST_AB_BESUCHEN ? 'stammgast' : 'besucher';
 }
 
+// Offene Seelsorge-Anfrage, dazu der Status der fragenden Person (Passant, Stammgast …)
+function seelsorgeLage(z) {
+  const a = anfrageInfo(z), p = a && mensch(z, a.id);
+  return a && p ? { ...a, status: statusVon(z, p) } : a;
+}
+
 // ---- Das Spiel als Ganzes: Befehle und Abfragen ----
 export function spielStarten(gespeichert = null, zufall = Math.random) {
   let z = (gespeichert && spielstandLesen(gespeichert)) || neuesSpiel(zufall);
@@ -278,7 +284,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         verfuegbarkeit: verfuegbarkeit(z, raeume), personen,
         status: spielStatus(z, raeume),
         beschaeftigt: z.laeufe.some(L => L.phase !== 'ende') || anfrageOffen(z),
-        seelsorge: anfrageInfo(z),   // offene Seelsorge-Anfrage (sonst null)
+        seelsorge: seelsorgeLage(z),   // offene Seelsorge-Anfrage mit Status der Person (sonst null)
         meldung: ortMeldung(z)       // z. B. jemand ist neugierig am Tor stehen geblieben
       };
     },

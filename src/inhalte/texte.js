@@ -179,11 +179,23 @@ export const TEXTE = {
       neugierig: 'jetzt neugierig auf die Gemeinde'
     },
     neueStufe: n => `Pastor Harder ist jetzt Seelsorger Stufe ${n}.`,
+    // Wer fragt (unter dem Namen) und was das Ergebnis bewirkt – freigegeben 25.11.
+    person: (status, besuche, haltung) => `${status} · ${besuche} ${besuche === 1 ? 'Besuch' : 'Besuche'} · Haltung ${haltung}`,
+    haltungVorherNachher: (vorher, nachher) => `Haltung ${vorher} → ${nachher}`,
+    kommt: n => `kommt jetzt mit ${n} % zur nächsten Veranstaltung`,
+    // Einschätzung der Ratschläge je Stufe des Pastors – freigegeben 25.11.
+    beste: 'Das könnte passen',
+    einschaetzung: { gut: 'passt gut', unsicher: 'unsicher', riskant: 'riskant' },
+    prozent: n => `${n} %`,
     // Charakter-Karte des Pastors
     karte: {
       titel: n => `Seelsorge – Stufe ${n}`,
       fortschritt: (x, y, n) => `${x} von ${y} Punkten bis Stufe ${n}`,
-      hoechste: 'Höchste Stufe erreicht'
+      hoechste: 'Höchste Stufe erreicht',
+      // Was jede Stufe bringt (Stufe 1 bringt noch nichts Besonderes) – freigegeben 25.11.
+      kann: { 2: 'erkennt den passendsten Rat', 3: 'schätzt jeden Rat ein', 4: 'sieht die genaue Chance', 5: 'Ratschläge gelingen am häufigsten' },
+      jetzt: t => `Jetzt: ${t}`,
+      ab: (n, t) => n === 5 ? `Stufe 5: ${t}` : `Ab Stufe ${n}: ${t}`
     },
     // Situationen: Anfrage und je 3 Ratschläge mit gutem und schlechtem Ausgang (Reihenfolge wie in inhalte/seelsorge.js)
     situationen: {
