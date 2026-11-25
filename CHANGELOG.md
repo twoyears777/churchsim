@@ -3,6 +3,21 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.5
+
+**Neu**
+- Bis zu zwei Veranstaltungen pro Gottesdienstraum: „Veranstaltung 1“ und „Veranstaltung 2“, Art und Zeit im Raum-Fenster einstellen
+- Veranstaltung 2 wird frei, sobald Kanzel und Altar im Raum stehen
+- Lobpreisgottesdienst: braucht eine Gitarre; ob jemand kommt und wie es ihm gefällt, hängt von seiner Lobpreis-Vorliebe ab (im Besucher-Kärtchen)
+- Bekanntheit anklicken: woher sie kommt, wie sie sich entwickelt hat und was sie bewirkt
+
+**Geändert**
+- Gottesdienste am Sonntagvormittag bringen doppelte Kollekte
+- Bekanntheit wächst deutlich langsamer
+- Wer in einer Woche schon bei einer Veranstaltung war, kommt zur zweiten seltener
+- Jede Veranstaltung braucht einen Hauptamtlichen im Raum
+- Passanten und Besucher laufen langsamer und lassen sich leichter anklicken
+
 ## 0.1.4
 
 **Neu**
