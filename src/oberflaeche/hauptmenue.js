@@ -8,6 +8,16 @@ import { hatSpielstand } from './speicher.js';
 const T = TEXTE.hauptmenue;
 let rueckfrage = false;
 
+// „Spiel beenden“ gibt es nur dort, wo sich das Fenster wirklich schließen lässt:
+// in der installierten App auf dem PC (eigenes Fenster) und später in der Steam-Fassung.
+// Die Steam-Hülle kann dafür eine Funktion window.churchsimBeenden bereitstellen.
+// Im normalen Browser-Tab und auf dem iPad (dort kann sich eine Web-App nicht selbst schließen) bleibt der Knopf weg.
+function beendenMoeglich() {
+  if (typeof window.churchsimBeenden === 'function') return true;
+  if (navigator.standalone !== undefined) return false;   // iPad/iPhone
+  return ['standalone', 'fullscreen', 'window-controls-overlay'].some(m => matchMedia(`(display-mode: ${m})`).matches);
+}
+
 function zeigen() {
   const m = $('hauptmenue');
   m.hidden = !ui.menueOffen;
@@ -30,10 +40,16 @@ export function menueEscape() {
   if (hatSpielstand()) menueSchliessen();
 }
 
-export function hauptmenueEinrichten(neuesSpiel) {
+export function hauptmenueEinrichten(neuesSpiel, speichern) {
   $('menueTitel').textContent = T.titel;
   $('menueWeiter').textContent = T.weiterspielen;
   $('menueNeu').textContent = T.neuesSpiel;
+  $('menueBeenden').textContent = T.beenden;
+  $('menueBeenden').hidden = !beendenMoeglich();
+  $('menueBeenden').addEventListener('click', () => {   // ohne Rückfrage – vorher wird gespeichert (Lukas)
+    speichern();
+    if (typeof window.churchsimBeenden === 'function') window.churchsimBeenden(); else window.close();
+  });
   $('menueFrage').textContent = T.rueckfrage;
   $('menueJa').textContent = T.neuStarten;
   $('menueAbbrechen').textContent = T.abbrechen;

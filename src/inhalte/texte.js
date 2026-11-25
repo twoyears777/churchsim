@@ -15,6 +15,7 @@ export const TEXTE = {
     titel: 'Churchsim',
     weiterspielen: 'Weiterspielen',
     neuesSpiel: 'Neues Spiel',
+    beenden: 'Spiel beenden',
     rueckfrage: 'Neues Spiel starten? Der bisherige Spielstand wird überschrieben.',
     neuStarten: 'Neu starten',
     abbrechen: 'Abbrechen',

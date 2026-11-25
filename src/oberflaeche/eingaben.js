@@ -202,7 +202,7 @@ export function eingabenEinrichten() {
   $('drehen').addEventListener('click', drehen);
   werkzeugWaehlen(ui.werkzeug);
   $('zurueck').addEventListener('click', () => { if (ui.spiel.rueckgaengig()) { ui.fenster = null; fensterSchliessen(); fertig(); } });
-  hauptmenueEinrichten(zuruecksetzen);
+  hauptmenueEinrichten(zuruecksetzen, () => ui.speichern());
   $('hauptmenueAuf').addEventListener('click', () => menueOeffnen(() => { ui.fenster = null; fensterSchliessen(); }));
   $('testGeld').textContent = TEXTE.testGeld;
   $('testGeldBetrag').setAttribute('aria-label', TEXTE.testGeldFeld);
