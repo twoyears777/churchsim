@@ -387,7 +387,7 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
     assert.equal(spiel.stuhlInfo(G.x + 22, G.y + 8).naechste.trinkgeld, 1.1);
     const arten = spiel.moebelArten();
     assert.equal(arten.find(m => m.id === 'tisch').kategorie, 'kirchkaffee');
-    assert.deepEqual(arten.find(m => m.id === 'stuhl').auchIn, ['kirchkaffee']);
+    assert.deepEqual(arten.find(m => m.id === 'stuhl').auchIn, ['kirchkaffee', 'gemeindesaal']);   // Gemeindesaal: Stuhl auch dort (25.11.)
   }
 }
 console.log('Sitzplatz- und Trinkgeld-Tests bestanden.');

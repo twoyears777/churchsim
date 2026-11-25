@@ -10,7 +10,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
@@ -400,7 +400,14 @@ function mikrofon(ctx, px, py, k) {
   ctx.fillRect(px + k * 0.47, py + k * 0.32, k * 0.06, k * 0.55); ctx.fillRect(px + k * 0.3, py + k * 0.84, k * 0.4, k * 0.06);
   ctx.fillStyle = FARBEN.mikroKopf; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.24, k * 0.13, 0, Math.PI * 2); ctx.fill();
 }
-const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon };
+// Klavier (Gemeindesaal) – Platzhalter-Bild von Claude
+function klavier(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.klavier; ctx.fillRect(px + k * 0.06, py + k * 0.12, k * 0.88, k * 0.62);
+  ctx.fillStyle = FARBEN.keyTasten; ctx.fillRect(px + k * 0.1, py + k * 0.6, k * 0.8, k * 0.22);
+  ctx.fillStyle = FARBEN.keySchwarz;
+  for (let i = 1; i < 7; i++) ctx.fillRect(px + k * (0.1 + i * 0.114) - k * 0.02, py + k * 0.6, k * 0.04, k * 0.12);
+}
+const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon, klavier };
 // Plakat am Zaun links neben dem Tor (solange es hängt)
 function plakat(ctx, { k, ox, oy }) {
   const g = GRUNDSTUECK, x = ox + (g.tor.x - 1.6) * k, y = oy + (g.y + g.h - 0.55) * k;

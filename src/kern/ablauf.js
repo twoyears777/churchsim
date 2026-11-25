@@ -10,13 +10,13 @@
 //                Wer keinen Kaffee will (oder keinen Platz in der Schlange bekommt), geht gleich nach dem Gottesdienst heim.
 //   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche.
 //                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
-import { VERANSTALTUNGEN, SONNTAGVORMITTAG, PLAETZE, ZWEITER_PLATZ_STANDARD } from '../inhalte/veranstaltungen.js';
+import { VERANSTALTUNGEN, SONNTAGVORMITTAG, PLAETZE, ZWEITER_PLATZ_STANDARD, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
 import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN } from '../inhalte/zeit.js';
 import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
-import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, musikLevel, musikErfahrungDazu, instrumenteImRaum } from './moebel.js';
+import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, musikLevel, musikBonus, musikErfahrungDazu, instrumenteImRaum, hindernisBei } from './moebel.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { werKommt, kommChance, besuchChance, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
@@ -45,11 +45,15 @@ export const HEIMWEG = 120;  // so lange (Spielminuten) laufen die Besucher nach
 // Gespeichert in z.veranstaltung, für jedes Kästchen des Raums dieselbe Liste (so übersteht sie Umbauten wie bisher).
 // Alte Spielstände hatten dort nur die Art (Text) und einen Termin für alle (z.plan) – das wird hier umgestellt.
 export function moeglicheVeranstaltungen(typ) { return typ ? VERANSTALTUNGEN.filter(v => v.raumtypen.includes(typ.id)) : []; }
+// Plätze für Veranstaltungen: eigene des Raumtyps (z. B. Gemeindesaal: 2 frei) oder die des Gottesdienstraums
+export function plaetzeVon(typ) { return (typ && typ.plaetze) || PLAETZE; }
+// Findet nach dieser Veranstaltung ein Kirchkaffee statt? (Gemeindesaal: nein)
+export const mitKirchkaffee = art => { const v = VERANSTALTUNGEN.find(x => x.id === art); return !v || v.kirchkaffee !== false; };
 const standardPlatz = i => i === 0 ? { art: null, ...(STANDARD_PLAN) } : { art: null, ...ZWEITER_PLATZ_STANDARD };
 export function programmVon(z, raum) {
   const roh = z.veranstaltung && z.veranstaltung[raum.zellen[0]];
   const liste = Array.isArray(roh) ? roh : typeof roh === 'string' ? [{ art: roh, ...(z.plan || STANDARD_PLAN) }] : [];
-  return PLAETZE.map((_, i) => {
+  return plaetzeVon(raum.typ).map((_, i) => {
     const e = liste[i], d = standardPlatz(i);
     return e ? { art: VERANSTALTUNGEN.some(v => v.id === e.art) ? e.art : null, tag: e.tag ?? d.tag, slot: e.slot ?? d.slot } : d;
   });
@@ -94,16 +98,38 @@ export function gottesdienstRaeume(z, raeume) {
     const spieler = ehrenamtliche.map((p, i) => ({ p, i })).sort((a, b) => musikLevel(b.p) - musikLevel(a.p) || a.i - b.i)
       .slice(0, instrumenteImRaum(z, r)).map(x => x.p);
     const musiker = spieler;
-    const hat = art => moebelImRaum(z, r, art).length > 0;
+    const hat = art => moebelImRaum(z, r, art).length > 0, plaetze = plaetzeVon(r.typ);
     const programm = programmVon(z, r).map((e, i) => {
-      const v = VERANSTALTUNGEN.find(x => x.id === e.art) || null, frei = PLAETZE[i].braucht.every(hat);
-      const leitung = v ? imRaum.find(p => daten(p).art === v.leitung) || null : null;
-      const fehlt = !v ? 'keine' : !frei ? 'gesperrt' : !leitung ? 'leitung' : v.braucht.some(a => !hat(a)) ? 'gitarre' : null;
-      return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, leitung, fehlt, bereit: !fehlt };
+      const v = VERANSTALTUNGEN.find(x => x.id === e.art) || null, frei = plaetze[i].braucht.every(hat);
+      const pruefung = v ? voraussetzungen(z, r, v, imRaum, ehrenamtliche) : { leitung: null, fehlt: null };
+      const fehlt = !v ? 'keine' : !frei ? 'gesperrt' : pruefung.fehlt;
+      return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, leitung: pruefung.leitung, fehlt, bereit: !fehlt,
+        musikBonus: pruefung.musikBonus || 0 };
     });
     return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt,
       leitung: hauptamt[0] || null, musiker, spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)), bereit: programm.some(p => p.bereit) };
   });
+}
+// Kann diese Veranstaltung im Raum stattfinden? → { leitung, fehlt, musikBonus }
+// fehlt: null | 'leitung' (Hauptamtlicher fehlt) | 'ehrenamt' (Ehrenamtlicher fehlt) | 'musikLevel' (kein Ehrenamtlicher mit genug
+// Musik-Level) | Kennung des fehlenden Möbels (z. B. 'gitarre', 'tisch', 'klavier') | 'stuehle' (zu wenige Stühle)
+// leitung: wer die Veranstaltung leitet (der erste der verlangten Mitarbeiter, z. B. der Hauptamtliche beim Seniorennachmittag).
+function voraussetzungen(z, r, v, imRaum, ehrenamtliche) {
+  let leitung = null, musik = 0;
+  for (const art of [].concat(v.leitung)) {
+    let kandidaten = art === 'ehrenamt' ? ehrenamtliche : imRaum.filter(p => daten(p).art === art);
+    if (art === 'ehrenamt' && v.musikLevelMin) {
+      kandidaten = kandidaten.filter(p => musikLevel(p) >= v.musikLevelMin).sort((a, b) => musikLevel(b) - musikLevel(a));
+      if (!kandidaten.length) return { leitung: null, fehlt: ehrenamtliche.length ? 'musikLevel' : 'ehrenamt' };
+      musik = musikBonus(musikLevel(kandidaten[0]));
+    }
+    if (!kandidaten.length) return { leitung: null, fehlt: art === 'ehrenamt' ? 'ehrenamt' : 'leitung' };
+    leitung = leitung || kandidaten[0];
+  }
+  const fehltMoebel = v.braucht.find(a => !moebelImRaum(z, r, a).length);
+  if (fehltMoebel) return { leitung, fehlt: fehltMoebel };
+  if (v.stuehleMin && moebelImRaum(z, r, 'stuhl').length < v.stuehleMin) return { leitung, fehlt: 'stuehle' };
+  return { leitung, fehlt: null, musikBonus: v.haltungNachMusik ? musik : 0 };
 }
 // Räume, in denen Veranstaltung 1 als Gottesdienst stattfinden kann (für Tests und Übersichten)
 export function gottesdienstBereit(z, raeume) { return gottesdienstRaeume(z, raeume).filter(g => g.programm[0].bereit && g.programm[0].art === 'gottesdienst'); }
@@ -122,10 +148,12 @@ function raumZu(raeume, schluessel) { const nr = raeume.gruppe[schluessel]; retu
 // Gibt es gar keinen Gottesdienstraum, bleibt wie bisher der Standardtermin (Sonntag vormittags), der ausfällt.
 export function termineDerWoche(z, raeume, woche) {
   const t = [];
+  let pflicht = false;
   for (const r of raeume.liste.filter(r => r.typ && moeglicheVeranstaltungen(r.typ).length)) {
     const key = raumSchluessel(r);
     programmVon(z, r).forEach((e, i) => {
-      if (i > 0 && !e.art) return;
+      if ((i > 0 || !r.typ.ersterTerminPflicht) && !e.art) return;   // Gemeindesaal: nur eingestellte Veranstaltungen sind Termine
+      if (i === 0 && r.typ.ersterTerminPflicht) pflicht = true;
       t.push({ id: `${woche}:${key}:${i}`, woche, raum: key, platz: i, art: e.art, plan: { tag: e.tag, slot: e.slot }, beginn: slotBeginn(e, woche) });
     });
   }
@@ -135,7 +163,7 @@ export function termineDerWoche(z, raeume, woche) {
     const plan = { tag: f.tag, slot: f.plan.slot };
     t.push({ id: `${woche}:fest:${f.schluessel}`, woche, raum: f.plan.raum, platz: 'fest', fest: f.schluessel, art: f.plan.art, plan, beginn: slotBeginn(plan, woche) });
   }
-  if (!t.length) t.push({ id: `${woche}:-:0`, woche, raum: null, platz: 0, art: null, plan: { ...STANDARD_PLAN }, beginn: slotBeginn(STANDARD_PLAN, woche) });
+  if (!pflicht && !t.some(x => x.fest)) t.push({ id: `${woche}:-:0`, woche, raum: null, platz: 0, art: null, plan: { ...STANDARD_PLAN }, beginn: slotBeginn(STANDARD_PLAN, woche) });
   return t.sort((a, b) => a.beginn - b.beginn || (a.fest ? -1 : b.fest ? 1 : a.platz - b.platz));
 }
 // Der nächste anstehende Termin (noch nicht begonnen, noch nicht ausgelost)
@@ -306,17 +334,24 @@ function anreise(z, raeume, zufall, termin) {
 
 // Wer kommt, wer sitzt wo, wer muss wieder heim?
 function gaesteAuslosen(z, raeume, zufall, L, info) {
-  const sitze = sitzplaetze([info.g]).map(s => ({ x: s.x, y: s.y }));   // beste Plätze werden zuerst besetzt
+  const v = info.p.veranstaltung, frei = v && v.stuehleBegrenzen === false;
+  // Stühle egal (Chorprobe): jeder passt hinein und stellt sich auf ein freies Kästchen im Raum
+  const sitze = frei ? freieFelder(z, info.g.raum) : sitzplaetze([info.g]).map(s => ({ x: s.x, y: s.y }));   // beste Plätze werden zuerst besetzt
   // Wer gerade bei einer anderen Veranstaltung ist (nicht schon auf dem Heimweg), kann nicht kommen.
   const woanders = new Set(z.laeufe.filter(x => x !== L && x.phase !== 'ende' && x.gaeste).flatMap(x => x.gaeste.map(g => g.id)));
   const anzahl = termineDerWoche(z, raeume, L.woche).filter(t => t.art).length || 1;
   // Spielt im Raum gerade ein Lobpreisteam? Das wissen die Leute, wenn sie sich auf den Weg machen (wirkt beim normalen Gottesdienst).
   const kommen = werKommt(z, zufall, { art: L.art, woche: L.woche, ausschluss: woanders, neuAnteil: 1 / anzahl, faktor: terminFaktoren(L).besucher,
-    musik: info.g.ausstattung.musik });
+    musik: info.g.typ.id === 'gottesdienst' ? info.g.ausstattung.musik : undefined });
   for (let i = kommen.length - 1; i > 0; i--) { const j = Math.floor(zufall() * (i + 1)); [kommen[i], kommen[j]] = [kommen[j], kommen[i]]; }
   const tuer = raumTuer(z, info.g.raum);
   L.ankunft = z.minuten;
-  L.gaeste = kommen.map((b, i) => ({ id: b.id, name: b.vorname, voll: b.voll, sitz: i < sitze.length ? sitze[i] : null, tuer, kaffee: null }));
+  const platz = i => frei ? (sitze.length ? { ...sitze[i % sitze.length] } : { ...tuer }) : i < sitze.length ? sitze[i] : null;
+  L.gaeste = kommen.map((b, i) => ({ id: b.id, name: b.vorname, voll: b.voll, sitz: platz(i), tuer, kaffee: null }));
+}
+// Freie Kästchen im Raum (ohne Möbel)
+function freieFelder(z, raum) {
+  return raum.zellen.map(c => ({ x: c % z.w, y: (c / z.w) | 0 })).filter(f => !hindernisBei(z, f.x, f.y) && !moebelBei(z, f.x, f.y));
 }
 const NACHBARN = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // Eine Tür des Raums (für die Heimgeschickten: bis dorthin und wieder zurück)
@@ -344,7 +379,7 @@ function beginnen(z, raeume, zufall, L) {
     for (const b of z.besucher) zufriedenheitAendern(b, AENDERUNG.ausfall);
     const grund = info ? info.p.fehlt : 'raum';
     Object.assign(L, { phase: 'ende', ausgefallen: true, grund, ende: z.minuten });
-    z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: true, grund, besucher: 0, heim: 0 };
+    if (mitKirchkaffee(L.art)) z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: true, grund, besucher: 0, heim: 0 };
     return;
   }
   if (!L.gaeste) gaesteAuslosen(z, raeume, zufall, L, info);   // Hauptamtlicher erst kurz vor Beginn gekommen
@@ -352,6 +387,8 @@ function beginnen(z, raeume, zufall, L) {
 }
 
 function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
+  const v = VERANSTALTUNGEN.find(x => x.id === L.art);
+  if (v && v.kollekte === false) return saalEnde(z, raeume, L, v, zufall);
   const sitzend = L.gaeste.filter(g => g.sitz);
   // Kollekte: pro Besucher 1 € × Stuhl, × Altar, Grünpflanzen und Musik des Raums, × 2 am Sonntagvormittag,
   // × Kollekte-Faktor des Kirchenjahres (z. B. Heiligabend ×2); auf ganze Euro gerundet.
@@ -383,9 +420,35 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   L.phase = 'kirchkaffee';
 }
 
-// Haltung für die Veranstaltung selbst: Gottesdienst fest, Lobpreisgottesdienst nach Lobpreis-Vorliebe
-function haltungFuer(art, b) {
+// Ende einer Veranstaltung im Gemeindesaal (Lukas, 25.11.): keine Kollekte, kein Kirchkaffee, manchmal eine spontane Spende.
+// Bekanntheit wie beim Gottesdienst; der Ehrenamtliche der Chorprobe sammelt Musik-Erfahrung. Danach gehen alle heim.
+function saalEnde(z, raeume, L, v, zufall) {
+  const info = terminInfo(z, raeume, L);
+  L.musikBonus = info ? info.p.musikBonus : 0;   // Chorprobe: Bonus des besten Ehrenamtlichen (vor der neuen Erfahrung)
+  let spende = 0;
+  for (const g of L.gaeste.filter(g => g.sitz)) {
+    g.kaffee = null;
+    // Seniorennachmittag: wer auf einem Stuhl sitzt, bekommt dessen Haltung (Polsterstuhl usw.) wie im Gottesdienst
+    const m = moebelBei(z, g.sitz.x, g.sitz.y);
+    g.bonus = m && m.art === 'stuhl' ? stuhlStufe(m).haltung : 0;
+    if (v.spende && zufall() < SPONTANE_SPENDE.chance) {
+      const betrag = SPONTANE_SPENDE.min + Math.floor(zufall() * (SPONTANE_SPENDE.max - SPONTANE_SPENDE.min + 1));
+      spende += betrag; zahlZeigen(z, g.sitz, betrag);
+    }
+  }
+  if (spende > 0) buchen(z, 'einnahmen', 'spende', spende, { veranstaltung: L.art });
+  if (info && v.musikLevelMin && info.p.leitung) musikErfahrungDazu(info.p.leitung);
+  bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
+  L.gottesdienstEnde = z.minuten;
+  abschliessen(z, raeume, zufall, L);
+}
+
+// Haltung für die Veranstaltung selbst: Gottesdienst fest, Lobpreisgottesdienst nach Lobpreis-Vorliebe,
+// Seniorennachmittag fest (haltung), Chorprobe: Musik-Bonus × aktuelle Haltung
+function haltungFuer(art, b, L = {}) {
   const v = VERANSTALTUNGEN.find(x => x.id === art);
+  if (v && typeof v.haltung === 'number') return v.haltung;
+  if (v && v.haltungNachMusik) return Math.round(b.zufriedenheit * (L.musikBonus || 0));
   return v && v.haltungNachVorliebe ? Math.round(lobpreisVorliebe(b) * v.haltungNachVorliebe) : AENDERUNG.gottesdienst;
 }
 
@@ -399,7 +462,7 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
     // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
     const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
-    zufriedenheitAendern(b, AENDERUNG.sitzplatz + haltungFuer(L.art, b) + (g.bonus || 0) + musik);
+    zufriedenheitAendern(b, AENDERUNG.sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik);
     if (g.kaffee && g.kaffee.ergebnis === 'keinPlatz') zufriedenheitAendern(b, AENDERUNG.kaffeeNein);   // sonst: beim Bedienen (kirchkaffee.js)
     g.zufriedenheit = b.zufriedenheit;
   }
@@ -409,7 +472,7 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
       herkunft: { besuche: b.besuche, zufriedenheit: b.zufriedenheit, kaffee: kaffeeVorliebe(b), zuletzt: b.zuletzt } }));
   Object.assign(L, { phase: 'ende', ende: z.minuten, neueEhrenamtliche: neueEA.map(p => p.daten.name) });
-  z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: false, besucher: anwesend.length, heim: L.gaeste.filter(g => !g.sitz).length };
+  if (mitKirchkaffee(L.art)) z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: false, besucher: anwesend.length, heim: L.gaeste.filter(g => !g.sitz).length };
 }
 
 // ---- Prognose für eine Veranstaltung (erwartete Werte = Summe der Einzelchancen) ----
@@ -421,7 +484,8 @@ export function prognose(z, raeume, raumNr = null, platz = 0) {
   const plan = p ? { tag: p.tag, slot: p.slot } : STANDARD_PLAN, faktor = zeitFaktor(plan);
   const termin = g && dieserTermin(z, raeume, g.raum, platz);
   const woche = termin ? termin.woche : zeitpunkt(z.minuten).woche;
-  const bereit = !!(p && p.bereit), plaetze = g ? g.stuehle.length : 0;
+  const v = p ? p.veranstaltung : null, saal = !!(v && v.kollekte === false), unbegrenzt = !!(v && v.stuehleBegrenzen === false);
+  const bereit = !!(p && p.bereit), plaetze = unbegrenzt ? null : g ? g.stuehle.length : 0;
   const plakat = !!z.plakat;
   // Neugierige vom Tor kommen zur nächsten Veranstaltung; neue Besucher über die Bekanntheit verteilen sich auf die Termine der Woche
   const naechster = naechsterTermin(z, raeume), istNaechster = !!(termin && naechster && naechster.id === termin.id);
@@ -432,17 +496,22 @@ export function prognose(z, raeume, raumNr = null, platz = 0) {
   // Kirchenjahr: Fest an dem Tag oder Zeit (z. B. Adventszeit) – Besucher und Kollekte × Faktor
   const kj = terminFaktoren({ woche, plan });
   const neu = Math.min(z.bekanntheit / BEKANNTHEIT.teiler / anzahl * kj.besucher, moeglich);
-  const chance = b => besuchChance(b, { art, woche, faktor: kj.besucher, musik: g ? g.ausstattung.musik : undefined });
+  const chance = b => besuchChance(b, { art, woche, faktor: kj.besucher, musik: g && g.typ.id === 'gottesdienst' ? g.ausstattung.musik : undefined });
   const erwartet = z.besucher.reduce((s, b) => s + chance(b), 0) + neu + neugierige.length * NEUGIER.kommChance;
-  const anteil = erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
+  const anteil = unbegrenzt ? 1 : erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
   // Fällt der Termin wegen eines geplanten Sonderevents aus?
   const wegenFest = g && verdraengtVon(z, raeume, { woche, plan, raum: raumSchluessel(g.raum), platz });
   const kirchenjahr = { besucher: kj.besucher, kollekte: kj.kollekte, fest: kj.fest, zeit: kj.zeit,
     festName: kj.fest ? FESTE.find(f => f.id === kj.fest).name : null, zeitName: (ZEITEN.find(t => t.id === kj.zeit) || {}).name || null };
-  const grund = { bereit: bereit && !wegenFest, erwartet, plaetze, plakat, sonntagvormittag: faktor > 1, fehlt: wegenFest ? 'fest' : p ? p.fehlt : 'raum',
+  const grund = { bereit: bereit && !wegenFest, erwartet, plaetze, plakat, saal, sonntagvormittag: !saal && faktor > 1, fehlt: wegenFest ? 'fest' : p ? p.fehlt : 'raum',
     kirchenjahr, wegenFest: wegenFest ? festAusSchluessel(wegenFest).fest.name : null };
   if (wegenFest) return { ...grund, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0 };
   if (!bereit) return { ...grund, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0 };
+  const ehrenamt = z.besucher.filter(b => b.besuche + 1 >= EHRENAMT_AB_BESUCHEN).reduce((s, b) => s + chance(b) * anteil * EHRENAMT_QUOTE, 0);
+  if (saal) {   // Gemeindesaal: statt Kollekte und Kaffee nur die erwartete spontane Spende
+    const spende = v.spende ? sitzend * SPONTANE_SPENDE.chance * (SPONTANE_SPENDE.min + SPONTANE_SPENDE.max) / 2 : 0;
+    return { ...grund, sitzend, geld: spende, kollekte: 0, spende, ehrenamt, tassen: 0 };
+  }
   // Erwartete Kollekte: die erwarteten Besucher sitzen auf den besten Plätzen des Raums
   const sitze = sitzplaetze([g]);
   let kollekteSumme = 0;
@@ -454,7 +523,6 @@ export function prognose(z, raeume, raumNr = null, platz = 0) {
     + neugierige.reduce((s, p) => s + kaffeeVorliebe(p), 0) * NEUGIER.kommChance) * anteil;
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
   const tassen = Math.min(kaffeeWunsch, stationen.length * fassung('kaffeemaschine'));
-  const ehrenamt = z.besucher.filter(b => b.besuche + 1 >= EHRENAMT_AB_BESUCHEN).reduce((s, b) => s + chance(b) * anteil * EHRENAMT_QUOTE, 0);
   return { ...grund, sitzend, geld: kollekteSumme + tassen * PREIS_TASSE, kollekte: kollekteSumme, ehrenamt, tassen };
 }
 // Der anstehende (oder gerade in der Anreise befindliche) Termin dieser Veranstaltung, sonst null
@@ -491,9 +559,9 @@ export function naechsteKaffeeOeffnung(z, raeume, raum) {
   const t = z.minuten, w = zeitpunkt(t).woche, werte = [];
   const s = naechsteSchicht(z, raum, t);
   if (s !== null) werte.push(s);
-  for (const L of z.laeufe || []) if ((L.phase === 'anreise' || L.phase === 'gottesdienst') && !L.ausgefallen) werte.push(L.beginn + DAUER.gottesdienst);
+  for (const L of z.laeufe || []) if ((L.phase === 'anreise' || L.phase === 'gottesdienst') && !L.ausgefallen && mitKirchkaffee(L.art)) werte.push(L.beginn + DAUER.gottesdienst);
   const erledigt = new Set(z.termineErledigt || []);
   for (const woche of [w, w + 1]) for (const termin of termineDerWoche(z, raeume, woche))
-    if (termin.art && termin.beginn > t && !erledigt.has(termin.id)) werte.push(termin.beginn + DAUER.gottesdienst);
+    if (termin.art && mitKirchkaffee(termin.art) && termin.beginn > t && !erledigt.has(termin.id)) werte.push(termin.beginn + DAUER.gottesdienst);
   return werte.length ? Math.min(...werte) : null;
 }

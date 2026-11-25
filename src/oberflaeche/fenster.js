@@ -85,6 +85,7 @@ function raumFenster(f) {
   const uhr = slot => `${String(r.slots.find(s => s.id === slot).stunde).padStart(2, '0')}:00`;
   const terminText = e => T.termin(TEXTE.tage[e.tag], T.slots[e.slot], uhr(e.slot));
   const artName = id => id ? (r.moeglich.find(v => v.id === id) || {}).name : KEINE_VERANSTALTUNG;
+  const saal = r.typId === 'gemeindesaal';
 
   if (p) {
     // ---- Menü: Art und Zeit einer Veranstaltung ----
@@ -99,7 +100,7 @@ function raumFenster(f) {
         <span class="klein">${TEXTE.bringt}</span><ul>${[...k.bringt, ...extra(id)].map(t => `<li>${t}</li>`).join('')}</ul>
         <span class="klein">${TEXTE.bedingungen}</span><ul>${k.bedingungen.map(bedingung).join('')}</ul></button>`;
     const kacheln = r.moeglich.map(v => kachel(v.id, v.name, TEXTE.veranstaltungKacheln[v.id])).join('')
-      + kachel('', KEINE_VERANSTALTUNG, TEXTE.veranstaltungKacheln.keine);
+      + kachel('', KEINE_VERANSTALTUNG, TEXTE.veranstaltungKacheln[saal ? 'keineSaal' : 'keine']);
     // Zeiten, zu denen im Raum schon eine andere Veranstaltung ist, sind gesperrt
     const belegt = (tag, slot) => r.programm.some(e => e.platz !== p.platz && e.art && e.tag === tag && e.slot === slot);
     const kopf = TEXTE.tageKurz.map(t => `<th>${t}</th>`).join('');
@@ -107,12 +108,13 @@ function raumFenster(f) {
       TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${p.tag === tag && p.slot === s.id ? ' aktiv' : ''}" data-plan="${tag}:${s.id}" ${belegt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${T.slots[s.id]}"></button></td>`).join('')}</tr>`).join('');
     return `<h2>${T.platzEinstellen(p.platz + 1)}</h2><p class="unter">${r.typName}</p>
       <h3>${T.art}</h3><div class="kacheln">${kacheln}</div>
-      <h3>${T.zeit}</h3><p class="unter">${T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
+      <h3>${T.zeit}</h3><p class="unter">${saal ? T.wochenplanInfoSaal : T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
       <div class="zeile"><button data-zurueck>${T.zurueck}</button><button data-zu>Schließen</button></div>`;
   }
 
   // ---- Übersicht: Veranstaltung 1, 2 ----
-  const warnung = e => e.fehlt === 'gesperrt' && e.art ? TEXTE.fehltGesperrt(e.platz + 1)
+  const warnung = e => saal ? (e.art && e.fehlt && TEXTE.fehltSaal[e.fehlt]) || ''
+    : e.fehlt === 'gesperrt' && e.art ? TEXTE.fehltGesperrt(e.platz + 1)
     : e.art && e.fehlt === 'gitarre' ? TEXTE.fehltGitarre : e.art && e.fehlt === 'leitung' ? T.keinMitarbeiter : '';
   const plaetze = r.programm.map(e => {
     if (!e.nutzbar) return `<button class="kachel" disabled><b>${T.platz(e.platz + 1)}</b><small class="unter">${T.gesperrt}</small></button>`;
@@ -123,15 +125,15 @@ function raumFenster(f) {
   }).join('');
   const mitarbeiter = r.imRaum.length
     ? r.imRaum.map(m => `<div class="kachel klein-kachel"><b>${esc(m.name)}</b><small>${ART_TEXT[m.art]} · ${
-      m.art === 'ehrenamt' ? (m.musiker ? A.musiker : A.ohneGitarre) : T.skillsSpaeter}</small></div>`).join('')
-    : `<p class="warnung">${T.keinMitarbeiter}</p>`;
+      m.art === 'ehrenamt' ? (saal ? A.musikLevel(m.musikLevel) : m.musiker ? A.musiker : A.ohneGitarre) : T.skillsSpaeter}</small></div>`).join('')
+    : `<p class="warnung">${saal ? T.keinMitarbeiterSaal : T.keinMitarbeiter}</p>`;
   const vorschau = r.programm.filter(e => e.prognose && (e.art || e.platz === 0)).map(e => {
     const v = e.prognose;
     return `<h3>${T.platz(e.platz + 1)} · ${v.dieseWoche ? T.prognose : T.prognoseNaechste}</h3>
       ${v.bereit ? '' : `<p class="warnung">${v.wegenFest ? TEXTE.faelltAusWegen(e.platz, esc(v.wegenFest)) : warnung(e) || T.prognoseFaelltAus}</p>`}
       <table class="finanzen hell">
         <tr><td>${T.prognoseBesucher}</td><td class="zahl">${T.ca(zahl1(v.erwartet))}</td></tr>
-        <tr><td>${T.prognosePlaetze}</td><td class="zahl">${v.plaetze}</td></tr>
+        <tr><td>${T.prognosePlaetze}</td><td class="zahl">${v.plaetze === null ? T.plaetzeEgal : v.plaetze}</td></tr>
         <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(v.geld)))}</td></tr>
         <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(v.ehrenamt))}</td></tr>
         ${v.sonntagvormittag ? `<tr><td colspan="2">${T.prognoseSonntagvormittag}</td></tr>` : ''}

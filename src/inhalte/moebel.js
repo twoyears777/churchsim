@@ -3,10 +3,10 @@
 // Namen sind Platzhalter – Lukas legt sie fest.
 // kategorie: unter welchem Reiter der Bauleiste es steht (Namen der Reiter in texte.js → bauleiste).
 export const MOEBEL = [
-  { id: 'stuhl', name: 'Stuhl', kosten: 5, kategorie: 'gottesdienst', auchIn: ['kirchkaffee'] },   // auchIn: steht zusätzlich unter diesem Reiter
+  { id: 'stuhl', name: 'Stuhl', kosten: 5, kategorie: 'gottesdienst', auchIn: ['kirchkaffee', 'gemeindesaal'] },   // auchIn: steht zusätzlich unter diesem Reiter
   { id: 'kaffeemaschine', name: 'Kaffeemaschine', kosten: 50, fassung: 30, startFuellung: 0, kategorie: 'kirchkaffee' },  // für das Kirchkaffee
   { id: 'theke', name: 'Theke', kosten: 20, kategorie: 'kirchkaffee' },  // für das Kirchkaffee; mehrere Thekenteile nebeneinander = eine Theke
-  { id: 'tisch', name: 'Tisch', kosten: 15, kategorie: 'kirchkaffee' },  // Kirchkaffee: Stühle direkt daneben bringen mehr Trinkgeld (SITZEN.tisch)
+  { id: 'tisch', name: 'Tisch', kosten: 15, kategorie: 'kirchkaffee', auchIn: ['gemeindesaal'] },  // Kirchkaffee: Stühle direkt daneben bringen mehr Trinkgeld (SITZEN.tisch)
 
   // Ausstattung des Gottesdienstraums (Spielprinzip vom 25.11.). Wirkt nur im Gottesdienstraum.
   // max: höchstens so viele pro Raum (mehr kann man nicht aufstellen).
@@ -25,6 +25,9 @@ export const MOEBEL = [
   { id: 'bass', kategorie: 'gottesdienst', name: 'Bass', kosten: 25, max: 1, wirkung: { musik: true } },
   { id: 'egitarre', kategorie: 'gottesdienst', name: 'E-Gitarre', kosten: 25, max: 1, wirkung: { musik: true } },
   { id: 'mikrofon', kategorie: 'gottesdienst', name: 'Mikrofon', kosten: 25, max: 1, wirkung: { musik: true } },
+
+  // Gemeindesaal (Lukas, 25.11.): Klavier für die Kirchenchorprobe, 1× pro Raum. Kein Instrument fürs Lobpreisteam.
+  { id: 'klavier', kategorie: 'gemeindesaal', name: 'Klavier', kosten: 100, max: 1 },
 
   // Außen (Spielprinzip Einzugsgebiet, 25.11.): nur draußen auf dem Grundstück, nicht in Räumen. Man kann darüber laufen.
   // groesse: [Breite, Länge] in Kästchen (lässt sich drehen). Preise sind PLATZHALTER von Claude.

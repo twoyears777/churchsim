@@ -11,7 +11,7 @@ import { neuerZustand, LEER, WAND, TUER, idx, erkenneRaeume, pruefeRaum, raumTyp
 import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
-  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand, instrumenteImRaum, istHindernis } from './moebel.js';
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand, musikLevel, instrumenteImRaum, istHindernis } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht } from './finanzen.js';
@@ -20,10 +20,10 @@ import { besucherAnlegen } from './besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten, TAG_MIN } from './zeit.js';
 import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, programmVon,
   veranstaltungEinstellen, terminEinstellen, prognose, finanzPrognose, terminDieseWoche, ablaufAnlegen, laufVon,
-  naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon, naechstesEvent } from './ablauf.js';
+  naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon, naechstesEvent, plaetzeVon } from './ablauf.js';
 import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
   schichtHinzufuegen, schichtEntfernen, offenBei } from './kirchkaffee.js';
-import { PLAETZE, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
+import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { lobpreisVorliebe, kaffeeVorliebe } from './besucher.js';
 import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
@@ -89,18 +89,19 @@ export function raeumeAuswerten(z) {
   return { liste, gruppe };
 }
 
+const artName = id => (VERANSTALTUNGEN.find(v => v.id === id) || {}).name || null;
 // Was gerade läuft bzw. was für die Veranstaltungen fehlt (als Code; den Text macht die Oberfläche)
 // fehlt: 'raum' | 'veranstaltung' | 'leitung' | 'gitarre' | 'gesperrt' (Kanzel/Altar für Veranstaltung 2)
 export function spielStatus(z, raeume) {
   const L = z.laeufe || [];
   const aktiv = L.filter(l => l.phase !== 'ende').sort((a, b) => a.beginn - b.beginn)[0];
-  if (aktiv) return { phase: aktiv.phase, platz: aktiv.platz, heim: aktiv.gaeste && aktiv.phase !== 'anreise' ? aktiv.gaeste.filter(g => !g.sitz).length : 0 };
+  if (aktiv) return { phase: aktiv.phase, platz: aktiv.platz, art: aktiv.art, artName: artName(aktiv.art), heim: aktiv.gaeste && aktiv.phase !== 'anreise' ? aktiv.gaeste.filter(g => !g.sitz).length : 0 };
   // Kirchkaffee hat in einer eigenen Schicht geöffnet
   if (kirchkaffeeZustand(z, raeume).some(k => k.stationen.length && offenBei(z, k.raum))) return { phase: 'kaffeeOffen' };
   const zuletzt = L.filter(l => l.phase === 'ende').sort((a, b) => b.ende - a.ende)[0];
   if (zuletzt && zuletzt.ausgefallen) {
     const f = zuletzt.wegenFest && festAusSchluessel(zuletzt.wegenFest);   // fällt wegen eines Sonderevents aus
-    return { phase: 'ausgefallen', grund: zuletzt.grund, platz: zuletzt.platz, fest: f ? f.fest.name : null };
+    return { phase: 'ausgefallen', grund: zuletzt.grund, platz: zuletzt.platz, fest: f ? f.fest.name : null, art: zuletzt.art, artName: artName(zuletzt.art) };
   }
   if (zuletzt && z.letzterGottesdienst && z.letzterGottesdienst.heim) return { phase: 'vorbei', heim: z.letzterGottesdienst.heim };
   const gd = gottesdienstRaeume(z, raeume).filter(b => b.typ.id === 'gottesdienst');
@@ -246,17 +247,17 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // Art einer Veranstaltung (platz 0 = Veranstaltung 1) → 'ok' | 'gesperrt' (Platz noch nicht frei) | 'keine'
     veranstaltungSetzen(nr, platz, id) {
       const r = raeume.liste[nr];
-      if (!r || !moeglicheVeranstaltungen(r.typ).length || !PLAETZE[platz]) return 'keine';
+      if (!r || !moeglicheVeranstaltungen(r.typ).length || !plaetzeVon(r.typ)[platz]) return 'keine';
       if (id && !moeglicheVeranstaltungen(r.typ).some(v => v.id === id)) return 'keine';
       const e = programmVon(z, r)[platz];
-      if (!e.art && id && !PLAETZE[platz].braucht.every(a => moebelImRaum(z, r, a).length)) return 'gesperrt';
+      if (!e.art && id && !plaetzeVon(r.typ)[platz].braucht.every(a => moebelImRaum(z, r, a).length)) return 'gesperrt';
       aendern(() => veranstaltungEinstellen(z, r, id || null, platz));
       return 'ok';
     },
     // Zeit einer Veranstaltung → 'ok' | 'belegt' (im Raum ist dann schon eine) | 'zeit' | 'keine'
     terminSetzen(nr, platz, tag, slot) {
       const r = raeume.liste[nr];
-      if (!r || !moeglicheVeranstaltungen(r.typ).length || !PLAETZE[platz]) return 'keine';
+      if (!r || !moeglicheVeranstaltungen(r.typ).length || !plaetzeVon(r.typ)[platz]) return 'keine';
       let e = 'zeit';
       aendern(() => { e = terminEinstellen(z, r, platz, tag, slot); });
       return e;
@@ -468,7 +469,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const f = festAusSchluessel(schluessel);
       if (!f) return null;
       const heute = Math.floor(z.minuten / TAG_MIN), a = tagAnzeige(f.tagNr), plan = z.feste && z.feste.plaene[schluessel];
-      const orte = raeume.liste.filter(r => moeglicheVeranstaltungen(r.typ).length && !r.probleme.length);
+      const orte = raeume.liste.filter(r => r.typ && r.typ.id === 'gottesdienst' && !r.probleme.length);   // Feste nur im Gottesdienstraum
       const leute = art => z.personen.map(p => ({ p, d: daten(p) })).filter(x => x.d && x.d.art === art).map(x => ({ id: x.p.id, name: x.d.name }));
       const haupt = leute('hauptamt'), arten = VERANSTALTUNGEN.filter(v => v.raumtypen.includes('gottesdienst')).map(v => ({ id: v.id, name: v.name }));
       const planNr = plan ? raeume.gruppe[plan.raum] : undefined;
@@ -581,13 +582,17 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const info = gottesdienstRaeume(z, raeume).find(g => g.raum === r);
       const a = info ? info.ausstattung : null, musiker = new Set(info ? info.musiker : []);
       const hat = art => moebelImRaum(z, r, art).length > 0;
+      const eaImRaum = info ? info.imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r) : [];
       // Raum mit Problemen (z. B. ohne Tür): Veranstaltungen sind eingestellt, können aber nicht stattfinden
       const programm = info ? info.programm : programmVon(z, r).map((e, i) => ({ platz: i, art: e.art, tag: e.tag, slot: e.slot,
-        frei: PLAETZE[i].braucht.every(hat), fehlt: e.art ? 'raum' : 'keine', bereit: false }));
+        frei: plaetzeVon(r.typ)[i].braucht.every(hat), fehlt: e.art ? 'raum' : 'keine', bereit: false }));
       return {
-        nr, typName: r.typ.name,
+        nr, typName: r.typ.name, typId: r.typ.id,
         moeglich: moeglicheVeranstaltungen(r.typ).map(x => ({ id: x.id, name: x.name })),
-        bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre'), instrument: instrumenteImRaum(z, r) > 0 },
+        bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre'), instrument: instrumenteImRaum(z, r) > 0,
+          // Gemeindesaal: Ehrenamtlicher im Raum, Ehrenamtlicher mit Musik-Level ab 1, Tisch, mind. 2 Stühle, Klavier
+          ehrenamt: eaImRaum.length > 0, musikLevel: eaImRaum.some(p => musikLevel(p) >= 1), tisch: hat('tisch'), klavier: hat('klavier'),
+          stuehle: moebelImRaum(z, r, 'stuhl').length >= 2 },
         // Was die Möbel im Raum bringen (Kanzel, Altar, Blumen, Grünpflanzen, Instrumente) und ob Musik gemacht wird
         ausstattung: a ? { teile: a.teile, instrument: a.instrument, musik: a.musik, musiker: a.musiker, musikBonus: a.musikBonus } : null,
         slots: SLOTS.map(s => ({ ...s })),
@@ -595,7 +600,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         programm: programm.map(p => ({ platz: p.platz, art: p.art, tag: p.tag, slot: p.slot, frei: p.frei, fehlt: p.fehlt, bereit: p.bereit,
           nutzbar: p.frei || !!p.art,
           prognose: p.platz === 0 || p.art ? { ...prognose(z, raeume, nr, p.platz), dieseWoche: terminDieseWoche(z, raeume, r, p.platz) } : null })),
-        imRaum: (info ? info.imRaum : []).map(p => { const d = daten(p); return { name: d.name, art: d.art, musiker: musiker.has(p) }; })
+        imRaum: (info ? info.imRaum : []).map(p => { const d = daten(p); return { name: d.name, art: d.art, musiker: musiker.has(p), musikLevel: d.art === 'ehrenamt' ? musikLevel(p) : null }; })
       };
     },
     // Menü der Kaffeemaschine (nachgefüllt wird vom Ehrenamtlichen im Laden)

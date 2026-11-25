@@ -5,8 +5,8 @@ import { ui, $, euro, esc } from './ui.js';
 import { symbolZeichnen } from '../ansicht/zeichnen.js';
 
 const T = TEXTE.bauleiste;
-const KATEGORIEN = ['bauen', 'gottesdienst', 'kirchkaffee', 'deko', 'aussen'];
-const SYMBOL = { bauen: 'wand', gottesdienst: 'kanzel', kirchkaffee: 'kaffeemaschine', deko: 'blumen', aussen: 'parkplatz' };
+const KATEGORIEN = ['bauen', 'gottesdienst', 'kirchkaffee', 'gemeindesaal', 'deko', 'aussen'];
+const SYMBOL = { bauen: 'wand', gottesdienst: 'kanzel', kirchkaffee: 'kaffeemaschine', gemeindesaal: 'klavier', deko: 'blumen', aussen: 'parkplatz' };
 const WERKZEUGE = { bauen: ['wand', 'tuer', 'raum'] };          // Werkzeuge ohne Preis
 let kategorie = 'bauen', aufWahl = () => {}, aufBus = () => {};
 

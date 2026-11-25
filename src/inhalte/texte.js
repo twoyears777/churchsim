@@ -49,6 +49,21 @@ export const TEXTE = {
   fehltGesperrt: n => `Veranstaltung ${n} fällt aus – Kanzel und Altar fehlen im Raum.`,
   fehltGitarre: 'Für den Lobpreisgottesdienst fehlt eine Gitarre im Raum.',
   ausgefallenGitarre: 'Der Lobpreisgottesdienst ist ausgefallen – keine Gitarre im Raum.',
+  // ---- Gemeindesaal (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
+  // Was einer Veranstaltung im Gemeindesaal fehlt (Codes aus dem Spiel)
+  fehltSaal: {
+    leitung: 'Es fehlt ein Hauptamtlicher im Raum.',
+    ehrenamt: 'Es fehlt ein Ehrenamtlicher im Raum.',
+    musikLevel: 'Kein Ehrenamtlicher mit Musik ab Level 1 im Raum.',
+    tisch: 'Es fehlt ein Tisch im Raum.',
+    stuehle: 'Es fehlen Stühle (mindestens 2).',
+    klavier: 'Es fehlt ein Klavier im Raum.'
+  },
+  laeuftSaal: {
+    anreise: name => `${name}: Die Besucher kommen.`,
+    gottesdienst: name => `${name} läuft.`
+  },
+  ausgefallenSaal: (name, grund) => `Ausgefallen: ${name}${grund ? ' – ' + grund : ''}`,
 
   // Seitenleiste „Besucher“
   besucherLetzter: 'Letzter Gottesdienst',
@@ -67,6 +82,9 @@ export const TEXTE = {
     zurueck: 'Zurück',                                       // Platzhalter von Claude
     wochenplan: 'Wochenplan',
     wochenplanInfo: 'Wann findet der Gottesdienst statt? Er dauert 1 Stunde, danach 2 Stunden Kirchkaffee.',   // 25.11.: Kirchkaffee jetzt 2 Stunden (von Claude angepasst)
+    wochenplanInfoSaal: 'Wann findet die Veranstaltung statt? Sie dauert 1 Stunde.',   // ENTWURF von Claude (Gemeindesaal)
+    keinMitarbeiterSaal: 'Kein Mitarbeiter im Raum.',                                   // ENTWURF von Claude (Gemeindesaal)
+    plaetzeEgal: 'egal',                                                                // ENTWURF: Prognose Chorprobe (Stühle egal)
     slots: { vormittag: 'Vormittags', nachmittag: 'Nachmittags', abend: 'Abends' },
     mitarbeiter: 'Mitarbeiter im Raum',
     keinMitarbeiter: 'Kein Mitarbeiter im Raum – ohne ihn findet kein Gottesdienst statt.',
@@ -95,7 +113,19 @@ export const TEXTE = {
       bringt: ['Kollekte: 1 € pro Besucher', 'Haltung je nach Lobpreis-Vorliebe', 'Bekanntheit der Gemeinde'],
       bedingungen: [{ text: 'Hauptamtlicher im Raum', bedingung: 'leitung' }, { text: 'Gitarre im Raum', bedingung: 'gitarre' }]
     },
-    keine: { bringt: ['Nichts'], bedingungen: ['Stammgäste werden unzufrieden'] }
+    keine: { bringt: ['Nichts'], bedingungen: ['Stammgäste werden unzufrieden'] },
+    // ---- Gemeindesaal (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
+    senioren: {
+      bringt: ['Haltung +5 für jeden Besucher', 'Manchmal eine spontane Spende', 'Bekanntheit der Gemeinde'],
+      bedingungen: [{ text: 'Hauptamtlicher im Raum', bedingung: 'leitung' }, { text: 'Ehrenamtlicher im Raum', bedingung: 'ehrenamt' },
+        { text: 'Tisch im Raum', bedingung: 'tisch' }, { text: 'Mindestens 2 Stühle', bedingung: 'stuehle' }, 'Stühle = Sitzplätze']
+    },
+    chorprobe: {
+      bringt: ['Haltung je nach Musik-Level des Ehrenamtlichen', 'Manchmal eine spontane Spende', 'Bekanntheit der Gemeinde'],
+      bedingungen: [{ text: 'Ehrenamtlicher mit Musik ab Level 1', bedingung: 'musikLevel' }, { text: 'Klavier im Raum', bedingung: 'klavier' },
+        'Stühle egal – alle passen hinein']
+    },
+    keineSaal: { bringt: ['Nichts'], bedingungen: [] }
   },
   bringt: 'Bringt',
   bedingungen: 'Bedingungen',
@@ -397,7 +427,7 @@ export const TEXTE = {
 
   // ---- Bauleiste unten (25.11.; Reiter von Lukas freigegeben, übrige Texte ENTWÜRFE von Claude) ----
   bauleiste: {
-    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', deko: 'Deko', aussen: 'Außen' },
+    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', deko: 'Deko', aussen: 'Außen' },
     werkzeuge: { wand: 'Wand', tuer: 'Tür', raum: 'Raum festlegen', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },
     abBekanntheit: n => `ab Bekanntheit ${n}`,
     drehen: 'Drehen (R)'
