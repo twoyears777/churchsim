@@ -32,3 +32,22 @@ const z4 = neuerZustand(); wandRechteck(z4, 0, 0, 3, 3);
 assert.ok(z4.zellen.every((t, i) => !t || aufGrundstueck(i % z4.w, (i / z4.w) | 0)));
 assert.equal(tuerUmschalten(z4, 0, 0), false);
 console.log('Alle Tests bestanden.');
+
+// Mitarbeiter
+import { personenAnlegen, versetzen, verfuegbarkeit, personenPruefen, startPlatz } from '../src/kern/personen.js';
+{
+  const z5 = neuerZustand(); personenAnlegen(z5);
+  const auswerten = () => { const { raeume, gruppe } = erkenneRaeume(z5); for (const r of raeume) { r.typ = raumTypVon(z5, r); r.probleme = pruefeRaum(z5, r, r.typ); } return { liste: raeume, gruppe }; };
+  assert.deepEqual(verfuegbarkeit(z5, auswerten()).hauptamt, { frei: 1, gesamt: 1 });
+  assert.deepEqual(verfuegbarkeit(z5, auswerten()).ehrenamt, { frei: 0, gesamt: 0 });
+  wandRechteck(z5, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z5, G.x + 2, G.y + 5);
+  typZuweisen(z5, erkenneRaeume(z5).raeume[0], 'gottesdienst');
+  const pastor = z5.personen[0];
+  assert.ok(versetzen(z5, pastor, G.x + 5, G.y + 5));
+  assert.deepEqual(verfuegbarkeit(z5, auswerten()).hauptamt, { frei: 0, gesamt: 1 });
+  assert.equal(versetzen(z5, pastor, G.x + 2, G.y + 2), false);             // nicht in eine Wand
+  assert.equal(versetzen(z5, pastor, 0, 0), false);                         // nicht außerhalb des Grundstücks
+  wandRechteck(z5, G.x + 5, G.y + 5, G.x + 6, G.y + 6); personenPruefen(z5); // Wand über die Figur gebaut
+  assert.deepEqual({ x: pastor.x, y: pastor.y }, startPlatz());
+}
+console.log('Mitarbeiter-Tests bestanden.');

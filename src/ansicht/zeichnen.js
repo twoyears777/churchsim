@@ -1,5 +1,6 @@
 // Darstellung: malt den Zustand der Karte auf die Zeichenfläche. Ändert selbst nichts.
 import { WAND, TUER, idx } from '../kern/karte.js';
+import { ART_FARBE } from '../inhalte/mitarbeiter.js';
 import { GRUNDSTUECK, STRASSEN, GEHWEGE, NACHBARN, BAEUME } from '../inhalte/umgebung.js';
 
 // Platzhalter-Farben – das Design legt Lukas fest.
@@ -59,7 +60,7 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
   const schrift = Math.max(11, Math.min(18, k * 0.75));
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const r of liste) {
-    const b = r.box, cx = ox + (b.minX + b.maxX + 1) / 2 * k, cy = oy + (b.minY + b.maxY + 1) / 2 * k;
+    const b = r.box, cx = ox + (b.minX + b.maxX + 1) / 2 * k, cy = oy + b.minY * k + Math.max(schrift * 1.2, k * 1.1); // oben im Raum, damit Figuren frei bleiben
     ctx.font = `500 ${schrift}px system-ui, sans-serif`;
     ctx.fillStyle = FARBEN.text;
     ctx.fillText(r.typ ? r.typ.name : 'Ohne Funktion', cx, cy - (r.probleme.length ? schrift * 0.7 : 0));
@@ -69,6 +70,18 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
       const t = r.probleme.map(p => p === 'tuer' ? 'Tür fehlt' : `zu klein (mind. ${r.typ.minGroesse[0]} × ${r.typ.minGroesse[1]})`).join(' · ');
       ctx.fillText(t, cx, cy + schrift * 0.7);
     }
+  }
+
+  // Mitarbeiter-Figuren
+  for (const f of extra.personen || []) {
+    if (f.getragen) continue;
+    figur(ctx, ox + (f.x + 0.5) * k, oy + (f.y + 0.5) * k, k, f, false, schrift);
+  }
+  if (extra.tragen) {
+    const t = extra.tragen, f = (extra.personen || []).find(p => p.getragen);
+    const fx = Math.floor((t.px - ox) / k), fy = Math.floor((t.py - oy) / k);
+    ctx.strokeStyle = FARBEN.auswahl; ctx.lineWidth = 2; ctx.strokeRect(ox + fx * k + 1, oy + fy * k + 1, k - 2, k - 2);
+    if (f) figur(ctx, t.px, t.py, k, f, true, schrift);
   }
 
   // Vorschau beim Ziehen
@@ -170,4 +183,18 @@ function zaunZeichnen(ctx, { k, ox, oy }) {
   for (let x = g.x; x <= g.x + g.w; x += 2) { pfosten(ox + x * k, y0); if (x <= g.tor.x || x >= g.tor.x + g.tor.breite) pfosten(ox + x * k, y1); }
   for (let y = g.y; y <= g.y + g.h; y += 2) { pfosten(x0, oy + y * k); pfosten(x1, oy + y * k); }
   pfosten(tl, y1); pfosten(tr, y1);
+}
+
+function figur(ctx, cx, cy, k, f, angehoben, schrift) {
+  const r = Math.max(9, k * 0.48) * (angehoben ? 1.25 : 1);
+  ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * (angehoben ? 0.6 : 0.25), r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = ART_FARBE[f.art] || '#666'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = `600 ${r * 1.05}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(f.kuerzel, cx, cy + 1);
+  const n = Math.max(11, schrift * 0.8);
+  ctx.font = `500 ${n}px system-ui, sans-serif`;
+  const b = ctx.measureText(f.name).width + 8;
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(cx - b / 2, cy + r + 3, b, n + 4);
+  ctx.fillStyle = FARBEN.text; ctx.fillText(f.name, cx, cy + r + 5 + n / 2);
 }

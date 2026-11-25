@@ -33,3 +33,8 @@ button:focus-visible { outline: 2px solid #8fb4ea; outline-offset: 2px; }
 /* Modi: normale Spielansicht (HUD) und Editor */
 .modus-spiel .editor, .modus-editor .hud { display: none; }
 button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
+.anzeigen { display: flex; flex-wrap: wrap; gap: 8px; }
+.anzeige { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 8px; background: #3a3935; font-size: 15px; }
+.anzeige b { font-variant-numeric: tabular-nums; }
+.punkt { width: 12px; height: 12px; border-radius: 50%; }
+.punkt.hauptamt { background: #2d69be; } .punkt.ehrenamt { background: #d08a1e; }
