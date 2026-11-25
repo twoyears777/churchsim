@@ -6,8 +6,9 @@ import { ORT, NEUGIER, PLAKAT } from '../inhalte/ort.js';
 import { GRUNDSTUECK, GEHWEGE, WELT } from '../inhalte/umgebung.js';
 import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { TAG_MIN } from './zeit.js';
-import { neuePerson } from './besucher.js';
+import { neuePerson, kaffeeVorliebe } from './besucher.js';
 import { platzImGebiet } from './einzugsgebiet.js';
+import { passantKommt, offenesKirchkaffee } from './kirchkaffee.js';
 
 const G = GRUNDSTUECK;
 const TOR_X = G.tor.x + G.tor.breite / 2 - 0.5;                        // Mitte des Tors
@@ -53,14 +54,18 @@ export function neugierChance(z, mitPlakat = !!z.plakat) {
   return Math.min(1, c * (mitPlakat ? PLAKAT.faktor : 1));
 }
 // Am Tor: Passanten (noch nie da gewesen) werden nach neugierChance neugierig.
-function amTor(z, g, zufall) {
+// Hat das Kirchkaffee offen, geht wer Kaffee mag (Chance = Kaffee-Wert) hinein – Passanten wie bekannte Besucher (25.11.).
+function amTor(z, g, zufall, raeume) {
   g.geprueft = true;
   const p = z.ort.leute.find(x => x.id === g.id);
-  if (!p || p.neugierig) return;
-  if (zufall() < neugierChance(z)) {
+  if (p && !p.neugierig && zufall() < neugierChance(z)) {
     p.neugierig = true; g.halt = NEUGIER.haltMinuten;
     z.ort.meldung = { code: 'neugierig', id: p.id, name: p.vorname, zeit: z.minuten };
+    return;
   }
+  const wer = mensch(z, g.id);
+  if (!raeume || !wer || !offenesKirchkaffee(z, raeume)) return;
+  if (zufall() < kaffeeVorliebe(wer) && passantKommt(z, raeume, { id: wer.id, name: wer.vorname })) g.imKaffee = true;
 }
 
 // Nächster Schritt im Ort (für das Tick-System in ablauf.js)
@@ -70,7 +75,7 @@ export function ortSchritt(z, zufall) {
   if (o.tag < tag) return { zeit: z.minuten, tun: () => tagPlanen(z, tag, zufall) };
   let g = null;
   for (const x of o.gaenge) if (!x.geprueft && (!g || x.tor < g.tor)) g = x;
-  if (g && g.tor < morgen) return { zeit: g.tor, tun: () => amTor(z, g, zufall) };
+  if (g && g.tor < morgen) return { zeit: g.tor, tun: (zz, raeume) => amTor(z, g, zufall, raeume) };
   return { zeit: morgen, tun: () => tagPlanen(z, tag + 1, zufall) };
 }
 
@@ -80,6 +85,7 @@ export function passantenPositionen(z) {
   const t = z.minuten, y = gehwegY(), imGottesdienst = new Set((z.laeufe || []).filter(L => L.gaeste).flatMap(L => L.gaeste.map(g => g.id)));
   return z.ort.gaenge.map(g => {
     if (t < g.start || imGottesdienst.has(g.id)) return null;
+    if (g.imKaffee && t >= g.tor) return null;                      // ist ins Kirchkaffee gegangen
     const p = mensch(z, g.id);
     if (!p) return null;
     const dTor = Math.abs(TOR_X - g.x0);

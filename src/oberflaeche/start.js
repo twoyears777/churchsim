@@ -13,6 +13,22 @@ import { bauleisteAktualisieren } from './bauleiste.js';
 ui.spiel = spielStarten(ladenText());
 const leinwand = $('karte'), ctx = leinwand.getContext('2d'), flaeche = $('flaeche');
 
+// Grüne/rote Zahlen im Kirchkaffee: Das Spiel meldet sie; wie lange sie zu sehen sind (in echter Zeit), entscheidet die Anzeige.
+const ZAHL_SICHTBAR = 1500;   // Millisekunden
+const zahlenGesehen = new Map();
+function zahlenAnzeigen(liste) {
+  const jetzt = performance.now();
+  const schluessel = e => `${e.nr}|${e.x}|${e.y}|${e.betrag}`;   // nach „Zurücksetzen“ fängt die Nummer wieder bei 1 an
+  for (const e of liste) if (!zahlenGesehen.has(schluessel(e))) zahlenGesehen.set(schluessel(e), { ...e, start: jetzt });
+  const sichtbar = [];
+  for (const [s, e] of zahlenGesehen) {
+    const anteil = (jetzt - e.start) / ZAHL_SICHTBAR;
+    if (anteil >= 1) { if (!liste.some(x => schluessel(x) === s)) zahlenGesehen.delete(s); continue; }
+    sichtbar.push({ ...e, anteil });
+  }
+  return sichtbar;
+}
+
 function malen() {
   const spiel = ui.spiel, karte = spiel.karte();
   ctx.clearRect(0, 0, leinwand.width, leinwand.height);
@@ -22,11 +38,11 @@ function malen() {
   const preisSchild = ui.editorOffen && moebelTyp && ui.maus ? { ...ui.maus, text: euro(moebelTyp.kosten), zuTeuer: !moebelTyp.leistbar } : null;
   // Umriss unter der Maus beim Aufstellen (grün/rot), z. B. der 2 Kästchen lange Parkplatz
   const geist = ui.editorOffen && moebelTyp && ui.werkzeug !== 'strasse' && ui.schwebe && !z ? spiel.moebelVorschau(ui.werkzeug, ui.schwebe.x, ui.schwebe.y, ui.dreh) : null;
-  const f = ui.fenster, auswahl = f && (f.art === 'raum' || f.art === 'raumtyp') ? f.nr : null;
+  const f = ui.fenster, auswahl = f && (f.art === 'raum' || f.art === 'raumtyp' || f.art === 'kaffee') ? f.nr : null;
   zeichne(ctx, karte, ui.ansicht, {
     vorschau, konflikte: vorschau && vorschau.konflikte || [], auswahl, preisSchild, geist, raster: ui.editorOffen,
     schwebe: ui.editorOffen && !z ? ui.schwebe : null, tragen: ui.tragen, getragen: ui.tragen ? ui.tragen.id : null,
-    markiert: f && f.art === 'besucher' ? f.id : null
+    markiert: f && f.art === 'besucher' ? f.id : null, zahlen: zahlenAnzeigen(karte.zahlen)
   });
   anzeigenAktualisieren();
   if (ui.editorOffen) bauleisteAktualisieren();

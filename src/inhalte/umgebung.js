@@ -35,3 +35,7 @@ export const BAEUME = [
   { x: 47, y: 2.5, r: 1.3 }, { x: 60.5, y: 14, r: 1.5 }, { x: 58, y: 32, r: 1.3 },
   { x: 49.2, y: 10, r: 1.1 }, { x: 49.2, y: 22, r: 1.1 }, { x: 18, y: 41, r: 1.2 }, { x: 47, y: 41, r: 1.2 }
 ];
+
+// Der Laden, in dem die Ehrenamtlichen Kaffee kaufen (Lukas, 25.11.): das untere Nachbarhaus ganz rechts.
+// nachbar = Nummer in NACHBARN (0 = erstes), eingang = Kästchen, bis zu dem der Ehrenamtliche läuft.
+export const LADEN = { nachbar: 5, eingang: { x: 56, y: 25 } };

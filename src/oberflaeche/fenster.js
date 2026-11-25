@@ -24,10 +24,10 @@ export function fensterOffen() { return !maske().hidden; }
 export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
-  const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
+  const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, hilfe: hilfeFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
-  m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe');
+  m.classList.toggle('breit', f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
 }
@@ -135,7 +135,7 @@ function raumFenster(f) {
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
-// Kaffeemaschine: Füllstand und Kaffee nachkaufen
+// Kaffeemaschine: Füllstand (aufgefüllt wird vom Ehrenamtlichen im Laden)
 function maschinenFenster(f) {
   const m = ui.spiel.maschineInfo(f.x, f.y);
   if (!m) return null;
@@ -144,9 +144,39 @@ function maschinenFenster(f) {
     <div class="balken"><span style="width:${Math.round(m.fuellung / m.fassung * 100)}%"></span></div>
     <p class="unter">${T.fuellstand(m.fuellung, m.fassung)}</p>
     ${m.fuellung === 0 ? `<p class="warnung">${T.leer}</p>` : ''}
-    ${m.imKirchkaffee ? '' : `<p class="warnung">${T.nichtImKaffee}</p>`}
-    <div class="typen"><button data-nachkaufen ${m.zuVoll || m.keinGeld ? 'disabled' : ''}>${T.nachkaufen(m.nachkaufen.preis, m.nachkaufen.tassen)}</button></div>
-    ${m.zuVoll ? `<p class="unter">${T.voll}</p>` : m.keinGeld ? `<p class="unter">${T.keinGeld}</p>` : ''}
+    ${m.imKirchkaffee ? `<p class="unter">${T.auffuellen}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Kirchkaffee: Zustand und eigene Öffnungszeiten (höchstens 3 Schichten pro Woche).
+// f.waehlen gesetzt → Wochenplan, in dem man eine Öffnungszeit hinzufügt.
+const uhrText = (stunde, minute = 0) => minute ? `${stunde}:${String(minute).padStart(2, '0')}` : `${stunde}`;
+export function kaffeeZustandText(zustand, naechste) {
+  const K = TEXTE.kirchkaffee;
+  if (zustand === 'zu') return naechste ? K.zuBis(TEXTE.tageKurz[naechste.tag], uhrText(naechste.stunde, naechste.minute)) : K.zu;
+  return K[zustand] || '';
+}
+function kaffeeFenster(f) {
+  const r = ui.spiel.kaffeeRaumInfo(f.nr);
+  if (!r) return null;
+  const T = TEXTE.kaffeeFenster, voll = r.schichten.length >= r.max;
+  const zustand = `<p class="unter staerker">${kaffeeZustandText(r.zustand, r.naechste)}</p>`;
+  if (f.waehlen && !voll) {
+    const kopf = TEXTE.tageKurz.map(t => `<th>${t}</th>`).join('');
+    const gesetzt = (tag, slot) => r.schichten.some(s => s.tag === tag && s.slot === slot);
+    const reihen = r.slots.map(s => `<tr><th class="slot">${T.slot[s.id]}</th>${
+      TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${gesetzt(tag, s.id) ? ' aktiv' : ''}" data-schicht="${tag}:${s.id}" ${gesetzt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${T.slot[s.id]}"></button></td>`).join('')}</tr>`).join('');
+    return `<h2>${T.hinzufuegen}</h2><p class="unter">${r.typName}</p>
+      <p class="unter">${T.info}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
+      <div class="zeile"><button data-zurueck>${TEXTE.raum.zurueck}</button><button data-zu>Schließen</button></div>`;
+  }
+  const liste = r.schichten.map((s, i) => `<div class="kachel klein-kachel schicht"><b>${TEXTE.tage[s.tag]}</b><small>${T.slot[s.slot]}</small>
+      <button class="klein-knopf" data-schicht-weg="${i}">${T.entfernen}</button></div>`).join('');
+  return `<h2>${r.typName}</h2>${zustand}
+    <h3>${T.oeffnungszeiten}</h3><p class="unter">${T.info}</p>
+    ${liste ? `<div class="kacheln">${liste}</div>` : ''}
+    <div class="typen"><button data-schicht-neu ${voll ? 'disabled' : ''}>${T.hinzufuegen}</button></div>
+    ${voll ? `<p class="unter">${T.voll}</p>` : ''}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
@@ -193,7 +223,8 @@ function besucherKarte(f) {
     <p class="unter">${b.status === 'passant' ? T.passant : b.status === 'neugierig' ? T.neugierig : b.besuche ? T.besuche(b.besuche) : T.neu}</p>
     <h3>${T.zufriedenheit}</h3>
     <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>
-    <p class="unter">${T.lobpreis(Math.round(b.lobpreis * 100))}</p>`;
+    <p class="unter">${T.lobpreis(Math.round(b.lobpreis * 100))}</p>
+    <p class="unter">${T.kaffeeWert(Math.round(b.kaffee * 100))}</p>`;
   if (!n) return `${kopf}<div class="zeile"><button data-zu>Schließen</button></div>`;   // Passant: keine Bedürfnisse
   return `${kopf}
     <h3>${T.beduerfnisse}</h3>
@@ -209,7 +240,7 @@ function besucherKarte(f) {
 const STATUS_REIHE = ['passant', 'neugierig', 'besucher', 'stammgast', 'ehrenamtlich'];
 function menschenFenster(f) {
   const T = TEXTE.menschen, liste = ui.spiel.menschen(), sort = f.sort || { spalte: 'status', ab: true };
-  const wert = (m, sp) => sp === 'name' ? m.voll : sp === 'status' ? STATUS_REIHE.indexOf(m.status) : sp === 'kaffee' ? (m.kaffee === null ? -1 : +m.kaffee) : m[sp] ?? -1;
+  const wert = (m, sp) => sp === 'name' ? m.voll : sp === 'status' ? STATUS_REIHE.indexOf(m.status) : sp === 'kaffee' ? (m.kaffee === null ? -1 : m.kaffee) : m[sp] ?? -1;
   liste.sort((a, b) => {
     const x = wert(a, sort.spalte), y = wert(b, sort.spalte);
     const v = typeof x === 'string' ? x.localeCompare(y, 'de') : x - y;
@@ -222,7 +253,7 @@ function menschenFenster(f) {
       <td>${m.haltung === null ? T.unbekannt : `<div class="balken mini"><span style="width:${m.haltung}%"></span></div>`}</td>
       <td class="zahl">${m.besuche ?? T.unbekannt}</td>
       <td>${m.zuletzt === null ? T.unbekannt : T.woche(m.zuletzt)}</td>
-      <td>${m.kaffee === null ? T.unbekannt : m.kaffee ? T.ja : T.nein}</td>
+      <td>${m.kaffee === null ? T.unbekannt : T.prozent(Math.round(m.kaffee * 100))}</td>
       <td>${T.status[m.status]}</td></tr>`).join('');
   return `<h2>${T.titel}</h2>
     ${liste.length ? `<table class="menschen"><tr>${kopf}</tr>${zeilen}</table>` : `<p class="leer">${T.leer}</p>`}
@@ -375,12 +406,14 @@ export function fensterEinrichten() {
     else if (b.dataset.rat !== undefined) spiel.seelsorgeRat(Number(b.dataset.rat));
     else if (b.hasAttribute('data-seelsorge-zu')) { spiel.seelsorgeSchliessen(); ui.speichern(); return fensterSchliessen(); }
     else if (b.dataset.platz !== undefined) f.platz = Number(b.dataset.platz);   // Menü „Veranstaltung n einstellen“
-    else if (b.hasAttribute('data-zurueck')) delete f.platz;
+    else if (b.hasAttribute('data-zurueck')) { delete f.platz; delete f.waehlen; }
     else if (b.dataset.hilfe) f.thema = b.dataset.hilfe;               // Hilfe: Thema öffnen
     else if (b.hasAttribute('data-hilfe-zurueck')) delete f.thema;     // Hilfe: zurück zur Themenliste
+    else if (b.hasAttribute('data-schicht-neu')) f.waehlen = true;
+    else if (b.dataset.schichtWeg !== undefined) spiel.schichtEntfernen(f.nr, Number(b.dataset.schichtWeg));
+    else if (b.dataset.schicht) { const [tag, slot] = b.dataset.schicht.split(':'); if (spiel.schichtHinzufuegen(f.nr, Number(tag), slot) === 'ok') delete f.waehlen; }
     else if (b.dataset.veranstaltung !== undefined) spiel.veranstaltungSetzen(f.nr, f.platz ?? 0, b.dataset.veranstaltung);   // Fenster bleibt offen
     else if (b.dataset.plan) { const [tag, slot] = b.dataset.plan.split(':'); spiel.terminSetzen(f.nr, f.platz ?? 0, Number(tag), slot); }
-    else if (b.hasAttribute('data-nachkaufen')) spiel.kaffeeNachkaufen(f.x, f.y);
     else if (b.hasAttribute('data-verbessern')) spiel.stuhlVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-alle-verbessern')) spiel.alleStuehleVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();

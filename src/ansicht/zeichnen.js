@@ -3,7 +3,7 @@
 import { FELD } from '../kern/spiel.js';
 import { ART_FARBE } from '../inhalte/mitarbeiter.js';
 import { TEXTE } from '../inhalte/texte.js';
-import { GRUNDSTUECK, STRASSEN, GEHWEGE, NACHBARN, BAEUME } from '../inhalte/umgebung.js';
+import { GRUNDSTUECK, STRASSEN, GEHWEGE, NACHBARN, BAEUME, LADEN } from '../inhalte/umgebung.js';
 
 // Platzhalter-Farben – das Design legt Lukas fest.
 export const FARBEN = {
@@ -22,12 +22,16 @@ export const FARBEN = {
   busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
   geisterOk: 'rgba(60,160,80,0.9)', geisterNein: 'rgba(200,55,45,0.9)',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
-  auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
+  auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e',
+  // Kirchkaffee (25.11., Platzhalter): Ladebalken der Maschine, grüne/rote Zahlen
+  ladenBalken: '#f2c94c', plus: '#1f8a3a', minus: '#b3261e'
 };
 
 // Beschriftung unter dem Raumnamen: eingestellte Veranstaltung bzw. Zustand des Kirchkaffees
+const uhrText = n => n.minute ? `${n.stunde}:${String(n.minute).padStart(2, '0')}` : `${n.stunde}`;
 function raumUntertitel(r) {
-  if (r.kirchkaffee) return TEXTE.kirchkaffee[r.kirchkaffee];
+  const kk = r.kirchkaffee;
+  if (kk) return kk.code === 'zu' && kk.naechste ? TEXTE.kirchkaffee.zuBis(TEXTE.tageKurz[kk.naechste.tag], uhrText(kk.naechste)) : TEXTE.kirchkaffee[kk.code];
   if (r.veranstaltungsraum) return r.veranstaltung || 'Keine Veranstaltung';
   return null;
 }
@@ -105,6 +109,12 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     else if (m.art === 'gitarre') gitarre(ctx, px, py, k);
     else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.anteil || 0);
   }
+  // Kaffeemaschine lädt: kleiner Balken über der Maschine
+  for (const l of z.laden || []) {
+    const px = ox + l.x * k, py = oy + l.y * k - k * 0.32, w = k * 0.9, h = Math.max(4, k * 0.18);
+    ctx.fillStyle = 'rgba(43,42,39,0.85)'; ctx.fillRect(px + k * 0.05, py, w, h);
+    ctx.fillStyle = FARBEN.ladenBalken; ctx.fillRect(px + k * 0.05 + 1, py + 1, (w - 2) * l.anteil, h - 2);
+  }
 
   // Besucher
   for (const b of z.besucher) {
@@ -166,6 +176,17 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     const fs = extra.geist.felder, minX = Math.min(...fs.map(f => f.x)), minY = Math.min(...fs.map(f => f.y));
     const w = Math.max(...fs.map(f => f.x)) - minX + 1, h = Math.max(...fs.map(f => f.y)) - minY + 1;
     ctx.strokeRect(ox + minX * k + 1.5, oy + minY * k + 1.5, w * k - 3, h * k - 3);
+  }
+
+  // „+1 €“ über Kunden, „−5 €“ über dem Ehrenamtlichen: steigen kurz auf und verblassen (anteil 0 → 1)
+  for (const e of extra.zahlen || []) {
+    const cx = ox + (e.x + 0.5) * k, cy = oy + (e.y - 0.3 - e.anteil * 1.2) * k;
+    const text = `${e.betrag > 0 ? '+' : '−'}${Math.abs(e.betrag).toLocaleString('de-DE')} €`;
+    ctx.globalAlpha = Math.max(0, 1 - e.anteil * e.anteil);
+    ctx.font = `700 ${Math.max(12, k * 0.7)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.strokeText(text, cx, cy);
+    ctx.fillStyle = e.betrag > 0 ? FARBEN.plus : FARBEN.minus; ctx.fillText(text, cx, cy);
+    ctx.globalAlpha = 1;
   }
 
   // Preis neben dem Mauszeiger beim Bauen (z. B. Stuhl)
@@ -231,6 +252,15 @@ function umgebungZeichnen(ctx, z, { k, ox, oy }) {
     ctx.strokeStyle = FARBEN.hecke; ctx.lineWidth = Math.max(2, k * 0.25);
     ctx.strokeRect(...P(n.x + 0.12, n.y + 0.12, n.w - 0.24, n.h - 0.24));
     if (n.haus) dach(ctx, ...P(n.haus.x, n.haus.y, n.haus.w, n.haus.h), n.haus.dach);
+  }
+  // Der Laden: Schild mitten auf dem Dach
+  const laden = NACHBARN[LADEN.nachbar] && NACHBARN[LADEN.nachbar].haus;
+  if (laden) {
+    const cx = ox + (laden.x + laden.w / 2) * k, cy = oy + (laden.y + laden.h / 2) * k;
+    ctx.font = `600 ${Math.max(11, k * 0.7)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const b = ctx.measureText(TEXTE.laden).width + 10, h = Math.max(16, k * 0.95);
+    ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(cx - b / 2, cy - h / 2, b, h);
+    ctx.fillStyle = FARBEN.text; ctx.fillText(TEXTE.laden, cx, cy + 1);
   }
 
   for (const g of GEHWEGE) {

@@ -2,7 +2,6 @@
 import { LEER, idx, aufGrundstueck } from './karte.js';
 import { MOEBEL, STUHL_STUFEN, MUSIK } from '../inhalte/moebel.js';
 import { kannBezahlen, buchen } from './finanzen.js';
-import { NACHKAUFEN } from '../inhalte/kirchkaffee.js';
 
 export function moebelAnlegen(z) { if (!Array.isArray(z.moebel)) z.moebel = []; }
 const typVon = art => MOEBEL.find(t => t.id === art) || {};
@@ -68,15 +67,7 @@ export function moebelImRaum(z, raum, art) {
   return z.moebel.filter(m => m.art === art && zellen.has(idx(z, m.x, m.y)));
 }
 
-// Kaffeemaschine nachfüllen: 'ok', 'voll' (passt nicht mehr hinein) oder 'geld'
-export function kaffeeNachkaufen(z, maschine) {
-  const typ = MOEBEL.find(m => m.id === maschine.art);
-  if ((maschine.fuellung || 0) + NACHKAUFEN.tassen > typ.fassung) return 'voll';
-  if (!kannBezahlen(z, NACHKAUFEN.preis)) return 'geld';
-  maschine.fuellung = (maschine.fuellung || 0) + NACHKAUFEN.tassen;
-  buchen(z, 'ausgaben', 'kaffee', NACHKAUFEN.preis);
-  return 'ok';
-}
+// Kaffeemaschine: Nachfüllen macht seit 25.11. der Ehrenamtliche (Einkauf im Laden, siehe kirchkaffee.js).
 export function fassung(art) { return (MOEBEL.find(m => m.id === art) || {}).fassung || 0; }
 
 // ---- Stühle verbessern ----

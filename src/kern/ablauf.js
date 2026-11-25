@@ -5,25 +5,29 @@
 // Ablauf eines Termins (Zeiten in Spielminuten):
 //   Beginn − 180 Anreise: Es wird ausgelost, wer kommt; die Besucher laufen los.
 //   Beginn       Veranstaltung beginnt – nur, wenn ein Hauptamtlicher im Raum ist (und was sie sonst braucht). Sonst fällt sie aus.
-//   Beginn + 60  Gottesdienst zu Ende: Kollekte (Stuhl, Altar, Grünpflanzen, Musik), Bekanntheit; Kaffeegäste ins Kirchkaffee.
-//   …            Kirchkaffee: Tasse für Tasse wird ausgegeben, je 1 € (wenn die Maschine nicht leer ist).
-//   Beginn + 120 Ende: Zufriedenheit ändert sich, manche werden Ehrenamtliche, alle gehen heim.
+//   Beginn + 60  Gottesdienst zu Ende: Kollekte (Stuhl, Altar, Grünpflanzen, Musik), Bekanntheit; wer Kaffee will
+//                (Chance = Kaffee-Wert), stellt sich im Kirchkaffee an (Bedienung: kirchkaffee.js).
+//   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche, alle gehen heim.
+//                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
 import { VERANSTALTUNGEN, SONNTAGVORMITTAG, PLAETZE, ZWEITER_PLATZ_STANDARD } from '../inhalte/veranstaltungen.js';
 import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN } from '../inhalte/zeit.js';
-import { AENDERUNG, BEKANNTHEIT, KAFFEE_ANTEIL, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
+import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
-import { LEER, idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
+import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
 import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe } from './moebel.js';
 import { buchen, summe } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
-import { werKommt, kommChance, besuchChance, lobpreisVorliebe, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
+import { werKommt, kommChance, besuchChance, lobpreisVorliebe, kaffeeVorliebe, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
 import { zeitpunkt, slotBeginn, WOCHE_MIN } from './zeit.js';
 import { NEUGIER } from '../inhalte/ort.js';
 import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { ortSchritt } from './ort.js';
 import { seelsorgeSchritt, anfrageOffen } from './seelsorge.js';
+import { kirchkaffeeZustand, kirchkaffeeOffen, gottesdienstKunden, kaffeeAktualisieren, kaffeeSchritt, naechsteSchicht, kaffeeAnlegen } from './kirchkaffee.js';
+import { fassung } from './moebel.js';
+export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: Sonntagvormittag doppelt (Gottesdienst und Lobpreisgottesdienst)
 export function zeitFaktor(plan) { return plan && plan.tag === SONNTAGVORMITTAG.tag && plan.slot === SONNTAGVORMITTAG.slot ? SONNTAGVORMITTAG.kollekte : 1; }
@@ -144,80 +148,27 @@ function platzWirkung(z, raeume, sitz, liste) {
   return { kollekte: KOLLEKTE_PRO_BESUCHER * st.kollekte * a.faktor, haltung: st.haltung + a.haltung };
 }
 
-// ---- Kirchkaffee: Stationen aus Kaffeemaschine + Theke + Ehrenamtlichem ----
-const NACHBARN = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-function thekenGruppen(z, teile) {
-  const rest = new Set(teile), gruppen = [];
-  for (const start of teile) {
-    if (!rest.has(start)) continue;
-    const g = [start], stapel = [start]; rest.delete(start);
-    while (stapel.length) {
-      const t = stapel.pop();
-      for (const n of [...rest]) if (Math.abs(n.x - t.x) + Math.abs(n.y - t.y) === 1) { rest.delete(n); g.push(n); stapel.push(n); }
-    }
-    gruppen.push(g);
-  }
-  return gruppen;
-}
-// Freies Kästchen direkt neben einem Möbel, auf dem der Ehrenamtliche steht
-function standplatz(z, raum, m, ziel) {
-  const zellen = new Set(raum.zellen);
-  const frei = NACHBARN.map(([dx, dy]) => ({ x: m.x + dx, y: m.y + dy }))
-    .filter(p => zellen.has(idx(z, p.x, p.y)) && z.zellen[idx(z, p.x, p.y)] === LEER && !moebelBei(z, p.x, p.y));
-  frei.sort((a, b) => Math.hypot(a.x - ziel.x, a.y - ziel.y) - Math.hypot(b.x - ziel.x, b.y - ziel.y));
-  return frei[0] || null;
-}
-
-export function kirchkaffeeZustand(z, raeume) {
-  return raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee' && !r.probleme.length).map(r => {
-    const maschinen = moebelImRaum(z, r, 'kaffeemaschine'), theken = thekenGruppen(z, moebelImRaum(z, r, 'theke'));
-    const eas = z.personen.filter(p => eingesetztIn(z, raeume, p) === r);
-    const frei = [...theken], stationen = [];
-    for (const m of maschinen) {
-      if (stationen.length >= eas.length || !frei.length) break;
-      // nächstgelegene freie Theke zur Maschine
-      let beste = null;
-      for (const g of frei) for (const t of g) {
-        const d = Math.abs(t.x - m.x) + Math.abs(t.y - m.y);
-        if (!beste || d < beste.d) beste = { d, g, t };
-      }
-      frei.splice(frei.indexOf(beste.g), 1);
-      const ea = eas[stationen.length];
-      stationen.push({ maschine: m, theke: beste.t, ea,
-        standMaschine: standplatz(z, r, m, beste.t) || { x: ea.x, y: ea.y }, standTheke: standplatz(z, r, beste.t, m) || { x: ea.x, y: ea.y } });
-    }
-    const fehlt = !eas.length ? 'keinEhrenamt' : !maschinen.length ? 'keineMaschine' : !theken.length ? 'keineTheke' : null;
-    return { raum: r, maschinen, stationen, fehlt };
-  });
-}
-export function kirchkaffeeOffen(z, raeume) { return kirchkaffeeZustand(z, raeume).filter(k => k.stationen.length).map(k => k.raum); }
-
-// Freie Stehplätze im Kirchkaffee (kein Möbel, keine Person, nicht der Platz eines Ehrenamtlichen)
-function stehplaetze(z, zustand) {
-  const belegt = new Set();
-  for (const k of zustand) for (const s of k.stationen) for (const p of [s.standMaschine, s.standTheke]) belegt.add(idx(z, p.x, p.y));
-  return zustand.filter(k => k.stationen.length).flatMap(k => k.raum.zellen)
-    .filter(c => !belegt.has(c)).map(c => ({ x: c % z.w, y: (c / z.w) | 0 }))
-    .filter(f => !moebelBei(z, f.x, f.y) && !z.personen.some(p => p.x === f.x && p.y === f.y));
-}
-
 // ---- Zeit vorrücken ----
 // Prüft, welcher Schritt als Nächstes ansteht (Veranstaltungen, Passanten im Ort, Seelsorge-Anfrage),
 // und führt alle Schritte bis zur Zielzeit aus. Kommt eine Seelsorge-Anfrage, bleibt die Zeit genau dort stehen.
 export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
-  ablaufAnlegen(z);
+  ablaufAnlegen(z); kaffeeAnlegen(z);
   if (anfrageOffen(z)) return;
   const ziel = z.minuten + minuten, gesperrt = zz => seelsorgeGesperrt(zz, raeume);
+  kaffeeAktualisieren(z, raeume);
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall)]) if (k && (!s || k.zeit < s.zeit)) s = k;
+    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume)])
+      if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
     s.tun(z, raeume, zufall);
+    kaffeeAktualisieren(z, raeume);   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
     if (anfrageOffen(z)) { wochenbuchPruefen(z); return; }
   }
   z.minuten = ziel;
+  kaffeeAktualisieren(z, raeume);
   wochenbuchPruefen(z);
 }
 // Alte Spielstände: ein einzelner laufender Termin (z.lauf) wird zum ersten Eintrag in z.laeufe
@@ -229,11 +180,16 @@ export function ablaufAnlegen(z) {
   delete z.lauf;
   if (!Array.isArray(z.termineErledigt)) z.termineErledigt = [];
 }
-// Keine Seelsorge-Anfrage in den 3 Stunden vor einer Veranstaltung und nicht während Veranstaltung/Kirchkaffee
+// Seelsorge (Lukas, 25.11.): Anfragen kommen immer, wenn der Pastor gerade keine Veranstaltung leitet – auch während
+// des Kirchkaffees. Gesperrt nur während einer Veranstaltung, die der Pastor leitet, und in den 3 Stunden davor.
+function leitetPastor(z, raeume, termin) {
+  const info = terminInfo(z, raeume, termin);
+  return !!(info && info.p.leitung && info.p.leitung.id === 'pastor');
+}
 export function seelsorgeGesperrt(z, raeume = raeumeVon(z)) {
-  if ((z.laeufe || []).some(L => L.phase !== 'ende')) return true;
+  if ((z.laeufe || []).some(L => (L.phase === 'anreise' || L.phase === 'gottesdienst') && !L.ausgefallen && leitetPastor(z, raeume, L))) return true;
   const t = naechsterTermin(z, raeume);
-  return !!t && z.minuten >= t.beginn - SEELSORGE.sperreVorGottesdienst;
+  return !!t && z.minuten >= t.beginn - SEELSORGE.sperreVorGottesdienst && leitetPastor(z, raeume, t);
 }
 // Neue Woche (Montag 0:00): Wochenbuch für die Seitenleiste leeren
 function wochenbuchPruefen(z) {
@@ -264,12 +220,8 @@ function naechsterSchritt(z, raeume) {
 function laufSchritt(z, L) {
   const ende = L.beginn + DAUER.gottesdienst + DAUER.kirchkaffee;
   if (L.phase === 'anreise') return { zeit: L.beginn, tun: (z, r, zf) => beginnen(z, r, zf, L) };
-  if (L.phase === 'gottesdienst') return { zeit: L.beginn + DAUER.gottesdienst, tun: (z, r) => gottesdienstEnde(z, r, L) };
-  if (L.phase === 'kirchkaffee') {
-    const g = L.gaeste.filter(g => g.kaffee && g.kaffee.zeit !== null && !g.kaffee.ergebnis).sort((a, b) => a.kaffee.zeit - b.kaffee.zeit)[0];
-    if (g && g.kaffee.zeit <= ende) return { zeit: g.kaffee.zeit, tun: z => ausgeben(z, L, g) };
-    return { zeit: ende, tun: (z, r, zf) => abschliessen(z, r, zf, L) };
-  }
+  if (L.phase === 'gottesdienst') return { zeit: L.beginn + DAUER.gottesdienst, tun: (z, r, zf) => gottesdienstEnde(z, r, L, zf) };
+  if (L.phase === 'kirchkaffee') return { zeit: ende, tun: (z, r, zf) => abschliessen(z, r, zf, L) };
   if (L.phase === 'ende') return { zeit: L.ende + HEIMWEG, tun: z => { z.laeufe = z.laeufe.filter(x => x !== L); } };
   return null;
 }
@@ -306,6 +258,7 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
   L.ankunft = z.minuten;
   L.gaeste = kommen.map((b, i) => ({ id: b.id, name: b.vorname, voll: b.voll, sitz: i < sitze.length ? sitze[i] : null, tuer, kaffee: null }));
 }
+const NACHBARN = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // Eine Tür des Raums (für die Heimgeschickten: bis dorthin und wieder zurück)
 function raumTuer(z, raum) {
   for (const c of raum.zellen) {
@@ -331,8 +284,8 @@ function beginnen(z, raeume, zufall, L) {
   L.phase = 'gottesdienst';
 }
 
-function gottesdienstEnde(z, raeume, L) {
-  const sitzend = L.gaeste.filter(g => g.sitz), S = L.beginn + DAUER.gottesdienst;
+function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
+  const sitzend = L.gaeste.filter(g => g.sitz);
   // Kollekte: pro Besucher 1 € × Stuhl, × Altar, Grünpflanzen und Musik des Raums, × 2 am Sonntagvormittag; auf ganze Euro gerundet.
   // Dazu merkt sich jeder Gast, wie viel Haltung ihm Stuhl, Kanzel und Blumen bringen (wird am Ende gutgeschrieben).
   const liste = gottesdienstRaeume(z, raeume);
@@ -341,32 +294,15 @@ function gottesdienstEnde(z, raeume, L) {
   const betrag = Math.round(summeKollekte * zeitFaktor(L.plan));
   if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag);
   bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
-  // Kaffeegäste auf die Stationen verteilen; jeder bekommt einen Stehplatz möglichst nah an seiner Theke.
-  const zustand = kirchkaffeeZustand(z, raeume), stationen = zustand.flatMap(k => k.stationen);
-  const plaetze = stehplaetze(z, zustand), wollen = sitzend.filter(g => (z.besucher.find(b => b.id === g.id) || {}).kaffee);
-  const proStation = stationen.map(() => []);
-  wollen.forEach((g, i) => {
-    if (!stationen.length || !plaetze.length) { g.kaffee = { station: null, platz: null, zeit: null, ergebnis: 'keinPlatz' }; return; }
-    const si = i % stationen.length, t = stationen[si].theke;
-    plaetze.sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y));
-    g.kaffee = { station: si, platz: plaetze.shift(), zeit: null, ergebnis: null };
-    proStation[si].push(g);
+  // Wer will Kaffee? Chance = Kaffee-Wert. Die stellen sich im Kirchkaffee an (ohne Kirchkaffee: kein Kaffee, −10 am Ende).
+  const wollen = [];
+  L.gaeste.forEach((g, i) => {
+    g.kaffee = null;
+    const b = g.sitz && z.besucher.find(x => x.id === g.id);
+    if (b && zufall() < kaffeeVorliebe(b)) { g.kaffee = { ergebnis: null }; wollen.push({ g, i }); }
   });
-  // Ausgabezeiten: erst laufen alle hin, dann kommt Tasse für Tasse – so verteilt, dass alle in die Stunde passen.
-  proStation.forEach(liste => {
-    const takt = Math.min(5, (DAUER.kirchkaffee - 25) / Math.max(1, liste.length));
-    liste.forEach((g, j) => { g.kaffee.zeit = S + 20 + (j + 1) * takt; });
-  });
-  L.stationen = stationen.map(s => ({ maschine: { x: s.maschine.x, y: s.maschine.y }, theke: s.theke, ea: s.ea.id, standMaschine: s.standMaschine, standTheke: s.standTheke }));
+  if (!gottesdienstKunden(z, raeume, L, wollen)) for (const { g } of wollen) g.kaffee.ergebnis = 'keinPlatz';
   L.phase = 'kirchkaffee';
-}
-
-function ausgeben(z, L, g) {
-  const st = L.stationen[g.kaffee.station], m = st && moebelBei(z, st.maschine.x, st.maschine.y);
-  if (!m || m.art !== 'kaffeemaschine' || !(m.fuellung > 0)) { g.kaffee.ergebnis = 'leer'; return; }
-  m.fuellung--;
-  buchen(z, 'einnahmen', 'kirchkaffee', PREIS_TASSE);
-  g.kaffee.ergebnis = 'ja';
 }
 
 // Haltung für die Veranstaltung selbst: Gottesdienst fest, Lobpreisgottesdienst nach Lobpreis-Vorliebe
@@ -383,14 +319,14 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     if (!g.sitz) { zufriedenheitAendern(b, AENDERUNG.heimgeschickt); continue; }
     anwesend.push(b); b.besuche++; b.zuletzt = L.woche; b.besuchtWoche = L.woche;
     zufriedenheitAendern(b, AENDERUNG.sitzplatz + haltungFuer(L.art, b) + (g.bonus || 0));   // bonus: Stuhl, Kanzel, Blumen
-    if (b.kaffee) zufriedenheitAendern(b, g.kaffee && g.kaffee.ergebnis === 'ja' ? AENDERUNG.kaffeeJa : AENDERUNG.kaffeeNein);
+    if (g.kaffee && g.kaffee.ergebnis === 'keinPlatz') zufriedenheitAendern(b, AENDERUNG.kaffeeNein);   // sonst: beim Bedienen (kirchkaffee.js)
     g.zufriedenheit = b.zufriedenheit;
   }
   const sehr = anwesend.filter(b => b.zufriedenheit >= BEKANNTHEIT.sehrZufrieden).length;
   bekanntheitAendern(z, sehr * BEKANNTHEIT.proSehrZufriedenem, 'zufrieden', sehr);
   const neueEA = ehrenamtWerden(z, anwesend, zufall).map(b =>
     personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
-      herkunft: { besuche: b.besuche, zufriedenheit: b.zufriedenheit, kaffee: b.kaffee, zuletzt: b.zuletzt } }));
+      herkunft: { besuche: b.besuche, zufriedenheit: b.zufriedenheit, kaffee: kaffeeVorliebe(b), zuletzt: b.zuletzt } }));
   Object.assign(L, { phase: 'ende', ende: z.minuten, neueEhrenamtliche: neueEA.map(p => p.daten.name) });
   z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: false, besucher: anwesend.length, heim: L.gaeste.filter(g => !g.sitz).length };
 }
@@ -423,11 +359,12 @@ export function prognose(z, raeume, raumNr = null, platz = 0) {
   let kollekteSumme = 0;
   for (let i = 0, rest = Math.min(sitzend, sitze.length); rest > 0; i++, rest--) kollekteSumme += sitze[i].wert * Math.min(1, rest);
   kollekteSumme *= faktor;
-  const kaffeeWunsch = (z.besucher.filter(b => b.kaffee).reduce((s, b) => s + chance(b), 0) + neu * KAFFEE_ANTEIL
-    + neugierige.filter(p => p.kaffee).length * NEUGIER.kommChance) * anteil;
-  const zustand = kirchkaffeeZustand(z, raeume);
-  const vorrat = zustand.flatMap(k => k.stationen).reduce((s, st) => s + (st.maschine.fuellung || 0), 0);
-  const tassen = Math.min(kaffeeWunsch, vorrat, stehplaetze(z, zustand).length);
+  // Kaffee: erwartete Gäste × Kaffee-Wert (neue im Schnitt 50 %); höchstens so viele Tassen, wie in die Maschinen passen
+  // (die Ehrenamtlichen füllen sie auf, wenn das Kirchkaffee zu hat)
+  const kaffeeWunsch = (z.besucher.reduce((s, b) => s + chance(b) * kaffeeVorliebe(b), 0) + neu * 0.5
+    + neugierige.reduce((s, p) => s + kaffeeVorliebe(p), 0) * NEUGIER.kommChance) * anteil;
+  const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
+  const tassen = Math.min(kaffeeWunsch, stationen.length * fassung('kaffeemaschine'));
   const ehrenamt = z.besucher.filter(b => b.besuche + 1 >= EHRENAMT_AB_BESUCHEN).reduce((s, b) => s + chance(b) * anteil * EHRENAMT_QUOTE, 0);
   return { ...grund, sitzend, geld: kollekteSumme + tassen * PREIS_TASSE, kollekte: kollekteSumme, ehrenamt, tassen };
 }
@@ -458,4 +395,16 @@ export function finanzPrognose(z, raeume) {
     if ((i === 0 || p.art) && terminDieseWoche(z, raeume, g.raum, i)) offen += prognose(z, raeume, g.raum.nr, i).geld;
   });
   return { einnahmen: Math.round(summe(z.wochenbuch.einnahmen) + offen), ausgaben: summe(z.wochenbuch.ausgaben) };
+}
+
+// Wann öffnet dieses Kirchkaffee als Nächstes? Nächste eigene Schicht oder Ende des nächsten Gottesdienstes (Minuten oder null)
+export function naechsteKaffeeOeffnung(z, raeume, raum) {
+  const t = z.minuten, w = zeitpunkt(t).woche, werte = [];
+  const s = naechsteSchicht(z, raum, t);
+  if (s !== null) werte.push(s);
+  for (const L of z.laeufe || []) if ((L.phase === 'anreise' || L.phase === 'gottesdienst') && !L.ausgefallen) werte.push(L.beginn + DAUER.gottesdienst);
+  const erledigt = new Set(z.termineErledigt || []);
+  for (const woche of [w, w + 1]) for (const termin of termineDerWoche(z, raeume, woche))
+    if (termin.art && termin.beginn > t && !erledigt.has(termin.id)) werte.push(termin.beginn + DAUER.gottesdienst);
+  return werte.length ? Math.min(...werte) : null;
 }

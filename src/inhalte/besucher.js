@@ -4,7 +4,8 @@ export const START_STAMMGAESTE = 4;       // so viele Stammgäste gibt es bei Sp
 export const START_ZUFRIEDENHEIT = 60;    // ... mit dieser Zufriedenheit
 export const NEU_ZUFRIEDENHEIT = 50;      // neue Besucher starten mit dieser Zufriedenheit
 export const MIN_CHANCE = 0.1;            // Chance zu kommen = Zufriedenheit in %, aber mindestens 10 %
-export const KAFFEE_ANTEIL = 0.5;         // etwa die Hälfte will Kaffee (einmal ausgelost, bleibt fest)
+// Kaffee: Jeder Mensch hat einen festen Kaffee-Wert 0–100 % (wie die Lobpreis-Vorliebe). Er ersetzt seit 25.11. das Ja/Nein:
+// Nach dem Gottesdienst und beim Vorbeilaufen am offenen Kirchkaffee will er mit dieser Chance einen Kaffee.
 
 // Änderung der Zufriedenheit nach jedem Gottesdienst
 export const AENDERUNG = {

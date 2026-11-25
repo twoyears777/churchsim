@@ -4,7 +4,7 @@ import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte
 import { NEUGIER } from '../inhalte/ort.js';
 import { ZWEITER_BESUCH } from '../inhalte/veranstaltungen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
-import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, KAFFEE_ANTEIL, BEKANNTHEIT,
+import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, BEKANNTHEIT,
   EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 
 export function namenZiehen(anzahl, zufall = Math.random) {
@@ -31,14 +31,14 @@ export function besucherAnlegen(z, zufall = Math.random) {
   for (const b of z.besucher) if (b.stamm === undefined) b.stamm = ['b1', 'b2', 'b3', 'b4'].includes(b.id);
 }
 
-// Neue Person: Name möglichst nicht doppelt, Kaffeewunsch einmal ausgelost. Wird noch nirgends eingetragen.
+// Neue Person: Name möglichst nicht doppelt. Wird noch nirgends eingetragen. (Kaffee-Wert: siehe kaffeeVorliebe)
 export function neuePerson(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
   const vergeben = new Set([...z.besucher.map(b => b.voll), ...(z.ort ? z.ort.leute : []).map(b => b.voll),
     ...(z.personen || []).map(p => p.daten && p.daten.name)]);
   let name = null;
   for (const n of namenZiehen(30, zufall)) if (!vergeben.has(n.voll)) { name = n; break; }
   if (!name) [name] = namenZiehen(1, zufall);
-  return { id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, kaffee: zufall() < KAFFEE_ANTEIL, besuche: 0 };
+  return { id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, besuche: 0 };
 }
 export function neuerBesucher(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
   const b = neuePerson(z, zufriedenheit, zufall);
@@ -62,6 +62,15 @@ export function lobpreisVorliebe(b) {
   if (typeof b.lobpreis === 'number') return b.lobpreis;
   let h = 2166136261;
   for (const c of `${b.id}|${b.voll}`) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return Math.round((h % 1001) / 10) / 100;   // 0,00 … 1,00
+}
+// Kaffee-Wert 0–1 (Lukas, 25.11.): wie die Lobpreis-Vorliebe für jeden fest, aber aus einer anderen Rechnung.
+// Ersetzt das frühere Ja/Nein (b.kaffee) – auch in alten Spielständen bekommt jeder gleich seinen Wert.
+export function kaffeeVorliebe(b) {
+  if (typeof b.kaffeeWert === 'number') return b.kaffeeWert;
+  let h = 2166136261;
+  for (const c of `kaffee|${b.voll}|${b.id}`) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
   return Math.round((h % 1001) / 10) / 100;   // 0,00 … 1,00
 }
 // Chance für eine bestimmte Veranstaltung: × Lobpreis-Vorliebe beim Lobpreisgottesdienst, × 0,5 beim 2. Besuch derselben Woche

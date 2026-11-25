@@ -184,3 +184,6 @@ button.abriss-knopf[aria-pressed="true"] { background: #b3261e; color: #fff; bor
 .inhalt p.hilfe-text { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
 .inhalt ul.hilfe-punkte { margin: 0 0 8px; padding-left: 20px; font-size: 14px; line-height: 1.5; }
 .inhalt ul.hilfe-punkte li { margin-bottom: 4px; }
+
+/* Kirchkaffee-Fenster: Öffnungszeiten als kleine Kacheln mit „Entfernen“ */
+.schicht .klein-knopf { margin-top: 6px; }

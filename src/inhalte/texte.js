@@ -6,7 +6,7 @@ export const TEXTE = {
   tageKurz: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
   zeitAnzeige: (woche, tag, uhr) => `Woche ${woche} · ${tag} ${uhr}`,
   countdown: tage => tage === null ? 'Heute ist Sonntag' : tage === 0 ? 'Morgen ist Sonntag' : `Nächster Sonntag in ${tage} ${tage === 1 ? 'Tag' : 'Tagen'}`,
-  tempo: { 0: 'Pause', 1: 'x1', 2: 'x2', 5: 'x5' },
+  tempo: { 0: 'Pause', 1: 'x1', 2: 'x2', 5: 'x5', 10: 'x10', 25: 'x25' },
   kontostand: 'Kontostand',
   bekanntheit: 'Bekanntheit',
 
@@ -21,7 +21,8 @@ export const TEXTE = {
   laeuft: {
     anreise: 'Die Besucher kommen zum Gottesdienst.',
     gottesdienst: 'Gottesdienst läuft.',
-    kirchkaffee: 'Kirchkaffee läuft.'
+    kirchkaffee: 'Kirchkaffee läuft.',
+    kaffeeOffen: 'Kirchkaffee hat geöffnet.'   // eigene Öffnungszeit (Lukas, 25.11.)
   },
   heimgeschickt: n => `${n} ${n === 1 ? 'Besucher musste' : 'Besucher mussten'} wieder heim – kein Stuhl frei.`,
   ausgefallen: 'Der Gottesdienst ist ausgefallen – kein Mitarbeiter im Raum.',
@@ -49,7 +50,7 @@ export const TEXTE = {
     termin: (tag, slot, uhr) => `${tag} ${slot.toLowerCase()} · ${uhr}`,
     zurueck: 'Zurück',                                       // Platzhalter von Claude
     wochenplan: 'Wochenplan',
-    wochenplanInfo: 'Wann findet der Gottesdienst statt? Er dauert 1 Stunde, danach 1 Stunde Kirchkaffee.',
+    wochenplanInfo: 'Wann findet der Gottesdienst statt? Er dauert 1 Stunde, danach 2 Stunden Kirchkaffee.',   // 25.11.: Kirchkaffee jetzt 2 Stunden (von Claude angepasst)
     slots: { vormittag: 'Vormittags', nachmittag: 'Nachmittags', abend: 'Abends' },
     mitarbeiter: 'Mitarbeiter im Raum',
     keinMitarbeiter: 'Kein Mitarbeiter im Raum – ohne ihn findet kein Gottesdienst statt.',
@@ -87,15 +88,15 @@ export const TEXTE = {
   maschine: {
     titel: 'Kaffeemaschine',
     fuellstand: (n, max) => `Füllstand: ${n} von ${max} Tassen`,
-    nachkaufen: (preis, tassen) => `Kaffee nachkaufen (${preis} € für ${tassen} Tassen)`,
-    voll: 'Die Maschine ist zu voll zum Nachfüllen.',
-    keinGeld: 'Nicht genug Geld.',
+    auffuellen: 'Der Ehrenamtliche füllt die Maschine auf, wenn das Kirchkaffee zu hat (0,50 € pro Tasse).',   // Lukas, 25.11.
     leer: 'Leer – es wird kein Kaffee verkauft.',
     nichtImKaffee: 'Steht nicht im Kirchkaffee – hier wird kein Kaffee verkauft.'
   },
   // Kirchkaffee-Raum: Zustand unter dem Raumnamen
   kirchkaffee: {
     offen: 'Geöffnet',
+    zu: 'Geschlossen',
+    zuBis: (tag, uhr) => `Geschlossen · öffnet ${tag} ${uhr} Uhr`,   // Lukas, 25.11.
     keinEhrenamt: 'Geschlossen – kein Ehrenamtlicher',
     keineMaschine: 'Geschlossen – keine Kaffeemaschine',
     keineTheke: 'Geschlossen – keine Theke'
@@ -116,8 +117,20 @@ export const TEXTE = {
     neu: 'Neu dabei',
     passant: 'Passant · noch nie in der Gemeinde',
     neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst',
-    lobpreis: prozent => `Mag Lobpreis: ${prozent} %`   // Lukas, 25.11.
+    lobpreis: prozent => `Mag Lobpreis: ${prozent} %`,  // Lukas, 25.11.
+    kaffeeWert: prozent => `Mag Kaffee: ${prozent} %`   // Lukas, 25.11.
   },
+
+  // ---- Fenster des Kirchkaffees: Öffnungszeiten (Lukas, 25.11.) ----
+  kaffeeFenster: {
+    oeffnungszeiten: 'Öffnungszeiten',
+    info: 'Das Kirchenkaffee öffnet nach dem Gottesdienst automatisch für 2h. Zusätzlich kannst du drei Schichten pro Woche festlegen, an dem Kunden bedient werden.',
+    slot: { vormittag: 'Vormittags · 10–15 Uhr', nachmittag: 'Nachmittags · 15–19 Uhr', abend: 'Abends · 19–23 Uhr' },
+    hinzufuegen: 'Öffnungszeit hinzufügen',
+    entfernen: 'Entfernen',
+    voll: 'Höchstens 3 Öffnungszeiten pro Woche.'
+  },
+  laden: 'Laden',   // Beschriftung des Ladens auf der Karte (Lukas, 25.11.)
 
   // ---- Fenster „Bekanntheit“ (Klick oben auf Bekanntheit; Entwürfe von Claude, von Lukas freigegeben 25.11.) ----
   bekanntheitFenster: {
@@ -153,13 +166,16 @@ export const TEXTE = {
     knopf: 'Menschen',
     titel: 'Menschen im Ort',
     spalten: { name: 'Name', haltung: 'Haltung', besuche: 'Besuche', zuletzt: 'Zuletzt da', kaffee: 'Kaffee', status: 'Status' },
-    ja: 'ja', nein: 'nein', unbekannt: '–',
+    unbekannt: '–', prozent: n => `${n} %`,
     woche: n => `Woche ${n}`,
     leer: 'Noch niemand bekannt.',
     status: { passant: 'Passant', neugierig: 'Neugierig', besucher: 'Besucher', stammgast: 'Stammgast', ehrenamtlich: 'Ehrenamtlich' }
   },
   // Meldung unten rechts
-  meldung: { neugierig: name => `${name} ist am Tor stehen geblieben und schaut neugierig herein.` },
+  meldung: {
+    neugierig: name => `${name} ist am Tor stehen geblieben und schaut neugierig herein.`,
+    keinGeldKaffee: name => `Nicht genug Geld – ${name} konnte keinen Kaffee einkaufen.`   // Lukas, 25.11.
+  },
 
   // Seelsorge-Fenster
   seelsorge: {

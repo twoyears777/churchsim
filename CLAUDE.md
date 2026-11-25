@@ -14,11 +14,11 @@ Die vollständigen Regeln stehen im claude.ai-Projekt „Church-Sim“ (projektr
 
 ## Aufbau
 - `src/inhalte/` – Inhaltsdateien (z. B. Raumtypen, Zahlen, Texte in `texte.js`). Kann Lukas selbst erweitern.
-- `src/kern/` – Spiellogik ohne Grafik: Zahlen, Berechnungen, Tick-System. Wird mit Tests geprüft.
+- `src/kern/` – Spiellogik ohne Grafik: Zahlen, Berechnungen, Tick-System. Wird mit Tests geprüft. Das Kirchkaffee (Öffnungszeiten, Bedienung, Einkauf) steht in `src/kern/kirchkaffee.js`.
 - `src/kern/spiel.js` – die **Schalterwand**: einziger Zugang der Oberfläche zur Spiellogik (Befehle + Abfragen).
 - `src/ansicht/` – Darstellung (zeichnet nur, ändert nichts).
 - `src/oberflaeche/` – Bedienung: `start.js` (Uhr, Zeichnen), `eingaben.js`, `bauleiste.js` (Bauleiste unten: Reiter + Kärtchen), `anzeigen.js`, `fenster.js`, `speicher.js`.
-- `tests/` – automatische Prüfungen: `node tests/karte.test.mjs`, `node tests/menschen.test.mjs` (Passanten, Seelsorge) , `node tests/ausstattung.test.mjs` (Stuhlstufen, Möbel im Gottesdienstraum, Musiker, Plakat) `node tests/veranstaltungen.test.mjs` (Veranstaltung 1/2, Lobpreisgottesdienst, Bekanntheit-Protokoll) und `node tests/einzugsgebiet.test.mjs` (Einzugsgebiet, Parkplatz/Straße, Bushaltestelle, Werbekampagne). Der Changelog im Spiel (`src/oberflaeche/changelog.js`) liest CHANGELOG.md – deshalb dort das Format beibehalten: `## 0.1.x` als Versionsüberschrift, Bereiche als `**Fett**`-Zeile, Punkte mit `- `.
+- `tests/` – automatische Prüfungen: `node tests/karte.test.mjs`, `node tests/menschen.test.mjs` (Passanten, Seelsorge) , `node tests/ausstattung.test.mjs` (Stuhlstufen, Möbel im Gottesdienstraum, Musiker, Plakat) `node tests/veranstaltungen.test.mjs` (Veranstaltung 1/2, Lobpreisgottesdienst, Bekanntheit-Protokoll) und `node tests/einzugsgebiet.test.mjs` (Einzugsgebiet, Parkplatz/Straße, Bushaltestelle, Werbekampagne) und `node tests/kirchkaffee.test.mjs` (Öffnungszeiten, Schlange und Bedienung, Einkauf im Laden, Kaffee-Wert). Der Changelog im Spiel (`src/oberflaeche/changelog.js`) liest CHANGELOG.md – deshalb dort das Format beibehalten: `## 0.1.x` als Versionsüberschrift, Bereiche als `**Fett**`-Zeile, Punkte mit `- `.
 
 ## Trennung Spiellogik / Oberfläche (strikt)
 - Oberfläche und Ansicht importieren aus `src/kern/` **nur** `spiel.js` und aus `src/inhalte/` nur Texte, Farben, Stadt.

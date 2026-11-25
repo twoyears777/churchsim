@@ -24,7 +24,7 @@ function gemeinde() {
   moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 3);
   versetzen(z, z.personen[0], G.x + 4, G.y + 5);
   z.besucher = Array.from({ length: 10 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X',
-    zufriedenheit: 100, kaffee: false, besuche: 0, lobpreis: i < 5 ? 1 : 0 }));
+    zufriedenheit: 100, kaffeeWert: 0, besuche: 0, lobpreis: i < 5 ? 1 : 0 }));
   z.bekanntheit = 0; z.ortRuhig = true; z.konto = 1000;
   return z;
 }
@@ -69,7 +69,7 @@ console.log('Platz-Tests bestanden.');
   veranstaltungEinstellen(z, raumBei(z), 'lobpreis', 1);
   terminEinstellen(z, raumBei(z), 1, 6, 'abend');
   // Vormittag: alle 10 kommen (Haltung 100, Zufall 0)
-  zeitVorruecken(z, aus(z), SO + 10 * 60 + 150 - z.minuten, () => 0);
+  zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
   assert.equal(z.letzterGottesdienst.besucher, 10);
   const kollekteVormittag = z.wochenbuch.einnahmen.kollekte;
   assert.ok(kollekteVormittag > 0);
@@ -78,7 +78,7 @@ console.log('Platz-Tests bestanden.');
   assert.equal(besuchChance(b0, { art: 'lobpreis', woche: 0 }), kommChance(b0) * 1 * ZWEITER_BESUCH);
   assert.equal(besuchChance(b9, { art: 'lobpreis', woche: 0 }), 0);
   const haltungVorher = z.besucher.map(b => b.zufriedenheit);
-  zeitVorruecken(z, aus(z), SO + 19 * 60 + 150 - z.minuten, () => 0.4);
+  zeitVorruecken(z, aus(z), SO + 19 * 60 + 190 - z.minuten, () => 0.4);
   assert.equal(z.letzterGottesdienst.besucher, 5);
   assert.equal(z.letzterGottesdienst.platz, 1);
   // Am Abend kommt Kollekte dazu (ohne Sonntagvormittag-Bonus)
@@ -94,7 +94,7 @@ console.log('Zwei-Veranstaltungen-Tests bestanden.');
   veranstaltungEinstellen(z, r, 'lobpreis');
   z.besucher.forEach(b => { b.zufriedenheit = 50; b.lobpreis = 1; });
   z.besucher[9].lobpreis = 0.5;
-  zeitVorruecken(z, aus(z), SO + 10 * 60 + 150 - z.minuten, () => 0);
+  zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
   // Fans: +5 Sitzplatz +10 Lobpreis; Besucher 9 (50 %): +5 +5. (Kanzel/Blumen bringen Haltung über den Stuhl-Bonus.)
   const fan = z.besucher[0].zufriedenheit, halb = z.besucher[9].zufriedenheit;
   assert.equal(fan - halb, 5);

@@ -53,7 +53,7 @@ import { personenAnlegen, versetzen, verfuegbarkeit, personenPruefen, startPlatz
 console.log('Mitarbeiter-Tests bestanden.');
 
 // Möbel und Wände
-import { moebelSetzen, moebelKaufen, moebelAbreissen, kaffeeNachkaufen } from '../src/kern/moebel.js';
+import { moebelSetzen, moebelKaufen, moebelAbreissen } from '../src/kern/moebel.js';
 import { weg } from '../src/kern/wege.js';
 import { wandKonflikte, wandBauen, wandAnpassen } from '../src/kern/bauen.js';
 import { namenZiehen, neueBesucherZahl } from '../src/kern/besucher.js';
@@ -108,8 +108,9 @@ import { zeitpunkt, tageBisSonntag, slotBeginn, startMinuten, spielMinuten, TAG_
   assert.equal(tageBisSonntag(6 * TAG_MIN + 9 * 60), null);         // Sonntag → heute
   assert.equal(slotBeginn({ tag: 6, slot: 'vormittag' }, 0), 6 * TAG_MIN + 600);
   assert.equal(slotBeginn({ tag: 2, slot: 'abend' }, 1), 7 * TAG_MIN + 2 * TAG_MIN + 19 * 60);
-  assert.equal(spielMinuten(3, 1), 60);                              // 3 Sekunden = 1 Spielstunde
-  assert.equal(spielMinuten(3, 5), 300);
+  assert.equal(spielMinuten(12, 1), 60);                             // 12 Sekunden = 1 Spielstunde (seit 25.11.)
+  assert.equal(spielMinuten(12, 5), 300);
+  assert.equal(spielMinuten(1, 1), 5);                               // 1 Sekunde = 5 Spielminuten
 }
 console.log('Zeit-Tests bestanden.');
 
@@ -120,8 +121,9 @@ import { personHinzufuegen } from '../src/kern/personen.js';
 {
   const SONNTAG_10 = 6 * TAG_MIN + 600;
   const aufbau = () => {
-    const z = neuesSpiel(() => 0.9);                                  // 0.9: niemand will Kaffee
-    z.ortRuhig = true;                                                // ohne Passanten und Seelsorge (eigene Tests weiter unten)
+    const z = neuesSpiel(() => 0.9);
+    z.ortRuhig = true;
+    for (const b of z.besucher) b.kaffeeWert = 0;                     // niemand will Kaffee (eigene Tests: kirchkaffee.test.mjs)                                                // ohne Passanten und Seelsorge (eigene Tests weiter unten)
     const aus = () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
     const raumBei = (x, y) => { const a = aus(); return a.liste[a.gruppe[x + y * z.w]]; };
     wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
@@ -135,7 +137,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
   // Ohne Mitarbeiter: kein Gottesdienst, jeder Stammgast −5
   {
     const { z, aus } = aufbau();
-    assert.equal(z.besucher.length, 4); assert.ok(z.besucher.every(b => b.zufriedenheit === 60 && !b.kaffee));
+    assert.equal(z.besucher.length, 4); assert.ok(z.besucher.every(b => b.zufriedenheit === 60));
     zeitVorruecken(z, aus(), SONNTAG_10 + 1 - z.minuten, () => 0);
     assert.ok(z.besucher.every(b => b.zufriedenheit === 55));
     assert.equal(z.letzterGottesdienst.ausgefallen, true); assert.equal(z.bekanntheit, 0);
@@ -156,39 +158,13 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     zeitVorruecken(z, aus(), 180 + 60, () => 0);                       // Gottesdienst vorbei
     assert.equal(z.konto, 50 + 6); assert.equal(z.bekanntheit, 0.6);
     assert.deepEqual(z.bekanntheitLog.map(e => [e.quelle, e.wert]), [['gottesdienst', 0.6]]);   // fürs Bekanntheit-Fenster gemerkt
-    zeitVorruecken(z, aus(), 60, () => 0);                            // Kirchkaffee vorbei
+    zeitVorruecken(z, aus(), 120, () => 0);                           // Kirchkaffee vorbei (2 Stunden)
     const heim = z.besucher.find(b => b.id === z.laeufe[0].gaeste.find(g => !g.sitz).id);
     assert.equal(heim.zufriedenheit, 45);
     assert.equal(z.besucher.filter(b => b.zufriedenheit === 70).length, 3);   // +5 Platz, +5 Gottesdienst
     assert.deepEqual(z.letzterGottesdienst, { woche: 0, platz: 0, ausgefallen: false, besucher: 3, heim: 1 });
     zeitVorruecken(z, aus(), 121, () => 0);                           // Heimweg (2 Stunden) vorbei
     assert.equal(z.laeufe.length, 0);
-  }
-  // Kirchkaffee mit Maschine, Theke und Ehrenamtlichem; Maschine reicht nur für 2 Tassen
-  {
-    const { z, aus } = aufbau();
-    versetzen(z, z.personen[0], G.x + 4, G.y + 5);
-    for (const b of z.besucher) b.kaffee = true;
-    z.konto = 200;
-    assert.equal(moebelKaufen(z, 'kaffeemaschine', G.x + 20, G.y + 3), 'ok');
-    assert.equal(moebelKaufen(z, 'theke', G.x + 22, G.y + 3), 'ok');
-    assert.equal(moebelKaufen(z, 'theke', G.x + 22, G.y + 4), 'ok');   // zweites Thekenteil = dieselbe Theke
-    const m = z.moebel.find(x => x.art === 'kaffeemaschine');
-    assert.equal(m.fuellung, 0);
-    assert.equal(kirchkaffeeOffen(z, aus()).length, 0);               // noch kein Ehrenamtlicher
-    const ea = personHinzufuegen(z, { name: 'Test Helfer', kuerzel: 'T', art: 'ehrenamt' });
-    versetzen(z, ea, G.x + 21, G.y + 6);
-    assert.equal(kirchkaffeeOffen(z, aus()).length, 1);
-    assert.equal(kaffeeNachkaufen(z, m), 'ok'); assert.equal(m.fuellung, 10);
-    m.fuellung = 25; assert.equal(kaffeeNachkaufen(z, m), 'voll');
-    m.fuellung = 2; z.konto = 200;
-    zeitVorruecken(z, aus(), SONNTAG_10 + 120 - z.minuten, () => 0);
-    const gaeste = z.laeufe[0].gaeste.filter(g => g.sitz);
-    assert.deepEqual(gaeste.map(g => g.kaffee.ergebnis).sort(), ['ja', 'ja', 'leer']);
-    assert.equal(m.fuellung, 0);
-    assert.equal(z.konto, 200 + 6 + 2);                               // Kollekte 3 × 2 (Sonntagvormittag) + 2 Tassen
-    assert.equal(z.besucher.filter(b => b.zufriedenheit === 75).length, 2);   // +5 +5 +5
-    assert.equal(z.besucher.filter(b => b.zufriedenheit === 60).length, 1);   // +5 +5 −10
   }
   // Neue Besucher über die Bekanntheit, neue Ehrenamtliche ab 3 Besuchen
   {
@@ -197,7 +173,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     const { z, aus } = aufbau();
     versetzen(z, z.personen[0], G.x + 4, G.y + 5);
     z.bekanntheit = 20; z.besucher.forEach(b => { b.besuche = 2; });
-    zeitVorruecken(z, aus(), SONNTAG_10 + 121 - z.minuten, () => 0);
+    zeitVorruecken(z, aus(), SONNTAG_10 + 181 - z.minuten, () => 0);
     assert.equal(z.laeufe[0].gaeste.length, 6);                           // 4 bekannte + 2 neue
     assert.equal(z.laeufe[0].neueEhrenamtliche.length, 3);                 // die 3 mit Sitzplatz und 3. Besuch
     assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 3);
@@ -277,7 +253,7 @@ console.log('Weg-Tests bestanden.');
 // Schalterwand (kern/spiel.js): Befehle und Abfragen, wie die Oberfläche sie benutzt
 import { spielStarten } from '../src/kern/spiel.js';
 {
-  const spiel = spielStarten(null, () => 0.5);   // 0.5: alle kommen (60 %), niemand will Kaffee (50 %)
+  const spiel = spielStarten(null, () => 0.5);   // 0.5: alle kommen (60 %)
   assert.equal(spiel.lage().konto, 50); assert.equal(spiel.lage().tag, 0); assert.equal(spiel.lage().stunde, 8);
   assert.deepEqual(spiel.lage().status, { fehlt: 'raum' });
   // Bauen über Befehle
@@ -317,7 +293,8 @@ import { spielStarten } from '../src/kern/spiel.js';
   spiel.tempoSetzen(7); assert.equal(spiel.lage().tempo, 1);
   // Tick-System: Bau-Modus und Pause halten die Zeit an
   spiel.bauModus(true); assert.equal(spiel.tick(0.2), false); assert.equal(spiel.lage().minute, 0);
-  spiel.bauModus(false); assert.equal(spiel.tick(0.15), true); assert.equal(spiel.lage().minute, 3);   // 0,15 s = 3 Spielminuten
+  spiel.bauModus(false); assert.equal(spiel.tick(0.24), true); assert.equal(spiel.lage().minute, 1);   // 0,24 s = 1,2 Spielminuten
+  spiel.tempoSetzen(25); assert.equal(spiel.lage().tempo, 25); spiel.tempoSetzen(10); assert.equal(spiel.lage().tempo, 10); spiel.tempoSetzen(1);
   spiel.tempoSetzen(0); assert.equal(spiel.tick(1), false);
   for (let i = 0; i < 5; i++) assert.equal(spiel.moebelKaufen('stuhl', G.x + 7 + i, G.y + 4), 'ok');
   // Bis Mittwochabend laufen lassen: Besucher sind unterwegs, Kärtchen hat Bedürfnisse
@@ -328,7 +305,7 @@ import { spielStarten } from '../src/kern/spiel.js';
   assert.ok(b && typeof b.x === 'number');
   const info = spiel.besucherInfo(b.id);
   assert.equal(info.beduerfnisse.sitzplatz, true); assert.equal(info.beduerfnisse.gottesdienst, true);
-  assert.equal(info.beduerfnisse.kaffee, 'keinWunsch');                          // niemand will Kaffee
+  assert.equal(info.beduerfnisse.kaffee, null);                                 // ob er Kaffee will, entscheidet sich nach dem Gottesdienst
   // Speichern und wieder laden
   const kopie = spielStarten(spiel.speicherText());
   assert.equal(kopie.lage().tag, 2); assert.equal(kopie.zelle(G.x + 2, G.y + 2), 'wand');

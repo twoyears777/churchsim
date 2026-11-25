@@ -53,7 +53,8 @@ function abbrechen() { if (ui.ziehen || ui.tragen) { ui.ziehen = null; ui.tragen
 function mauszeiger(e) {
   let c = 'default';
   if (ui.tragen) c = 'grabbing';
-  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) ? 'pointer' : 'default'; }
+  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
+      || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) ? 'pointer' : 'default'; }
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
   else if (istMoebelWerkzeug()) c = 'crosshair';
   else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'raum' ? 'pointer' : 'crosshair';
@@ -99,7 +100,8 @@ function loslassen(e) {
     spiel.personVersetzen(id, f.x, f.y); return fertig();
   }
   if (!ui.editorOffen) {
-    // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Stuhl → Verbessern, Raum mit Veranstaltungen → Raum-Fenster, Tor → Pforte (Plakat)
+    // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Stuhl → Verbessern, Raum mit Veranstaltungen → Raum-Fenster,
+    // Kirchkaffee → Öffnungszeiten, Tor → Pforte (Plakat)
     const f = feldAus(e), s = ui.klickStart; ui.klickStart = null;
     if (!s || s.feld.x !== f.x || s.feld.y !== f.y) return;
     if (s.besucher) return fensterOeffnen({ art: 'besucher', id: s.besucher.id });
@@ -109,6 +111,8 @@ function loslassen(e) {
     if (st) return fensterOeffnen({ art: 'stuhl', x: st.x, y: st.y });
     const nr = spiel.veranstaltungsraumBei(f.x, f.y);
     if (nr !== null) return fensterOeffnen({ art: 'raum', nr });
+    const kk = spiel.kirchkaffeeBei(f.x, f.y);
+    if (kk !== null) return fensterOeffnen({ art: 'kaffee', nr: kk });   // Kirchkaffee → Öffnungszeiten
     if (spiel.torBei(f.x, f.y)) return fensterOeffnen({ art: 'tor' });
     if (spiel.busBei(f.x, f.y)) fensterOeffnen({ art: 'bus' });
     return;

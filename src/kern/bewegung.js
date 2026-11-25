@@ -1,7 +1,7 @@
 // Wo laufen die Figuren gerade? Wird aus der Spielzeit berechnet – so laufen alle bei x5 schneller
 // und stehen bei Pause still. Liefert nur Positionen, zeichnet nichts.
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
-import { DAUER, LAUFTEMPO, ABSTAND } from '../inhalte/zeit.js';
+import { LAUFTEMPO, ABSTAND } from '../inhalte/zeit.js';
 import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 
@@ -31,8 +31,8 @@ export function strasse(i) {
   return { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
 }
 
-// Ein Besucher geht nacheinander Wegstücke: von der Straße zum Stuhl (oder bis zur Tür und wieder heim),
-// nach dem Gottesdienst zum Stehplatz im Kirchkaffee und am Ende nach Hause.
+// Ein Besucher geht nacheinander Wegstücke: von der Straße zum Stuhl (oder bis zur Tür und wieder heim)
+// und am Ende nach Hause. Wer nach dem Gottesdienst Kaffee will, wird ab dann vom Kirchkaffee gezeigt (kirchkaffee.js).
 // Bei mehreren Abläufen zählt der jüngste: Wer schon zur nächsten Veranstaltung unterwegs ist, wird nur dort gezeigt.
 export function besucherPositionen(z, speicher) {
   const gezeigt = new Set(), alle = [];
@@ -55,11 +55,7 @@ function laufPositionen(z, speicher, L) {
       if (t >= t1) { ort = punktAufWeg(st(s + 'heim', g.tuer, start), (t - t1) * LAUFTEMPO); if (!ort.unterwegs) return null; }
       return { id: g.id, name: g.name, x: ort.x, y: ort.y, sitzt: false };
     }
-    const kaffeeBeginn = L.beginn + DAUER.gottesdienst + i * 0.5;
-    if (g.kaffee && g.kaffee.platz && t >= kaffeeBeginn && !L.ausgefallen) {
-      ort = punktAufWeg(st(s + 'kaffee', g.sitz, g.kaffee.platz), (t - kaffeeBeginn) * LAUFTEMPO);
-      sitzt = false; ziel = g.kaffee.platz;
-    }
+    if (g.kaffee && typeof g.kaffee.ab === 'number' && t >= g.kaffee.ab) return null;   // steht jetzt im Kirchkaffee an
     if (L.phase === 'ende') {
       const t2 = L.ende + i * ABSTAND * 0.5;
       if (t >= t2) {
@@ -71,25 +67,4 @@ function laufPositionen(z, speicher, L) {
     }
     return { id: g.id, name: g.name, x: ort.x, y: ort.y, sitzt };
   }).filter(Boolean);
-}
-
-// Ehrenamtlicher an der Kaffeemaschine: holt Tasse für Tasse an der Maschine und bringt sie zur Theke.
-// Liefert null, wenn die Person gerade nicht im Kirchkaffee arbeitet (dann steht sie an ihrem Platz).
-export function kaffeePosition(z, p) {
-  const L = (z.laeufe || []).find(l => l.phase === 'kirchkaffee' && l.stationen && l.stationen.some(s => s.ea === p.id));
-  if (!L) return null;
-  const si = L.stationen.findIndex(s => s.ea === p.id);
-  const st = L.stationen[si], t = z.minuten;
-  const zeiten = L.gaeste.filter(g => g.kaffee && g.kaffee.station === si).map(g => g.kaffee.zeit).sort((a, b) => a - b);
-  const zwischen = (a, b, f) => ({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
-  const start = L.beginn + DAUER.gottesdienst;
-  const anfangs = () => t - start < 5 ? zwischen(p, st.standTheke, (t - start) / 5) : st.standTheke;
-  if (!zeiten.length || t >= zeiten[zeiten.length - 1]) return anfangs();
-  const takt = zeiten.length > 1 ? zeiten[1] - zeiten[0] : 5;
-  const j = zeiten.findIndex(h => t <= h), anfang = zeiten[j] - takt;
-  if (t < anfang) return anfangs();
-  const f = (t - anfang) / takt;
-  if (f < 0.35) return zwischen(st.standTheke, st.standMaschine, f / 0.35);
-  if (f < 0.65) return st.standMaschine;
-  return zwischen(st.standMaschine, st.standTheke, (f - 0.65) / 0.35);
 }
