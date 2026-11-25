@@ -39,14 +39,23 @@ function bisNachGottesdienst(z, zufall) {
 }
 const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
 
-// Ohne Ausstattung: 10 Besucher = 10 €
+// Ohne Ausstattung: 10 Besucher = 10 €, am Sonntagvormittag (Standard-Termin) doppelt = 20 €
 {
   const zufall = saat(3), z = gemeinde(zufall);
   bisNachGottesdienst(z, zufall);
   assert.strictEqual(z.letzterGottesdienst.besucher, 10);
+  assert.strictEqual(kollekte(z), 20);
+}
+// Anderer Termin (Sonntag abends): einfache Kollekte, 10 €
+{
+  const zufall = saat(3), z = gemeinde(zufall);
+  z.plan = { tag: 6, slot: 'abend' };
+  assert.strictEqual(prognose(z, aus(z)).sonntagvormittag, false);
+  bisNachGottesdienst(z, zufall);
+  assert.strictEqual(z.letzterGottesdienst.besucher, 10);
   assert.strictEqual(kollekte(z), 10);
 }
-// Beispiel aus dem Spielprinzip: Polsterstühle, Altar, Musiker → 10 × 1,2 × 1,2 × 1,1 = 15,84 → 16 €
+// Beispiel aus dem Spielprinzip: Polsterstühle, Altar, Musiker → 10 × 1,2 × 1,2 × 1,1 = 15,84, am Sonntagvormittag × 2 = 31,68 → 32 €
 {
   const zufall = saat(3), z = gemeinde(zufall);
   z.konto = 1000;
@@ -57,9 +66,9 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   versetzen(z, ea, G.x + 13, G.y + 6);
   assert.ok(eingesetztIn(z, aus(z), ea), 'Ehrenamtlicher mit Gitarre ist im Gottesdienstraum eingesetzt');
   const p = prognose(z, aus(z));
-  assert.ok(Math.abs(p.kollekte - 15.84) < 1e-9, 'Prognose rechnet Stuhl, Altar und Musik mit');
+  assert.ok(Math.abs(p.kollekte - 31.68) < 1e-9, 'Prognose rechnet Stuhl, Altar und Musik mit');
   bisNachGottesdienst(z, zufall);
-  assert.strictEqual(kollekte(z), 16);
+  assert.strictEqual(kollekte(z), 32);
   // Polsterstuhl +2 Haltung: 100 bleibt 100 (Obergrenze) – Haltung testen wir unten mit niedrigerem Wert
 }
 // Ohne Gitarre ist der Ehrenamtliche im Gottesdienstraum nicht eingesetzt und es gibt keine Musik

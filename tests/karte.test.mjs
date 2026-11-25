@@ -149,18 +149,18 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     assert.equal(gottesdienstBereit(z, aus()).length, 1);
     assert.deepEqual(prognose(z, aus()).plaetze, 3);
     assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.4) < 1e-9);    // 4 × 60 %
-    assert.ok(Math.abs(prognose(z, aus()).geld - 2.4) < 1e-9);
-    zeitVorruecken(z, aus(), SONNTAG_10 - 90 - z.minuten, () => 0);  // Anreise
+    assert.ok(Math.abs(prognose(z, aus()).geld - 4.8) < 1e-9);       // Sonntagvormittag: Kollekte × 2
+    zeitVorruecken(z, aus(), SONNTAG_10 - 180 - z.minuten, () => 0);  // Anreise
     assert.equal(z.lauf.phase, 'anreise'); assert.equal(z.lauf.gaeste.length, 4);
     assert.equal(z.lauf.gaeste.filter(g => !g.sitz).length, 1);
-    zeitVorruecken(z, aus(), 90 + 60, () => 0);                       // Gottesdienst vorbei
-    assert.equal(z.konto, 50 + 3); assert.equal(z.bekanntheit, 3);
+    zeitVorruecken(z, aus(), 180 + 60, () => 0);                       // Gottesdienst vorbei
+    assert.equal(z.konto, 50 + 6); assert.equal(z.bekanntheit, 3);
     zeitVorruecken(z, aus(), 60, () => 0);                            // Kirchkaffee vorbei
     const heim = z.besucher.find(b => b.id === z.lauf.gaeste.find(g => !g.sitz).id);
     assert.equal(heim.zufriedenheit, 45);
     assert.equal(z.besucher.filter(b => b.zufriedenheit === 70).length, 3);   // +5 Platz, +5 Gottesdienst
     assert.deepEqual(z.letzterGottesdienst, { woche: 0, ausgefallen: false, besucher: 3, heim: 1 });
-    zeitVorruecken(z, aus(), 61, () => 0);
+    zeitVorruecken(z, aus(), 121, () => 0);                           // Heimweg (2 Stunden) vorbei
     assert.equal(z.lauf, null);
   }
   // Kirchkaffee mit Maschine, Theke und Ehrenamtlichem; Maschine reicht nur für 2 Tassen
@@ -185,7 +185,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     const gaeste = z.lauf.gaeste.filter(g => g.sitz);
     assert.deepEqual(gaeste.map(g => g.kaffee.ergebnis).sort(), ['ja', 'ja', 'leer']);
     assert.equal(m.fuellung, 0);
-    assert.equal(z.konto, 200 + 3 + 2);                               // Kollekte 3 + 2 Tassen
+    assert.equal(z.konto, 200 + 6 + 2);                               // Kollekte 3 × 2 (Sonntagvormittag) + 2 Tassen
     assert.equal(z.besucher.filter(b => b.zufriedenheit === 75).length, 2);   // +5 +5 +5
     assert.equal(z.besucher.filter(b => b.zufriedenheit === 60).length, 1);   // +5 +5 −10
   }

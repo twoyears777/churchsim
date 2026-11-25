@@ -7,7 +7,7 @@
 //   Beginn + 60  Gottesdienst zu Ende: Kollekte (Stuhl, Altar, Grünpflanzen, Musik), Bekanntheit; Kaffeegäste ins Kirchkaffee.
 //   …            Kirchkaffee: Tasse für Tasse wird ausgegeben, je 1 € (wenn die Maschine nicht leer ist).
 //   Beginn + 120 Ende: Zufriedenheit ändert sich, manche werden Ehrenamtliche, alle gehen heim.
-import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
+import { VERANSTALTUNGEN, SONNTAGVORMITTAG } from '../inhalte/veranstaltungen.js';
 import { DAUER, ANREISE_VORLAUF } from '../inhalte/zeit.js';
 import { AENDERUNG, BEKANNTHEIT, KAFFEE_ANTEIL, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
@@ -23,7 +23,9 @@ import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { ortSchritt } from './ort.js';
 import { seelsorgeSchritt, anfrageOffen } from './seelsorge.js';
 
-export const HEIMWEG = 60;   // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause
+// Kollekte-Faktor für den Termin: Sonntagvormittag doppelt
+export function zeitFaktor(plan) { return plan && plan.tag === SONNTAGVORMITTAG.tag && plan.slot === SONNTAGVORMITTAG.slot ? SONNTAGVORMITTAG.kollekte : 1; }
+export const HEIMWEG = 120;  // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause
 
 // ---- Veranstaltungen in Räumen ----
 export function moeglicheVeranstaltungen(typ) { return typ ? VERANSTALTUNGEN.filter(v => v.raumtypen.includes(typ.id)) : []; }
@@ -231,7 +233,7 @@ function gottesdienstEnde(z, raeume) {
   const liste = gottesdienstRaeume(z, raeume);
   let summeKollekte = 0;
   for (const g of sitzend) { const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte; g.bonus = w.haltung; }
-  const betrag = Math.round(summeKollekte);
+  const betrag = Math.round(summeKollekte * zeitFaktor(z.plan));
   if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag);
   bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst);
   // Kaffeegäste auf die Stationen verteilen; jeder bekommt einen Stehplatz möglichst nah an seiner Theke.
@@ -292,18 +294,19 @@ export function prognose(z, raeume) {
   const neu = z.bekanntheit / BEKANNTHEIT.teiler;
   const erwartet = z.besucher.reduce((s, b) => s + kommChance(b), 0) + neu + neugierige.length * NEUGIER.kommChance;
   const anteil = erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
-  if (!bereit) return { bereit, erwartet, plaetze, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0, plakat };
+  if (!bereit) return { bereit, erwartet, plaetze, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0, plakat, sonntagvormittag: zeitFaktor(z.plan) > 1 };
   // Erwartete Kollekte: die erwarteten Besucher sitzen auf den besten Plätzen der bereiten Räume
   const sitze = sitzplaetze(gd.filter(g => g.bereit));
   let kollekteSumme = 0;
   for (let i = 0, rest = Math.min(sitzend, sitze.length); rest > 0; i++, rest--) kollekteSumme += sitze[i].wert * Math.min(1, rest);
+  kollekteSumme *= zeitFaktor(z.plan);
   const kaffeeWunsch = (z.besucher.filter(b => b.kaffee).reduce((s, b) => s + kommChance(b), 0) + neu * KAFFEE_ANTEIL
     + neugierige.filter(p => p.kaffee).length * NEUGIER.kommChance) * anteil;
   const zustand = kirchkaffeeZustand(z, raeume);
   const vorrat = zustand.flatMap(k => k.stationen).reduce((s, st) => s + (st.maschine.fuellung || 0), 0);
   const tassen = Math.min(kaffeeWunsch, vorrat, stehplaetze(z, zustand).length);
   const ehrenamt = z.besucher.filter(b => b.besuche + 1 >= EHRENAMT_AB_BESUCHEN).reduce((s, b) => s + kommChance(b) * anteil * EHRENAMT_QUOTE, 0);
-  return { bereit, erwartet, plaetze, sitzend, geld: kollekteSumme + tassen * PREIS_TASSE, kollekte: kollekteSumme, ehrenamt, tassen, plakat };
+  return { bereit, erwartet, plaetze, sitzend, geld: kollekteSumme + tassen * PREIS_TASSE, kollekte: kollekteSumme, ehrenamt, tassen, plakat, sonntagvormittag: zeitFaktor(z.plan) > 1 };
 }
 // Steht der Gottesdienst dieser Woche noch aus?
 export function terminDieseWoche(z) {

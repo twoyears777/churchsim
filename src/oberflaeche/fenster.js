@@ -103,6 +103,7 @@ function raumFenster(f) {
         <tr><td>${T.prognosePlaetze}</td><td class="zahl">${p.plaetze}</td></tr>
         <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(p.geld)))}</td></tr>
         <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(p.ehrenamt))}</td></tr>
+        ${p.sonntagvormittag ? `<tr><td colspan="2">${T.prognoseSonntagvormittag}</td></tr>` : ''}
         <tr><td>${T.prognosePlakat}</td><td class="zahl">${p.plakat ? T.plakatJa : T.plakatNein}</td></tr></table>`;
   }
   return `<h2>${r.typName}</h2>

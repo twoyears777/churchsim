@@ -13,6 +13,6 @@ export const STANDARD_PLAN = { tag: 6, slot: 'vormittag' };  // bei Spielbeginn:
 export const DAUER = { gottesdienst: 60, kirchkaffee: 60 };   // Spielminuten
 
 // Laufen der Besucher (in Spielminuten, damit es mit den Zeit-Knöpfen schneller und langsamer wird)
-export const ANREISE_VORLAUF = 90;    // so viele Minuten vor Beginn machen sich die Besucher auf den Weg
-export const LAUFTEMPO = 0.5;         // Kästchen pro Spielminute
+export const ANREISE_VORLAUF = 180;   // so viele Minuten vor Beginn machen sich die Besucher auf den Weg
+export const LAUFTEMPO = 0.25;        // Kästchen pro Spielminute (25.11.: halbiert, damit man Figuren besser anklicken kann)
 export const ABSTAND = 2;             // Spielminuten zwischen zwei Besuchern

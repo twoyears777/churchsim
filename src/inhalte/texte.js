@@ -52,13 +52,14 @@ export const TEXTE = {
     prognosePlakat: 'Plakat an der Pforte',
     plakatJa: 'hängt',
     plakatNein: 'keins',
+    prognoseSonntagvormittag: 'Sonntagvormittag: Kollekte ×2',   // Zeile erscheint nur, wenn der Termin Sonntagvormittag ist
     prognoseFaelltAus: 'Ohne Mitarbeiter im Raum fällt der Gottesdienst aus.',
     ca: wert => `ca. ${wert}`
   },
   // Kacheln der Veranstaltungen: was sie bringen und welche Bedingungen sie haben
   veranstaltungKacheln: {
     gottesdienst: {
-      bringt: ['Kollekte: 1 € pro Besucher', 'Zufriedenheit der Besucher', 'Bekanntheit der Gemeinde'],
+      bringt: ['Kollekte: 1 € pro Besucher', 'Sonntagvormittag: Kollekte ×2', 'Zufriedenheit der Besucher', 'Bekanntheit der Gemeinde'],
       bedingungen: [{ text: 'Pastor im Raum', bedingung: 'leitung' }, 'Stühle = Sitzplätze',
         { text: 'Für Musik: Gitarre im Raum', bedingung: 'gitarre' }]   // bedingung: wird im Fenster grün/rot markiert
     },
