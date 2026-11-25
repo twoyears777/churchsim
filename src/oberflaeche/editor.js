@@ -215,7 +215,7 @@ let letzteZeit = performance.now(), letztesSpeichern = 0;
 function schleife(t) {
   const sekunden = Math.min(0.25, (t - letzteZeit) / 1000);   // nach langer Abwesenheit nicht sprunghaft weiter
   letzteZeit = t;
-  if (z.tempo > 0) {
+  if (z.tempo > 0 && !editorOffen) {   // im Editor steht die Zeit still
     const vorher = z.personen.length;
     zeitVorruecken(z, raeume, spielMinuten(sekunden, z.tempo));
     if (z.personen.length !== vorher) raeume = auswerten();   // neue Ehrenamtliche

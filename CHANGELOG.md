@@ -10,6 +10,7 @@ Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 - Oben: Woche, Tag, Uhrzeit und Countdown bis Sonntag; Kontostand und Bekanntheit
 - Gottesdienst findet jede Woche automatisch im eingetragenen Slot statt (1 Stunde), danach 1 Stunde Kirchkaffee
 - Einnahmen werden sofort gutgeschrieben; „Woche beenden“ und Wochenrückblick entfallen
+- Während der Editor offen ist, steht die Zeit still
 - Test-Knopf „Spiel auf Start zurücksetzen“
 
 **Besucher**
