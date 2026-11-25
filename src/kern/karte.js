@@ -102,7 +102,27 @@ export function pruefeRaum(z, raum, typ) {
   const probleme = [];
   if (raum.tueren === 0) probleme.push('tuer');
   if (typ && !passtGroesse(z, raum.zellen, typ.minGroesse[0], typ.minGroesse[1])) probleme.push('groesse');
+  if (typ && typ.verbindungZu && !hatVerbindungZu(z, raum, typ.verbindungZu)) probleme.push('verbindung');
   return probleme;
+}
+
+// Gibt es eine Tür, die diesen Raum direkt mit einem Raum des gesuchten Typs verbindet?
+export function hatVerbindungZu(z, raum, typId) {
+  const eigene = new Set(raum.zellen), nachbarn = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (const c of raum.zellen) {
+    const x = c % z.w, y = (c / z.w) | 0;
+    for (const [dx, dy] of nachbarn) {
+      const tx = x + dx, ty = y + dy;
+      if (!imFeld(z, tx, ty) || z.zellen[idx(z, tx, ty)] !== TUER) continue;
+      for (const [ex, ey] of nachbarn) {
+        const ax = tx + ex, ay = ty + ey;
+        if (!imFeld(z, ax, ay)) continue;
+        const a = idx(z, ax, ay);
+        if (!eigene.has(a) && z.zellen[a] === LEER && z.raumTyp[a] === typId) return true;
+      }
+    }
+  }
+  return false;
 }
 
 // Nach jeder Baumaßnahme: Raumfunktionen den neu erkannten Räumen zuordnen.

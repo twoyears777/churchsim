@@ -7,12 +7,12 @@ import { moebelAnlegen, moebelPruefen, moebelBei, moebelKaufen, moebelAbreissen 
 import { finanzenAnlegen, kannBezahlen, summe } from '../kern/finanzen.js';
 import { EINNAHMEN, AUSGABEN } from '../inhalte/finanzen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
-import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose, moeglicheVeranstaltungen, veranstaltungVon, veranstaltungEinstellen } from '../kern/runde.js';
+import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose, kirchkaffeeOffen, moeglicheVeranstaltungen, veranstaltungVon, veranstaltungEinstellen } from '../kern/runde.js';
 import { KEINE_VERANSTALTUNG } from '../inhalte/veranstaltungen.js';
 import { sonntagDerWoche, kirchenjahrStand } from '../kern/kalender.js';
 import { weg } from '../kern/wege.js';
 import { wandBauen, wandKonflikte } from '../kern/bauen.js';
-import { namenZiehen } from '../kern/besucher.js';
+import { stammAnlegen } from '../kern/besucher.js';
 import { zeichne } from '../ansicht/zeichnen.js';
 import { aktualisierungStarten } from './aktualisieren.js';
 
@@ -29,7 +29,7 @@ const LAUFTEMPO = 7;      // Kästchen pro Sekunde
 const ABSTAND_MS = 260;   // Abstand zwischen zwei Besuchern
 
 let z = laden() || neuerZustand();
-personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
+personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); stammAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
 let raeume = auswerten();
 let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
 let besucher = [], ablauf = null, stuhlStart = null, schwebe = null, klickStart = null, maus = null;
@@ -49,6 +49,10 @@ function auswerten() {
     r.veranstaltungText = moeglicheVeranstaltungen(r.typ).length ? (v ? v.name : 'Keine Veranstaltung') : null;
     r.veranstaltungFehlt = !!r.veranstaltungText && !v;   // Warnsymbol auf der Karte
   }
+  // Kirchkaffee: geöffnet oder geschlossen unter dem Namen anzeigen
+  const offen = kirchkaffeeOffen(z, { liste, gruppe });
+  for (const r of liste) if (r.typ && r.typ.id === 'kirchkaffee' && !r.probleme.length)
+    r.veranstaltungText = offen.includes(r) ? 'Geöffnet' : 'Geschlossen – kein Ehrenamtlicher';
   return { liste, gruppe };
 }
 function speichern() {
@@ -95,6 +99,8 @@ const ART_TEXT_MEHRZAHL = { hauptamt: 'listeHauptamt', ehrenamt: 'listeEhrenamt'
 const LEERTEXT = { hauptamt: 'Noch keine Hauptamtlichen', ehrenamt: 'Noch keine Ehrenamtlichen' };
 let letzteAnzeige = '';
 function anzeigenAktualisieren() {
+  // Während Besucher einlaufen, bleibt die Seitenleiste beim alten Stand – sie springt erst nach dem Wochenrückblick um.
+  if (ablauf) { $('wocheBeenden').disabled = true; $('spielHinweis').textContent = ''; return; }
   const v = verfuegbarkeit(z, raeume);
   $('anzHauptamt').textContent = `${v.hauptamt.frei}/${v.hauptamt.gesamt}`;
   $('anzEhrenamt').textContent = `${v.ehrenamt.frei}/${v.ehrenamt.gesamt}`;
@@ -343,14 +349,15 @@ function wocheStarten() {
   const ergebnis = wocheBeenden(z, raeume);
   speichern();
   const g = GRUNDSTUECK, gehweg = GEHWEGE.find(w => w.w > w.h && w.y >= g.y + g.h);
-  const plaetze = ergebnis.angebote.flatMap(a => a.plaetze);
   const blockiert = (x, y) => !!moebelBei(z, x, y) || personAuf(x, y);
-  const jetzt = performance.now(), namen = namenZiehen(plaetze.length);
-  besucher = plaetze.map((ziel, i) => {
+  const jetzt = performance.now();
+  // Phase 1: alle laufen vom Tor auf ihre Stühle. Phase 2 (nach dem Gottesdienst): einige gehen ins Kirchkaffee.
+  besucher = ergebnis.weg.map((w, i) => {
     const start = { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
-    return { name: namen[i].vorname, vollerName: namen[i].voll, pfad: weg(z, start, ziel, blockiert) || [ziel], beginn: jetzt + i * ABSTAND_MS, x: start.x, y: start.y, sichtbar: false };
+    return { name: w.name, vollerName: w.voll, pfad: weg(z, start, w.sitz, blockiert) || [w.sitz], beginn: jetzt + i * ABSTAND_MS,
+      x: start.x, y: start.y, sichtbar: false, kaffee: w.kaffee, sitz: w.sitz };
   });
-  ablauf = { beendet, ergebnis, woche: ergebnis.woche };
+  ablauf = { beendet, ergebnis, woche: ergebnis.woche, phase: 1 };
   document.body.classList.add('laeuft');
   requestAnimationFrame(schritt);
 }
@@ -366,7 +373,19 @@ function schritt(t) {
     b.x = a.x + (c.x - a.x) * f; b.y = a.y + (c.y - a.y) * f;
   }
   malen();
-  if (fertig) setTimeout(rueckblickZeigen, 600); else requestAnimationFrame(schritt);
+  if (!fertig) { requestAnimationFrame(schritt); return; }
+  const zumKaffee = besucher.filter(b => b.kaffee);
+  if (ablauf.phase === 1 && zumKaffee.length) {
+    // kurze Pause (der Gottesdienst), dann gehen die Kirchkaffee-Gäste los
+    ablauf.phase = 2;
+    setTimeout(() => {
+      const jetzt = performance.now(), blockiert = (x, y) => !!moebelBei(z, x, y) || personAuf(x, y);
+      zumKaffee.forEach((b, i) => { b.pfad = weg(z, b.sitz, b.kaffee, blockiert) || [b.kaffee]; b.beginn = jetzt + i * ABSTAND_MS; b.sitzt = false; });
+      requestAnimationFrame(schritt);
+    }, 1200);
+    return;
+  }
+  setTimeout(rueckblickZeigen, 600);
 }
 function rueckblickZeigen() {
   const { beendet, ergebnis: e } = ablauf;
@@ -384,7 +403,8 @@ function rueckblickZeigen() {
       <tr class="summe"><td>Saldo</td><td class="zahl">${euro(saldo)}</td></tr>
       <tr><td>Kontostand</td><td class="zahl">${euro(e.kontostand)}</td></tr></table>
     <h3>Besucher</h3><table>${angebote}</table>
-    <h3>Neue Ehrenamtliche</h3><table><tr><td>Dazugekommen</td><td class="zahl">${e.neueEhrenamtliche}</td></tr></table>
+    <h3>Neue Ehrenamtliche</h3><table><tr><td>Dazugekommen</td><td class="zahl">${e.neueEhrenamtliche.length}</td></tr>
+      ${e.neueEhrenamtliche.map(n => `<tr><td class="einzug">${n}</td><td></td></tr>`).join('')}</table>
     <div class="zeile"><button id="weiter" class="haupt">Weiter</button></div>`;
   rueckblick.hidden = false;
   $('weiter').addEventListener('click', () => {

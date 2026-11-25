@@ -17,7 +17,22 @@ export function personenAnlegen(z) {
   }
 }
 
-export function daten(person) { return START_MITARBEITER.find(m => m.id === person.id); }
+// Daten einer Person: Startmitarbeiter aus der Inhaltsdatei, im Spiel dazugekommene (z. B. Ehrenamtliche) tragen sie selbst.
+export function daten(person) { return START_MITARBEITER.find(m => m.id === person.id) || person.daten; }
+
+// Neue Person (z. B. Ehrenamtlicher aus einem Besucher) am Tor aufstellen, auf dem nächsten freien Platz.
+export function personHinzufuegen(z, daten) {
+  const s = startPlatz(), id = `ea${(z.naechsteId = (z.naechsteId || 0) + 1)}`;
+  let platz = s;
+  for (let r = 0; r < 12 && !platzFrei(z, platz.x, platz.y); r++) {
+    const kandidaten = [];
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r) kandidaten.push({ x: s.x + dx, y: s.y + dy });
+    platz = kandidaten.find(k => platzFrei(z, k.x, k.y)) || platz;
+  }
+  const p = { id, x: platz.x, y: platz.y, daten };
+  z.personen.push(p);
+  return p;
+}
 
 // Darf eine Figur auf dieses Kästchen? Nur freier Boden auf dem eigenen Grundstück, nicht besetzt.
 export function platzFrei(z, x, y, ausser) {
@@ -42,11 +57,13 @@ export function personenPruefen(z) {
   }
 }
 
-// Eingesetzt = steht in einem fertigen Raum mit Funktion (Tür da, groß genug).
+// Eingesetzt = steht in einem fertigen Raum mit Funktion, in dem diese Art Mitarbeiter arbeiten kann
+// (z. B. Hauptamtliche im Gottesdienstraum, Ehrenamtliche im Kirchkaffee).
 export function eingesetztIn(z, raeume, person) {
   const nr = raeume.gruppe[idx(z, person.x, person.y)];
-  const r = nr >= 0 ? raeume.liste[nr] : null;
-  return r && r.typ && r.probleme.length === 0 ? r : null;
+  const r = nr >= 0 ? raeume.liste[nr] : null, d = daten(person);
+  if (!r || !r.typ || r.probleme.length || !d) return null;
+  return !r.typ.einsatz || r.typ.einsatz.includes(d.art) ? r : null;
 }
 
 export function verfuegbarkeit(z, raeume) {

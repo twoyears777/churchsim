@@ -3,6 +3,10 @@ import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { moebelImRaum } from './moebel.js';
 import { idx } from './karte.js';
 import { kollekte, buchen, wocheAbschliessen } from './finanzen.js';
+import { moebelBei } from './moebel.js';
+import { besucherDerWoche, ehrenamtWerden } from './besucher.js';
+import { eingesetztIn, personHinzufuegen } from './personen.js';
+import { KIRCHKAFFEE_QUOTE, KIRCHKAFFEE_ANGEBOT } from '../inhalte/kirchkaffee.js';
 
 // Veranstaltungen, die in einem Raumtyp möglich sind, und die im Raum eingestellte
 export function moeglicheVeranstaltungen(typ) { return typ ? VERANSTALTUNGEN.filter(v => v.raumtypen.includes(typ.id)) : []; }
@@ -37,32 +41,66 @@ export function kannWocheBeenden(z, raeume) {
   return VERANSTALTUNGEN.filter(v => v.proWochePflicht).every(v => bereit.some(b => b.veranstaltung.id === v.id));
 }
 
-// Führt die Woche aus und liefert den Wochenrückblick. Regeln für Besucherzahl,
-// Finanzen und neue Ehrenamtliche folgen später; im Moment: Besucher = Stühle.
-export function wocheBeenden(z, raeume) {
+// Kirchkaffee: fertige Räume (mit Verbindungstür) mit genug eingesetzten Ehrenamtlichen.
+export function kirchkaffeeOffen(z, raeume) {
+  return raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee' && !r.probleme.length &&
+    z.personen.filter(p => eingesetztIn(z, raeume, p) === r).length >= (r.typ.minBesetzung || 1));
+}
+// Freie Stehplätze im Kirchkaffee (kein Möbel, keine Person)
+function kaffeePlaetze(z, raeume) {
+  return kirchkaffeeOffen(z, raeume).flatMap(r => r.zellen)
+    .map(c => ({ x: c % z.w, y: (c / z.w) | 0 }))
+    .filter(f => !moebelBei(z, f.x, f.y) && !z.personen.some(p => p.x === f.x && p.y === f.y));
+}
+
+// Führt die Woche aus und liefert den Wochenrückblick.
+// Ablauf: Gottesdienst (Stammbesucher + neue auf die Stühle) → mit KIRCHKAFFEE_QUOTE ins Kirchkaffee →
+// Kollekte und Kirchkaffee-Einnahmen buchen → manche Besucher werden Ehrenamtliche.
+export function wocheBeenden(z, raeume, zufall = Math.random) {
   const bereit = raumBereitschaft(z, raeume).filter(b => b.bereit);
-  const angebote = VERANSTALTUNGEN.map(v => {
-    const plaetze = bereit.filter(b => b.veranstaltung.id === v.id).flatMap(b => b.stuehle.map(s => ({ x: s.x, y: s.y })));
-    return { veranstaltung: v.id, name: v.name, besucher: plaetze.length, plaetze };
-  }).filter(a => a.besucher > 0);
-  const besucherGesamt = angebote.reduce((s, a) => s + a.besucher, 0);
-  if (besucherGesamt) buchen(z, 'einnahmen', 'kollekte', kollekte(besucherGesamt));
+  const sitze = bereit.filter(b => b.veranstaltung.id === 'gottesdienst').flatMap(b => b.stuehle.map(s => ({ x: s.x, y: s.y })));
+  const anwesende = besucherDerWoche(z, sitze.length, zufall);
+
+  // Wer geht danach ins Kirchkaffee?
+  const frei = kaffeePlaetze(z, raeume);
+  const weg = anwesende.map((b, i) => {
+    let kaffee = null;
+    if (frei.length && zufall() < KIRCHKAFFEE_QUOTE) kaffee = frei.splice(Math.floor(zufall() * frei.length), 1)[0];
+    return { name: b.vorname, voll: b.voll, besuche: b.besuche, sitz: sitze[i], kaffee };
+  });
+  const gaeste = weg.filter(w => w.kaffee).length;
+
+  if (anwesende.length) buchen(z, 'einnahmen', 'kollekte', kollekte(anwesende.length));
+  const kaffeeEinnahmen = gaeste * KIRCHKAFFEE_ANGEBOT.reduce((s, a) => s + a.preis, 0);
+  if (kaffeeEinnahmen) buchen(z, 'einnahmen', 'kirchkaffee', kaffeeEinnahmen);
+
+  const neueEA = ehrenamtWerden(z, anwesende, zufall).map(b =>
+    personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null }));
+
+  const angebote = [{ veranstaltung: 'gottesdienst', name: 'Gottesdienst', besucher: anwesende.length }];
+  if (gaeste) angebote.push({ veranstaltung: 'kirchkaffee', name: 'Kirchkaffee', besucher: gaeste });
   const rueckblick = {
     woche: z.woche,
     finanzen: wocheAbschliessen(z),          // { einnahmen: {kategorie: €}, ausgaben: {kategorie: €} }
     kontostand: z.konto,
-    angebote,
-    neueEhrenamtliche: 0
+    angebote: angebote.filter(a => a.besucher > 0),
+    weg,                                       // für die Animation: wer sitzt wo, wer geht danach wohin
+    neueEhrenamtliche: neueEA.map(p => p.daten.name)
   };
-  z.letzteWoche = { besucher: besucherGesamt };   // für die Anzeige „Besucher letzte Woche“
+  z.letzteWoche = { besucher: anwesende.length };   // für die Anzeige „Besucher letzte Woche“
   z.woche++;
   return rueckblick;
 }
 
 // Voraussichtliche Finanzen der laufenden Woche. Regeln folgen später – bis dahin 0.
 // Einnahmen: was schon gebucht ist plus Kollekte, falls die Woche jetzt beendet würde. Ausgaben: bisher in dieser Woche.
+// Kirchkaffee wird mit der erwarteten Gästezahl geschätzt (Besucher × Quote, höchstens so viele Stehplätze).
 export function finanzPrognose(z, raeume) {
-  const plaetze = raumBereitschaft(z, raeume).filter(b => b.bereit).reduce((s, b) => s + b.stuehle.length, 0);
+  const plaetze = raumBereitschaft(z, raeume).filter(b => b.bereit && b.veranstaltung.id === 'gottesdienst').reduce((s, b) => s + b.stuehle.length, 0);
+  const gaeste = Math.min(Math.round(plaetze * KIRCHKAFFEE_QUOTE), kaffeePlaetze(z, raeume).length);
   const schon = Object.values(z.wochenbuch.einnahmen).reduce((a, b) => a + b, 0);
-  return { einnahmen: schon + kollekte(plaetze), ausgaben: Object.values(z.wochenbuch.ausgaben).reduce((a, b) => a + b, 0) };
+  return {
+    einnahmen: schon + kollekte(plaetze) + gaeste * KIRCHKAFFEE_ANGEBOT.reduce((s, a) => s + a.preis, 0),
+    ausgaben: Object.values(z.wochenbuch.ausgaben).reduce((a, b) => a + b, 0)
+  };
 }

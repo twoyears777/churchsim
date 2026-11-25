@@ -8,6 +8,19 @@ export const RAUMTYPEN = [
     minGroesse: [5, 15],
     farbe: '#d8cdea',
     // Welche Veranstaltungen hier eingestellt werden können: siehe veranstaltungen.js
+    einsatz: ['hauptamt'],          // wer hier als eingesetzt zählt
+    kosten: null,
+    moebel: [],
+    erweiterungen: []
+  },
+  {
+    id: 'kirchkaffee',
+    name: 'Kirchkaffee',
+    minGroesse: [4, 5],
+    farbe: '#ecd9bd',
+    verbindungZu: 'gottesdienst',   // braucht eine Verbindungstür zu einem Gottesdienstraum
+    einsatz: ['ehrenamt'],          // nur Ehrenamtliche
+    minBesetzung: 1,                // geöffnet ab so vielen Eingesetzten
     kosten: null,
     moebel: [],
     erweiterungen: []

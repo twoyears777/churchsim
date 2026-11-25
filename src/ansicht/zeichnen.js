@@ -94,7 +94,9 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
     if (r.probleme.length) {
       ctx.font = `400 ${schrift * 0.85}px system-ui, sans-serif`;
       ctx.fillStyle = FARBEN.fehler;
-      const t = r.probleme.map(p => p === 'tuer' ? 'Tür fehlt' : `zu klein (mind. ${r.typ.minGroesse[0]} × ${r.typ.minGroesse[1]})`).join(' · ');
+      const t = r.probleme.map(p => p === 'tuer' ? 'Tür fehlt'
+        : p === 'verbindung' ? 'Verbindungstür zum Gottesdienstraum fehlt'
+        : `zu klein (mind. ${r.typ.minGroesse[0]} × ${r.typ.minGroesse[1]})`).join(' · ');
       ctx.fillText(t, cx, cy + schrift * 0.7);
     } else if (r.veranstaltungText) {
       // eingestellte Veranstaltung klein unter dem Raumnamen

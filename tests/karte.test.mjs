@@ -80,7 +80,7 @@ import { sonntagDerWoche } from '../src/kern/kalender.js';
   const rb = wocheBeenden(z6, aus());
   assert.equal(rb.angebote[0].besucher, 3); assert.equal(z6.woche, 1);
   assert.equal(sonntagDerWoche(0).name, '1. Advent'); assert.equal(sonntagDerWoche(1).name, '2. Advent');
-  const pfad = weg(z6, { x: G.tor.x, y: G.y + G.h + 1 }, rb.angebote[0].plaetze[0], (x, y) => z6.moebel.some(m => m.x === x && m.y === y));
+  const pfad = weg(z6, { x: G.tor.x, y: G.y + G.h + 1 }, rb.weg[0].sitz, (x, y) => z6.moebel.some(m => m.x === x && m.y === y));
   assert.ok(pfad && pfad.length > 5);
   assert.ok(pfad.some(p => p.x === G.x + 2 && p.y === G.y + 5));    // läuft durch die Tür
   const raus = pfad.findIndex(p => aufGrundstueck(p.x, p.y));        // betritt das Grundstück nur durchs Tor
@@ -160,3 +160,48 @@ import { finanzPrognose } from '../src/kern/runde.js';
   assert.equal(veranstaltungVon(z8, aus().liste[0]), null);
 }
 console.log('Finanz-Tests bestanden.');
+
+// Kirchkaffee, Stammbesucher, neue Ehrenamtliche
+import { kirchkaffeeOffen } from '../src/kern/runde.js';
+import { besucherDerWoche } from '../src/kern/besucher.js';
+import { eingesetztIn as einsatz, personHinzufuegen } from '../src/kern/personen.js';
+{
+  const z9 = neuerZustand(); personenAnlegen(z9);
+  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z9); for (const r of raeume) { r.typ = raumTypVon(z9, r); r.probleme = pruefeRaum(z9, r, r.typ); } return { liste: raeume, gruppe }; };
+  const raumBei = (x, y) => { const a = aus(); return a.liste[a.gruppe[x + y * z9.w]]; };
+  // Gottesdienstraum innen 15×5, rechts daneben Kirchkaffee innen 5×5 (gemeinsame Wand bei x = G.x+18)
+  wandRechteck(z9, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z9, G.x + 2, G.y + 5);
+  wandRechteck(z9, G.x + 18, G.y + 2, G.x + 24, G.y + 8);
+  typZuweisen(z9, raumBei(G.x + 5, G.y + 5), 'gottesdienst');
+  typZuweisen(z9, raumBei(G.x + 20, G.y + 5), 'kirchkaffee');
+  assert.deepEqual(raumBei(G.x + 20, G.y + 5).probleme, ['tuer', 'verbindung']);
+  tuerUmschalten(z9, G.x + 18, G.y + 5);                                         // Verbindungstür
+  assert.deepEqual(raumBei(G.x + 20, G.y + 5).probleme, []);
+  veranstaltungEinstellen(z9, raumBei(G.x + 5, G.y + 5), 'gottesdienst');
+  versetzen(z9, z9.personen[0], G.x + 4, G.y + 5);
+  for (let i = 0; i < 10; i++) moebelSetzen(z9, 'stuhl', G.x + 6 + i, G.y + 4, G.x + 6 + i, G.y + 4);
+  assert.equal(kirchkaffeeOffen(z9, aus()).length, 0);                           // noch kein Ehrenamtlicher
+  versetzen(z9, z9.personen[0], G.x + 20, G.y + 5);                              // Pastor im Kirchkaffee zählt nicht
+  assert.equal(einsatz(z9, aus(), z9.personen[0]), null);
+  assert.equal(kirchkaffeeOffen(z9, aus()).length, 0);
+  versetzen(z9, z9.personen[0], G.x + 4, G.y + 5);
+  const ea = personHinzufuegen(z9, { name: 'Test Helfer', kuerzel: 'T', art: 'ehrenamt' });
+  versetzen(z9, ea, G.x + 20, G.y + 3);
+  assert.equal(kirchkaffeeOffen(z9, aus()).length, 1);
+  // Woche mit festem „Zufall“: alle gehen ins Kirchkaffee (0 < 0.2), keiner wird EA (5 % nicht erreicht bei 1. Besuch)
+  const rb = wocheBeenden(z9, aus(), () => 0.1);
+  assert.equal(rb.weg.length, 10); assert.equal(rb.weg.filter(w => w.kaffee).length, 10);
+  assert.deepEqual(rb.finanzen.einnahmen, { kollekte: 10, kirchkaffee: 10 });
+  assert.equal(z9.stamm.length, 10);
+  // Dreimal mit „Zufall“ 0.01: alle kommen wieder; ab dem 3. Besuch werden alle EA (0.01 < 0.05)
+  wocheBeenden(z9, aus(), () => 0.01);
+  const rb3 = wocheBeenden(z9, aus(), () => 0.01);
+  assert.equal(rb3.neueEhrenamtliche.length, 10);
+  assert.equal(z9.stamm.length, 0);
+  assert.equal(z9.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 11);
+  // Stamm: niemand kommt wieder (Zufall 0.99) → nur neue Besucher
+  const z10 = neuerZustand(); z10.stamm = [{ vorname: 'A', nachname: 'B', voll: 'A B', besuche: 2 }];
+  const da = besucherDerWoche(z10, 3, () => 0.99);
+  assert.equal(da.length, 3); assert.ok(!da.some(b => b.voll === 'A B')); assert.equal(z10.stamm.length, 4);
+}
+console.log('Kirchkaffee-Tests bestanden.');
