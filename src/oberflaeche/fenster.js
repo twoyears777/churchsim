@@ -27,7 +27,7 @@ export function fensterAktualisieren() {
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('sehr-breit', f.art === 'finanzen');
   m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest');
@@ -568,6 +568,35 @@ function seelsorgeFenster(f) {
   return `<h2>${T.titel}</h2>${inhalt}`;
 }
 
+// Forschung: vorerst ein schlichter Platzhalter-Baum (eine Reihe Knoten). Das Design im Stil eines mittelalterlichen
+// Lebensbaums legt Lukas später fest. Abbrechen fragt im Fenster nach (keine Browser-Dialoge).
+function forschungFenster(f) {
+  const T = TEXTE.forschung, info = ui.spiel.forschungInfo();
+  const knoten = info.forschungen.map(fo => {
+    let unten;
+    if (fo.zustand === 'erforscht') unten = `<p class="ok">${T.erforscht}</p>`;
+    else if (fo.zustand === 'laeuft') {
+      unten = `<div class="balken"><span style="width:${Math.round(fo.anteil * 100)}%"></span></div><p class="unter">${T.rest(fo.restSekunden)}</p>`
+        + (f.abbrechenFragen
+          ? `<p class="warnung">${T.abbrechenFrage}</p><div class="zeile"><button data-forschung-abbrechen-ja>${T.abbrechenJa}</button><button data-forschung-abbrechen-nein>${T.abbrechenNein}</button></div>`
+          : `<div class="zeile"><button data-forschung-abbrechen>${T.abbrechen}</button></div>`);
+    } else {
+      const grund = T.zustand[fo.zustand];
+      unten = `${grund ? `<p class="fehlt">${grund}</p>` : ''}<div class="zeile"><button class="haupt" data-forschung="${esc(fo.id)}" ${fo.zustand === 'bereit' ? '' : 'disabled'}>${T.starten}</button></div>`;
+    }
+    return `<div class="forschung-knoten ${fo.zustand}">
+      <b>${esc(fo.name)}</b>
+      ${T.beschreibung[fo.id] ? `<p class="unter">${T.beschreibung[fo.id]}</p>` : ''}
+      <p class="unter">${T.kosten(euro(fo.kosten.geld), fo.kosten.heiligkeit)}</p>
+      <p class="unter" title="${T.dauerInfo}">${T.dauer(fo.dauer)}</p>
+      ${unten}</div>`;
+  }).join('');
+  return `<h2>${T.titel}</h2>
+    <p class="unter">${T.vorrat(Math.floor(info.heiligkeit), euro(info.konto))}</p>
+    <div class="forschung-baum">${knoten}</div>
+    <div class="zeile"><button data-zu>${T.schliessen}</button></div>`;
+}
+
 // Knöpfe in den Fenstern → Befehle ans Spiel
 export function fensterEinrichten() {
   maske().addEventListener('click', e => {
@@ -607,6 +636,10 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();
     else if (b.dataset.aushang) { const [nr, platz] = b.dataset.aushang.split(':').map(Number); spiel.aushangSetzen(f.x, f.y, nr, platz); }
     else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);
+    else if (b.dataset.forschung) { spiel.forschungStarten(b.dataset.forschung); delete f.abbrechenFragen; }
+    else if (b.hasAttribute('data-forschung-abbrechen')) f.abbrechenFragen = true;
+    else if (b.hasAttribute('data-forschung-abbrechen-nein')) delete f.abbrechenFragen;
+    else if (b.hasAttribute('data-forschung-abbrechen-ja')) { spiel.forschungAbbrechen(); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-bus-ausbauen')) spiel.busAusbauen();
     else if (b.hasAttribute('data-werbekampagne')) spiel.werbekampagneKaufen();
     else if (b.dataset.typ !== undefined) { spiel.raumTypSetzen(f.nr, b.dataset.typ); fensterSchliessen(); }

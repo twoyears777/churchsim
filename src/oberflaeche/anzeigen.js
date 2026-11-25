@@ -28,6 +28,9 @@ export function anzeigenEinrichten() {
   $('textStamm').textContent = TEXTE.besucherStamm;
   $('menschenAuf').textContent = TEXTE.menschen.knopf;
   $('menschenAuf').addEventListener('click', () => fensterOeffnen({ art: 'menschen' }));
+  $('textHeiligkeit').textContent = TEXTE.heiligkeit;
+  $('forschungAuf').textContent = TEXTE.forschung.knopf;
+  $('forschungAuf').addEventListener('click', () => fensterOeffnen({ art: 'forschung' }));
   $('bekanntheitAuf').addEventListener('click', () => fensterOeffnen({ art: 'bekanntheit' }));
   // Finanzen in der Seitenleiste → Finanz-Fenster (Maus oder Enter/Leertaste)
   $('finanzenAuf').addEventListener('click', () => fensterOeffnen({ art: 'finanzen' }));
@@ -54,6 +57,8 @@ export function anzeigenAktualisieren() {
   personenListen(l.personen);
   for (const id of ['kontostand', 'kontoEditor', 'kontoKurz', 'kontoOben']) $(id).textContent = euro(l.konto);
   $('bekanntheit').textContent = Math.round(l.bekanntheit);
+  $('heiligkeit').textContent = Math.floor(l.heiligkeit);
+  $('heiligkeitWert').title = TEXTE.heiligkeitHinweis(l.heiligkeitProBesucher);   // Regel beim Darüberfahren mit der Maus
   const lg = l.letzterGottesdienst;
   $('besucherLetzter').textContent = lg ? lg.besucher : '–';
   $('besucherKurz').textContent = lg ? lg.besucher : '–';

@@ -565,5 +565,27 @@ export const TEXTE = {
   },
   faelltAusWegen: (platz, fest) => `Veranstaltung ${platz + 1} fällt aus wegen ${fest}.`,
   festPrognose: (fest, wort) => `${fest}: ${wort}`,             // ENTWURF: Zeile in der Prognose (Fest oder Adventszeit)
-  hinweisKirchenjahr: 'Kirchenjahr anklicken für Feste und Zeiten'   // ENTWURF: Tooltip rechts oben
+  hinweisKirchenjahr: 'Kirchenjahr anklicken für Feste und Zeiten',   // ENTWURF: Tooltip rechts oben
+
+  // ---- Forschungsbaum und Heiligkeit (ALLES ENTWÜRFE von Claude, 25.11. – Lukas formuliert sie selbst) ----
+  heiligkeit: 'Heiligkeit',
+  heiligkeitHinweis: n => `Jeder Gottesdienstbesucher bringt ${n} Heiligkeit (gutgeschrieben am Ende des Gottesdienstes). Wird beim Forschen verbraucht.`,
+  forschung: {
+    knopf: 'Forschung',
+    titel: 'Forschung',
+    vorrat: (heiligkeit, geld) => `Heiligkeit: ${heiligkeit} · Kontostand: ${geld}`,
+    kosten: (geld, heiligkeit) => `${geld} und ${heiligkeit} Heiligkeit`,
+    dauer: sek => sek >= 60 && sek % 60 === 0 ? `Dauer: ${sek / 60} ${sek === 60 ? 'Minute' : 'Minuten'}` : `Dauer: ${sek} Sekunden`,
+    dauerInfo: 'Gilt bei normaler Geschwindigkeit. Die Forschung läuft nur, wenn die Spielzeit läuft.',
+    rest: sek => `noch ${sek >= 60 ? `${Math.floor(sek / 60)}:${String(sek % 60).padStart(2, '0')} Min.` : `${sek} Sek.`}`,
+    beschreibung: { schulungen1: 'Schaltet frei, dass du Ehrenamtliche auf Schulungen schicken kannst.' },
+    erforscht: 'Erforscht',
+    starten: 'Forschen',
+    abbrechen: 'Abbrechen',
+    abbrechenFrage: 'Wirklich abbrechen? Geld und Heiligkeit sind dann weg.',
+    abbrechenJa: 'Ja, abbrechen',
+    abbrechenNein: 'Weiterforschen',
+    zustand: { gesperrt: 'Erst die vorherige Forschung abschließen', besetzt: 'Es läuft schon eine andere Forschung', geld: 'Zu wenig Geld', heiligkeit: 'Zu wenig Heiligkeit' },
+    schliessen: 'Schließen'
+  }
 };

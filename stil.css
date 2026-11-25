@@ -237,3 +237,10 @@ p .farbe, .kirchenjahr-zeiten .farbe { display: inline-block; width: 14px; heigh
 .menue-knopf:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,230,170,.25), 0 1px 0 #3a2614; }
 .menue-knopf:disabled { cursor: default; color: #a8916c; border-color: #8a7444; filter: saturate(.4); opacity: .7; }
 .menue-frage { margin: 0 0 6px; font-size: 17px; line-height: 1.45; color: #f3e6c4; }
+
+/* Forschung: Platzhalter-Baum (Design legt Lukas später fest) */
+.forschung-baum { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 12px 0; }
+.forschung-knoten { width: 260px; border: 2px solid #cfc9bb; border-radius: 10px; padding: 10px 12px; background: #faf7f0; }
+.forschung-knoten.erforscht { border-color: #6c9a5b; }
+.forschung-knoten.laeuft { border-color: #2d69be; }
+.forschung-knoten.gesperrt { opacity: .6; }

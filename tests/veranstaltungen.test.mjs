@@ -74,6 +74,7 @@ console.log('Platz-Tests bestanden.');
   // Vormittag: alle 10 kommen (Haltung 100, Zufall 0)
   zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
   assert.equal(z.letzterGottesdienst.besucher, 10);
+  assert.equal(z.heiligkeit, 10);   // Forschungsbaum: 1 Heiligkeit pro Gottesdienstbesucher
   const kollekteVormittag = z.wochenbuch.einnahmen.kollekte;
   assert.ok(kollekteVormittag > 0);
   // Abend: Chance = Haltung × Vorliebe × 0,5 (schon da gewesen). Zufall 0,4: Lobpreis-Fans (0,5) kommen, die anderen (0) nicht.
@@ -84,6 +85,7 @@ console.log('Platz-Tests bestanden.');
   zeitVorruecken(z, aus(z), SO + 19 * 60 + 190 - z.minuten, () => 0.4);
   assert.equal(z.letzterGottesdienst.besucher, 5);
   assert.equal(z.letzterGottesdienst.platz, 1);
+  assert.equal(z.heiligkeit, 15);   // Lobpreisgottesdienst zählt genauso
   // Am Abend kommt Kollekte dazu (ohne Sonntagvormittag-Bonus)
   assert.ok(z.wochenbuch.einnahmen.kollekte > kollekteVormittag);
   assert.deepEqual(z.besucher.map(b => b.zufriedenheit), haltungVorher);   // Haltung war schon 100 (Obergrenze)

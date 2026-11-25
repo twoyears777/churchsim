@@ -29,6 +29,8 @@ import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
+import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
+import { HEILIGKEIT } from '../inhalte/forschung.js';
 import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
@@ -53,7 +55,7 @@ export const SPEICHER_VERSION = 3;          // Spielstand-Format (3 = Echtzeit, 
 // ---- Spielstand anlegen ----
 export function spielAnlegen(z, zufall = Math.random) {
   personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); besucherAnlegen(z, zufall); zeitAnlegen(z);
-  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z);
+  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); forschungAnlegen(z);
   return z;
 }
 // Neues Spiel: Pastor (aus der Inhaltsdatei) und die Start-Ehrenamtlichen (z. B. Frau des Pastors); sie stehen am Tor.
@@ -337,6 +339,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     },
     // Fest-Menü „Diesmal nicht“ (oder geplantes Sonderevent absagen) → 'ok'
     festAbsagen(schluessel) { return festAbsagen(z, schluessel); },
+    // Forschungsbaum: starten → 'ok' | 'keine' | 'erforscht' | 'laeuft' | 'gesperrt' | 'besetzt' | 'geld' | 'heiligkeit'
+    forschungStarten(id) { return forschungStarten(z, id); },
+    // Laufende Forschung abbrechen (Geld und Heiligkeit sind weg) → 'ok' | 'keine'
+    forschungAbbrechen() { return forschungAbbrechen(z); },
     // Seelsorge-Fenster → 'ok' | 'keine' | 'geld'
     seelsorgeAblehnen() { return seelsorgeAblehnen(z); },
     seelsorgeRat(nr) { return seelsorgeRaten(z, nr, zufall); },
@@ -397,7 +403,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         woche: zp.woche + 1, tag: zp.tag, datum: tagAnzeige(Math.floor(z.minuten / TAG_MIN)).datum, stunde: zp.stunde, minute: zp.minute, tageBisSonntag: tageBisSonntag(z.minuten),
         naechstesEvent: naechstesEvent(z, raeume),   // läuft gerade eins / das nächste mit Minuten bis Beginn / null
         sonntag: sonntagDerWoche(zp.woche), kirchenjahr: kirchenjahrStand(zp.woche),
-        tempo: z.tempo, konto: z.konto, bekanntheit: z.bekanntheit,
+        tempo: z.tempo, konto: z.konto, bekanntheit: z.bekanntheit, heiligkeit: z.heiligkeit, heiligkeitProBesucher: HEILIGKEIT.proBesucher,
         finanzen: finanzPrognose(z, raeume),
         letzterGottesdienst: lg ? { besucher: lg.besucher, heim: lg.heim, ausgefallen: lg.ausgefallen } : null,
         bekannteBesucher: z.besucher.length,
@@ -409,6 +415,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         meldung: neuesteMeldung(z)   // z. B. jemand ist neugierig am Tor stehen geblieben, zu wenig Geld für den Kaffee-Einkauf
       };
     },
+    // Forschungs-Fenster: Heiligkeit, Kontostand und alle Forschungen mit Zustand, Kosten, Dauer (echte Sekunden bei x1) und Fortschritt
+    forschungInfo() { return { heiligkeit: z.heiligkeit, konto: z.konto, forschungen: forschungListe(z) }; },
     // Finanz-Fenster: diese Woche (nach Kategorien, Kirchkaffee im Detail), Kassenbuch der Woche, Verlauf früherer Wochen.
     // Wochen und Zeiten wie überall in der Anzeige: Woche ab 1, Tag 0 = Montag. Namen von Möbeln/Veranstaltungen kommen aus den Inhaltsdateien.
     finanzInfo() {

@@ -4,7 +4,7 @@ export const KOLLEKTE_PRO_BESUCHER = 1;     // € pro Besucher im Gottesdienst
 
 // Kategorien
 export const EINNAHMEN = { kollekte: 'Kollekte', kirchkaffee: 'Kirchkaffee', rueckerstattung: 'Rückerstattung', spende: 'Spende', dauerspende: 'Dauerspenden' };
-export const AUSGABEN = { moebel: 'Möbel', kaffee: 'Kaffee', seelsorge: 'Seelsorge', plakat: 'Plakat', einzugsgebiet: 'Einzugsgebiet' };
+export const AUSGABEN = { moebel: 'Möbel', kaffee: 'Kaffee', seelsorge: 'Seelsorge', plakat: 'Plakat', einzugsgebiet: 'Einzugsgebiet', forschung: 'Forschung' };   // Forschung: ENTWURF von Claude
 
 // Finanzübersicht (Spielprinzip vom 25.11.2026: Fenster mit dieser Woche, Kassenbuch und Verlauf)
 export const VERLAUF_WOCHEN = 8;     // Platzhalter von Claude: so viele vergangene Wochen zeigt der Verlauf
