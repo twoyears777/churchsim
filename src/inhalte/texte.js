@@ -153,6 +153,37 @@ export const TEXTE = {
     neugier: (grund, wert, faktor) => `Passanten am Tor werden neugierig: ${grund} + halbe Bekanntheit → jetzt ${wert} (mit Plakat ${faktor}×)`
   },
 
+  // ---- Finanz-Fenster (Spielprinzip 25.11.2026) – ENTWURF von Claude, Lukas formuliert selbst ----
+  finanzFenster: {
+    titel: 'Finanzen',
+    kontostand: euro => `Kontostand: ${euro}`,
+    dieseWoche: n => `Diese Woche (Woche ${n})`,
+    einnahmen: 'Einnahmen',
+    ausgaben: 'Ausgaben',
+    keine: 'Noch nichts',
+    summe: 'Summe',
+    saldo: 'Ergebnis der Woche',
+    voraussichtlich: (ein, aus) => `Voraussichtlich bis Sonntag: Einnahmen ${ein}, Ausgaben ${aus}`,
+    kaffee: 'Kirchkaffee diese Woche',
+    kaffeeGottesdienst: 'Verkauft nach Gottesdiensten',
+    kaffeeOeffnungszeit: 'Verkauft in eigenen Öffnungszeiten',
+    kaffeeVerkauft: 'Verkauft gesamt',
+    kaffeeEinkauf: 'Einkauf im Laden',
+    kaffeeGewinn: 'Gewinn',
+    kaffeeGewinnInfo: 'Verkauf minus Einkauf. Eingekaufter Kaffee kann auch erst später verkauft werden.',
+    tassen: n => `${n} ${n === 1 ? 'Tasse' : 'Tassen'}`,
+    verlauf: 'Verlauf',
+    verlaufInfo: n => `Die letzten ${n} Wochen`,
+    verlaufLeer: 'Noch keine abgeschlossene Woche.',
+    spalten: { woche: 'Woche', einnahmen: 'Einnahmen', ausgaben: 'Ausgaben', saldo: 'Ergebnis', kaffee: 'Kirchkaffee', kaffeeGewinn: 'Kaffee-Gewinn', konto: 'Kontostand' },
+    laeuft: 'läuft',
+    kassenbuch: 'Kassenbuch diese Woche',
+    kassenbuchLeer: 'Noch keine Buchungen in dieser Woche.',
+    // Zusatz im Kassenbuch hinter der Kategorie
+    anlass: { gottesdienst: 'nach dem Gottesdienst', oeffnungszeit: 'Öffnungszeit', einkauf: 'Einkauf im Laden' },
+    was: { abriss: 'Abriss', verbessern: 'verbessert', rueckgaengig: 'Rückgängig gemacht', bus: 'Bushaltestelle', werbekampagne: 'Werbekampagne' }
+  },
+
   // ---- Versionsnummer unten links und Fenster „Changelog“ (Lukas' Wahl, 25.11.) ----
   changelog: {
     version: v => `Version ${v}`,

@@ -14,7 +14,8 @@ import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as k
   alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
-import { finanzenAnlegen, kannBezahlen, buchen } from './finanzen.js';
+import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht } from './finanzen.js';
+import { EINNAHMEN, AUSGABEN, VERLAUF_WOCHEN } from '../inhalte/finanzen.js';
 import { besucherAnlegen } from './besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten } from './zeit.js';
 import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, programmVon,
@@ -283,8 +284,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       for (const m of moebel) { const jetzt = moebelAuf(z, m.x, m.y); if (jetzt && jetzt.art === m.art && 'fuellung' in jetzt) m.fuellung = jetzt.fuellung; }
       Object.assign(z, { zellen, raumTyp, veranstaltung, moebel, kaffeeZeiten: kaffeeZeiten || {} });
       for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt) { p.x = alt.x; p.y = alt.y; } }
-      if (e.geld < 0) buchen(z, 'einnahmen', 'rueckerstattung', -e.geld);
-      if (e.geld > 0) buchen(z, 'ausgaben', 'moebel', e.geld);
+      if (e.geld < 0) buchen(z, 'einnahmen', 'rueckerstattung', -e.geld, { was: 'rueckgaengig' });
+      if (e.geld > 0) buchen(z, 'ausgaben', 'moebel', e.geld, { was: 'rueckgaengig' });
       personenPruefen(z); raeume = raeumeAuswerten(z);
       return true;
     },
@@ -355,6 +356,22 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         beschaeftigt: z.laeufe.some(L => L.phase !== 'ende') || anfrageOffen(z) || z.kaffee.kunden.length > 0,
         seelsorge: seelsorgeLage(z),   // offene Seelsorge-Anfrage mit Status der Person (sonst null)
         meldung: neuesteMeldung(z)   // z. B. jemand ist neugierig am Tor stehen geblieben, zu wenig Geld für den Kaffee-Einkauf
+      };
+    },
+    // Finanz-Fenster: diese Woche (nach Kategorien, Kirchkaffee im Detail), Kassenbuch der Woche, Verlauf früherer Wochen.
+    // Wochen und Zeiten wie überall in der Anzeige: Woche ab 1, Tag 0 = Montag. Namen von Möbeln/Veranstaltungen kommen aus den Inhaltsdateien.
+    finanzInfo() {
+      const f = finanzUebersicht(z), prog = finanzPrognose(z, raeume);
+      const name = (liste, id) => ((liste.find(x => x.id === id) || {}).name) || null;
+      return {
+        konto: f.konto, prognose: prog, namen: { einnahmen: EINNAHMEN, ausgaben: AUSGABEN }, verlaufWochen: VERLAUF_WOCHEN,
+        woche: { ...f.woche, woche: (f.woche.woche ?? zeitpunkt(z.minuten).woche) + 1 },
+        buchungen: f.buchungen.map(b => {
+          const t = b.minuten === null ? null : zeitpunkt(b.minuten);
+          return { ...b, tag: t ? t.tag : null, stunde: t ? t.stunde : null, minute: t ? t.minute : null,
+            moebelName: b.moebel ? name(MOEBEL, b.moebel) : null, veranstaltungName: b.veranstaltung ? name(VERANSTALTUNGEN, b.veranstaltung) : null };
+        }),
+        verlauf: f.verlauf.map(w => ({ ...w, woche: w.woche + 1 }))
       };
     },
     // Bekanntheit-Fenster: woher sie kommt, wie sie sich entwickelt hat und was sie bewirkt

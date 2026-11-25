@@ -16,7 +16,7 @@ import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
 import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, musikLevel, musikErfahrungDazu } from './moebel.js';
-import { buchen, summe } from './finanzen.js';
+import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { werKommt, kommChance, besuchChance, lobpreisVorliebe, kaffeeVorliebe, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
@@ -193,10 +193,10 @@ export function seelsorgeGesperrt(z, raeume = raeumeVon(z)) {
   const t = naechsterTermin(z, raeume);
   return !!t && z.minuten >= t.beginn - SEELSORGE.sperreVorGottesdienst && leitetPastor(z, raeume, t);
 }
-// Neue Woche (Montag 0:00): Wochenbuch für die Seitenleiste leeren
+// Neue Woche (Montag 0:00): alte Woche in den Finanz-Verlauf, Wochenbuch leeren
 function wochenbuchPruefen(z) {
   const w = zeitpunkt(z.minuten).woche;
-  if (z.buchWoche !== w) { z.buchWoche = w; z.wochenbuch = { einnahmen: {}, ausgaben: {} }; }
+  if (z.buchWoche !== w) wocheWechseln(z, w);
   // Bekanntheit am Ende jeder Woche merken (Kurve im Bekanntheit-Fenster); alte Spielstände beginnen ab jetzt
   if (!Array.isArray(z.bekanntheitVerlauf)) z.bekanntheitVerlauf = [];
   const V = z.bekanntheitVerlauf;
@@ -297,7 +297,7 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   const info = terminInfo(z, raeume, L);
   if (info && info.g.ausstattung.musik && info.g.spieler) musikErfahrungDazu(info.g.spieler);
   const betrag = Math.round(summeKollekte * zeitFaktor(L.plan));
-  if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag);
+  if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag, { veranstaltung: L.art || 'gottesdienst' });
   bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
   // Wer will Kaffee? Chance = Kaffee-Wert. Die stellen sich im Kirchkaffee an (ohne Kirchkaffee: kein Kaffee, −10 am Ende).
   const wollen = [];

@@ -188,3 +188,24 @@ button.abriss-knopf[aria-pressed="true"] { background: #b3261e; color: #fff; bor
 
 /* Kirchkaffee-Fenster: Öffnungszeiten als kleine Kacheln mit „Entfernen“ */
 .schicht .klein-knopf { margin-top: 6px; }
+
+/* Finanzen: Seitenleiste anklickbar, Finanz-Fenster (25.11.2026) – Platzhalter-Design */
+.seitenleiste .finanzen.anklickbar { cursor: pointer; border-radius: 6px; outline-offset: 2px; }
+.seitenleiste .finanzen.anklickbar:hover { background: #45443f; }
+.seitenleiste .finanzen.anklickbar td:first-child { padding-left: 6px; }
+.seitenleiste .finanzen.anklickbar td.zahl { padding-right: 6px; }
+.maske.breit.sehr-breit { width: min(760px, calc(100% - 24px)); }
+.inhalt .spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.inhalt h4 { margin: 6px 0 2px; font-size: 13px; font-weight: 600; color: #6b665b; text-transform: uppercase; letter-spacing: .03em; }
+.finanzen.hell tr.summe td { font-weight: 600; }
+.finanzen.hell td.leer { color: #8a857a; font-style: italic; }
+.finanzen.drei td.zahl { padding-left: 12px; }
+.finanzen.verlauf { font-size: 13px; }
+.finanzen.verlauf th { text-align: right; font-weight: 600; padding: 0 0 4px 8px; white-space: nowrap; }
+.finanzen.verlauf th:first-child { text-align: left; padding-left: 0; }
+.finanzen.verlauf td.zahl { padding-left: 8px; }
+.finanzen.verlauf tr.jetzt td { background: #ebe5d8; }
+.finanzen.verlauf small { color: #6b665b; }
+.inhalt ul.kassenbuch { max-height: 240px; overflow-y: auto; font-size: 13px; }
+.inhalt ul.kassenbuch b.ok { color: #2e7d32; } .inhalt ul.kassenbuch b.fehlt { color: #b3261e; }
+.finanzen.hell.abstand { margin-bottom: 6px; }

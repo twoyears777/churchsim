@@ -66,7 +66,7 @@ export function busAusbauen(z) {
   if (z.bekanntheit < n.abBekanntheit) return 'bekanntheit';
   if (!kannBezahlen(z, n.preis)) return 'geld';
   z.bus = n.stufe;
-  buchen(z, 'ausgaben', 'einzugsgebiet', n.preis);
+  buchen(z, 'ausgaben', 'einzugsgebiet', n.preis, { was: 'bus' });
   return 'ok';
 }
 // Überregionale Werbekampagne → 'ok' | 'gekauft' | 'bekanntheit' | 'geld'
@@ -75,6 +75,6 @@ export function werbekampagneKaufen(z) {
   if (z.bekanntheit < WERBEKAMPAGNE.abBekanntheit) return 'bekanntheit';
   if (!kannBezahlen(z, WERBEKAMPAGNE.preis)) return 'geld';
   z.werbekampagne = true;
-  buchen(z, 'ausgaben', 'einzugsgebiet', WERBEKAMPAGNE.preis);
+  buchen(z, 'ausgaben', 'einzugsgebiet', WERBEKAMPAGNE.preis, { was: 'werbekampagne' });
   return 'ok';
 }

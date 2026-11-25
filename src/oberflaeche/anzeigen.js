@@ -29,6 +29,9 @@ export function anzeigenEinrichten() {
   $('menschenAuf').textContent = TEXTE.menschen.knopf;
   $('menschenAuf').addEventListener('click', () => fensterOeffnen({ art: 'menschen' }));
   $('bekanntheitAuf').addEventListener('click', () => fensterOeffnen({ art: 'bekanntheit' }));
+  // Finanzen in der Seitenleiste → Finanz-Fenster (Maus oder Enter/Leertaste)
+  $('finanzenAuf').addEventListener('click', () => fensterOeffnen({ art: 'finanzen' }));
+  $('finanzenAuf').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fensterOeffnen({ art: 'finanzen' }); } });
   for (const id of ['hilfeAuf', 'hilfeEditor']) {   // Hilfe: unten links und in der Werkzeugleiste beim Bauen
     $(id).textContent = HILFE.knopf;
     $(id).addEventListener('click', () => fensterOeffnen({ art: 'hilfe' }));

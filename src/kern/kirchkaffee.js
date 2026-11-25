@@ -248,7 +248,7 @@ function ohneKaffee(z, k, t) {
 }
 // Kaffee übergeben: 1 €, +5 Haltung, dann auf einen Stehplatz (Gottesdienst-Gäste bis zum Ende, Passanten eine Weile)
 function uebergeben(z, stationen, s, k, t) {
-  buchen(z, 'einnahmen', 'kirchkaffee', PREIS_TASSE);
+  buchen(z, 'einnahmen', 'kirchkaffee', PREIS_TASSE, { tassen: 1, anlass: k.lauf ? 'gottesdienst' : 'oeffnungszeit' });
   zahlZeigen(z, posBei(k.bew, t), PREIS_TASSE);
   const m = menschVon(z, k.id);
   if (m) zufriedenheitAendern(m, AENDERUNG.kaffeeJa);
@@ -322,7 +322,7 @@ function stationSchritt(z, stationen, s, t) {
   }
   if (a && a.art === 'einkauf') {
     if (a.phase === 'hin' && da) {
-      if (kannBezahlen(z, a.preis)) { buchen(z, 'ausgaben', 'kaffee', a.preis); zahlZeigen(z, hier, -a.preis); delete K.gemeldet[id]; }
+      if (kannBezahlen(z, a.preis)) { buchen(z, 'ausgaben', 'kaffee', a.preis, { tassen: a.menge, anlass: 'einkauf' }); zahlZeigen(z, hier, -a.preis); delete K.gemeldet[id]; }
       else { a.menge = 0; keinGeld(z, p, t); }
       a.phase = 'zurueck'; geh(s.standMaschine); return true;
     }

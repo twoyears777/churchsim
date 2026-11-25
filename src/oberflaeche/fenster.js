@@ -25,9 +25,10 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, hilfe: hilfeFenster }[f.art](f);
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, hilfe: hilfeFenster, finanzen: finanzFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
-  m.classList.toggle('breit', f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe');
+  m.classList.toggle('sehr-breit', f.art === 'finanzen');
+  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
 }
@@ -263,6 +264,60 @@ function menschenFenster(f) {
       <td>${T.status[m.status]}</td></tr>`).join('');
   return `<h2>${T.titel}</h2>
     ${liste.length ? `<table class="menschen"><tr>${kopf}</tr>${zeilen}</table>` : `<p class="leer">${T.leer}</p>`}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Finanzen: diese Woche nach Kategorien, Kirchkaffee im Detail, Verlauf früherer Wochen, Kassenbuch. Alle Zahlen kommen vom Spiel.
+const geld = n => `${n.toLocaleString('de-DE', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })} €`;
+const mitVorzeichen = n => (n > 0 ? '+' : n < 0 ? '−' : '') + geld(Math.abs(n));
+const vorzeichenKlasse = n => n > 0 ? 'ok' : n < 0 ? 'fehlt' : '';
+const plus = n => (n ? '+' : '') + geld(n), minus = n => (n ? '−' : '') + geld(n);   // bei 0 ohne Vorzeichen
+function finanzFenster() {
+  const T = TEXTE.finanzFenster, f = ui.spiel.finanzInfo(), w = f.woche, k = w.kaffee, { einnahmen: EINNAHMEN, ausgaben: AUSGABEN } = f.namen;
+  const teil = (posten, namen, vz) => {
+    const ids = Object.keys(posten).filter(id => posten[id]);
+    return ids.length ? ids.map(id => `<tr><td>${namen[id] || id}</td><td class="zahl">${vz(posten[id])}</td></tr>`).join('')
+      : `<tr><td colspan="2" class="leer">${T.keine}</td></tr>`;
+  };
+  const woche = `<div class="spalten">
+      <div><h4>${T.einnahmen}</h4><table class="finanzen hell">${teil(w.einnahmen, EINNAHMEN, plus)}
+        <tr class="summe"><td>${T.summe}</td><td class="zahl">${plus(w.summeEinnahmen)}</td></tr></table></div>
+      <div><h4>${T.ausgaben}</h4><table class="finanzen hell">${teil(w.ausgaben, AUSGABEN, minus)}
+        <tr class="summe"><td>${T.summe}</td><td class="zahl">${minus(w.summeAusgaben)}</td></tr></table></div>
+    </div>
+    <table class="finanzen hell abstand"><tr class="summe"><td>${T.saldo}</td><td class="zahl ${vorzeichenKlasse(w.saldo)}">${mitVorzeichen(w.saldo)}</td></tr></table>
+    <p class="unter">${T.voraussichtlich(euro(f.prognose.einnahmen), euro(f.prognose.ausgaben))}</p>`;
+  const kz = (text, x, vz) => `<tr><td>${text}</td><td class="zahl">${T.tassen(x.tassen)}</td><td class="zahl">${vz(x.euro)}</td></tr>`;
+  const kaffee = `<table class="finanzen hell drei">
+      ${kz(T.kaffeeGottesdienst, k.gottesdienst, plus)}${kz(T.kaffeeOeffnungszeit, k.oeffnungszeit, plus)}
+      <tr class="summe">${kz(T.kaffeeVerkauft, k.verkauft, plus).slice(4)}
+      ${kz(T.kaffeeEinkauf, k.einkauf, minus)}
+      <tr class="summe"><td>${T.kaffeeGewinn}</td><td></td><td class="zahl ${vorzeichenKlasse(k.gewinn)}">${mitVorzeichen(k.gewinn)}</td></tr></table>
+    <p class="unter">${T.kaffeeGewinnInfo}</p>`;
+  const S = T.spalten;
+  const zeile = (x, jetzt) => `<tr${jetzt ? ' class="jetzt"' : ''}><td>${x.woche}${jetzt ? ` <small>(${T.laeuft})</small>` : ''}</td>
+    <td class="zahl">${plus(x.summeEinnahmen)}</td><td class="zahl">${minus(x.summeAusgaben)}</td>
+    <td class="zahl ${vorzeichenKlasse(x.saldo)}">${mitVorzeichen(x.saldo)}</td>
+    <td class="zahl">${T.tassen(x.kaffee.verkauft.tassen)}</td><td class="zahl ${vorzeichenKlasse(x.kaffee.gewinn)}">${mitVorzeichen(x.kaffee.gewinn)}</td>
+    <td class="zahl">${geld(x.konto)}</td></tr>`;
+  const verlauf = `<table class="finanzen hell verlauf"><tr><th>${S.woche}</th><th>${S.einnahmen}</th><th>${S.ausgaben}</th><th>${S.saldo}</th><th>${S.kaffee}</th><th>${S.kaffeeGewinn}</th><th>${S.konto}</th></tr>
+      ${zeile({ ...w, konto: f.konto }, true)}${f.verlauf.map(x => zeile(x, false)).join('')}</table>
+    ${f.verlauf.length ? '' : `<p class="leer">${T.verlaufLeer}</p>`}`;
+  const zusatz = b => b.anlass ? T.anlass[b.anlass] : b.moebelName ? b.moebelName + (b.was === 'verbessern' ? ' ' + T.was.verbessern : '')
+    : b.veranstaltungName || (b.was ? T.was[b.was] : '');
+  const uhr = b => b.tag === null ? '' : `${TEXTE.tageKurz[b.tag]} ${String(b.stunde).padStart(2, '0')}:${String(b.minute).padStart(2, '0')} · `;
+  const kassenbuch = f.buchungen.length
+    ? `<ul class="protokoll kassenbuch">${f.buchungen.map(b => {
+        const name = (b.seite === 'einnahmen' ? EINNAHMEN : AUSGABEN)[b.kategorie] || b.kategorie, z = zusatz(b);
+        const tassen = b.tassen && b.anlass === 'einkauf' ? ` (${T.tassen(b.tassen)})` : '';
+        return `<li><span>${uhr(b)}${name}${z ? ' · ' + z : ''}${tassen}</span><b class="${b.seite === 'einnahmen' ? 'ok' : 'fehlt'}">${b.seite === 'einnahmen' ? '+' : '−'}${geld(b.betrag)}</b></li>`;
+      }).join('')}</ul>`
+    : `<p class="leer">${T.kassenbuchLeer}</p>`;
+  return `<h2>${T.titel}</h2><p class="unter staerker">${T.kontostand(geld(f.konto))}</p>
+    <h3>${T.dieseWoche(w.woche)}</h3>${woche}
+    <h3>${T.kaffee}</h3>${kaffee}
+    <h3>${T.verlauf}</h3><p class="unter">${T.verlaufInfo(f.verlaufWochen)}</p>${verlauf}
+    <h3>${T.kassenbuch}</h3>${kassenbuch}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 

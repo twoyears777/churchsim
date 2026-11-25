@@ -43,7 +43,7 @@ export function moebelKaufen(z, art, x, y, istBesetzt = () => false, dreh = fals
   if (typ.groesse && dreh) m.dreh = true;
   if (typeof typ.fassung === 'number') m.fuellung = typ.startFuellung || 0;   // Kaffeemaschine: Füllstand in Tassen
   z.moebel.push(m);
-  if (preis) buchen(z, 'ausgaben', 'moebel', preis);
+  if (preis) buchen(z, 'ausgaben', 'moebel', preis, { moebel: art });
   return 'ok';
 }
 // Was ein Möbel gekostet hat: Kaufpreis, bei Stühlen plus alle Verbesserungen
@@ -56,7 +56,7 @@ export function moebelWert(m) {
 export function moebelAbreissen(z, x0, y0, x1, y1) {
   const weg = moebelEntfernen(z, x0, y0, x1, y1);
   const betrag = weg.reduce((s, m) => s + moebelWert(m), 0);
-  if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag);
+  if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag, { was: 'abriss' });
   return betrag;
 }
 // Nach dem Bauen: Möbel, über die eine Wand gebaut wurde, verschwinden.
@@ -79,7 +79,7 @@ export function stuhlVerbessern(z, m) {
   if (!n) return 'max';
   if (!kannBezahlen(z, n.upgrade)) return 'geld';
   m.stufe = n.stufe;
-  buchen(z, 'ausgaben', 'moebel', n.upgrade);
+  buchen(z, 'ausgaben', 'moebel', n.upgrade, { moebel: 'stuhl', was: 'verbessern' });
   return 'ok';
 }
 // Alle Stühle eines Raums je eine Stufe höher (nur, wenn das Geld für alle reicht)
