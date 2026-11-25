@@ -28,6 +28,8 @@ import { lobpreisVorliebe, kaffeeVorliebe } from './besucher.js';
 import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
+import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
+import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
@@ -49,7 +51,7 @@ export const SPEICHER_VERSION = 3;          // Spielstand-Format (3 = Echtzeit, 
 // ---- Spielstand anlegen ----
 export function spielAnlegen(z, zufall = Math.random) {
   personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); besucherAnlegen(z, zufall); zeitAnlegen(z);
-  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z);
+  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z);
   return z;
 }
 // Neues Spiel: Pastor (aus der Inhaltsdatei) und die Start-Ehrenamtlichen (z. B. Frau des Pastors); sie stehen am Tor.
@@ -395,8 +397,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         buchungen: f.buchungen.map(b => {
           const t = b.minuten === null ? null : zeitpunkt(b.minuten);
           return { ...b, tag: t ? t.tag : null, stunde: t ? t.stunde : null, minute: t ? t.minute : null,
-            moebelName: b.moebel ? name(MOEBEL, b.moebel) : null, veranstaltungName: b.veranstaltung ? name(VERANSTALTUNGEN, b.veranstaltung) : null };
+            moebelName: b.moebel ? name(MOEBEL, b.moebel) : null, veranstaltungName: b.veranstaltung ? name(VERANSTALTUNGEN, b.veranstaltung) : null,
+            spenderName: b.spender ? ((mensch(z, b.spender) || {}).voll || null) : null };
         }),
+        // Dauerspender: wer spendet wie viel (diesen Montag), was nächsten Montag kommt, seit welcher Woche (ab 1); Regeln zum Anzeigen
+        dauerspender: dauerspenderListe(z).map(d => ({ ...d, seit: d.seit + 1 })),
+        dauerspendeRegeln: { ...DAUERSPENDE, chance: Math.round(DAUERSPENDE.chance * 100) },
         verlauf: f.verlauf.map(w => ({ ...w, woche: w.woche + 1 }))
       };
     },

@@ -317,7 +317,13 @@ function finanzFenster() {
   const verlauf = `<table class="finanzen hell verlauf"><tr><th>${S.woche}</th><th>${S.einnahmen}</th><th>${S.ausgaben}</th><th>${S.saldo}</th><th>${S.kaffee}</th><th>${S.kaffeeGewinn}</th><th>${S.konto}</th></tr>
       ${zeile({ ...w, konto: f.konto }, true)}${f.verlauf.map(x => zeile(x, false)).join('')}</table>
     ${f.verlauf.length ? '' : `<p class="leer">${T.verlaufLeer}</p>`}`;
-  const zusatz = b => b.anlass ? T.anlass[b.anlass] : b.moebelName ? b.moebelName + (b.was === 'verbessern' ? ' ' + T.was.verbessern : '')
+  const DS = T.dauerspenderSpalten, ds = f.dauerspender;
+  const dauerspender = `<p class="unter">${T.dauerspenderInfo(f.dauerspendeRegeln)}</p>` + (ds.length
+    ? `<table class="finanzen hell verlauf"><tr><th>${DS.name}</th><th>${DS.betrag}</th><th>${DS.naechster}</th><th>${DS.seit}</th><th>${DS.haltung}</th></tr>
+        ${ds.map(d => `<tr><td>${esc(d.name || '–')}</td><td class="zahl">${plus(d.betrag)}</td><td class="zahl">${plus(d.naechster)}</td><td class="zahl">${d.seit}</td><td class="zahl">${d.haltung ?? '–'}</td></tr>`).join('')}
+        <tr class="summe"><td>${T.dauerspenderSumme}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.betrag, 0))}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.naechster, 0))}</td><td></td><td></td></tr></table>`
+    : `<p class="leer">${T.dauerspenderLeer}</p>`);
+  const zusatz = b => b.spenderName ? esc(b.spenderName) : b.anlass ? T.anlass[b.anlass] : b.moebelName ? b.moebelName + (b.was === 'verbessern' ? ' ' + T.was.verbessern : '')
     : b.veranstaltungName || (b.was ? T.was[b.was] : '');
   const uhr = b => b.tag === null ? '' : `${TEXTE.tageKurz[b.tag]} ${String(b.stunde).padStart(2, '0')}:${String(b.minute).padStart(2, '0')} · `;
   const kassenbuch = f.buchungen.length
@@ -330,6 +336,7 @@ function finanzFenster() {
   return `<h2>${T.titel}</h2><p class="unter staerker">${T.kontostand(geld(f.konto))}</p>
     <h3>${T.dieseWoche(w.woche)}</h3>${woche}
     <h3>${T.kaffee}</h3>${kaffee}
+    <h3>${T.dauerspender}</h3>${dauerspender}
     <h3>${T.verlauf}</h3><p class="unter">${T.verlaufInfo(f.verlaufWochen)}</p>${verlauf}
     <h3>${T.kassenbuch}</h3>${kassenbuch}
     <div class="zeile"><button data-zu>Schließen</button></div>`;

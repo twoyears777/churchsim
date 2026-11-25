@@ -193,6 +193,12 @@ export const TEXTE = {
     kassenbuchLeer: 'Noch keine Buchungen in dieser Woche.',
     // Zusatz im Kassenbuch hinter der Kategorie
     anlass: { gottesdienst: 'nach dem Gottesdienst', oeffnungszeit: 'Öffnungszeit', einkauf: 'Einkauf im Laden' },
+    // Dauerspender (ENTWURF von Claude, 25.11. – Lukas formuliert selbst)
+    dauerspender: 'Dauerspender',
+    dauerspenderInfo: r => `Wer montags eine Haltung ab ${r.abHaltung} hat, wird mit ${r.chance} % Chance Dauerspender. Die Spenden kommen montags um ${r.stunde}:00 Uhr: zuerst ${r.start} €, jede Woche ${r.steigerung} € mehr, höchstens ${r.max} €. Sinkt die Haltung unter ${r.abHaltung}, endet die Dauerspende am nächsten Montag.`,
+    dauerspenderLeer: 'Noch keine Dauerspender.',
+    dauerspenderSumme: 'Summe pro Woche',
+    dauerspenderSpalten: { name: 'Name', betrag: 'Spende diese Woche', naechster: 'Nächsten Montag', seit: 'Seit Woche', haltung: 'Haltung' },
     was: { abriss: 'Abriss', verbessern: 'verbessert', rueckgaengig: 'Rückgängig gemacht', bus: 'Bushaltestelle', werbekampagne: 'Werbekampagne' }
   },
 
