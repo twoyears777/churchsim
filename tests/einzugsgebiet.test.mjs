@@ -13,14 +13,14 @@ import { wandRechteck } from '../src/kern/karte.js';
 const saat = s => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 const torY = G.y + G.h - 1, torX = G.tor.x;
 
-// Start: Grenze 40, gezählt werden die 4 Start-Stammgäste
+// Start: Grenze 40, gezählt werden die 4 Start-Stammgäste (Pastor und Frau des Pastors nicht)
 {
   const z = neuesSpiel(saat(1));
   const e = einzugsgebiet(z);
   assert.equal(e.grenze, EINZUGSGEBIET.start);
   assert.equal(e.erreicht, 4);
-  // Ehrenamtliche aus Besuchern zählen mit, der Pastor nicht
-  z.personen.push({ id: 'ea1', x: 0, y: 0, daten: { name: 'X', art: 'ehrenamt' } });
+  // Ehrenamtliche aus Besuchern zählen mit
+  z.personen.push({ id: 'ea9', x: 0, y: 0, daten: { name: 'X', art: 'ehrenamt' } });
   assert.equal(erreicht(z), 5);
 }
 // Voll: keine neuen Passanten im Ort und keine ganz neuen Besucher über die Bekanntheit

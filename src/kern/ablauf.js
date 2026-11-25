@@ -7,7 +7,8 @@
 //   Beginn       Veranstaltung beginnt – nur, wenn ein Hauptamtlicher im Raum ist (und was sie sonst braucht). Sonst fällt sie aus.
 //   Beginn + 60  Gottesdienst zu Ende: Kollekte (Stuhl, Altar, Grünpflanzen, Musik), Bekanntheit; wer Kaffee will
 //                (Chance = Kaffee-Wert), stellt sich im Kirchkaffee an (Bedienung: kirchkaffee.js).
-//   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche, alle gehen heim.
+//                Wer keinen Kaffee will (oder keinen Platz in der Schlange bekommt), geht gleich nach dem Gottesdienst heim.
+//   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche.
 //                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
 import { VERANSTALTUNGEN, SONNTAGVORMITTAG, PLAETZE, ZWEITER_PLATZ_STANDARD } from '../inhalte/veranstaltungen.js';
 import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN } from '../inhalte/zeit.js';
@@ -25,7 +26,7 @@ import { NEUGIER } from '../inhalte/ort.js';
 import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { ortSchritt } from './ort.js';
 import { seelsorgeSchritt, anfrageOffen } from './seelsorge.js';
-import { kirchkaffeeZustand, kirchkaffeeOffen, gottesdienstKunden, kaffeeAktualisieren, kaffeeSchritt, naechsteSchicht, kaffeeAnlegen } from './kirchkaffee.js';
+import { kirchkaffeeZustand, kirchkaffeeOffen, gottesdienstKunden, kaffeeAktualisieren, kaffeeSchritt, naechsteSchicht, kaffeeAnlegen, zahlZeigen } from './kirchkaffee.js';
 import { fassung } from './moebel.js';
 import { faktorAmTag } from './kalender.js';
 import { FESTE, ZEITEN } from '../inhalte/kirchenjahr.js';
@@ -334,11 +335,17 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   // Dazu merkt sich jeder Gast, wie viel Haltung ihm Stuhl, Kanzel und Blumen bringen (wird am Ende gutgeschrieben).
   const liste = gottesdienstRaeume(z, raeume);
   let summeKollekte = 0;
-  for (const g of sitzend) { const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte; g.bonus = w.haltung; g.musikHaltung = w.musikHaltung; }
+  const faktor = zeitFaktor(L.plan) * terminFaktoren(L).kollekte;
+  // Über jedem Kopf erscheint kurz, was er gegeben hat (wie „+1 €“ beim Kaffee; auf Cent gerundet, gebucht wird die Summe auf ganze Euro).
+  for (const g of sitzend) {
+    const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte; g.bonus = w.haltung; g.musikHaltung = w.musikHaltung;
+    const gabe = Math.round(w.kollekte * faktor * 100) / 100;
+    if (gabe > 0) zahlZeigen(z, g.sitz, gabe);
+  }
   // Lobpreisteam: Wer die Gitarre gespielt hat, bekommt etwas Musik-Erfahrung.
   const info = terminInfo(z, raeume, L);
   if (info && info.g.ausstattung.musik && info.g.spieler) musikErfahrungDazu(info.g.spieler);
-  const betrag = Math.round(summeKollekte * zeitFaktor(L.plan) * terminFaktoren(L).kollekte);
+  const betrag = Math.round(summeKollekte * faktor);
   if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag, { veranstaltung: L.art || 'gottesdienst' });
   bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
   // Wer will Kaffee? Chance = Kaffee-Wert. Die stellen sich im Kirchkaffee an (ohne Kirchkaffee: kein Kaffee, −10 am Ende).
@@ -349,6 +356,7 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
     if (b && zufall() < kaffeeVorliebe(b)) { g.kaffee = { ergebnis: null }; wollen.push({ g, i }); }
   });
   if (!gottesdienstKunden(z, raeume, L, wollen)) for (const { g } of wollen) g.kaffee.ergebnis = 'keinPlatz';
+  L.gottesdienstEnde = z.minuten;   // wer keinen Kaffee will, geht ab jetzt nach Hause (bewegung.js)
   L.phase = 'kirchkaffee';
 }
 

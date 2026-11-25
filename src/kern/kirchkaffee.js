@@ -173,7 +173,9 @@ const TOR = () => {
 
 // ---- Menschen finden, Geld und Haltung ----
 const menschVon = (z, id) => z.besucher.find(b => b.id === id) || (z.ort ? z.ort.leute.find(p => p.id === id) : null) || null;
-function zahlZeigen(z, ort, betrag) {
+// Geld-Zahl über einem Kopf (Kaffee, Einkauf, Kollekte nach dem Gottesdienst)
+export function zahlZeigen(z, ort, betrag) {
+  kaffeeAnlegen(z);
   const K = z.kaffee;
   K.zahlen.push({ nr: ++K.nr, x: ort.x, y: ort.y, betrag, zeit: z.minuten });
 }

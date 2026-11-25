@@ -44,7 +44,7 @@ export function parkplaetzeAuswerten(z, gruppe = erkenneRaeume(z).gruppe) {
 
 // Wie viele Menschen die Gemeinde schon kennt: Besucher + Passanten im Ort + Ehrenamtliche aus Besuchern
 export function erreicht(z) {
-  const ehrenamt = (z.personen || []).filter(p => p.daten && p.daten.art === 'ehrenamt').length;
+  const ehrenamt = (z.personen || []).filter(p => p.daten && p.daten.art === 'ehrenamt' && !p.daten.start).length;   // Start-Ehrenamtliche zählen nicht
   return (z.besucher || []).length + (z.ort ? z.ort.leute.length : 0) + ehrenamt;
 }
 

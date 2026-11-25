@@ -8,7 +8,7 @@
 // Texte, Farben und Formatierung macht die Oberfläche; Regeln, Zahlen und Berechnungen macht nur der Kern.
 import { neuerZustand, LEER, WAND, TUER, idx, erkenneRaeume, pruefeRaum, raumTypVon, typZuweisen,
   abriss, tuerUmschalten as tuerSchalten } from './karte.js';
-import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
+import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
   alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand } from './moebel.js';
@@ -25,6 +25,7 @@ import { kaffeeAnlegen, kaffeeKundenPositionen, kaffeeMitarbeiterPosition, kaffe
   schichtHinzufuegen, schichtEntfernen, offenBei } from './kirchkaffee.js';
 import { PLAETZE, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { lobpreisVorliebe, kaffeeVorliebe } from './besucher.js';
+import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
@@ -51,7 +52,13 @@ export function spielAnlegen(z, zufall = Math.random) {
   ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z);
   return z;
 }
-export function neuesSpiel(zufall = Math.random) { return spielAnlegen(neuerZustand(), zufall); }
+// Neues Spiel: Pastor (aus der Inhaltsdatei) und die Start-Ehrenamtlichen (z. B. Frau des Pastors); sie stehen am Tor.
+// start: true – gehört von Anfang an dazu, zählt nicht zum Einzugsgebiet.
+export function neuesSpiel(zufall = Math.random) {
+  const z = spielAnlegen(neuerZustand(), zufall);
+  for (const d of START_EHRENAMTLICHE) personHinzufuegen(z, { ...d, start: true });
+  return z;
+}
 
 // Spielstand aus 0.1.1 (Runden) übernehmen: Gebäude, Möbel, Mitarbeiter und Geld bleiben,
 // Besucher und Zeit fangen neu an.

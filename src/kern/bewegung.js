@@ -1,7 +1,7 @@
 // Wo laufen die Figuren gerade? Wird aus der Spielzeit berechnet – so laufen alle bei x5 schneller
 // und stehen bei Pause still. Liefert nur Positionen, zeichnet nichts.
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
-import { LAUFTEMPO, ABSTAND } from '../inhalte/zeit.js';
+import { LAUFTEMPO, ABSTAND, DAUER } from '../inhalte/zeit.js';
 import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 
@@ -56,8 +56,13 @@ function laufPositionen(z, speicher, L) {
       return { id: g.id, name: g.name, x: ort.x, y: ort.y, sitzt: false };
     }
     if (g.kaffee && typeof g.kaffee.ab === 'number' && t >= g.kaffee.ab) return null;   // steht jetzt im Kirchkaffee an
-    if (L.phase === 'ende') {
-      const t2 = L.ende + i * ABSTAND * 0.5;
+    // Heimweg: wer keinen Kaffee will, gleich nach dem Gottesdienst; sonst (und bei Ausfall) am Ende.
+    // Alte Spielstände ohne gottesdienstEnde: Ende = Beginn + Dauer des Gottesdienstes.
+    const ohneKaffee = !L.ausgefallen && !(g.kaffee && typeof g.kaffee.ab === 'number');
+    const gdEnde = typeof L.gottesdienstEnde === 'number' ? L.gottesdienstEnde : L.beginn + DAUER.gottesdienst;
+    const heimAb = L.phase === 'kirchkaffee' && ohneKaffee ? gdEnde : L.phase === 'ende' ? (ohneKaffee ? gdEnde : L.ende) : null;
+    if (heimAb !== null) {
+      const t2 = heimAb + i * ABSTAND * 0.5;
       if (t >= t2) {
         const von = L.ausgefallen ? { x: Math.round(ort.x), y: Math.round(ort.y) } : ziel;
         ort = punktAufWeg(st(s + 'ende', von, start), (t - t2) * LAUFTEMPO);

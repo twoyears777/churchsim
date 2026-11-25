@@ -10,6 +10,8 @@ import { moebelSetzen, moebelAbreissen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 import { besuchChance, kommChance, lobpreisVorliebe } from '../src/kern/besucher.js';
 import { TAG_MIN, WOCHE_MIN } from '../src/kern/zeit.js';
+import { besucherPositionen } from '../src/kern/bewegung.js';
+import { kaffeeZahlen } from '../src/kern/kirchkaffee.js';
 
 const aus = z => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
 const raumBei = z => { const a = aus(z); return a.liste[a.gruppe[G.x + 5 + (G.y + 5) * z.w]]; };
@@ -149,3 +151,40 @@ console.log('Prognose-Tests bestanden.');
   assert.equal(info.verlauf.length, 2); assert.equal(info.protokoll[0].quelle, 'zufrieden');
 }
 console.log('Bekanntheit-Tests bestanden.');
+
+// Neues Spiel: Pastor und Frau des Pastors (Ehrenamtliche); alte Spielstände bekommen niemanden dazu
+{
+  const z = neuesSpiel(() => 0.3);
+  const ea = z.personen.filter(p => p.daten && p.daten.art === 'ehrenamt');
+  assert.equal(z.personen.length, 2); assert.equal(ea.length, 1);
+  assert.deepEqual([ea[0].daten.name, ea[0].daten.kuerzel, ea[0].daten.start], ['Frau des Pastors', 'F', true]);
+  assert.ok(!(ea[0].x === z.personen[0].x && ea[0].y === z.personen[0].y)); // steht nicht auf dem Pastor
+  z.personen = z.personen.filter(p => p.id === 'pastor');
+  const neu = spielStarten(JSON.stringify({ version: 3, zustand: z }), () => 0);
+  assert.equal(neu.lage().personen.length, 1);
+}
+console.log('Frau-des-Pastors-Tests bestanden.');
+
+// Nach dem Gottesdienst: Wer keinen Kaffee will, geht gleich heim (nicht erst nach dem Kirchkaffee);
+// über jedem Kopf erscheint kurz seine Kollekte (zusammen = gebuchte Kollekte).
+{
+  const z = gemeinde(), r = raumBei(z);
+  veranstaltungEinstellen(z, r, 'gottesdienst');
+  const speicher = new Map(), sitzen = () => besucherPositionen(z, speicher).filter(b => b.sitzt).length;
+  while (z.minuten < SO + 10 * 60 + 59) zeitVorruecken(z, aus(z), 1, () => 0);
+  assert.equal(sitzen(), 10);
+  assert.equal(kaffeeZahlen(z).length, 0);
+  zeitVorruecken(z, aus(z), 2, () => 0);                                  // 11:01: Gottesdienst zu Ende
+  const zahlen = kaffeeZahlen(z);
+  assert.equal(zahlen.length, 10);
+  const L = z.laeufe[0];
+  assert.deepEqual(zahlen.map(e => `${e.x},${e.y}`).sort(), L.gaeste.map(g => `${g.sitz.x},${g.sitz.y}`).sort());
+  assert.equal(Math.round(zahlen.reduce((s, e) => s + e.betrag, 0)), z.wochenbuch.einnahmen.kollekte);
+  zeitVorruecken(z, aus(z), 30, () => 0);
+  assert.equal(sitzen(), 0);                                              // alle auf dem Heimweg
+  assert.equal(L.phase, 'kirchkaffee');                                    // Abschluss (Zufriedenheit) bleibt bei +180
+  while (z.minuten < SO + 14 * 60 + 30) zeitVorruecken(z, aus(z), 1, () => 0);
+  assert.equal(z.laeufe.length, 1);                                       // der Ablauf läuft noch (Heimweg-Frist bis 15:00) ...
+  assert.equal(besucherPositionen(z, speicher).length, 0);                // ... aber alle sind schon zu Hause
+}
+console.log('Heimweg- und Kollekte-Zahlen-Tests bestanden.');

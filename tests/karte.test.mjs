@@ -176,7 +176,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     zeitVorruecken(z, aus(), SONNTAG_10 + 181 - z.minuten, () => 0);
     assert.equal(z.laeufe[0].gaeste.length, 7);                           // 4 bekannte + 3 neue (20 ÷ 10 × 1,2 Adventszeit = 2,4)
     assert.equal(z.laeufe[0].neueEhrenamtliche.length, 3);                 // die 3 mit Sitzplatz und 3. Besuch
-    assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 3);
+    assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 4);   // 3 neue + Frau des Pastors
     assert.equal(z.besucher.length, 4);   // 1 bekannter + 3 neue (3 wurden Ehrenamtliche)
   }
   // Wochenplan: Mittwochabend
@@ -280,7 +280,7 @@ import { spielStarten } from '../src/kern/spiel.js';
   assert.equal(spiel.wandVorschau(G.x + 19, G.y + 2, G.x + 25, G.y + 8).x0, G.x + 18);
   // Abfragen liefern Kopien: Ändern an der Antwort ändert das Spiel nicht
   const l = spiel.lage(); l.konto = 9999; l.personen.length = 0;
-  assert.equal(spiel.lage().konto, 50); assert.equal(spiel.lage().personen.length, 1);
+  assert.equal(spiel.lage().konto, 50); assert.equal(spiel.lage().personen.length, 2);   // Pastor + Frau des Pastors
   const k = spiel.karte(); k.zellen.fill(0);
   assert.equal(spiel.zelle(G.x + 2, G.y + 2), 'wand');
   // Plan und Tempo werden geprüft
