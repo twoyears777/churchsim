@@ -2,6 +2,7 @@
 // Holt sich alles über spiel.lage() und macht daraus nur Text.
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro } from './ui.js';
+import { VERSION } from '../version.js';
 import { fensterAktualisieren, fensterOeffnen } from './fenster.js';
 
 const LISTE = { hauptamt: 'listeHauptamt', ehrenamt: 'listeEhrenamt' };
@@ -26,6 +27,8 @@ export function anzeigenEinrichten() {
   $('textStamm').textContent = TEXTE.besucherStamm;
   $('menschenAuf').textContent = TEXTE.menschen.knopf;
   $('menschenAuf').addEventListener('click', () => fensterOeffnen({ art: 'menschen' }));
+  $('versionAuf').textContent = TEXTE.changelog.version(VERSION);
+  $('versionAuf').addEventListener('click', () => fensterOeffnen({ art: 'changelog' }));
 }
 
 export function anzeigenAktualisieren() {

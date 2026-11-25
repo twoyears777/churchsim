@@ -102,6 +102,13 @@ export const TEXTE = {
     neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst'
   },
 
+  // ---- Versionsnummer unten links und Fenster „Changelog“ (Lukas' Wahl, 25.11.) ----
+  changelog: {
+    version: v => `Version ${v}`,
+    titel: 'Changelog',
+    fehler: 'Der Changelog konnte gerade nicht geladen werden.'   // Platzhalter (z. B. ohne Internet)
+  },
+
   // ---- Menschen, Passanten, Seelsorge (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
   // Fenster „Menschen im Ort“
   menschen: {

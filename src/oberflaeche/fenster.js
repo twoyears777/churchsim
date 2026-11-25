@@ -4,6 +4,8 @@
 import { KEINE_VERANSTALTUNG } from '../inhalte/veranstaltungen.js';
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro, zahl1, esc } from './ui.js';
+import { changelogHolen } from './changelog.js';
+import { VERSION } from '../version.js';
 
 const maske = () => $('maske');
 const ART_TEXT = { hauptamt: 'Hauptamtlich', ehrenamt: 'Ehrenamtlich' };
@@ -22,9 +24,9 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster }[f.art](f);
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
-  m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen');
+  m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen' || f.art === 'changelog');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
 }
@@ -201,6 +203,16 @@ function menschenFenster(f) {
       <td>${T.status[m.status]}</td></tr>`).join('');
   return `<h2>${T.titel}</h2>
     ${liste.length ? `<table class="menschen"><tr>${kopf}</tr>${zeilen}</table>` : `<p class="leer">${T.leer}</p>`}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Changelog: Änderungen der aktuellen Version (aus CHANGELOG.md)
+function changelogFenster() {
+  const T = TEXTE.changelog, c = changelogHolen(() => { letzterInhalt = ''; ui.anzeigeErzwingen(); ui.malen(); });
+  let inhalt = '';
+  if (c.fehler) inhalt = `<p class="leer">${T.fehler}</p>`;
+  else if (c.bereiche) inhalt = c.bereiche.map(b => `${b.titel ? `<h3>${esc(b.titel)}</h3>` : ''}<ul class="changelog">${b.punkte.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`).join('');
+  return `<h2>${T.titel}</h2><p class="unter">${T.version(VERSION)}</p>${inhalt}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 

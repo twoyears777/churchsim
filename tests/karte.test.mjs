@@ -225,6 +225,14 @@ console.log('Gottesdienst- und Kirchkaffee-Tests bestanden.');
 import { VERSION } from '../src/version.js';
 import { readFileSync } from 'node:fs';
 assert.equal(JSON.parse(readFileSync(new URL('../version.json', import.meta.url))).version, VERSION);
+// Changelog im Spiel: Abschnitt der Version wird herausgeschnitten, nächste Version gehört nicht dazu
+import { abschnittLesen } from '../src/oberflaeche/changelog.js';
+{
+  const text = '# Changelog\n\n## 0.1.3\n\n**Neu**\n- A\n- B\n\n**Geändert**\n- C\n\n## 0.1.2\n\n**Alt**\n- D\n';
+  assert.deepEqual(abschnittLesen(text, '0.1.3'), [{ titel: 'Neu', punkte: ['A', 'B'] }, { titel: 'Geändert', punkte: ['C'] }]);
+  assert.equal(abschnittLesen(text, '9.9.9'), null);
+  assert.ok(abschnittLesen(readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8'), '0.1.2').length > 0);
+}
 console.log('Versions-Test bestanden.');
 
 // Kirchenjahr-Rad
