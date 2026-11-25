@@ -2,16 +2,19 @@
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro } from './ui.js';
 import { fensterOeffnen, fensterSchliessen, fensterOffen } from './fenster.js';
+import { bauleisteEinrichten, werkzeugWaehlen } from './bauleiste.js';
 
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
   tuer: 'Tippe auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
   ...TEXTE.hinweise,
+  ...TEXTE.hinweiseAussen,
   abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
   raum: 'Tippe in einen Raum, um seine Funktion festzulegen.'
 };
 const leinwand = $('karte');
-const istMoebelWerkzeug = () => ui.spiel.moebelArten().some(m => m.id === ui.werkzeug);
+const istMoebelWerkzeug = () => ui.werkzeug !== 'strasse' && ui.spiel.moebelArten().some(m => m.id === ui.werkzeug);
+const ZIEH_WERKZEUGE = ['wand', 'abriss', 'strasse'];   // Rechteck ziehen
 
 // ---- Pixel → Kästchen, und was liegt dort? ----
 function punktAus(e) { const r = leinwand.getBoundingClientRect(); return { px: e.clientX - r.left, py: e.clientY - r.top }; }
@@ -50,8 +53,9 @@ function abbrechen() { if (ui.ziehen || ui.tragen) { ui.ziehen = null; ui.tragen
 function mauszeiger(e) {
   let c = 'default';
   if (ui.tragen) c = 'grabbing';
-  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) ? 'pointer' : 'default'; }
+  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) ? 'pointer' : 'default'; }
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
+  else if (istMoebelWerkzeug()) c = 'crosshair';
   else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'raum' ? 'pointer' : 'crosshair';
   if (leinwand.style.cursor !== c) leinwand.style.cursor = c;
 }
@@ -66,7 +70,7 @@ function druecken(e) {
   }
   const f = feldAus(e);
   ui.moebelStart = f;
-  if (ui.werkzeug === 'wand' || ui.werkzeug === 'abriss') {
+  if (ZIEH_WERKZEUGE.includes(ui.werkzeug)) {
     leinwand.setPointerCapture(e.pointerId);
     ui.ziehen = { x0: f.x, y0: f.y, x1: f.x, y1: f.y, art: ui.werkzeug };
     ui.malen();
@@ -103,13 +107,19 @@ function loslassen(e) {
     if (m) return fensterOeffnen({ art: 'maschine', x: m.x, y: m.y });
     const nr = spiel.veranstaltungsraumBei(f.x, f.y);
     if (nr !== null) return fensterOeffnen({ art: 'raum', nr });
-    if (spiel.torBei(f.x, f.y)) fensterOeffnen({ art: 'tor' });
+    if (spiel.torBei(f.x, f.y)) return fensterOeffnen({ art: 'tor' });
+    if (spiel.busBei(f.x, f.y)) fensterOeffnen({ art: 'bus' });
     return;
   }
   const f = feldAus(e);
   if (ui.ziehen) {
     const v = ui.ziehen; ui.ziehen = null;
     if (v.art === 'wand') spiel.wandBauen(v.x0, v.y0, v.x1, v.y1);   // bei Möbeln im Weg baut das Spiel nicht
+    else if (v.art === 'strasse') {
+      const r = spiel.strasseBauen(v.x0, v.y0, v.x1, v.y1);
+      if (r.ergebnis === 'geld') kurzerHinweis(r.gebaut ? TEXTE.aussenMeldung.strasseGeld : TEXTE.nichtGenugGeld('Straße', euro(spiel.moebelArten().find(m => m.id === 'strasse').kosten)));
+      else if (r.ergebnis === 'platz' && spiel.raumNrBei(v.x0, v.y0) >= 0) kurzerHinweis(TEXTE.aussenMeldung.innen);
+    }
     else spiel.abreissen(v.x0, v.y0, v.x1, v.y1);
     return fertig();
   }
@@ -117,11 +127,13 @@ function loslassen(e) {
     const s = ui.moebelStart;
     if (!s || s.x !== f.x || s.y !== f.y) return;                    // nur Tippen, kein Ziehen
     if (ui.werkzeug === 'stuhl' && stuhlBei(f)) return fensterOeffnen({ art: 'stuhl', x: f.x, y: f.y });   // Stuhl verbessern
-    const ergebnis = spiel.moebelKaufen(ui.werkzeug, f.x, f.y);      // entfernen nur per Abriss
+    const ergebnis = spiel.moebelKaufen(ui.werkzeug, f.x, f.y, ui.dreh);      // entfernen nur per Abriss
+    const typ = spiel.moebelArten().find(m => m.id === ui.werkzeug);
     if (ergebnis === 'geld') {
-      const typ = spiel.moebelArten().find(m => m.id === ui.werkzeug);
       kurzerHinweis(typ.id === 'stuhl' ? `Nicht genug Geld für einen Stuhl (${euro(typ.kosten)}).` : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten)));
     } else if (ergebnis === 'grenze') kurzerHinweis(TEXTE.grenze[ui.werkzeug]);
+    else if (ergebnis === 'innen') kurzerHinweis(TEXTE.aussenMeldung.innen);
+    else if (ergebnis === 'bekanntheit') kurzerHinweis(TEXTE.aussenMeldung.bekanntheit(typ.abBekanntheit));
     return fertig();
   }
   if (ui.werkzeug === 'tuer') { spiel.tuerUmschalten(f.x, f.y); return fertig(); }
@@ -130,6 +142,10 @@ function loslassen(e) {
     if (nr >= 0) fensterOeffnen({ art: 'raumtyp', nr }); else fensterSchliessen();
   }
 }
+
+// Parkplatz drehen (quer ↔ längs)
+const drehbar = () => { const m = ui.spiel.moebelArten().find(x => x.id === ui.werkzeug); return !!(m && m.groesse); };
+function drehen() { if (drehbar()) { ui.dreh = !ui.dreh; ui.malen(); } }
 
 function editorUmschalten(offen) {
   ui.editorOffen = offen; ui.ziehen = null; ui.tragen = null;
@@ -162,18 +178,20 @@ export function eingabenEinrichten() {
 
   // Escape: erst Ziehen abbrechen, dann Fenster schließen, dann Editor schließen
   document.addEventListener('keydown', e => {
+    if ((e.key === 'r' || e.key === 'R') && ui.editorOffen && !e.target.closest('input')) { drehen(); return; }
     if (e.key !== 'Escape') return;
     if (ui.ziehen || ui.tragen) return abbrechen();
     if (fensterOffen()) return fensterSchliessen();
     if (ui.editorOffen) editorUmschalten(false);
   });
 
-  document.querySelectorAll('[data-werkzeug]').forEach(b => b.addEventListener('click', () => {
-    ui.werkzeug = b.dataset.werkzeug;
-    document.querySelectorAll('[data-werkzeug]').forEach(x => x.setAttribute('aria-pressed', x === b));
-    $('hinweis').textContent = HINWEISE[ui.werkzeug];
-    fensterSchliessen();
-  }));
+  bauleisteEinrichten({
+    beiWahl: id => { $('hinweis').textContent = HINWEISE[id]; $('hinweis').classList.remove('warnung'); $('drehen').hidden = !drehbar(); fensterSchliessen(); ui.malen(); },
+    beiBus: () => { $('hinweis').textContent = HINWEISE.bushaltestelle; fensterOeffnen({ art: 'bus' }); }
+  });
+  $('drehen').textContent = TEXTE.bauleiste.drehen;
+  $('drehen').addEventListener('click', drehen);
+  werkzeugWaehlen(ui.werkzeug);
   $('zurueck').addEventListener('click', () => { if (ui.spiel.rueckgaengig()) { ui.fenster = null; fensterSchliessen(); fertig(); } });
   sicherKnopf($('zuruecksetzen'), TEXTE.zuruecksetzen, TEXTE.zuruecksetzenSicher, zuruecksetzen);
   $('testGeld').textContent = TEXTE.testGeld;

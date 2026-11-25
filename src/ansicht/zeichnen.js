@@ -17,6 +17,10 @@ export const FARBEN = {
   kanzel: '#6b4a2c', kanzelHell: '#a07445', altar: '#efeae0', altarTuch: '#7b3b8c', vase: '#6d7fa3',
   bluete: ['#e0567a', '#f2c94c', '#ffffff'], blatt: '#4f8a3a', blattHell: '#6fae55', topf: '#b5663d',
   gitarre: '#c07a32', gitarreHals: '#4a3220', plakat: '#fff6d6', plakatRand: '#c23b2e',
+  // Außen (Einzugsgebiet) – Platzhalter
+  strasse: '#6a6d72', strasseRand: '#55585c', parkLinie: '#f2efe6', nichtAngeschlossen: 'rgba(200,55,45,0.45)',
+  busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
+  geisterOk: 'rgba(60,160,80,0.9)', geisterNein: 'rgba(200,55,45,0.9)',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
 };
@@ -47,8 +51,19 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   for (let y = g.y + 1; y < g.y + g.h; y++) { ctx.moveTo(ox + g.x * k, oy + y * k + 0.5); ctx.lineTo(ox + (g.x + g.w) * k, oy + y * k + 0.5); }
   ctx.stroke();
   }
+  // Straße und Parkplätze liegen auf dem Boden – vor dem Zaun und den Möbeln zeichnen
+  for (const m of z.moebel) {
+    if (m.art !== 'strasse' && m.art !== 'parkplatz') continue;
+    const px = ox + m.x * k, py = oy + m.y * k;
+    if (m.art === 'strasse') strasse(ctx, px, py, k); else parkplatz(ctx, px, py, k, m.dreh);
+    if (extra.raster && m.angeschlossen === false) {             // im Editor: zählt (noch) nicht – keine Straße bis zum Tor
+      ctx.fillStyle = FARBEN.nichtAngeschlossen;
+      for (const f of m.felder) ctx.fillRect(ox + f.x * k, oy + f.y * k, k, k);
+    }
+  }
   zaunZeichnen(ctx, ansicht);
   if (z.plakat) plakat(ctx, ansicht);
+  if (z.bus && z.bus.stufe) bushaltestelle(ctx, ansicht, z.bus);
 
   // Wände und Türen
   for (let y = 0; y < z.h; y++) for (let x = 0; x < z.w; x++) {
@@ -80,6 +95,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   // Möbel
   for (const m of z.moebel) {
     const px = ox + m.x * k, py = oy + m.y * k;
+    if (m.art === 'strasse' || m.art === 'parkplatz') continue;
     if (m.art === 'stuhl') stuhl(ctx, px, py, k, m.stufe || 1);
     else if (m.art === 'theke') theke(ctx, px, py, k);
     else if (m.art === 'kanzel') kanzel(ctx, px, py, k);
@@ -144,6 +160,14 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     if (f) figur(ctx, t.px, t.py, k, f, true, schrift);
   }
 
+  // Umriss des Möbels unter der Maus: grün = passt hier hin, rot = geht hier nicht
+  if (extra.geist) {
+    ctx.strokeStyle = extra.geist.geht ? FARBEN.geisterOk : FARBEN.geisterNein; ctx.lineWidth = 2.5;
+    const fs = extra.geist.felder, minX = Math.min(...fs.map(f => f.x)), minY = Math.min(...fs.map(f => f.y));
+    const w = Math.max(...fs.map(f => f.x)) - minX + 1, h = Math.max(...fs.map(f => f.y)) - minY + 1;
+    ctx.strokeRect(ox + minX * k + 1.5, oy + minY * k + 1.5, w * k - 3, h * k - 3);
+  }
+
   // Preis neben dem Mauszeiger beim Bauen (z. B. Stuhl)
   const ps = extra.preisSchild;
   if (ps) {
@@ -168,6 +192,9 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
         ctx.font = `500 ${schrift}px system-ui, sans-serif`; ctx.fillStyle = FARBEN.auswahl;
         ctx.fillText(`${bx - ax - 1} × ${by - ay - 1}`, ox + (ax + bx + 1) / 2 * k, oy + (ay + by + 1) / 2 * k);
       }
+    } else if (v.art === 'strasse') {
+      ctx.fillStyle = 'rgba(90,93,98,0.55)';
+      ctx.fillRect(ox + ax * k, oy + ay * k, (bx - ax + 1) * k, (by - ay + 1) * k);
     } else {
       ctx.fillStyle = FARBEN.vorschauAbriss;
       ctx.fillRect(ox + ax * k, oy + ay * k, (bx - ax + 1) * k, (by - ay + 1) * k);
@@ -337,4 +364,76 @@ function kaffeemaschine(ctx, px, py, k, anteil) {
   ctx.fillStyle = '#d9d9d9'; ctx.fillRect(px + k * 0.3, py + k * 0.25, k * 0.4, k * 0.25);
   ctx.fillStyle = anteil > 0 ? FARBEN.maschineKaffee : '#b3261e';
   ctx.fillRect(px + k * 0.3, py + k * 0.6, k * 0.4 * (anteil > 0 ? Math.min(1, anteil) : 1), k * 0.14);
+}
+
+// ---- Außen: Straße, Parkplatz, Bushaltestelle (Platzhalter-Grafik) ----
+function strasse(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.strasse; ctx.fillRect(px, py, k, k);
+  ctx.strokeStyle = FARBEN.strasseRand; ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, k - 1, k - 1);
+}
+// Parkplatz 2×1 (quer) bzw. 1×2 (dreh): Asphalt mit weißer Markierung und einem kleinen „P“
+function parkplatz(ctx, px, py, k, dreh) {
+  const w = dreh ? k : 2 * k, h = dreh ? 2 * k : k, l = Math.max(1.5, k * 0.08);
+  ctx.fillStyle = FARBEN.strasse; ctx.fillRect(px, py, w, h);
+  ctx.fillStyle = FARBEN.parkLinie;
+  if (dreh) { ctx.fillRect(px + k * 0.08, py, l, h); ctx.fillRect(px + k * 0.92 - l, py, l, h); }
+  else { ctx.fillRect(px, py + k * 0.08, w, l); ctx.fillRect(px, py + k * 0.92 - l, w, l); }
+  ctx.font = `700 ${Math.max(9, k * 0.6)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('P', px + w / 2, py + h / 2 + 1);
+}
+// Bushaltestelle neben dem Tor: Stufe 1 Schild, Stufe 2 Wartehäuschen, Stufe 3 modernes Wartehäuschen aus Glas
+function bushaltestelle(ctx, { k, ox, oy }, b) {
+  const x = ox + b.x * k, y = oy + b.y * k;
+  if (b.stufe >= 3) {
+    ctx.fillStyle = FARBEN.schatten; ctx.fillRect(x + 3, y + k * 0.15 + 3, k * 2.6, k * 0.75);
+    ctx.fillStyle = FARBEN.glas; ctx.fillRect(x, y + k * 0.15, k * 2.6, k * 0.75);
+    ctx.strokeStyle = FARBEN.glasRahmen; ctx.lineWidth = Math.max(1.5, k * 0.08); ctx.strokeRect(x, y + k * 0.15, k * 2.6, k * 0.75);
+    ctx.beginPath(); ctx.moveTo(x + k * 1.3, y + k * 0.15); ctx.lineTo(x + k * 1.3, y + k * 0.9); ctx.stroke();
+    ctx.fillStyle = FARBEN.busBank; ctx.fillRect(x + k * 0.3, y + k * 0.3, k * 2, k * 0.18);
+  } else if (b.stufe >= 2) {
+    ctx.fillStyle = FARBEN.schatten; ctx.fillRect(x + 3, y + k * 0.2 + 3, k * 1.8, k * 0.7);
+    ctx.fillStyle = FARBEN.busWand; ctx.fillRect(x, y + k * 0.2, k * 1.8, k * 0.7);
+    ctx.fillStyle = FARBEN.busDach; ctx.fillRect(x - k * 0.08, y + k * 0.1, k * 1.96, k * 0.25);
+    ctx.fillStyle = FARBEN.busBank; ctx.fillRect(x + k * 0.25, y + k * 0.45, k * 1.3, k * 0.18);
+  }
+  // Haltestellenschild am Gehweg (jede Stufe)
+  const sx = x + k * (b.stufe >= 3 ? 2.85 : b.stufe >= 2 ? 2.2 : 0.5), sy = y + k * 1.1;
+  ctx.fillStyle = FARBEN.busPfosten; ctx.fillRect(sx - k * 0.05, sy - k * 0.2, k * 0.1, k * 0.6);
+  ctx.fillStyle = FARBEN.busSchild; ctx.beginPath(); ctx.arc(sx, sy - k * 0.3, k * 0.32, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#2f6b3a'; ctx.lineWidth = Math.max(1, k * 0.06); ctx.stroke();
+  ctx.fillStyle = '#2f6b3a'; ctx.font = `700 ${Math.max(8, k * 0.38)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('H', sx, sy - k * 0.28);
+}
+
+// ---- Symbolbilder für die Bauleiste: zeichnet ein Werkzeug oder Möbel in ein Quadrat der Größe g ----
+export function symbolZeichnen(ctx, id, g) {
+  ctx.clearRect(0, 0, g, g);
+  const k = g * 0.72, p = (g - k) / 2;
+  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, kanzel, altar, blumen, gruenpflanze, gitarre,
+    kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
+  if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
+  if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();
+  if (moebel[id]) return moebel[id](ctx, p, p, k);
+  if (id === 'wand') {
+    ctx.fillStyle = FARBEN.boden; ctx.fillRect(p, p, k, k);
+    ctx.strokeStyle = FARBEN.wand; ctx.lineWidth = k * 0.2; ctx.strokeRect(p + k * 0.1, p + k * 0.1, k * 0.8, k * 0.8);
+  } else if (id === 'tuer') {
+    ctx.fillStyle = FARBEN.wand; ctx.fillRect(p, p + k * 0.35, k, k * 0.3);
+    ctx.fillStyle = FARBEN.tuer; ctx.fillRect(p + k * 0.3, p + k * 0.3, k * 0.4, k * 0.4);
+    ctx.fillStyle = FARBEN.tuerHell; ctx.fillRect(p + k * 0.38, p + k * 0.38, k * 0.24, k * 0.24);
+  } else if (id === 'raum') {
+    ctx.fillStyle = '#d8cdea'; ctx.fillRect(p, p, k, k);
+    ctx.strokeStyle = FARBEN.auswahl; ctx.lineWidth = 2; ctx.setLineDash([3, 2]); ctx.strokeRect(p + 1, p + 1, k - 2, k - 2); ctx.setLineDash([]);
+  } else if (id === 'abriss') {
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = g * 0.12; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(p + k * 0.15, p + k * 0.15); ctx.lineTo(p + k * 0.85, p + k * 0.85); ctx.moveTo(p + k * 0.85, p + k * 0.15); ctx.lineTo(p + k * 0.15, p + k * 0.85); ctx.stroke();
+    ctx.lineCap = 'butt';
+  } else if (id === 'bushaltestelle') {
+    const cx = g / 2, r = g * 0.2;
+    ctx.fillStyle = FARBEN.busPfosten; ctx.fillRect(cx - g * 0.03, g * 0.4, g * 0.06, g * 0.45);
+    ctx.fillStyle = FARBEN.busSchild; ctx.beginPath(); ctx.arc(cx, g * 0.36, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#2f6b3a'; ctx.lineWidth = Math.max(1.5, g * 0.04); ctx.stroke();
+    ctx.fillStyle = '#2f6b3a'; ctx.font = `700 ${g * 0.24}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('H', cx, g * 0.37);
+  }
 }

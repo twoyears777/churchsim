@@ -13,30 +13,6 @@
 <meta name="theme-color" content="#2b2a27">
 </head>
 <body class="modus-spiel">
-<header class="leiste editor">
-  <div class="werkzeuge" role="toolbar" aria-label="Werkzeuge">
-    <button data-werkzeug="wand" aria-pressed="true">Wand</button>
-    <button data-werkzeug="tuer" aria-pressed="false">Tür</button>
-    <button data-werkzeug="stuhl" aria-pressed="false">Stuhl <small class="preis" id="preis-stuhl"></small></button>
-    <button data-werkzeug="kaffeemaschine" aria-pressed="false">Kaffeemaschine <small class="preis" id="preis-kaffeemaschine"></small></button>
-    <button data-werkzeug="theke" aria-pressed="false">Theke <small class="preis" id="preis-theke"></small></button>
-    <button data-werkzeug="kanzel" aria-pressed="false">Kanzel <small class="preis" id="preis-kanzel"></small></button>
-    <button data-werkzeug="altar" aria-pressed="false">Altar <small class="preis" id="preis-altar"></small></button>
-    <button data-werkzeug="blumen" aria-pressed="false">Blumen <small class="preis" id="preis-blumen"></small></button>
-    <button data-werkzeug="gruenpflanze" aria-pressed="false">Grünpflanze <small class="preis" id="preis-gruenpflanze"></small></button>
-    <button data-werkzeug="gitarre" aria-pressed="false">Gitarre <small class="preis" id="preis-gitarre"></small></button>
-    <button data-werkzeug="abriss" aria-pressed="false">Abriss</button>
-    <button data-werkzeug="raum" aria-pressed="false">Raum festlegen</button>
-  </div>
-  <div class="werkzeuge">
-    <span class="kontoEditor">Kontostand <b id="kontoEditor">0 €</b></span>
-    <button id="zurueck">Rückgängig</button>
-    <button id="neu">Neu</button>
-    <button id="editorZu" class="haupt">Fertig</button>
-  </div>
-</header>
-<p id="hinweis" class="hinweis editor"></p>
-
 <div class="spielflaeche">
   <aside class="seitenleiste hud" aria-label="Management">
     <details open>
@@ -95,6 +71,20 @@
     <div id="maske" class="maske" hidden><div class="inhalt"></div></div>
   </main>
 </div>
+<footer class="bauleiste editor" aria-label="Bauen">
+  <div class="hinweis-zeile"><p id="hinweis" class="hinweis"></p><button id="drehen" class="klein-knopf" hidden></button></div>
+  <div class="bau-zeile">
+    <div class="reiter" role="tablist" id="bauReiter"></div>
+    <div class="bau-karten" id="bauKarten" role="toolbar" aria-label="Werkzeuge"></div>
+    <div class="bau-rechts">
+      <button data-werkzeug="abriss" class="abriss-knopf" aria-pressed="false"><canvas class="symbol" data-symbol="abriss" width="56" height="56"></canvas><span id="textAbriss"></span></button>
+      <span class="kontoEditor">Kontostand <b id="kontoEditor">0 €</b></span>
+      <button id="zurueck">Rückgängig</button>
+      <button id="neu">Neu</button>
+      <button id="editorZu" class="haupt">Fertig</button>
+    </div>
+  </div>
+</footer>
 <script type="module" src="src/oberflaeche/start.js"></script>
 </body>
 </html>

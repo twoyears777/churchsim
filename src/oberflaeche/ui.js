@@ -4,6 +4,7 @@ export const ui = {
   spiel: null,                       // die Schalterwand zum Spiel (kern/spiel.js)
   werkzeug: 'wand',
   editorOffen: false,
+  dreh: false,                       // Parkplatz längs statt quer (Taste R)
   ziehen: null,                      // Rechteck, das gerade gezogen wird (Wand/Abriss)
   tragen: null,                      // Mitarbeiter, der gerade getragen wird
   fenster: null,                     // offenes Fenster: { art: 'raumtyp'|'raum'|'maschine'|'besucher'|'person', … }

@@ -1,7 +1,6 @@
 // Inhaltsdatei: die Menschen im Ort, die auf dem Gehweg vorbeilaufen (Passanten), und wann sie neugierig werden.
 // Zahlen von Lukas freigegeben (25.11.), nach dem Testen leicht anpassbar.
 export const ORT = {
-  maxBewohner: 40,          // so viele Passanten gibt es im Ort höchstens
   passantenProTag: [6, 10], // so viele Leute laufen pro Tag vorbei (zufällig dazwischen), bekannte Besucher eingerechnet
   bekannteProTag: [1, 2],   // ... davon bekannte Besucher
   anteilBekannt: 0.5,       // Chance, dass ein Passant jemand ist, der schon mal vorbeikam (bis der Ort voll ist)

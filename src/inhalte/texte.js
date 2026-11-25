@@ -301,5 +301,57 @@ export const TEXTE = {
     musiker: 'Musiker',
     ohneGitarre: 'ohne Gitarre keine Musik'
   },
-  nichtGenugGeld: (name, preis) => `Nicht genug Geld für ${name} (${preis}).`
+  nichtGenugGeld: (name, preis) => `Nicht genug Geld für ${name} (${preis}).`,
+
+  // ---- Bauleiste unten (25.11.; Reiter von Lukas freigegeben, übrige Texte ENTWÜRFE von Claude) ----
+  bauleiste: {
+    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', deko: 'Deko', aussen: 'Außen' },
+    werkzeuge: { wand: 'Wand', tuer: 'Tür', raum: 'Raum festlegen', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },
+    abBekanntheit: n => `ab Bekanntheit ${n}`,
+    drehen: 'Drehen (R)'
+  },
+  hinweiseAussen: {
+    strasse: 'Zieh ein Rechteck, um Straße zu bauen. Die Straße muss im Tor beginnen.',
+    parkplatz: 'Tippe, um einen Parkplatz zu bauen (R dreht ihn). Er zählt, wenn er an einer Straße liegt, die bis zum Tor führt.',
+    bushaltestelle: 'Die Bushaltestelle steht am Gehweg neben dem Tor.'
+  },
+  aussenMeldung: {
+    innen: 'Straße und Parkplätze gehören nach draußen, nicht in einen Raum.',
+    bekanntheit: n => `Parkplätze kannst du ab Bekanntheit ${n} bauen.`,
+    strasseGeld: 'Das Geld hat nicht für die ganze Straße gereicht.'
+  },
+
+  // ---- Einzugsgebiet (Bekanntheit-Fenster) – erste Texte von Lukas freigegeben, übrige ENTWÜRFE von Claude ----
+  einzugsgebiet: {
+    titel: 'Einzugsgebiet',
+    stand: (erreicht, grenze) => `${erreicht} von ${grenze} Menschen erreichbar`,
+    voll: 'Einzugsgebiet voll – mehr Menschen erreichst du über Maßnahmen',
+    info: 'So viele Menschen kann die Gemeinde erreichen. Mitgezählt: Besucher, Passanten im Ort und Ehrenamtliche.',
+    teile: {
+      start: n => `Ort: ${n}`,
+      parkplatz: (n, anzahl) => `Parkplätze: +${n} (${anzahl} angeschlossen)`,
+      bus: (n, name) => `Bushaltestelle (${name}): +${n}`,
+      werbekampagne: n => `Überregionale Werbekampagne: +${n}`
+    },
+    massnahmen: 'Maßnahmen',
+    parkplatz: 'Parkplatz',
+    parkplatzInfo: (plus, preis) => `+${plus} pro Parkplatz · ${preis} · bauen unter Bauen → Außen, mit Straße bis zum Tor`,
+    bushaltestelle: 'Bushaltestelle',
+    werbekampagne: 'Überregionale Werbekampagne',
+    plusPreis: (plus, preis) => `+${plus} · ${preis}`,
+    frei: n => `Frei ab Bekanntheit ${n}`,
+    kaufen: 'Kaufen',
+    ausbauen: name => `Ausbauen: ${name}`,
+    gekauft: 'Läuft dauerhaft.',
+    keinGeld: 'Nicht genug Geld.'
+  },
+  // Fenster der Bushaltestelle (anklicken oder Bauleiste → Außen)
+  bus: {
+    titel: 'Bushaltestelle',
+    keine: 'Noch keine Bushaltestelle. Mit einer Haltestelle erreicht die Gemeinde mehr Menschen.',
+    stufe: (n, max, name) => `Stufe ${n} von ${max}: ${name}`,
+    bringt: n => `Bringt +${n} Einzugsgebiet`,
+    naechste: name => `Nächste Stufe: ${name}`,
+    hoechste: 'Höchste Stufe erreicht.'
+  }
 };

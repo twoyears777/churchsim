@@ -7,6 +7,7 @@ import { GRUNDSTUECK, GEHWEGE, WELT } from '../inhalte/umgebung.js';
 import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { TAG_MIN } from './zeit.js';
 import { neuePerson } from './besucher.js';
+import { platzImGebiet } from './einzugsgebiet.js';
 
 const G = GRUNDSTUECK;
 const TOR_X = G.tor.x + G.tor.breite / 2 - 0.5;                        // Mitte des Tors
@@ -22,9 +23,10 @@ export function ortAnlegen(z) {
 export function mensch(z, id) { return z.besucher.find(b => b.id === id) || (z.ort ? z.ort.leute.find(p => p.id === id) : null) || null; }
 
 // Wer läuft heute vorbei? Ein paar bekannte Besucher, dazu Passanten – zur Hälfte bekannte Gesichter,
-// zur Hälfte neue Leute, bis der Ort voll ist.
+// zur Hälfte neue Leute, solange im Einzugsgebiet noch Platz ist.
 function tagPlanen(z, tag, zufall) {
   const o = z.ort, heute = new Set();
+  let frei = platzImGebiet(z);
   o.tag = tag; o.gaenge = [];
   const n = zwischen(ORT.passantenProTag, zufall), k = Math.min(z.besucher.length, zwischen(ORT.bekannteProTag, zufall));
   const nehmen = liste => { const frei = liste.filter(p => !heute.has(p.id)); return frei.length ? frei[Math.floor(zufall() * frei.length)] : null; };
@@ -32,9 +34,9 @@ function tagPlanen(z, tag, zufall) {
     let p = null;
     if (i < k) p = nehmen(z.besucher);
     else {
-      const bekannt = o.leute.length && (o.leute.length >= ORT.maxBewohner || zufall() < ORT.anteilBekannt);
+      const bekannt = o.leute.length && (frei <= 0 || zufall() < ORT.anteilBekannt);
       if (bekannt) p = nehmen(o.leute);
-      if (!p && o.leute.length < ORT.maxBewohner) { p = neuePerson(z, zwischen(ORT.haltung, zufall), zufall); o.leute.push(p); }
+      if (!p && frei > 0) { p = neuePerson(z, zwischen(ORT.haltung, zufall), zufall); o.leute.push(p); frei--; }
     }
     if (!p) continue;
     heute.add(p.id);

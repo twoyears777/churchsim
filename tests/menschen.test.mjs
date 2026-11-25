@@ -9,6 +9,7 @@ import { zeitVorruecken, veranstaltungEinstellen, seelsorgeGesperrt, prognose } 
 import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 import { werKommt } from '../src/kern/besucher.js';
+import { EINZUGSGEBIET } from '../src/inhalte/einzugsgebiet.js';
 import { ortSchritt, passantenPositionen } from '../src/kern/ort.js';
 import { stufe, raten, ablehnen, schliessen, anfrageOffen, schub, seelsorgePositionen, anfrageInfo, einschaetzen, chanceVon } from '../src/kern/seelsorge.js';
 import { TAG_MIN, WOCHE_MIN } from '../src/kern/zeit.js';
@@ -45,7 +46,7 @@ function laufen(z, aus, minuten, zufall, antwort = () => raten(z, 0, zufall)) {
   const bekannte = z.ort.gaenge.filter(g => z.besucher.some(b => b.id === g.id)).length;
   assert.ok(bekannte >= 1 && bekannte <= 2);
   laufen(z, aus, 6 * WOCHE_MIN, zufall);
-  assert.ok(z.ort.leute.length <= ORT.maxBewohner);
+  assert.ok(z.ort.leute.length + z.besucher.length <= EINZUGSGEBIET.start);
   // um 14 Uhr sind Leute unterwegs, alle auf der Gehweg-Zeile
   laufen(z, aus, TAG_MIN - (z.minuten % TAG_MIN) + 14 * 60, zufall);
   const pos = passantenPositionen(z);

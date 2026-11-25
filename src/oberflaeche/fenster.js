@@ -24,7 +24,7 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster }[f.art](f);
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
@@ -254,7 +254,48 @@ function bekanntheitFenster() {
     <h3>${T.letzte}</h3>${protokoll}
     <h3>${T.wirkung}</h3><ul class="quellen"><li>${T.neue(w.teiler, dez(w.neueProWoche))}</li>
       <li>${T.neugier(prozent(w.neugierGrund), prozent(w.neugier), w.plakatFaktor)}</li></ul>
+    ${einzugsgebietAbschnitt()}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Einzugsgebiet: Stand, woraus die Grenze besteht, Maßnahmen (Parkplatz, Bushaltestelle, Werbekampagne)
+function einzugsgebietAbschnitt() {
+  const E = TEXTE.einzugsgebiet, e = ui.spiel.einzugsgebietInfo(), t = e.teile;
+  const teile = [E.teile.start(t.start), t.parkplatz || e.parkplatz.anzahl ? E.teile.parkplatz(t.parkplatz, e.parkplatz.verbunden) : null,
+    e.bus.stufe ? E.teile.bus(t.bus, e.bus.name) : null, t.werbekampagne ? E.teile.werbekampagne(t.werbekampagne) : null].filter(Boolean);
+  const frei = (ok, ab) => ok ? '' : `<p class="fehlt">${E.frei(ab)}</p>`;
+  const n = e.bus.naechste, k = e.werbekampagne;
+  const busKachel = `<div class="kachel"><b>${E.bushaltestelle}</b>
+      ${e.bus.stufe ? `<span>${TEXTE.bus.stufe(e.bus.stufe, e.bus.maxStufe, esc(e.bus.name))}</span>` : ''}
+      ${n ? `<span>${n.stufe > 1 ? TEXTE.bus.naechste(esc(n.name)) + ' · ' : ''}${E.plusPreis(n.plus, euro(n.preis))}</span>${frei(n.frei, n.abBekanntheit)}
+        <div class="zeile links"><button data-bus-ausbauen ${n.frei && n.leistbar ? '' : 'disabled'}>${n.stufe === 1 ? E.kaufen : E.ausbauen(esc(n.name))}</button></div>
+        ${n.frei && !n.leistbar ? `<p class="unter">${E.keinGeld}</p>` : ''}` : `<span>${TEXTE.bus.hoechste}</span>`}</div>`;
+  const kampagne = `<div class="kachel"><b>${E.werbekampagne}</b>
+      ${k.gekauft ? `<span class="ok">${E.gekauft}</span>` : `<span>${E.plusPreis(k.plus, euro(k.preis))}</span>${frei(k.frei, k.abBekanntheit)}
+        <div class="zeile links"><button data-werbekampagne ${k.frei && k.leistbar ? '' : 'disabled'}>${E.kaufen}</button></div>
+        ${k.frei && !k.leistbar ? `<p class="unter">${E.keinGeld}</p>` : ''}`}</div>`;
+  return `<h3>${E.titel}</h3>
+    <p class="unter staerker">${E.stand(e.erreicht, e.grenze)}</p>
+    <div class="balken"><span style="width:${Math.min(100, Math.round(e.erreicht / e.grenze * 100))}%"></span></div>
+    ${e.voll ? `<p class="warnung">${E.voll}</p>` : ''}
+    <p class="unter">${E.info}</p>
+    <ul class="quellen">${teile.map(x => `<li>${x}</li>`).join('')}</ul>
+    <h3>${E.massnahmen}</h3>
+    <div class="kacheln">
+      <div class="kachel"><b>${E.parkplatz}</b><span>${E.parkplatzInfo(e.parkplatz.plus, euro(ui.spiel.moebelArten().find(m => m.id === 'parkplatz').kosten))}</span>${frei(e.parkplatz.frei, e.parkplatz.abBekanntheit)}</div>
+      ${busKachel}${kampagne}
+    </div>`;
+}
+
+// Bushaltestelle: Stufe, was sie bringt, nächste Stufe kaufen
+function busFenster() {
+  const E = TEXTE.einzugsgebiet, B = TEXTE.bus, b = ui.spiel.einzugsgebietInfo().bus, n = b.naechste;
+  const jetzt = b.stufe ? `<p class="unter staerker">${B.stufe(b.stufe, b.maxStufe, esc(b.name))}</p><p class="unter">${B.bringt(b.plus)}</p>` : `<p>${B.keine}</p>`;
+  const weiter = n ? `<h3>${n.stufe > 1 ? B.naechste(esc(n.name)) : esc(n.name)}</h3><p class="unter">${E.plusPreis(n.plus, euro(n.preis))}</p>
+      ${n.frei ? '' : `<p class="fehlt">${E.frei(n.abBekanntheit)}</p>`}
+      <div class="typen"><button data-bus-ausbauen ${n.frei && n.leistbar ? '' : 'disabled'}>${n.stufe === 1 ? E.kaufen : E.ausbauen(esc(n.name))}</button></div>
+      ${n.frei && !n.leistbar ? `<p class="unter">${E.keinGeld}</p>` : ''}` : `<p class="ok">${B.hoechste}</p>`;
+  return `<h2>${B.titel}</h2>${jetzt}${weiter}<div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
 // Changelog: Änderungen der aktuellen Version (aus CHANGELOG.md)
@@ -325,6 +366,8 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-verbessern')) spiel.stuhlVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-alle-verbessern')) spiel.alleStuehleVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();
+    else if (b.hasAttribute('data-bus-ausbauen')) spiel.busAusbauen();
+    else if (b.hasAttribute('data-werbekampagne')) spiel.werbekampagneKaufen();
     else if (b.dataset.typ !== undefined) { spiel.raumTypSetzen(f.nr, b.dataset.typ); fensterSchliessen(); }
     ui.speichern(); ui.anzeigeErzwingen(); ui.malen();
   });

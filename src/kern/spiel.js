@@ -11,7 +11,9 @@ import { neuerZustand, LEER, WAND, TUER, idx, erkenneRaeume, pruefeRaum, raumTyp
 import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   kaffeeNachkaufen as nachkaufen, fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
-  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum } from './moebel.js';
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon } from './moebel.js';
+import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
+import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen } from './finanzen.js';
 import { besucherAnlegen } from './besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten } from './zeit.js';
@@ -40,7 +42,7 @@ export const SPEICHER_VERSION = 3;          // Spielstand-Format (3 = Echtzeit, 
 // ---- Spielstand anlegen ----
 export function spielAnlegen(z, zufall = Math.random) {
   personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); besucherAnlegen(z, zufall); zeitAnlegen(z);
-  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z);
+  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z);
   return z;
 }
 export function neuesSpiel(zufall = Math.random) { return spielAnlegen(neuerZustand(), zufall); }
@@ -161,14 +163,39 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     abreissen(x0, y0, x1, y1) { aendern(() => { abriss(z, x0, y0, x1, y1); moebelAbreissen(z, x0, y0, x1, y1); }); },
     tuerUmschalten(x, y) { return z.zellen[idx(z, x, y)] ? aendern(() => tuerSchalten(z, x, y)) : false; },
     // → 'ok' | 'geld' | 'platz' | 'belegt' | 'grenze' (z. B. schon eine Kanzel im Raum)
-    moebelKaufen(art, x, y) {
-      if (moebelAuf(z, x, y)) return 'belegt';
+    //   | 'innen' (Straße/Parkplatz nur draußen) | 'bekanntheit' (Parkplatz erst ab Bekanntheit …)
+    // dreh: Parkplatz längs statt quer
+    moebelKaufen(art, x, y, dreh = false) {
       const typ = MOEBEL.find(m => m.id === art);
       if (!typ) return 'platz';
+      const f = felderVon(art, x, y, dreh);
+      if (f.some(c => moebelAuf(z, c.x, c.y))) return 'belegt';
+      if (typ.aussen && f.some(c => raumNr(c.x, c.y) >= 0)) return 'innen';
+      if (art === 'parkplatz' && z.bekanntheit < PARKPLATZ.abBekanntheit) return 'bekanntheit';
       if (grenzeErreicht(z, raeume.liste[raumNr(x, y)], art)) return 'grenze';
       if (!kannBezahlen(z, typ.kosten)) return 'geld';
-      return aendern(() => kaufen(z, art, x, y, personAuf));
+      return aendern(() => kaufen(z, art, x, y, typ.aussen ? () => false : personAuf, dreh));   // auf Straße/Parkplatz darf jemand stehen
     },
+    // Straße als Rechteck ziehen: jedes freie Kästchen draußen bekommt ein Straßenstück, solange das Geld reicht.
+    // → { gebaut, ergebnis: 'ok' | 'geld' (nicht alles bezahlbar) | 'platz' (nichts frei) }
+    strasseBauen(x0, y0, x1, y1) {
+      const typ = MOEBEL.find(m => m.id === 'strasse');
+      const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
+      let gebaut = 0, geld = false;
+      aendern(() => {
+        for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
+          if (moebelAuf(z, x, y) || raumNr(x, y) >= 0) continue;
+          if (!kannBezahlen(z, typ.kosten)) { geld = true; continue; }
+          if (kaufen(z, 'strasse', x, y) === 'ok') gebaut++;
+        }
+      });
+      if (!gebaut) verlauf.pop();                              // nichts gebaut: kein leerer Rückgängig-Schritt
+      return { gebaut, ergebnis: geld ? 'geld' : gebaut ? 'ok' : 'platz' };
+    },
+    // Bushaltestelle kaufen bzw. ausbauen → 'ok' | 'max' | 'bekanntheit' | 'geld'
+    busAusbauen() { return busAusbauen(z); },
+    // Überregionale Werbekampagne → 'ok' | 'gekauft' | 'bekanntheit' | 'geld'
+    werbekampagneKaufen() { return werbekampagneKaufen(z); },
     personVersetzen(id, x, y) {
       const p = z.personen.find(q => q.id === id);
       if (!p || (p.x === x && p.y === y)) return false;
@@ -248,6 +275,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // ---------- Abfragen ----------
     // Alles, was die 2D-Ansicht zum Zeichnen braucht
     karte() {
+      const park = parkplaetzeAuswerten(z, raeume.gruppe);
       const kk = new Map(kirchkaffeeZustand(z, raeume).map(k => [k.raum, k.stationen.length ? 'offen' : k.fehlt]));
       return {
         w: z.w, h: z.h, zellen: z.zellen.slice(),
@@ -259,8 +287,11 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
             veranstaltungsraum: moeglich, veranstaltung: namen.length ? namen.join(' · ') : null, kirchkaffee: kk.get(r) || null };
         }),
         moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung, anteil: m.art === 'kaffeemaschine' ? (m.fuellung || 0) / fassung(m.art) : null,
-          stufe: m.art === 'stuhl' ? stuhlStufe(m).stufe : null })),
+          stufe: m.art === 'stuhl' ? stuhlStufe(m).stufe : null, dreh: !!m.dreh, felder: felder(m),
+          // Straße/Parkplatz: führt es bis zum Tor? (sonst zählt der Parkplatz nicht)
+          angeschlossen: m.art === 'strasse' || m.art === 'parkplatz' ? park.angeschlossen.has(`${m.x},${m.y}`) : null })),
         plakat: !!z.plakat,
+        bus: { stufe: z.bus || 0, ...BUSHALTESTELLE_ORT },
         personen: z.personen.map(p => {
           const d = daten(p); if (!d) return null;
           const pos = kaffeePosition(z, p) || p;
@@ -305,8 +336,36 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     zelle(x, y) { const t = x >= 0 && y >= 0 && x < z.w && y < z.h ? z.zellen[idx(z, x, y)] : null; return t === WAND ? 'wand' : t === TUER ? 'tuer' : t === LEER ? 'leer' : null; },
     raumNrBei: raumNr,
     veranstaltungsraumBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && moeglicheVeranstaltungen(r.typ).length ? nr : null; },
-    moebelBei(x, y) { const m = moebelAuf(z, x, y); return m ? { art: m.art, x: m.x, y: m.y } : null; },
-    moebelArten() { return MOEBEL.map(m => ({ id: m.id, name: m.name, kosten: m.kosten, max: m.max || null, leistbar: kannBezahlen(z, m.kosten) })); },
+    moebelBei(x, y) { const m = moebelAuf(z, x, y); return m ? { art: m.art, x: m.x, y: m.y, dreh: !!m.dreh } : null; },
+    moebelArten() {
+      return MOEBEL.map(m => ({ id: m.id, name: m.name, kosten: m.kosten, max: m.max || null, leistbar: kannBezahlen(z, m.kosten),
+        kategorie: m.kategorie || null, groesse: m.groesse ? [...m.groesse] : null, aussen: !!m.aussen,
+        abBekanntheit: m.id === 'parkplatz' ? PARKPLATZ.abBekanntheit : null,
+        gesperrt: m.id === 'parkplatz' && z.bekanntheit < PARKPLATZ.abBekanntheit }));
+    },
+    // Welche Kästchen würde dieses Möbel hier belegen, und ginge das? (Vorschau beim Bauen)
+    moebelVorschau(art, x, y, dreh = false) {
+      const typ = MOEBEL.find(m => m.id === art);
+      if (!typ) return null;
+      const f = felderVon(art, x, y, dreh);
+      const geht = f.every(c => c.x >= 0 && c.y >= 0 && c.x < z.w && c.y < z.h && z.zellen[idx(z, c.x, c.y)] === LEER && !moebelAuf(z, c.x, c.y) && (typ.aussen || !personAuf(c.x, c.y))
+        && (!typ.aussen || raumNr(c.x, c.y) < 0)) && f.every(c => c.x >= GRUNDSTUECK.x && c.y >= GRUNDSTUECK.y && c.x < GRUNDSTUECK.x + GRUNDSTUECK.w && c.y < GRUNDSTUECK.y + GRUNDSTUECK.h);
+      return { felder: f, geht };
+    },
+    // Einzugsgebiet (Bekanntheit-Fenster, Bushaltestelle): Stand, woraus die Grenze besteht, Maßnahmen
+    einzugsgebietInfo() {
+      const e = einzugsgebiet(z, raeume.gruppe), st = z.bus || 0, n = BUSHALTESTELLE[st] || null, B = z.bekanntheit;
+      return { ...e, voll: e.frei <= 0, teile: { ...e.teile },
+        parkplatz: { plus: PARKPLATZ.plus, abBekanntheit: PARKPLATZ.abBekanntheit, frei: B >= PARKPLATZ.abBekanntheit, anzahl: e.parkplaetze, verbunden: e.verbunden },
+        bus: { stufe: st, maxStufe: BUSHALTESTELLE.length, name: st ? BUSHALTESTELLE[st - 1].name : null, plus: e.teile.bus,
+          naechste: n ? { ...n, frei: B >= n.abBekanntheit, leistbar: kannBezahlen(z, n.preis) } : null },
+        werbekampagne: { ...WERBEKAMPAGNE, gekauft: !!z.werbekampagne, frei: B >= WERBEKAMPAGNE.abBekanntheit, leistbar: kannBezahlen(z, WERBEKAMPAGNE.preis) } };
+    },
+    // Liegt dieses Kästchen an der Bushaltestelle? (nur wenn eine steht)
+    busBei(x, y) {
+      const o = BUSHALTESTELLE_ORT;
+      return (z.bus || 0) > 0 && x >= o.x && x < o.x + o.w && y >= o.y && y < o.y + o.h;
+    },
     // Liegt dieses Kästchen am Tor (Einfahrt)? Dort öffnet sich das Menü der Pforte.
     torBei(x, y) {
       const g = GRUNDSTUECK;
@@ -401,7 +460,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'raumtypWahl', 'raumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen', 'torInfo', 'stuhlInfo']) {
+  for (const name of ['lage', 'raumtypWahl', 'raumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

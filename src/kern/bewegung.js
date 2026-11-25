@@ -2,13 +2,13 @@
 // und stehen bei Pause still. Liefert nur Positionen, zeichnet nichts.
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { DAUER, LAUFTEMPO, ABSTAND } from '../inhalte/zeit.js';
-import { moebelBei } from './moebel.js';
+import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 
 // Wegstücke werden einmal berechnet und gemerkt (Schlüssel → Pfad und Länge)
 export function strecke(z, speicher, schluessel, von, nach) {
   if (!speicher.has(schluessel)) {
-    const blockiert = (x, y) => !!moebelBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
+    const blockiert = (x, y) => hindernisBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
     const pfad = glaetten(z, weg(z, von, nach, blockiert), blockiert) || [von, nach];
     let laenge = 0;
     for (let i = 0; i < pfad.length - 1; i++) laenge += Math.hypot(pfad[i + 1].x - pfad[i].x, pfad[i + 1].y - pfad[i].y);

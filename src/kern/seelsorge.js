@@ -8,7 +8,7 @@ import { kannBezahlen, buchen } from './finanzen.js';
 import { zufriedenheitAendern, bekanntheitAendern, kommChance } from './besucher.js';
 import { mensch } from './ort.js';
 import { LAUFTEMPO } from '../inhalte/zeit.js';
-import { moebelBei } from './moebel.js';
+import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 import { strasse, punktAufWeg } from './bewegung.js';
 
@@ -29,7 +29,7 @@ export function schub(anzahl) {
 function wegZumPastor(z, zufall) {
   const pastor = z.personen.find(p => p.id === 'pastor');
   if (!pastor) return null;
-  const blockiert = (x, y) => !!moebelBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
+  const blockiert = (x, y) => hindernisBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
   const start = strasse(Math.floor(zufall() * 4));
   const roh = weg(z, start, { x: pastor.x, y: pastor.y }, blockiert);
   if (!roh || roh.length < 3) return null;

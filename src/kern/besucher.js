@@ -3,6 +3,7 @@
 import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte/namen.js';
 import { NEUGIER } from '../inhalte/ort.js';
 import { ZWEITER_BESUCH } from '../inhalte/veranstaltungen.js';
+import { platzImGebiet } from './einzugsgebiet.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, KAFFEE_ANTEIL, BEKANNTHEIT,
   EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 
@@ -78,7 +79,7 @@ export function neueBesucherZahl(bekanntheit, zufall = Math.random) {
 }
 
 // Wer kommt diesmal? Bekannte Besucher nach ihrer Chance, dazu Neugierige aus dem Ort und die neuen Besucher
-// über die Bekanntheit – diese zuerst aus den bekannten Passanten, sonst ganz neue Leute.
+// über die Bekanntheit – diese zuerst aus den bekannten Passanten, sonst ganz neue Leute (nur, solange im Einzugsgebiet Platz ist).
 // o: { art, woche, ausschluss (Kennungen, die gerade woanders sind), neuAnteil (Anteil der Wochen-Neuen für diesen Termin) }
 export function werKommt(z, zufall = Math.random, o = {}) {
   const aus = o.ausschluss || new Set();
@@ -87,9 +88,13 @@ export function werKommt(z, zufall = Math.random, o = {}) {
   for (const p of ort.filter(p => p.neugierig)) {
     if (zufall() < NEUGIER.kommChance) neue.push(ausDemOrt(z, p)); else p.neugierig = false;
   }
+  let frei = null;
   for (let i = neueBesucherZahl(z.bekanntheit * (o.neuAnteil ?? 1), zufall); i > 0; i--) {
     const rest = z.ort ? z.ort.leute : [];
-    neue.push(rest.length ? ausDemOrt(z, rest[Math.floor(zufall() * rest.length)]) : neuerBesucher(z, NEU_ZUFRIEDENHEIT, zufall));
+    if (rest.length) { neue.push(ausDemOrt(z, rest[Math.floor(zufall() * rest.length)])); continue; }
+    if (frei === null) frei = platzImGebiet(z);
+    if (frei <= 0) break;                                  // Einzugsgebiet voll: keine ganz neuen Leute
+    neue.push(neuerBesucher(z, NEU_ZUFRIEDENHEIT, zufall)); frei--;
   }
   return [...bekannte, ...neue];
 }

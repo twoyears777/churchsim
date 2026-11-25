@@ -5,7 +5,19 @@ import { kannBezahlen, buchen } from './finanzen.js';
 import { NACHKAUFEN } from '../inhalte/kirchkaffee.js';
 
 export function moebelAnlegen(z) { if (!Array.isArray(z.moebel)) z.moebel = []; }
-export function moebelBei(z, x, y) { return z.moebel.find(m => m.x === x && m.y === y) || null; }
+const typVon = art => MOEBEL.find(t => t.id === art) || {};
+// Welche Kästchen ein Möbel belegt: meist 1, der Parkplatz 2 (dreh = längs statt quer)
+export function felderVon(art, x, y, dreh = false) {
+  const [a, b] = typVon(art).groesse || [1, 1], [w, h] = dreh ? [b, a] : [a, b], f = [];
+  for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) f.push({ x: x + dx, y: y + dy });
+  return f;
+}
+export const felder = m => felderVon(m.art, m.x, m.y, !!m.dreh);
+export function moebelBei(z, x, y) {
+  return z.moebel.find(m => m.x === x && m.y === y) || z.moebel.find(m => typVon(m.art).groesse && felder(m).some(f => f.x === x && f.y === y)) || null;
+}
+// Steht hier etwas, um das Figuren herumlaufen müssen? (Über Straße und Parkplatz kann man laufen.)
+export function hindernisBei(z, x, y) { const m = moebelBei(z, x, y); return !!m && !typVon(m.art).aussen; }
 
 export function moebelSetzen(z, art, x0, y0, x1, y1, istBesetzt = () => false) {
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
@@ -18,17 +30,18 @@ export function moebelSetzen(z, art, x0, y0, x1, y1, istBesetzt = () => false) {
 }
 export function moebelEntfernen(z, x0, y0, x1, y1) {
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
-  const weg = z.moebel.filter(m => !(m.x < ax || m.x > bx || m.y < ay || m.y > by));
+  const weg = z.moebel.filter(m => felder(m).some(f => !(f.x < ax || f.x > bx || f.y < ay || f.y > by)));
   z.moebel = z.moebel.filter(m => !weg.includes(m));
   return weg;
 }
 
 // Kaufen mit Geld: 'ok', 'geld' (zu wenig Geld) oder 'platz' (dort geht nichts hin)
-export function moebelKaufen(z, art, x, y, istBesetzt = () => false) {
+export function moebelKaufen(z, art, x, y, istBesetzt = () => false, dreh = false) {
   const typ = MOEBEL.find(m => m.id === art) || {}, preis = typ.kosten || 0;
-  if (!aufGrundstueck(x, y) || z.zellen[idx(z, x, y)] !== LEER || moebelBei(z, x, y) || istBesetzt(x, y)) return 'platz';
+  if (!felderVon(art, x, y, dreh).every(f => aufGrundstueck(f.x, f.y) && z.zellen[idx(z, f.x, f.y)] === LEER && !moebelBei(z, f.x, f.y) && !istBesetzt(f.x, f.y))) return 'platz';
   if (!kannBezahlen(z, preis)) return 'geld';
   const m = { art, x, y };
+  if (typ.groesse && dreh) m.dreh = true;
   if (typeof typ.fassung === 'number') m.fuellung = typ.startFuellung || 0;   // Kaffeemaschine: Füllstand in Tassen
   z.moebel.push(m);
   if (preis) buchen(z, 'ausgaben', 'moebel', preis);
@@ -48,7 +61,7 @@ export function moebelAbreissen(z, x0, y0, x1, y1) {
   return betrag;
 }
 // Nach dem Bauen: Möbel, über die eine Wand gebaut wurde, verschwinden.
-export function moebelPruefen(z) { z.moebel = z.moebel.filter(m => z.zellen[idx(z, m.x, m.y)] === LEER); }
+export function moebelPruefen(z) { z.moebel = z.moebel.filter(m => felder(m).every(f => z.zellen[idx(z, f.x, f.y)] === LEER)); }
 
 export function moebelImRaum(z, raum, art) {
   const zellen = new Set(raum.zellen);

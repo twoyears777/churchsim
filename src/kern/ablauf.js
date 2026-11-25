@@ -16,6 +16,7 @@ import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { LEER, idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
 import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe } from './moebel.js';
 import { buchen, summe } from './finanzen.js';
+import { platzImGebiet } from './einzugsgebiet.js';
 import { werKommt, kommChance, besuchChance, lobpreisVorliebe, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
 import { zeitpunkt, slotBeginn, WOCHE_MIN } from './zeit.js';
@@ -409,7 +410,9 @@ export function prognose(z, raeume, raumNr = null, platz = 0) {
   const naechster = naechsterTermin(z, raeume), istNaechster = !!(termin && naechster && naechster.id === termin.id);
   const neugierige = (istNaechster || !termin) && z.ort ? z.ort.leute.filter(p => p.neugierig) : [];
   const anzahl = termineDerWoche(z, raeume, woche).filter(t => t.art).length || 1;
-  const neu = z.bekanntheit / BEKANNTHEIT.teiler / anzahl;
+  // ... aber höchstens so viele, wie es im Ort und im Einzugsgebiet noch gibt
+  const moeglich = (z.ort ? z.ort.leute.filter(p => !p.neugierig).length : 0) + platzImGebiet(z);
+  const neu = Math.min(z.bekanntheit / BEKANNTHEIT.teiler / anzahl, moeglich);
   const chance = b => besuchChance(b, { art, woche });
   const erwartet = z.besucher.reduce((s, b) => s + chance(b), 0) + neu + neugierige.length * NEUGIER.kommChance;
   const anteil = erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;

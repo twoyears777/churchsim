@@ -2,7 +2,7 @@
 import { START_MITARBEITER } from '../inhalte/mitarbeiter.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { LEER, idx, aufGrundstueck } from './karte.js';
-import { moebelBei, moebelImRaum } from './moebel.js';
+import { hindernisBei, moebelImRaum } from './moebel.js';
 
 // Startplatz: innen am Tor
 export function startPlatz() {
@@ -37,7 +37,7 @@ export function personHinzufuegen(z, daten) {
 // Darf eine Figur auf dieses Kästchen? Nur freier Boden auf dem eigenen Grundstück, nicht besetzt.
 export function platzFrei(z, x, y, ausser) {
   if (!aufGrundstueck(x, y) || z.zellen[idx(z, x, y)] !== LEER) return false;
-  if (z.moebel && moebelBei(z, x, y)) return false;
+  if (z.moebel && hindernisBei(z, x, y)) return false;   // auf Straße und Parkplatz darf man stehen
   return !z.personen.some(p => p !== ausser && p.x === x && p.y === y);
 }
 

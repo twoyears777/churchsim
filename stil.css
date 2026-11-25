@@ -139,3 +139,41 @@ table.menschen tr[data-mensch]:hover td { background: #ebe5d6; }
 .kachel p.fehlt { margin: 6px 0 0; font-size: 13px; }
 .kachel:disabled { opacity: .6; cursor: default; }
 .kachel:disabled small { display: block; font-size: 13px; margin-top: 4px; }
+
+/* Bauleiste unten (25.11.) – Platzhalter-Design, Farben legt Lukas fest */
+.bauleiste { flex: none; background: linear-gradient(#383732, #2b2a27); border-top: 1px solid #4d4b45; padding: 4px 12px 10px; box-shadow: 0 -6px 18px rgba(0,0,0,.25); }
+.hinweis-zeile { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.hinweis-zeile .hinweis { padding: 0 2px; }
+.hinweis-zeile .klein-knopf { min-height: 26px; }
+.bau-zeile { display: flex; gap: 12px; align-items: stretch; }
+.reiter { display: flex; gap: 4px; flex: none; }
+.reiter button, .abriss-knopf { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  width: 82px; min-height: 84px; padding: 6px 4px; font-size: 13px; border-radius: 10px; }
+.reiter button[aria-selected="true"] { background: #f3efe6; color: #2b2a27; border-color: #f3efe6; }
+.reiter canvas.symbol { width: 34px; height: 34px; background: #e9e2d2; border-radius: 6px; }
+.bau-karten { flex: 1; min-width: 0; display: flex; gap: 8px; overflow-x: auto; padding: 6px; background: rgba(0,0,0,.22); border-radius: 12px; }
+.bau-karte { flex: none; width: 100px; min-height: 84px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 6px 4px; background: #403f3a; border: 2px solid #55534d; border-radius: 10px; font-size: 13px; }
+.bau-karte:hover { border-color: #8a877e; }
+.bau-karte canvas.symbol { width: 40px; height: 40px; background: #e9e2d2; border-radius: 6px; }
+.bau-karte .name { line-height: 1.15; text-align: center; }
+.bau-karte .preis { margin: 0; }
+button.bau-karte[aria-pressed="true"] { background: #4d4a40; color: #f3efe6; border-color: #f2c230; box-shadow: 0 0 0 2px rgba(242,194,48,.25); }
+button.bau-karte[aria-pressed="true"] .preis { background: rgba(255,255,255,.14); }
+.bau-karte.zu-teuer .preis { background: #b3261e; color: #fff; }
+.bau-karte.gesperrt { opacity: .55; }
+.bau-rechts { display: flex; align-items: center; gap: 8px; flex: none; }
+.abriss-knopf { background: #6e2621; border-color: #9b3a31; }
+.abriss-knopf canvas.symbol { width: 34px; height: 34px; background: #b3261e; border-radius: 6px; }
+button.abriss-knopf[aria-pressed="true"] { background: #b3261e; color: #fff; border-color: #fff; }
+.bau-rechts .kontoEditor { flex-direction: column; align-items: flex-end; gap: 0; font-size: 12px; color: #c9c4b8; padding: 0 6px; }
+.bau-rechts .kontoEditor b { font-size: 16px; color: #f3efe6; }
+
+/* Einzugsgebiet im Bekanntheit-Fenster */
+.zeile.links { justify-content: flex-start; margin-top: 6px; }
+.kachel span.ok { color: #2e7d32; }
+.kachel > b { display: block; margin-bottom: 2px; }
+
+.bau-karte .preis:empty { display: none; }
+.bau-karte.gesperrt .preis { font-size: 11px; white-space: nowrap; }
+.bau-karte { width: 108px; }
