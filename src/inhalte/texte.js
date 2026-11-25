@@ -62,6 +62,13 @@ export const TEXTE = {
     stuehle: 'Es fehlen Stühle (mindestens 2).',
     klavier: 'Es fehlt ein Klavier im Raum.'
   },
+  // Eigene Fehlt-Texte einzelner Veranstaltungen (gehen vor fehltSaal). Konfirmandenunterricht: von Lukas freigegeben (25.11.)
+  fehltArt: {
+    konfi: {
+      leitung: 'Für den Konfirmandenunterricht fehlt ein Hauptamtlicher.',
+      stuehle: 'Für den Konfirmandenunterricht fehlt mindestens ein Stuhl.'
+    }
+  },
   laeuftSaal: {
     anreise: name => `${name}: Die Besucher kommen.`,
     gottesdienst: name => `${name} läuft.`
@@ -161,18 +168,23 @@ export const TEXTE = {
       weitererStuhl: b => ({ name: 'Jeder weitere Stuhl', besucher: `+${b.plaetze} Platz` }),
       leitungChor: b => ({ name: `Ehrenamtlicher ab Musik-Level ${b.levelMin} (Pflicht)` + (b.level !== null ? ` (Level ${b.level})` : ''),
         besucher: 'normal, Stühle egal', haltung: `+${b.platz} Platz, +${b.bonus !== null ? b.bonus : b.bonusMin} %`, geld: `Spende ca. ${geld(b.spende)} je Besucher` }),
-      chorLevel: b => ({ name: 'Jedes weitere Musik-Level', haltung: `+${b.proLevel} %` })
+      chorLevel: b => ({ name: 'Jedes weitere Musik-Level', haltung: `+${b.proLevel} %` }),
+      // Konfirmandenunterricht (von Lukas freigegeben, 25.11.)
+      hauptamtKonfi: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: `nur Jugendliche, ${b.jugendProzent} %`, haltung: `+${b.veranstaltung}` }),
+      stuehlePflicht: b => ({ name: 'Stühle (Pflicht)', besucher: `${b.plaetze} Platz je Stuhl` }),
+      ehrenamtKonfi: b => ({ name: `Ehrenamtliche (${b.anzahl} von ${b.max})`, ehrenamt: `+${b.jeEhrenamt} Haltung je Ehrenamtlichem` })
     },
     // Zeile „Zusammen“: s = Summe aus dem Spiel
     summe: s => ({
       besucher: s.besucher.art === 'musik' ? `×${zahl(s.besucher.min)} bis ×${zahl(s.besucher.max)} je nach Lobpreis-Vorliebe`
         : s.besucher.art === 'vorliebe' ? '× Lobpreis-Vorliebe'
-        : s.besucher.art === 'plaetze' ? `normal, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}`
+        : s.besucher.art === 'plaetze' ? `${s.art === 'konfi' ? 'nur Jugendliche' : 'normal'}, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}`
         : s.besucher.art === 'egal' ? 'normal, Stühle egal' : 'normal',
       haltung: s.haltung.vorliebeMax !== null
         ? `+${s.haltung.fest}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` : '') + ' je nach Lobpreis-Vorliebe'
         : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' ? ' je nach Lobpreis-Vorliebe' : '') : ''),
-      geld: s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher` : `${geld(s.geld.jeBesucher)} je Besucher`
+      geld: s.geld.keins ? null : s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher` : `${geld(s.geld.jeBesucher)} je Besucher`,
+      ...(s.ehrenamt ? { ehrenamt: `+${s.ehrenamt} Haltung` } : {})   // Konfirmandenunterricht: Plus durch die Ehrenamtlichen im Raum
     })
   },
   bringt: 'Bringt',
@@ -213,7 +225,10 @@ export const TEXTE = {
     passant: 'Passant · noch nie in der Gemeinde',
     neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst',
     lobpreis: prozent => `Mag Lobpreis: ${prozent} %`,  // Lukas, 25.11.
-    kaffeeWert: prozent => `Mag Kaffee: ${prozent} %`   // Lukas, 25.11.
+    kaffeeWert: prozent => `Mag Kaffee: ${prozent} %`,  // Lukas, 25.11.
+    // Konfirmandenunterricht (von Lukas freigegeben, 25.11.)
+    jugendlich: 'Jugendlich',
+    konfi: (n, von) => `Konfirmandenunterricht: ${n} von ${von}`
   },
 
   // ---- Fenster des Kirchkaffees: Öffnungszeiten (Lukas, 25.11.) ----
@@ -310,7 +325,12 @@ export const TEXTE = {
   // Meldung unten rechts
   meldung: {
     neugierig: name => `${name} ist am Tor stehen geblieben und schaut neugierig herein.`,
-    keinGeldKaffee: name => `Nicht genug Geld – ${name} konnte keinen Kaffee einkaufen.`   // Lukas, 25.11.
+    keinGeldKaffee: name => `Nicht genug Geld – ${name} konnte keinen Kaffee einkaufen.`,   // Lukas, 25.11.
+    // Konfirmandenunterricht (von Lukas freigegeben, 25.11.; Einzahl bei „konfirmiert“ von Claude ergänzt)
+    konfirmand: name => `${name} war 7-mal im Konfirmandenunterricht und wird bei der nächsten Konfirmation konfirmiert.`,
+    konfirmiert: n => n === 1 ? '1 Jugendlicher wurde konfirmiert und gehört jetzt zu den Erwachsenen.'
+      : `${n} Jugendliche wurden konfirmiert und gehören jetzt zu den Erwachsenen.`,
+    keineKonfirmanden: () => 'In diesem Jahr gibt es keine Konfirmanden – die Konfirmation fällt aus.'
   },
 
   // Seelsorge-Fenster
@@ -584,6 +604,9 @@ export const TEXTE = {
     aendern: 'Plan ändern',                                    // ENTWURF
     normal: 'normal viele Besucher',                           // ENTWURF (Zeiten ohne eigenen Faktor)
     gesperrt: 'Gesperrt – braucht Konfirmandenunterricht',
+    // Konfirmation (von Lukas freigegeben, 25.11.)
+    konfirmation: 'Konfirmation: Jugendliche, die im Jahr 7-mal beim Konfirmandenunterricht waren, werden konfirmiert. Sehr viele Besucher, sehr hohe Kollekte.',
+    keineKonfirmanden: 'In diesem Jahr gibt es keine Konfirmanden – die Konfirmation fällt aus.',
     farben: { advent: 'violett', weihnachten: 'weiß', epiphanias: 'grün', vorpassion: 'grün', passion: 'violett', ostern: 'weiß', trinitatis: 'grün' },
     erklaerung: {
       advent: 'Die Zeit der Vorbereitung auf Weihnachten. Mit dem 1. Advent beginnt das neue Kirchenjahr.',
@@ -605,6 +628,7 @@ export const TEXTE = {
     keinRaum: 'Du hast noch keinen fertigen Gottesdienstraum.',                // ENTWURF
     keineEA: 'Noch keine Ehrenamtlichen.',                                     // ENTWURF
     eaSpaeter: 'Was Ehrenamtliche beim Fest bewirken, folgt später.',          // ENTWURF
+    konfirmanden: (name, n) => `${name} – ${n} ${n === 1 ? 'Konfirmand' : 'Konfirmanden'}`,   // von Lukas freigegeben (25.11.)
     faellt: (platz, raum) => `Fällt aus: Veranstaltung ${platz + 1}${raum ? ` (${raum})` : ''}`,   // ENTWURF
     planen: 'Fest planen',
     nicht: 'Diesmal nicht',

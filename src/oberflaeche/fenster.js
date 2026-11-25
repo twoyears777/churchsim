@@ -106,7 +106,7 @@ function raumFenster(f) {
   }
 
   // ---- Übersicht: Veranstaltung 1, 2 ----
-  const warnung = e => saal ? (e.art && e.fehlt && TEXTE.fehltSaal[e.fehlt]) || ''
+  const warnung = e => saal ? (e.art && e.fehlt && ((TEXTE.fehltArt[e.art] || {})[e.fehlt] || TEXTE.fehltSaal[e.fehlt])) || ''
     : e.fehlt === 'gesperrt' && e.art ? TEXTE.fehltGesperrt(e.platz + 1)
     : e.art && e.fehlt === 'gitarre' ? TEXTE.fehltGitarre : e.art && e.fehlt === 'leitung' ? T.keinMitarbeiter : '';
   const plaetze = r.programm.map(e => {
@@ -140,18 +140,18 @@ function raumFenster(f) {
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
-// Bausteintabelle: eine Zeile pro Baustein (Pflicht grau hinterlegt), unten „Zusammen“. Spalte Ehrenamt vorerst immer leer.
+// Bausteintabelle: eine Zeile pro Baustein (Pflicht grau hinterlegt), unten „Zusammen“. Spalte Ehrenamt: bisher nur beim Konfirmandenunterricht.
 function bausteinTabelle({ zeilen, summe }) {
   const B = TEXTE.bausteine, S = B.spalten;
   const zelle = t => t ? `<td>${t}</td>` : '<td class="strich">–</td>';
   const reihen = zeilen.map(b => {
     const t = B.zeilen[b.id](b);
     return `<tr class="${b.pflicht ? 'pflicht' : ''}"><td>${t.name}</td><td class="mitte">${b.imRaum ? '<span class="haken">✓</span>' : '<span class="nein">–</span>'}</td>
-      ${zelle(t.besucher)}${zelle(t.haltung)}${zelle(t.geld)}${zelle(null)}</tr>`;
+      ${zelle(t.besucher)}${zelle(t.haltung)}${zelle(t.geld)}${zelle(t.ehrenamt)}</tr>`;
   }).join('');
   const s = B.summe(summe);
   const zusammen = summe.bereit
-    ? `<tr class="summe"><td>${B.zusammen}</td><td></td>${zelle(s.besucher)}${zelle(s.haltung)}${zelle(s.geld)}${zelle(null)}</tr>`
+    ? `<tr class="summe"><td>${B.zusammen}</td><td></td>${zelle(s.besucher)}${zelle(s.haltung)}${zelle(s.geld)}${zelle(s.ehrenamt)}</tr>`
     : `<tr class="summe"><td>${B.zusammen}</td><td></td><td colspan="4" class="fehlt">${B.faelltAus}</td></tr>`;
   return `<table class="baustein"><colgroup><col style="width:27%"><col style="width:8%"><col style="width:18%"><col style="width:19%"><col style="width:16%"><col style="width:12%"></colgroup>
     <tr><th>${S.baustein}</th><th>${S.imRaum}</th><th>${S.besucher}</th><th>${S.haltung}</th><th>${S.geld}</th><th>${S.ehrenamt}</th></tr>${reihen}${zusammen}</table>`;
@@ -258,7 +258,8 @@ function besucherKarte(f) {
   const T = TEXTE.karte, n = b.beduerfnisse;
   const status = s => `<td class="zahl ${s === true ? 'ok' : s === false ? 'fehlt' : ''}">${s === true ? T.erfuellt : s === false ? T.nichtErfuellt : T.offen}</td>`;
   const kopf = `<h2>${esc(b.voll)}</h2>
-    <p class="unter">${b.status === 'passant' ? T.passant : b.status === 'neugierig' ? T.neugierig : b.besuche ? T.besuche(b.besuche) : T.neu}</p>
+    <p class="unter">${b.jugend ? `${T.jugendlich} · ` : ''}${b.status === 'passant' ? T.passant : b.status === 'neugierig' ? T.neugierig : b.besuche ? T.besuche(b.besuche) : T.neu}</p>
+    ${b.konfi ? `<p class="unter">${T.konfi(b.konfi.anzahl, b.konfi.von)}</p>` : ''}
     <h3>${T.zufriedenheit}</h3>
     <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>
     <p class="unter">${T.lobpreis(Math.round(b.lobpreis * 100))}</p>
@@ -495,10 +496,12 @@ function kirchenjahrFenster() {
   const feste = k.feste.map(f => {
     const wort = faktorWorte(f.besucher, f.kollekte), p = f.plan;
     const art = p ? (ui.spiel.festMenueInfo(f.schluessel).arten.find(a => a.id === p.art) || {}).name : '';
-    const knopf = f.gross ? `<div class="zeile links"><button data-kj-planen="${f.schluessel}">${p ? K.aendern : K.planen}</button></div>` : '';
-    return `<div class="kachel"><b>${esc(f.name)}</b>
+    // Konfirmation ohne Konfirmanden: fällt aus, kein Planen-Knopf
+    const knopf = f.gross && !f.faelltAus ? `<div class="zeile links"><button data-kj-planen="${f.schluessel}">${p ? K.aendern : K.planen}</button></div>` : '';
+    const konfi = f.konfirmanden === null ? '' : `<small class="unter">${K.konfirmation}</small>${f.faelltAus ? `<span class="fehlt">${K.keineKonfirmanden}</span>` : ''}`;
+    return `<div class="kachel"><b>${esc(f.konfirmanden ? TEXTE.festMenue.konfirmanden(f.name, f.konfirmanden) : f.name)}</b>
       <span class="klein">${TEXTE.tage[f.wochentag]}, ${f.datum} · ${K.inTagen(f.tageBis)}</span>
-      ${wort ? `<span>${wort}</span>` : ''}${f.feiertag ? `<span class="feiertag">${K.feiertag}</span>` : ''}
+      ${wort ? `<span>${wort}</span>` : ''}${f.feiertag ? `<span class="feiertag">${K.feiertag}</span>` : ''}${konfi}
       ${p ? `<span class="ok">${K.geplant(esc(art || ''), esc(p.raumName || '–'), esc(p.leitung || '–'))}</span>` : ''}${knopf}</div>`;
   }).join('');
   const gesperrt = k.gesperrt.map(f => `<button class="kachel" disabled><b>${esc(f.name)}</b><small class="unter">${K.gesperrt}</small></button>`).join('');
@@ -535,7 +538,7 @@ function festFenster(f) {
     ? `<button data-fest-nicht>${M.nicht}</button><button class="haupt" data-fest-planen ${kannPlanen ? '' : 'disabled'}>${M.planen}</button>`
     : `${m.geplant ? `<button data-fest-nicht>${M.absagen}</button>` : ''}${f.vonKirchenjahr ? `<button data-fest-zurueck>${M.zurueck}</button>` : '<button data-zu>Schließen</button>'}<button class="haupt" data-fest-planen ${kannPlanen ? '' : 'disabled'}>${M.planen}</button>`;
   return `<h2>${M.titel}</h2>
-    <p class="unter staerker">${M.zeile(esc(m.name), TEXTE.tage[m.wochentag], m.datum, TEXTE.kirchenjahr.inTagen(m.tageBis))}</p>
+    <p class="unter staerker">${M.zeile(m.konfirmanden !== null ? M.konfirmanden(esc(m.name), m.konfirmanden) : esc(m.name), TEXTE.tage[m.wochentag], m.datum, TEXTE.kirchenjahr.inTagen(m.tageBis))}</p>
     ${wort ? `<p class="unter">${M.erwartet(wort)}</p>` : ''}
     <h3>${M.zeit}</h3><div class="kacheln">${m.slots.map(s => wahl('slot', s.id, a.slot === s.id, `${R.slots[s.id]} · ${uhr(s)}`)).join('')}</div>
     <h3>${M.raum}</h3>${m.raeume.length ? `<div class="kacheln">${m.raeume.map(r => wahl('raumNr', r.nr, a.raumNr === r.nr, raumName(r))).join('')}</div>` : `<p class="warnung">${M.keinRaum}</p>`}

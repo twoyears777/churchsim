@@ -13,6 +13,7 @@ import { FESTE, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { SLOTS } from '../inhalte/zeit.js';
 import { TAG_MIN } from './zeit.js';
 import { kommendeFeste } from './kalender.js';
+import { festAktiv, keineKonfirmandenMelden } from './konfi.js';
 
 export function festeAnlegen(z) {
   if (!z.feste) z.feste = { gefragt: [], anfrage: null, plaene: {} };
@@ -32,8 +33,12 @@ export function festSchritt(z) {
   const f = kommendeFeste(heute + 1, 30).find(x => x.gross && !z.feste.gefragt.includes(festSchluessel(x.id, x.tagNr)));
   if (!f) return null;
   const zeit = (f.tagNr - FEST_MENUE.tageVorher) * TAG_MIN + FEST_MENUE.stunde * 60;
-  const k = festSchluessel(f.id, f.tagNr);
-  return { zeit: Math.max(zeit, z.minuten), tun: zz => { zz.feste.gefragt.push(k); zz.feste.anfrage = k; } };
+  const k = festSchluessel(f.id, f.tagNr), fest = FESTE.find(x => x.id === f.id);
+  // Konfirmation ohne Konfirmanden: kein Menü, nur eine Meldung (die Konfirmation fällt aus)
+  return { zeit: Math.max(zeit, z.minuten), tun: zz => {
+    zz.feste.gefragt.push(k);
+    if (festAktiv(zz, fest)) zz.feste.anfrage = k; else keineKonfirmandenMelden(zz);
+  } };
 }
 
 // Sonderevent planen. a: { slot, raum (Raum-Schlüssel), leitung (Person-id), art, ehrenamt: [Person-ids] }

@@ -6,6 +6,7 @@
 import { DAUERSPENDE as D } from '../inhalte/finanzen.js';
 import { WOCHE_MIN, zeitpunkt } from './zeit.js';
 import { buchen } from './finanzen.js';
+import { istJugend } from './konfi.js';
 
 const montag = woche => woche * WOCHE_MIN + D.stunde * 60;   // Montag 8:00 dieser Woche (Spielminuten)
 
@@ -18,9 +19,11 @@ export function dauerspenderAnlegen(z) {
 
 // Alle Menschen mit Haltung (Besucher und Passanten im Ort)
 const alleMenschen = z => [...(z.besucher || []), ...(z.ort ? z.ort.leute : [])];
+// Dauerspender werden können nur Erwachsene (Lukas, 25.11.: Jugendliche erst nach der Konfirmation)
+const erwachsene = z => alleMenschen(z).filter(p => !istJugend(p));
 
 function montagsAbrechnen(z, woche, zufall) {
-  const S = z.dauerspende.spender, menschen = new Map(alleMenschen(z).map(p => [p.id, p]));
+  const S = z.dauerspende.spender, menschen = new Map(erwachsene(z).map(p => [p.id, p]));
   const zahlen = (id, betrag) => buchen(z, 'einnahmen', 'dauerspende', betrag, { spender: id });
   for (const id of Object.keys(S)) {
     const p = menschen.get(id);

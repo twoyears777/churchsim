@@ -100,7 +100,7 @@ function gemeinde() {
   // Kirchenjahr-Fenster: Heiligabend als nächstes Fest, groß, nicht geplant
   const k = spiel.kirchenjahrInfo();
   assert.equal(k.feste[0].id, 'heiligabend'); assert.equal(k.feste[0].gross, true); assert.equal(k.feste[0].plan, null);
-  assert.equal(k.zeit, 'advent'); assert.equal(k.gesperrt[0].id, 'konfirmation');
+  assert.equal(k.zeit, 'advent'); assert.deepEqual(k.gesperrt, []);   // Konfirmation seit dem Konfirmandenunterricht frei
 }
 
 // ---- Sonderevent: findet statt, verdrängt die Veranstaltung im selben Raum zur gleichen Zeit (ohne Haltungs-Abzug) ----

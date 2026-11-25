@@ -123,7 +123,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
   const aufbau = () => {
     const z = neuesSpiel(() => 0.9);
     z.ortRuhig = true;
-    for (const b of z.besucher) { b.kaffeeWert = 0; b.lobpreis = 0.5; }   // Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; niemand will Kaffee (eigene Tests: kirchkaffee.test.mjs)                                                // ohne Passanten und Seelsorge (eigene Tests weiter unten)
+    for (const b of z.besucher) { b.kaffeeWert = 0; b.lobpreis = 0.5; b.jugend = false; }   // alle erwachsen (Jugendliche: konfi.test.mjs)   // Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; niemand will Kaffee (eigene Tests: kirchkaffee.test.mjs)                                                // ohne Passanten und Seelsorge (eigene Tests weiter unten)
     const aus = () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
     const raumBei = (x, y) => { const a = aus(); return a.liste[a.gruppe[x + y * z.w]]; };
     wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);

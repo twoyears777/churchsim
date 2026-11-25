@@ -88,6 +88,7 @@ export const HILFE = {
         { punkte: [
           '**Gottesdienst:** braucht den Pastor im Raum. Bringt Kollekte, Zufriedenheit und Bekanntheit.',
           '**Lobpreisgottesdienst:** braucht einen Hauptamtlichen und eine Gitarre. Wie gut er ankommt, hängt davon ab, wie sehr jemand Lobpreis mag.',
+          '**Konfirmandenunterricht:** Im Gemeindesaal möglich, braucht einen Hauptamtlichen und Stühle. Nur Jugendliche kommen. Jeder Ehrenamtliche im Raum bringt mehr Haltung. Wer 7-mal da war, wird am 2. Sonntag im Mai konfirmiert.',   // von Lukas freigegeben (25.11.)
           '**Sonntagvormittag** gibt es doppelte Kollekte.',
           'Sobald Kanzel und Altar im Raum stehen, kannst du eine **zweite Veranstaltung** einstellen.',
           'Fehlt etwas, fällt die Veranstaltung aus – das macht Stammgäste unzufrieden. Das Raum-Fenster zeigt dir rot, was fehlt, und eine Prognose für die Woche.'

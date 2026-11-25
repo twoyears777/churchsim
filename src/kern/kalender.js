@@ -70,6 +70,7 @@ function regelDatum(w, j) {
   if (w.ostern !== undefined) return ostern(j) + w.ostern * TAG;
   if (w.vorAdvent !== undefined) return ersterAdvent(j) - w.vorAdvent * TAG;
   if (w.ersterSonntagIm !== undefined) { const t = datum(j, w.ersterSonntagIm, 1), wt = new Date(t).getUTCDay(); return t + ((7 - wt) % 7) * TAG; }
+  if (w.zweiterSonntagIm !== undefined) { const t = datum(j, w.zweiterSonntagIm, 1), wt = new Date(t).getUTCDay(); return t + ((7 - wt) % 7 + 7) * TAG; }
   return datum(j, w.monat, w.tag);
 }
 const festeCache = new Map();
@@ -101,9 +102,10 @@ export function zeitAmTag(tagNr) {
   return 'advent';
 }
 // Faktoren für eine Veranstaltung an diesem Spieltag. Fest und Zeit gleichzeitig: jeweils der höhere Wert.
+// aktiv(fest): findet das Fest statt? (Konfirmation nur mit Konfirmanden – das weiß konfi.js; ohne Angabe: ja)
 // → { besucher, kollekte, fest: id | null, zeit: id }
-export function faktorAmTag(tagNr) {
-  const f = festAmTag(tagNr), zeit = zeitAmTag(tagNr), zf = ZEIT_FAKTOREN[zeit] || { besucher: 1, kollekte: 1 };
+export function faktorAmTag(tagNr, aktiv = () => true) {
+  const f0 = festAmTag(tagNr), f = f0 && aktiv(f0) ? f0 : null, zeit = zeitAmTag(tagNr), zf = ZEIT_FAKTOREN[zeit] || { besucher: 1, kollekte: 1 };
   return { besucher: Math.max(f ? f.besucher : 1, zf.besucher), kollekte: Math.max(f ? f.kollekte : 1, zf.kollekte), fest: f ? f.id : null, zeit };
 }
 // Die nächsten n Feste ab diesem Spieltag (heute eingeschlossen): { id, name, tagNr, besucher, kollekte, gross, feiertag }

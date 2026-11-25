@@ -32,5 +32,12 @@ export const BEKANNTHEIT = {
   teiler: 10             // neue Besucher pro Woche im Schnitt = Bekanntheit ÷ 10
 };
 
+// Jugendliche (Lukas, 25.11.): 20 % aller Menschen (Besucher und Passanten) sind Jugendliche.
+// Kommchance = normale (haltungsabhängige) Kommchance × Faktor der Veranstaltung. Nicht aufgeführt: × 1.
+// Später (Jugendgottesdienst): dort höher.
+export const JUGEND = { anteil: 0.2, faktor: { gottesdienst: 0.5, lobpreis: 0.5, senioren: 0, chorprobe: 0.2, konfi: 0.6 } };
+// Konfirmandenunterricht (Lukas, 25.11.): so viele Teilnahmen in einem Jahrgang (von Konfirmation zu Konfirmation) → Konfirmand
+export const KONFI = { teilnahmen: 7 };
+
 export const EHRENAMT_AB_BESUCHEN = 3;  // ab so vielen Gottesdienstbesuchen ...
 export const EHRENAMT_QUOTE = 0.05;     // ... wird man mit dieser Wahrscheinlichkeit pro Woche Ehrenamtlicher

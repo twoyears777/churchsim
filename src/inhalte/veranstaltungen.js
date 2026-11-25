@@ -17,7 +17,15 @@ export const VERANSTALTUNGEN = [
   { id: 'senioren', name: 'Seniorennachmittag', raumtypen: ['gemeindesaal'], leitung: ['hauptamt', 'ehrenamt'], braucht: ['tisch'],
     stuehleMin: 2, haltung: 5, kollekte: false, kirchkaffee: false, spende: true },
   { id: 'chorprobe', name: 'Kirchenchorprobe', raumtypen: ['gemeindesaal'], leitung: ['ehrenamt'], braucht: ['klavier'],
-    musikLevelMin: 1, haltungNachMusik: true, stuehleBegrenzen: false, kollekte: false, kirchkaffee: false, spende: true }
+    musikLevelMin: 1, haltungNachMusik: true, stuehleBegrenzen: false, kollekte: false, kirchkaffee: false, spende: true },
+  // Konfirmandenunterricht (Lukas, 25.11.: claude/spielprinzip-konfirmandenunterricht.md): bringt nur Haltung.
+  // haltungJeEhrenamt / ehrenamtMax: jeder eingesetzte Ehrenamtliche + so viel Haltung, höchstens so viele zählen.
+  // sitzplatzHaltung: false = der Sitzplatz ist nur Bedingung, kein Haltungs-Plus. nurJugend: nur Jugendliche kommen.
+  // bekanntheit: false = keine Bekanntheit. neueBesucher: false = keine neuen Besucher über die Bekanntheit.
+  // konfiTeilnahme: zählt für die Konfirmation (KONFI in besucher.js).
+  { id: 'konfi', name: 'Konfirmandenunterricht', raumtypen: ['gemeindesaal'], leitung: 'hauptamt', braucht: [],
+    stuehleMin: 1, haltung: 5, haltungJeEhrenamt: 2, ehrenamtMax: 3, sitzplatzHaltung: false, nurJugend: true,
+    bekanntheit: false, neueBesucher: false, konfiTeilnahme: true, kollekte: false, kirchkaffee: false, spende: false }
 ];
 // Spontane Spende im Gemeindesaal (Lukas, 25.11.): jeder anwesende Besucher mit dieser Chance zufällig min … max € (ganze Euro)
 export const SPONTANE_SPENDE = { chance: 0.1, min: 1, max: 3 };

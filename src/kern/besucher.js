@@ -2,7 +2,8 @@
 // Passanten aus dem Ort (z.ort.leute) haben dieselbe Form; kommen sie zum Gottesdienst, wechseln sie in z.besucher.
 import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte/namen.js';
 import { NEUGIER } from '../inhalte/ort.js';
-import { ZWEITER_BESUCH } from '../inhalte/veranstaltungen.js';
+import { ZWEITER_BESUCH, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
+import { istJugend, jugendFaktor, jugendZuteilen } from './konfi.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, BEKANNTHEIT,
   EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, LOBPREIS_MUSIK } from '../inhalte/besucher.js';
@@ -38,7 +39,8 @@ export function neuePerson(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.r
   let name = null;
   for (const n of namenZiehen(30, zufall)) if (!vergeben.has(n.voll)) { name = n; break; }
   if (!name) [name] = namenZiehen(1, zufall);
-  return { id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, besuche: 0 };
+  // Jugendlich ja/nein wird gleich fest zugeteilt (20 %, aus Kennung und Name – kein Würfel, siehe konfi.js)
+  return jugendZuteilen({ id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, besuche: 0 });
 }
 export function neuerBesucher(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
   const b = neuePerson(z, zufriedenheit, zufall);
@@ -75,14 +77,23 @@ export function kaffeeVorliebe(b) {
 }
 // Chance für eine bestimmte Veranstaltung: × Lobpreis-Vorliebe beim Lobpreisgottesdienst, × Musik-Faktor beim normalen
 // Gottesdienst (o.musik: true = Lobpreisteam spielt, false = keine Musik, nicht angegeben = ohne Wirkung),
-// × 0,5 beim 2. Besuch derselben Woche, × Besucher-Faktor des Kirchenjahres (o.faktor, z. B. Heiligabend ×3), höchstens 100 %
+// × 0,5 beim 2. Besuch derselben Woche, × Besucher-Faktor des Kirchenjahres (o.faktor, z. B. Heiligabend ×3), höchstens 100 %.
+// Jugendliche: × Faktor der Veranstaltung (JUGEND); Erwachsene kommen nicht, wenn nur Jugendliche kommen (Konfirmandenunterricht).
+// o.konfirmation: Konfirmations-Gottesdienst – Konfirmanden kommen sicher.
 export function besuchChance(b, o = {}) {
-  let c = kommChance(b);
+  if (o.konfirmation && b.konfirmand && istJugend(b)) return 1;
+  let c = kommChance(b) * artFaktor(b, o.art);
   if (o.art === 'lobpreis') c *= lobpreisVorliebe(b);
   else if (typeof o.musik === 'boolean') c = Math.min(1, c * musikFaktor(b, o.musik));
   if (o.woche !== undefined && b.besuchtWoche === o.woche) c *= ZWEITER_BESUCH;
   if (o.faktor) c = Math.min(1, c * o.faktor);   // Feste und Zeiten im Kirchenjahr (höchstens 100 %)
   return c;
+}
+
+// Jugendliche/Erwachsene: Faktor für diese Veranstaltung (1 = wie bisher)
+export function artFaktor(b, art) {
+  const v = art ? VERANSTALTUNGEN.find(x => x.id === art) : null;
+  return jugendFaktor(b, art, !!(v && v.nurJugend));
 }
 
 // Wie gern jemand zum normalen Gottesdienst mit (musik = true) oder ohne Musik kommt: 0 % Vorliebe mit Musik × 0,5, 100 % × 1,5
@@ -107,16 +118,22 @@ export function werKommt(z, zufall = Math.random, o = {}) {
   const aus = o.ausschluss || new Set();
   const bekannte = z.besucher.filter(b => !aus.has(b.id) && zufall() < besuchChance(b, o));
   const neue = [], ort = z.ort ? z.ort.leute : [];
+  // Jugendliche/Erwachsene (JUGEND): passt diese Veranstaltung? Faktor 1 = sicher, 0 = nie, dazwischen mit dieser Chance.
+  const passt = p => { const f = artFaktor(p, o.art); return f >= 1 || (f > 0 && zufall() < f); };
   for (const p of ort.filter(p => p.neugierig)) {
-    if (zufall() < NEUGIER.kommChance) neue.push(ausDemOrt(z, p)); else p.neugierig = false;
+    const f = artFaktor(p, o.art);
+    if (f <= 0) continue;                                  // z. B. Erwachsene beim Konfirmandenunterricht: bleiben neugierig
+    if (zufall() < NEUGIER.kommChance * f) neue.push(ausDemOrt(z, p)); else p.neugierig = false;
   }
   let frei = null;
-  for (let i = neueBesucherZahl(z.bekanntheit * (o.neuAnteil ?? 1) * (o.faktor || 1), zufall); i > 0; i--) {
+  const anzahlNeu = o.keineNeuen ? 0 : neueBesucherZahl(z.bekanntheit * (o.neuAnteil ?? 1) * (o.faktor || 1), zufall);
+  for (let i = anzahlNeu; i > 0; i--) {
     const rest = z.ort ? z.ort.leute : [];
-    if (rest.length) { neue.push(ausDemOrt(z, rest[Math.floor(zufall() * rest.length)])); continue; }
+    if (rest.length) { const p = rest[Math.floor(zufall() * rest.length)]; if (passt(p)) neue.push(ausDemOrt(z, p)); continue; }
     if (frei === null) frei = platzImGebiet(z);
     if (frei <= 0) break;                                  // Einzugsgebiet voll: keine ganz neuen Leute
-    neue.push(neuerBesucher(z, NEU_ZUFRIEDENHEIT, zufall)); frei--;
+    const p = neuePerson(z, NEU_ZUFRIEDENHEIT, zufall);
+    if (passt(p)) { z.besucher.push(p); neue.push(p); frei--; }
   }
   return [...bekannte, ...neue];
 }

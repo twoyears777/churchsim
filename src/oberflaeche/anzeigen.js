@@ -104,9 +104,10 @@ function personenListen(personen) {
 function hinweisText(s) {
   if (s.phase === 'kaffeeOffen') return TEXTE.laeuft.kaffeeOffen;
   // Gemeindesaal: eigene Texte mit dem Namen der Veranstaltung
-  const saal = s.art && TEXTE.veranstaltungKacheln[s.art] && !['gottesdienst', 'lobpreis'].includes(s.art);
+  const saal = s.art && !['gottesdienst', 'lobpreis'].includes(s.art);
+  const fehltText = grund => (TEXTE.fehltArt[s.art] || {})[grund] || TEXTE.fehltSaal[grund] || '';   // eigene Texte gehen vor
   if (saal && TEXTE.laeuftSaal[s.phase]) return TEXTE.laeuftSaal[s.phase](s.artName) + (s.heim ? ' ' + TEXTE.heimgeschickt(s.heim) : '');
-  if (saal && s.phase === 'ausgefallen' && s.grund !== 'fest') return TEXTE.ausgefallenSaal(s.artName, TEXTE.fehltSaal[s.grund] || '');
+  if (saal && s.phase === 'ausgefallen' && s.grund !== 'fest') return TEXTE.ausgefallenSaal(s.artName, fehltText(s.grund));
   if (s.phase === 'anreise' || s.phase === 'gottesdienst' || s.phase === 'kirchkaffee') return TEXTE.laeuft[s.phase] + (s.heim ? ' ' + TEXTE.heimgeschickt(s.heim) : '');
   if (s.phase === 'ausgefallen' && s.grund === 'fest') return TEXTE.faelltAusWegen(s.platz, s.fest);
   if (s.phase === 'ausgefallen') return s.grund === 'gesperrt' ? TEXTE.fehltGesperrt(s.platz + 1) : s.grund === 'gitarre' ? TEXTE.ausgefallenGitarre : TEXTE.ausgefallen;

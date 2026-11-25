@@ -4,7 +4,7 @@
 // Liefert nur Zahlen und Kennungen – die Texte macht die Oberfläche (texte.js → bausteine).
 // Alle Zahlen kommen aus den Inhaltsdateien; ändert sich dort etwas, stimmt die Tabelle automatisch.
 import { VERANSTALTUNGEN, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
-import { AENDERUNG, LOBPREIS_MUSIK } from '../inhalte/besucher.js';
+import { AENDERUNG, LOBPREIS_MUSIK, JUGEND } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
 import { moebelImRaum, stuhlStufe, musikLevel, musikBonus, instrumenteImRaum } from './moebel.js';
@@ -85,8 +85,28 @@ function gottesdienstraum(z, raum, info, v) {
   return { zeilen, summe };
 }
 
+// Konfirmandenunterricht (Lukas, 25.11.): Hauptamtlicher und Stühle Pflicht, nur Jugendliche, + Haltung je Ehrenamtlichem.
+// Das Plus der Ehrenamtlichen steht in der Spalte „Ehrenamt“ (erste Veranstaltung, die sie nutzt).
+function konfi(z, raum, info, v) {
+  const imRaum = info ? info.imRaum : [];
+  const hauptamt = imRaum.some(p => daten(p).art === 'hauptamt');
+  const stuehle = moebelImRaum(z, raum, 'stuhl');
+  const ea = info ? (info.ehrenamtliche || []).length : 0, zaehlen = Math.min(v.ehrenamtMax || Infinity, ea);
+  const zeilen = [
+    { id: 'hauptamtKonfi', pflicht: true, imRaum: hauptamt, jugendProzent: prozent(JUGEND.faktor[v.id] ?? 1), veranstaltung: v.haltung || 0 },
+    { id: 'stuehlePflicht', pflicht: true, imRaum: stuehle.length >= (v.stuehleMin || 1), plaetze: 1 },
+    { id: 'besserStuhl', imRaum: stuehle.some(s => stuhlStufe(s).stufe > 1), kollekte: false },
+    { id: 'ehrenamtKonfi', imRaum: zaehlen > 0, anzahl: zaehlen, max: v.ehrenamtMax || null, jeEhrenamt: v.haltungJeEhrenamt }
+  ];
+  const summe = { art: 'konfi', besucher: { art: 'plaetze', plaetze: stuehle.length },
+    haltung: { fest: v.haltung || 0, vorliebeMax: null, prozent: 0 }, geld: { keins: true }, ehrenamt: zaehlen * v.haltungJeEhrenamt,
+    bereit: zeilen.filter(x => x.pflicht).every(x => x.imRaum) };
+  return { zeilen, summe };
+}
+
 // Seniorennachmittag und Kirchenchorprobe
 function gemeindesaal(z, raum, info, v) {
+  if (v.haltungJeEhrenamt) return konfi(z, raum, info, v);
   const imRaum = info ? info.imRaum : [];
   const ea = imRaum.filter(p => daten(p).art === 'ehrenamt');
   const hauptamt = imRaum.some(p => daten(p).art === 'hauptamt');

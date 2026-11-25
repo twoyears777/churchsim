@@ -38,7 +38,8 @@ export const ZEITEN = [
 // besucher: Kommchance der bekannten Besucher × Faktor (höchstens 100 %) und neue Besucher × Faktor.
 // kollekte: Kollekte × Faktor (wird mit dem ×2 am Sonntagvormittag multipliziert).
 // gross: vor diesem Fest öffnet sich das Fest-Menü (Sonderevent planen). slot: Vorbelegung im Fest-Menü.
-// wann: wie das Datum berechnet wird – fest (Tag/Monat), um Ostern (Tage Abstand), vor dem 1. Advent (Tage), 1. Sonntag im Oktober.
+// wann: wie das Datum berechnet wird – fest (Tag/Monat), um Ostern (Tage Abstand), vor dem 1. Advent (Tage), 1. Sonntag im Oktober,
+//       2. Sonntag im Mai.
 export const FESTE = [
   { id: 'heiligabend', name: 'Heiligabend', wann: { tag: 24, monat: 12 }, besucher: 3, kollekte: 2, gross: true, slot: 'nachmittag' },
   { id: 'christfest1', name: 'Christfest I', wann: { tag: 25, monat: 12 }, besucher: 1.5, kollekte: 1.5, gross: true, slot: 'vormittag' },
@@ -52,13 +53,16 @@ export const FESTE = [
   { id: 'himmelfahrt', name: 'Himmelfahrt', wann: { ostern: 39 }, besucher: 1.3, kollekte: 1 },
   { id: 'pfingstsonntag', name: 'Pfingstsonntag', wann: { ostern: 49 }, besucher: 1.3, kollekte: 1, gross: true, slot: 'vormittag' },
   { id: 'pfingstmontag', name: 'Pfingstmontag', wann: { ostern: 50 }, besucher: 1.2, kollekte: 1 },
+  // Konfirmation (Lukas, 25.11.): 2. Sonntag im Mai. braucht: 'konfirmanden' – ohne Konfirmanden findet sie nicht statt
+  // (kein Fest-Menü, keine Faktoren an dem Tag).
+  { id: 'konfirmation', name: 'Konfirmation', wann: { zweiterSonntagIm: 5 }, besucher: 5, kollekte: 3, gross: true, slot: 'vormittag', braucht: 'konfirmanden' },
   { id: 'erntedank', name: 'Erntedank', wann: { ersterSonntagIm: 10 }, besucher: 1.5, kollekte: 1.5, gross: true, slot: 'vormittag' },
   { id: 'reformationstag', name: 'Reformationstag', wann: { tag: 31, monat: 10 }, besucher: 1.3, kollekte: 1 },
   { id: 'bussbettag', name: 'Buß- und Bettag', wann: { vorAdvent: 11 }, besucher: 1.2, kollekte: 1 },
   { id: 'ewigkeitssonntag', name: 'Ewigkeitssonntag', wann: { vorAdvent: 7 }, besucher: 1.3, kollekte: 1 }
 ];
-// Gesperrte Feste: werden im Kirchenjahr-Fenster ausgegraut gezeigt (Konfirmation: später mit Konfirmandenunterricht)
-export const FESTE_GESPERRT = [{ id: 'konfirmation', name: 'Konfirmation', braucht: 'konfirmandenunterricht' }];
+// Gesperrte Feste: werden im Kirchenjahr-Fenster ausgegraut gezeigt (die Konfirmation ist seit dem Konfirmandenunterricht frei)
+export const FESTE_GESPERRT = [];
 
 // Zeiten im Kirchenjahr mit eigenem Besucher-Faktor (gilt die ganze Zeit). Fest und Zeit gleichzeitig: der höhere zählt.
 export const ZEIT_FAKTOREN = { advent: { besucher: 1.2, kollekte: 1 } };

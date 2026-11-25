@@ -26,6 +26,8 @@ import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeite
 import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { bausteineVon } from './bausteine.js';
 import { lobpreisVorliebe, kaffeeVorliebe } from './besucher.js';
+import { jugendAnlegen, istJugend, konfiStand, konfiMeldung, konfirmandenZahl, festAktiv } from './konfi.js';
+import { FESTE } from '../inhalte/kirchenjahr.js';
 import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
@@ -58,6 +60,7 @@ export const SPEICHER_VERSION = 3;          // Spielstand-Format (3 = Echtzeit, 
 export function spielAnlegen(z, zufall = Math.random) {
   personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); besucherAnlegen(z, zufall); zeitAnlegen(z);
   ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); forschungAnlegen(z);
+  jugendAnlegen(z);   // alte Spielstände: 20 % der Besucher und Passanten werden Jugendliche
   return z;
 }
 // Neues Spiel: Pastor (aus der Inhaltsdatei) und die Start-Ehrenamtlichen (z. B. Frau des Pastors); sie stehen am Tor.
@@ -139,12 +142,11 @@ function statusVon(z, b) {
   return b.stamm || b.besuche >= STAMMGAST_AB_BESUCHEN ? 'stammgast' : 'besucher';
 }
 
-// Neueste Meldung: jemand neugierig am Tor, oder zu wenig Geld für den Kaffee-Einkauf
+// Neueste Meldung: jemand neugierig am Tor, zu wenig Geld für den Kaffee-Einkauf, Konfirmand/Konfirmation
 function neuesteMeldung(z) {
-  const o = ortMeldung(z), k = kaffeeMeldung(z);
-  if (!k) return o;
-  const oz = z.ort && z.ort.meldung ? z.ort.meldung.zeit : -Infinity;
-  return !o || k.zeit >= oz ? { code: k.code, name: k.name } : o;
+  const o = ortMeldung(z), oz = z.ort && z.ort.meldung ? z.ort.meldung.zeit : -Infinity;
+  const liste = [o && { ...o, zeit: oz }, kaffeeMeldung(z), konfiMeldung(z)].filter(Boolean).sort((a, b) => b.zeit - a.zeit);
+  return liste.length ? { code: liste[0].code, name: liste[0].name } : null;
 }
 
 // Offene Seelsorge-Anfrage, dazu der Status der fragenden Person (Passant, Stammgast …)
@@ -394,8 +396,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
         }).filter(Boolean),
         // Gottesdienst-Besucher, Passanten (ohne den, der gerade zum Pastor geht) und wer zur Seelsorge läuft
+        // jugend: Jugendliche werden in einem anderen Farbton gezeichnet
         besucher: [...besucherPositionen(z, wegSpeicher), ...passantenPositionen(z).filter(b => b.id !== seelsorgeUnterwegs(z)), ...seelsorgePositionen(z),
-          ...kaffeeKundenPositionen(z)],
+          ...kaffeeKundenPositionen(z)].map(b => ({ ...b, jugend: istJugend(mensch(z, b.id)) })),
         laden: kaffeeLaden(z),     // Kaffeemaschinen, die gerade laden (Fortschritt 0–1)
         zahlen: kaffeeZahlen(z)    // „+1 €“ über Kunden, „−x €“ über dem Ehrenamtlichen nach dem Einkauf (nr: zum Wiedererkennen)
       };
@@ -462,13 +465,16 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const fh = festAmTag(heute), plaene = z.feste ? z.feste.plaene : {};
       return {
         zeit: zeitAmTag(heute), fortschritt: stand.fortschritt, sonntag: sonntagDerWoche(zp.woche),
-        heute: { fest: fh ? fh.name : null, feiertag: feiertagAmTag(heute), faktor: faktorAmTag(heute) },
+        heute: { fest: fh && festAktiv(z, fh) ? fh.name : null, feiertag: feiertagAmTag(heute), faktor: faktorAmTag(heute, f => festAktiv(z, f)) },
         zeiten: ZEITEN.map(t => ({ id: t.id, name: t.name, farbe: t.farbe, besucher: (ZEIT_FAKTOREN[t.id] || {}).besucher || 1,
           kollekte: (ZEIT_FAKTOREN[t.id] || {}).kollekte || 1, aktuell: t.id === zeitAmTag(heute) })),
         feste: kommendeFeste(heute, 8).map(f => {
           const k = festSchluessel(f.id, f.tagNr), plan = plaene[k], a = tagAnzeige(f.tagNr);
           const nr = plan ? raeume.gruppe[plan.raum] : undefined, lp = plan && z.personen.find(p => p.id === plan.leitung);
+          // Konfirmation: Zahl der Konfirmanden; ohne Konfirmanden fällt sie aus (faelltAus)
+          const fest = FESTE.find(x => x.id === f.id), konfi = fest.braucht === 'konfirmanden';
           return { ...f, schluessel: k, tageBis: f.tagNr - heute, wochentag: a.wochentag, datum: a.datum,
+            konfirmanden: konfi ? konfirmandenZahl(z) : null, faelltAus: !festAktiv(z, fest),
             menueAb: f.gross ? Math.max(0, f.tagNr - heute - FEST_MENUE.tageVorher) : null,
             plan: plan ? { art: plan.art, slot: plan.slot, raumNr: nr === undefined || nr < 0 ? null : nr,
               raumName: nr >= 0 && raeume.liste[nr] && raeume.liste[nr].typ ? raeume.liste[nr].typ.name : null,
@@ -493,6 +499,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const faellt = plan ? termineDerWoche(z, raeume, woche).filter(t => !t.fest && t.art && verdraengtVon(z, raeume, t) === schluessel)
         .map(t => { const nr = raeume.gruppe[t.raum]; return { platz: t.platz, raumName: raeume.liste[nr] && raeume.liste[nr].typ ? raeume.liste[nr].typ.name : null }; }) : [];
       return { schluessel, id: f.fest.id, name: f.fest.name, besucher: f.fest.besucher, kollekte: f.fest.kollekte,
+        konfirmanden: f.fest.braucht === 'konfirmanden' ? konfirmandenZahl(z) : null,
         wochentag: a.wochentag, datum: a.datum, tageBis: f.tagNr - heute, offen: !!(z.feste && z.feste.anfrage === schluessel), geplant: !!plan,
         auswahl, raeume: orte.map(r => ({ nr: r.nr, name: r.typ.name })), hauptamtliche: haupt, ehrenamtliche: leute('ehrenamt'), arten,
         slots: SLOTS.map(x => ({ ...x })), faellt };
@@ -643,7 +650,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (!b) return null;
       const besucher = z.besucher.includes(b);
       return { id: b.id, voll: b.voll, besuche: b.besuche, zufriedenheit: b.zufriedenheit, status: statusVon(z, b), lobpreis: lobpreisVorliebe(b),
-        kaffee: kaffeeVorliebe(b),
+        kaffee: kaffeeVorliebe(b), jugend: istJugend(b), konfi: istJugend(b) ? konfiStand(z, b) : null,
         beduerfnisse: besucher ? beduerfnisse(z, b) : null };
     },
     seelsorgeOffen() { return anfrageOffen(z); },

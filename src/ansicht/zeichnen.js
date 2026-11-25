@@ -10,7 +10,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
@@ -131,7 +131,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   for (const b of z.besucher) {
     const cx = ox + (b.x + 0.5) * k, cy = oy + (b.y + 0.5) * k, r = Math.max(5, k * 0.32);
     ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * 0.3, r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = FARBEN.besucher; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = b.jugend ? FARBEN.jugend : FARBEN.besucher; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();   // Jugendliche: kräftiges Grün (Lukas, 25.11.)
     ctx.strokeStyle = b.id === extra.markiert ? FARBEN.auswahl : '#fff'; ctx.lineWidth = b.id === extra.markiert ? 3 : 1.5; ctx.stroke();
   }
   // Vornamen klein neben den Besuchern
