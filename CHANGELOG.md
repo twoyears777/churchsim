@@ -3,6 +3,35 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.6
+
+**Kirchkaffee**
+- Eigene Öffnungszeiten: bis zu 3 Schichten pro Woche
+- Nach dem Gottesdienst hat das Kirchkaffee 2 Stunden offen
+- Kunden stellen sich an und werden Schritt für Schritt bedient – mehr Theken, kürzere Schlangen
+- Ehrenamtliche kaufen den Kaffee selbst im Laden ein
+- Jeder Mensch mag Kaffee unterschiedlich gern
+
+**Einzugsgebiet**
+- Die Gemeinde erreicht nur so viele Menschen, wie ihr Einzugsgebiet hergibt
+- Mehr Menschen über Parkplätze, Bushaltestelle und Werbekampagne
+
+**Bauen**
+- Neue Bauleiste unten mit Kategorien
+- Klick auf einen Stuhl öffnet sein Verbessern-Menü
+
+**Seelsorge**
+- Je höher die Seelsorge-Stufe, desto besser schätzt der Pastor die Ratschläge ein
+- Im Gespräch sieht man, wer fragt
+- Das Ergebnis zeigt die Haltung vorher und nachher
+- Seelsorge-Anfragen kommen auch während des Kirchkaffees
+
+**Zeit**
+- Die Zeit läuft langsamer, dafür gibt es x10 und x25
+
+**Hilfe**
+- Neuer Hilfe-Bereich mit Erklärungen zu allen Bereichen des Spiels
+
 ## 0.1.5
 
 **Neu**

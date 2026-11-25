@@ -49,7 +49,7 @@ export const HILFE = {
         'Mit „Raum festlegen“ klickst du in einen fertigen Raum und gibst ihm eine Funktion.',
         { punkte: [
           `**Gottesdienstraum** (mindestens ${groesse('gottesdienst')} Kästchen): Hier finden Gottesdienste und Lobpreisgottesdienste statt.`,
-          `**Kirchkaffee** (mindestens ${groesse('kirchkaffee')} Kästchen): braucht eine Verbindungstür zu einem Gottesdienstraum. Nach dem Gottesdienst gibt es hier Kaffee.`
+          `**Kirchkaffee** (mindestens ${groesse('kirchkaffee')} Kästchen): braucht eine Verbindungstür zu einem Gottesdienstraum. Nach dem Gottesdienst und zu eigenen Öffnungszeiten gibt es hier Kaffee.`
         ] }
       ]
     },
@@ -97,7 +97,7 @@ export const HILFE = {
       id: 'kirchkaffee',
       titel: 'Kirchkaffee',
       inhalt: [
-        'Nach jedem Gottesdienst ist eine Stunde Kirchkaffee. Geöffnet ist es nur mit Kaffeemaschine, Theke und einem Ehrenamtlichen im Raum. Jede Tasse bringt Geld. Klick auf die Kaffeemaschine, um Kaffee nachzukaufen. Wer Kaffee will und keinen bekommt, ist enttäuscht.'
+        'Nach jedem Gottesdienst hat das Kirchkaffee 2 Stunden offen. Klick auf den Raum, um bis zu 3 weitere Öffnungszeiten pro Woche festzulegen. Geöffnet ist es nur mit Kaffeemaschine, Theke und einem Ehrenamtlichen im Raum. Die Kunden stellen sich an der Theke an; jede Tasse bringt 1 €. Mehr Theken bedeuten kürzere Schlangen. Wenn das Kirchkaffee zu hat, kauft der Ehrenamtliche im Laden Kaffee nach. Wer Kaffee will und keinen bekommt, ist enttäuscht.'
       ]
     },
     {
@@ -155,7 +155,7 @@ export const HILFE = {
       id: 'zeit',
       titel: 'Zeit und Kirchenjahr',
       inhalt: [
-        'Oben steuerst du die Zeit: Pause, x1, x2, x5. Rechts oben stehen Woche, Tag und Uhrzeit, wie lange es bis Sonntag ist und welcher Sonntag im Kirchenjahr ansteht. Das Rad zeigt die Zeit im Kirchenjahr. Das Spiel beginnt am 1. Advent.'
+        'Oben steuerst du die Zeit: Pause, x1, x2, x5, x10, x25. Rechts oben stehen Woche, Tag und Uhrzeit, wie lange es bis Sonntag ist und welcher Sonntag im Kirchenjahr ansteht. Das Rad zeigt die Zeit im Kirchenjahr. Das Spiel beginnt am 1. Advent.'
       ]
     }
   ]
