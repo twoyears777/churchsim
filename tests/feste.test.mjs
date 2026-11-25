@@ -6,7 +6,7 @@ import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { FEIERTAG_PASSANTEN } from '../src/inhalte/kirchenjahr.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
-import { zeitVorruecken, terminEinstellen, veranstaltungEinstellen, prognose, termineDerWoche } from '../src/kern/ablauf.js';
+import { zeitVorruecken, terminEinstellen, veranstaltungEinstellen, prognose, termineDerWoche, finanzPrognose } from '../src/kern/ablauf.js';
 import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 import { besuchChance } from '../src/kern/besucher.js';
@@ -122,6 +122,11 @@ function gemeinde() {
   z2.minuten = 4 * 7 * TAG_MIN; z2.feste.gefragt.push('christfest1:32');
   const v = prognose(z2, aus(z2));
   assert.equal(v.bereit, false); assert.equal(v.wegenFest, 'Heiligabend');
+  // Finanz-Prognose der Seitenleiste: das Fest zählt mit (9 erwartete Besucher × 1 € × 2), der verdrängte Termin nicht
+  const gebucht = zz => Object.values(zz.wochenbuch.einnahmen).reduce((a, b) => a + b, 0);
+  const zp = JSON.parse(JSON.stringify(z2)); zp.bekanntheit = 0;   // (ohne neue Besucher über die Bekanntheit)
+  assert.equal(finanzPrognose(zp, aus(zp)).einnahmen, Math.round(gebucht(zp) + 18));
+  assert.equal(finanzPrognose(z2, aus(z2)).einnahmen, 19);       // mit Bekanntheit 1,8: ca. 0,27 neue Besucher mehr → 18,54 €
   // Ablauf: Termin des Fests + verdrängter Termin
   const t = termineDerWoche(z2, aus(z2), 4).filter(x => x.plan.tag === 3);
   assert.equal(t.length, 2); assert.equal(t[0].fest, 'heiligabend:31');
@@ -130,6 +135,7 @@ function gemeinde() {
   assert.equal(fest.gaeste.length, 10); assert.equal(fest.ausgefallen, undefined);
   assert.equal(weg.ausgefallen, true); assert.equal(weg.grund, 'fest'); assert.equal(weg.gaeste, null);
   assert.equal(z2.konto, 1000 + 20);
+  assert.equal(finanzPrognose(z2, aus(z2)).einnahmen, Math.round(gebucht(z2)));   // nach dem Fest: nur noch Gebuchtes, nichts doppelt
   assert.ok(z2.besucher.every(b => b.zufriedenheit === 30));   // kein Abzug wegen Ausfall (Fest noch nicht zu Ende)
   // Leitung nicht im Raum: das Fest fällt aus
   const z3 = JSON.parse(spiel.speicherText()).zustand;

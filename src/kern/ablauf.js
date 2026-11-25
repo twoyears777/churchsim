@@ -501,9 +501,20 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
 export function prognose(z, raeume, raumNr = null, platz = 0) {
   const alle = gottesdienstRaeume(z, raeume);
   const g = raumNr === null ? alle[0] : alle.find(x => x.raum.nr === raumNr);
-  const p = g ? g.programm[platz] : null, art = p ? p.art : null;
-  const plan = p ? { tag: p.tag, slot: p.slot } : STANDARD_PLAN, faktor = zeitFaktor(plan);
+  const p = g ? g.programm[platz] : null;
   const termin = g && dieserTermin(z, raeume, g.raum, platz);
+  return prognoseFuer(z, raeume, g, p, termin, platz);
+}
+// Prognose für ein geplantes Sonderevent (Fest-Menü): gleiche Rechnung wie bei jedem anderen Termin,
+// nur mit der im Fest-Menü gewählten Leitung und Art. t: Termin aus termineDerWoche (platz 'fest').
+function festPrognose(z, raeume, t) {
+  const r = raumZu(raeume, t.raum), g = r && gottesdienstRaeume(z, raeume).find(x => x.raum === r);
+  if (!g) return null;
+  return prognoseFuer(z, raeume, g, festProgramm(z, g, t), t, 'fest');
+}
+function prognoseFuer(z, raeume, g, p, termin, platz) {
+  const art = p ? p.art : null;
+  const plan = p ? { tag: p.tag, slot: p.slot } : STANDARD_PLAN, faktor = zeitFaktor(plan);
   const woche = termin ? termin.woche : zeitpunkt(z.minuten).woche;
   const v = p ? p.veranstaltung : null, saal = !!(v && v.kollekte === false), unbegrenzt = !!(v && v.stuehleBegrenzen === false);
   const bereit = !!(p && p.bereit), plaetze = unbegrenzt ? null : g ? g.stuehle.length : 0;
@@ -522,7 +533,7 @@ export function prognose(z, raeume, raumNr = null, platz = 0) {
   const erwartet = z.besucher.reduce((s, b) => s + chance(b), 0) + neu + neugierErwartet;
   const anteil = unbegrenzt ? 1 : erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
   // Fällt der Termin wegen eines geplanten Sonderevents aus?
-  const wegenFest = g && verdraengtVon(z, raeume, { woche, plan, raum: raumSchluessel(g.raum), platz });
+  const wegenFest = g && platz !== 'fest' && verdraengtVon(z, raeume, { woche, plan, raum: raumSchluessel(g.raum), platz });
   const kirchenjahr = { besucher: kj.besucher, kollekte: kj.kollekte, fest: kj.fest, zeit: kj.zeit,
     festName: kj.fest ? FESTE.find(f => f.id === kj.fest).name : null, zeitName: (ZEITEN.find(t => t.id === kj.zeit) || {}).name || null };
   const grund = { bereit: bereit && !wegenFest, erwartet, plaetze, plakat, saal, sonntagvormittag: !saal && faktor > 1, fehlt: wegenFest ? 'fest' : p ? p.fehlt : 'raum',
@@ -560,6 +571,14 @@ function dieserTermin(z, raeume, raum, platz) {
   }
   return null;
 }
+// Sonderevents dieser Woche, deren Geld noch nicht gebucht ist: noch nicht begonnen oder gerade in der Anreise
+function festTermineOffen(z, raeume) {
+  const w = zeitpunkt(z.minuten).woche;
+  if (w <= z.letzterLauf) return [];
+  const anreise = new Set((z.laeufe || []).filter(L => L.phase === 'anreise').map(L => L.id));
+  const begonnen = new Set([...(z.laeufe || []).map(L => L.id), ...(z.termineErledigt || [])]);
+  return termineDerWoche(z, raeume, w).filter(t => t.fest && (anreise.has(t.id) || (z.minuten < t.beginn && !begonnen.has(t.id))));
+}
 // Steht diese Veranstaltung diese Woche noch aus? (sonst zeigt die Prognose die nächste Woche)
 export function terminDieseWoche(z, raeume, raum = null, platz = 0) {
   const g = raum || (gottesdienstRaeume(z, raeume)[0] || {}).raum;
@@ -573,6 +592,8 @@ export function finanzPrognose(z, raeume) {
   for (const g of gottesdienstRaeume(z, raeume)) g.programm.forEach((p, i) => {
     if ((i === 0 || p.art) && terminDieseWoche(z, raeume, g.raum, i)) offen += prognose(z, raeume, g.raum.nr, i).geld;
   });
+  // Geplante Sonderevents dieser Woche, die noch nicht begonnen haben (oder gerade in der Anreise sind)
+  for (const t of festTermineOffen(z, raeume)) { const f = festPrognose(z, raeume, t); if (f) offen += f.geld; }
   return { einnahmen: Math.round(summe(z.wochenbuch.einnahmen) + offen), ausgaben: summe(z.wochenbuch.ausgaben) };
 }
 
