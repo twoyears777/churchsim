@@ -79,3 +79,8 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .spielHinweis:empty { display: none; }
 .modus-editor .datum, .modus-editor .unten-mitte, .modus-editor .unten-rechts { display: none; }
 .modus-spiel .maske { bottom: 72px; }
+.finanzen .konto td { font-weight: 600; padding-bottom: 8px; }
+.kontoEditor { display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 15px; }
+.kontoEditor b { font-variant-numeric: tabular-nums; }
+.hinweis.warnung { color: #ffb4a8; }
+.rueckblick td.einzug { padding-left: 12px; }

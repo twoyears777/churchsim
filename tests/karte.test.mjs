@@ -120,3 +120,27 @@ import { kirchenjahrStand } from '../src/kern/kalender.js';
   assert.equal(a.zeiten.at(-1).bis, 1);
 }
 console.log('Kirchenjahr-Tests bestanden.');
+
+// Finanzen
+import { moebelKaufen, moebelAbreissen } from '../src/kern/moebel.js';
+import { finanzPrognose } from '../src/kern/runde.js';
+{
+  const z7 = neuerZustand(); personenAnlegen(z7);
+  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z7); for (const r of raeume) { r.typ = raumTypVon(z7, r); r.probleme = pruefeRaum(z7, r, r.typ); } return { liste: raeume, gruppe }; };
+  assert.equal(z7.konto, 50);
+  wandRechteck(z7, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z7, G.x + 2, G.y + 5);
+  typZuweisen(z7, erkenneRaeume(z7).raeume[0], 'gottesdienst');
+  versetzen(z7, z7.personen[0], G.x + 4, G.y + 5);
+  for (let i = 0; i < 10; i++) assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6 + i, G.y + 4), 'ok');
+  assert.equal(z7.konto, 0);
+  assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6, G.y + 6), 'geld');            // kein Geld mehr
+  assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6, G.y + 4), 'platz');           // schon belegt
+  assert.equal(moebelAbreissen(z7, G.x + 15, G.y + 4, G.x + 15, G.y + 4), 5);   // volle Rückerstattung
+  assert.equal(z7.konto, 5);
+  assert.deepEqual(finanzPrognose(z7, aus()), { einnahmen: 5 + 9, ausgaben: 50 });
+  const rb = wocheBeenden(z7, aus());
+  assert.deepEqual(rb.finanzen, { einnahmen: { rueckerstattung: 5, kollekte: 9 }, ausgaben: { moebel: 50 } });
+  assert.equal(z7.konto, 14); assert.equal(rb.kontostand, 14);
+  assert.deepEqual(z7.wochenbuch, { einnahmen: {}, ausgaben: {} });              // neue Woche, leeres Buch
+}
+console.log('Finanz-Tests bestanden.');

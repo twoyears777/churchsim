@@ -22,6 +22,7 @@
     <button data-werkzeug="raum" aria-pressed="false">Raum festlegen</button>
   </div>
   <div class="werkzeuge">
+    <span class="kontoEditor">Kontostand <b id="kontoEditor">0 €</b></span>
     <button id="zurueck">Rückgängig</button>
     <button id="neu">Neu</button>
     <button id="editorZu" class="haupt">Fertig</button>
@@ -45,6 +46,7 @@
     <details open>
       <summary>Finanzen</summary>
       <table class="finanzen">
+        <tr class="konto"><td>Kontostand</td><td class="zahl" id="kontostand">0 €</td></tr>
         <tr><td>Voraussichtliche Einnahmen</td><td class="zahl" id="progEinnahmen">0 €</td></tr>
         <tr><td>Voraussichtliche Ausgaben</td><td class="zahl" id="progAusgaben">0 €</td></tr>
       </table>

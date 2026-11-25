@@ -3,7 +3,10 @@ import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { neuerZustand, wandRechteck, abriss, tuerUmschalten, erkenneRaeume, pruefeRaum, raumTypVon, typZuweisen, idx } from '../kern/karte.js';
 import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from '../kern/personen.js';
-import { moebelAnlegen, moebelSetzen, moebelEntfernen, moebelPruefen, moebelBei } from '../kern/moebel.js';
+import { moebelAnlegen, moebelPruefen, moebelBei, moebelKaufen, moebelAbreissen } from '../kern/moebel.js';
+import { finanzenAnlegen, kannBezahlen, summe } from '../kern/finanzen.js';
+import { EINNAHMEN, AUSGABEN } from '../inhalte/finanzen.js';
+import { MOEBEL } from '../inhalte/moebel.js';
 import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose } from '../kern/runde.js';
 import { sonntagDerWoche, kirchenjahrStand } from '../kern/kalender.js';
 import { weg } from '../kern/wege.js';
@@ -25,7 +28,7 @@ const LAUFTEMPO = 7;      // Kästchen pro Sekunde
 const ABSTAND_MS = 260;   // Abstand zwischen zwei Besuchern
 
 let z = laden() || neuerZustand();
-personenAnlegen(z); moebelAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
+personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
 let raeume = auswerten();
 let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
 let besucher = [], ablauf = null, stuhlStart = null, schwebe = null;
@@ -103,6 +106,8 @@ function anzeigenAktualisieren() {
       }
     }
   }
+  $('kontostand').textContent = euro(z.konto);
+  $('kontoEditor').textContent = euro(z.konto);
   const f = finanzPrognose(z, raeume);
   $('progEinnahmen').textContent = euro(f.einnahmen);
   $('progAusgaben').textContent = euro(f.ausgaben);
@@ -207,12 +212,15 @@ leinwand.addEventListener('pointerup', e => {
   if (ziehen) {
     const v = ziehen; ziehen = null;
     if (v.art === 'wand') { if (!wandKonflikte(z, v.x0, v.y0, v.x1, v.y1).length) aendern(() => wandBauen(z, v.x0, v.y0, v.x1, v.y1)); else malen(); }
-    else aendern(() => { abriss(z, v.x0, v.y0, v.x1, v.y1); moebelEntfernen(z, v.x0, v.y0, v.x1, v.y1); });
+    else aendern(() => { abriss(z, v.x0, v.y0, v.x1, v.y1); moebelAbreissen(z, v.x0, v.y0, v.x1, v.y1); });
     return;
   }
   if (werkzeug === 'stuhl') {
     if (!stuhlStart || stuhlStart.x !== f.x || stuhlStart.y !== f.y) return;   // nur Tippen, kein Ziehen
-    if (!moebelBei(z, f.x, f.y)) aendern(() => moebelSetzen(z, 'stuhl', f.x, f.y, f.x, f.y, personAuf)); // entfernen nur per Abriss
+    if (moebelBei(z, f.x, f.y)) return;                               // entfernen nur per Abriss
+    const preis = MOEBEL.find(m => m.id === 'stuhl').kosten;
+    if (!kannBezahlen(z, preis)) { kurzerHinweis(`Nicht genug Geld für einen Stuhl (${euro(preis)}).`); return; }
+    aendern(() => moebelKaufen(z, 'stuhl', f.x, f.y, personAuf));
   } else if (werkzeug === 'tuer') {
     if (z.zellen[idx(z, f.x, f.y)]) aendern(() => tuerUmschalten(z, f.x, f.y));
   } else if (werkzeug === 'raum') {
@@ -241,6 +249,14 @@ document.addEventListener('keydown', e => {
   if (!maske.hidden) return maskeSchliessen();
   if (editorOffen) editorUmschalten(false);
 });
+
+// Kurzer Hinweis in der Editor-Zeile, danach wieder der normale Werkzeug-Hinweis
+let hinweisTimer = null;
+function kurzerHinweis(text) {
+  const h = $('hinweis'); h.textContent = text; h.classList.add('warnung');
+  clearTimeout(hinweisTimer);
+  hinweisTimer = setTimeout(() => { h.textContent = HINWEISE[werkzeug]; h.classList.remove('warnung'); }, 3000);
+}
 
 // ---- Raum-Maske ----
 function maskeOeffnen() {
@@ -313,16 +329,19 @@ function schritt(t) {
 }
 function rueckblickZeigen() {
   const { beendet, ergebnis: e } = ablauf;
-  const saldo = e.finanzen.einnahmen - e.finanzen.ausgaben;
+  const ein = e.finanzen.einnahmen, aus = e.finanzen.ausgaben, saldo = summe(ein) - summe(aus);
+  const zeilen = (teil, namen) => Object.keys(namen).filter(k => k in teil || k === Object.keys(namen)[0])
+    .map(k => `<tr><td class="einzug">${namen[k]}</td><td class="zahl">${euro(teil[k] || 0)}</td></tr>`).join('');
   const angebote = e.angebote.length
     ? e.angebote.map(a => `<tr><td>${a.name}</td><td class="zahl">${a.besucher}</td></tr>`).join('')
     : '<tr><td>Keine Besucher</td><td class="zahl">0</td></tr>';
   rueckblick.querySelector('.inhalt').innerHTML = `
     <h2>Wochenrückblick</h2><p class="unter">${beendet.name} · ${beendet.datum}</p>
     <h3>Finanzen</h3>
-    <table><tr><td>Einnahmen</td><td class="zahl">${euro(e.finanzen.einnahmen)}</td></tr>
-      <tr><td>Ausgaben</td><td class="zahl">${euro(e.finanzen.ausgaben)}</td></tr>
-      <tr class="summe"><td>Saldo</td><td class="zahl">${euro(saldo)}</td></tr></table>
+    <table><tr><td>Einnahmen</td><td class="zahl">${euro(summe(ein))}</td></tr>${zeilen(ein, EINNAHMEN)}
+      <tr><td>Ausgaben</td><td class="zahl">${euro(summe(aus))}</td></tr>${zeilen(aus, AUSGABEN)}
+      <tr class="summe"><td>Saldo</td><td class="zahl">${euro(saldo)}</td></tr>
+      <tr><td>Kontostand</td><td class="zahl">${euro(e.kontostand)}</td></tr></table>
     <h3>Besucher</h3><table>${angebote}</table>
     <h3>Neue Ehrenamtliche</h3><table><tr><td>Dazugekommen</td><td class="zahl">${e.neueEhrenamtliche}</td></tr></table>
     <div class="zeile"><button id="weiter" class="haupt">Weiter</button></div>`;
