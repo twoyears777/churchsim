@@ -10,7 +10,7 @@ import { MOEBEL } from '../inhalte/moebel.js';
 import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose, kirchkaffeeOffen, moeglicheVeranstaltungen, veranstaltungVon, veranstaltungEinstellen } from '../kern/runde.js';
 import { KEINE_VERANSTALTUNG } from '../inhalte/veranstaltungen.js';
 import { sonntagDerWoche, kirchenjahrStand } from '../kern/kalender.js';
-import { weg } from '../kern/wege.js';
+import { weg, glaetten } from '../kern/wege.js';
 import { wandBauen, wandKonflikte } from '../kern/bauen.js';
 import { stammAnlegen } from '../kern/besucher.js';
 import { zeichne } from '../ansicht/zeichnen.js';
@@ -354,7 +354,7 @@ function wocheStarten() {
   // Phase 1: alle laufen vom Tor auf ihre Stühle. Phase 2 (nach dem Gottesdienst): einige gehen ins Kirchkaffee.
   besucher = ergebnis.weg.map((w, i) => {
     const start = { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
-    return { name: w.name, vollerName: w.voll, pfad: weg(z, start, w.sitz, blockiert) || [w.sitz], beginn: jetzt + i * ABSTAND_MS,
+    return { name: w.name, vollerName: w.voll, pfad: glaetten(z, weg(z, start, w.sitz, blockiert), blockiert) || [w.sitz], beginn: jetzt + i * ABSTAND_MS,
       x: start.x, y: start.y, sichtbar: false, kaffee: w.kaffee, sitz: w.sitz };
   });
   ablauf = { beendet, ergebnis, woche: ergebnis.woche, phase: 1 };
@@ -364,13 +364,17 @@ function wocheStarten() {
 function schritt(t) {
   let fertig = true;
   for (const b of besucher) {
-    const strecke = (t - b.beginn) / 1000 * LAUFTEMPO, n = b.pfad.length - 1;
+    let strecke = (t - b.beginn) / 1000 * LAUFTEMPO;
     if (strecke < 0) { fertig = false; continue; }
     b.sichtbar = true;
-    if (strecke >= n) { b.x = b.pfad[n].x; b.y = b.pfad[n].y; b.sitzt = true; continue; }
+    let angekommen = true;
+    for (let i = 0; i < b.pfad.length - 1; i++) {
+      const a = b.pfad[i], c = b.pfad[i + 1], len = Math.hypot(c.x - a.x, c.y - a.y);
+      if (strecke <= len) { const f = len ? strecke / len : 1; b.x = a.x + (c.x - a.x) * f; b.y = a.y + (c.y - a.y) * f; angekommen = false; break; }
+      strecke -= len;
+    }
+    if (angekommen) { const e = b.pfad[b.pfad.length - 1]; b.x = e.x; b.y = e.y; b.sitzt = true; continue; }
     fertig = false;
-    const i = Math.floor(strecke), a = b.pfad[i], c = b.pfad[i + 1], f = strecke - i;
-    b.x = a.x + (c.x - a.x) * f; b.y = a.y + (c.y - a.y) * f;
   }
   malen();
   if (!fertig) { requestAnimationFrame(schritt); return; }
@@ -380,7 +384,7 @@ function schritt(t) {
     ablauf.phase = 2;
     setTimeout(() => {
       const jetzt = performance.now(), blockiert = (x, y) => !!moebelBei(z, x, y) || personAuf(x, y);
-      zumKaffee.forEach((b, i) => { b.pfad = weg(z, b.sitz, b.kaffee, blockiert) || [b.kaffee]; b.beginn = jetzt + i * ABSTAND_MS; b.sitzt = false; });
+      zumKaffee.forEach((b, i) => { b.pfad = glaetten(z, weg(z, b.sitz, b.kaffee, blockiert), blockiert) || [b.kaffee]; b.beginn = jetzt + i * ABSTAND_MS; b.sitzt = false; });
       requestAnimationFrame(schritt);
     }, 1200);
     return;

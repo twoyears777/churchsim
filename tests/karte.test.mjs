@@ -205,3 +205,25 @@ import { eingesetztIn as einsatz, personHinzufuegen } from '../src/kern/personen
   assert.equal(da.length, 3); assert.ok(!da.some(b => b.voll === 'A B')); assert.equal(z10.stamm.length, 4);
 }
 console.log('Kirchkaffee-Tests bestanden.');
+
+// Geglättete Wege
+import { glaetten } from '../src/kern/wege.js';
+{
+  const z11 = neuerZustand();
+  const p = weg(z11, { x: G.x + 2, y: G.y + 2 }, { x: G.x + 12, y: G.y + 9 });
+  assert.equal(glaetten(z11, p).length, 2);                                  // freie Wiese: direkt schräg
+  wandRechteck(z11, G.x + 2, G.y + 4, G.x + 18, G.y + 10); tuerUmschalten(z11, G.x + 10, G.y + 4);
+  const q = weg(z11, { x: G.x + 2, y: G.y + 2 }, { x: G.x + 10, y: G.y + 8 });
+  const g = glaetten(z11, q);
+  assert.ok(g.some(pt => pt.x === G.x + 10 && pt.y <= G.y + 4) || g.length > 2);   // muss um die Wand / durch die Tür
+  // kein Teilstück schneidet eine Wand
+  for (let i = 0; i < g.length - 1; i++) for (let s = 0; s <= 20; s++) {
+    const x = Math.round(g[i].x + (g[i + 1].x - g[i].x) * s / 20), y = Math.round(g[i].y + (g[i + 1].y - g[i].y) * s / 20);
+    assert.notEqual(z11.zellen[x + y * z11.w], 1);
+  }
+  // von der Straße aufs Grundstück nur durchs Tor
+  const r = glaetten(z11, weg(z11, { x: G.tor.x, y: G.y + G.h + 1 }, { x: G.x + 3, y: G.y + 3 }));
+  const rein = r.findIndex(pt => aufGrundstueck(pt.x, pt.y));
+  assert.ok(r[rein].x >= G.tor.x && r[rein].x < G.tor.x + G.tor.breite);
+}
+console.log('Weg-Tests bestanden.');
