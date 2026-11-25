@@ -19,6 +19,10 @@ import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVerans
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand } from './kalender.js';
 import { besucherPositionen, kaffeePosition } from './bewegung.js';
+import { ortAnlegen, passantenPositionen, ortMeldung, mensch } from './ort.js';
+import { seelsorgeAnlegen, anfrageOffen, anfrageInfo, ablehnen as seelsorgeAblehnen, raten as seelsorgeRaten,
+  schliessen as seelsorgeZu, stufeInfo } from './seelsorge.js';
+import { STAMMGAST_AB_BESUCHEN } from '../inhalte/ort.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
 import { NACHKAUFEN } from '../inhalte/kirchkaffee.js';
@@ -30,6 +34,7 @@ export const SPEICHER_VERSION = 3;          // Spielstand-Format (3 = Echtzeit, 
 // ---- Spielstand anlegen ----
 export function spielAnlegen(z, zufall = Math.random) {
   personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); besucherAnlegen(z, zufall); zeitAnlegen(z);
+  ortAnlegen(z); seelsorgeAnlegen(z);
   return z;
 }
 export function neuesSpiel(zufall = Math.random) { return spielAnlegen(neuerZustand(), zufall); }
@@ -86,6 +91,12 @@ export function beduerfnisse(z, b) {
   return { sitzplatz, kaffee: b.kaffee ? kaffee : 'keinWunsch', gottesdienst };
 }
 
+// Status einer Person für Liste und Kärtchen
+function statusVon(z, b) {
+  if (z.ort.leute.includes(b)) return b.neugierig ? 'neugierig' : 'passant';
+  return b.stamm || b.besuche >= STAMMGAST_AB_BESUCHEN ? 'stammgast' : 'besucher';
+}
+
 // ---- Das Spiel als Ganzes: Befehle und Abfragen ----
 export function spielStarten(gespeichert = null, zufall = Math.random) {
   let z = (gespeichert && spielstandLesen(gespeichert)) || neuesSpiel(zufall);
@@ -112,7 +123,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // ---------- Befehle ----------
     // Tick-System: echte Sekunden seit dem letzten Bild → Spielzeit rückt vor. Im Editor und bei Pause steht die Zeit.
     tick(sekunden) {
-      if (z.tempo <= 0 || bauModus) return false;
+      if (z.tempo <= 0 || bauModus || anfrageOffen(z)) return false;   // offene Seelsorge-Anfrage: Zeit steht
       const vorher = z.personen.length;
       zeitVorruecken(z, raeume, spielMinuten(Math.min(0.25, sekunden), z.tempo), zufall);
       if (z.personen.length !== vorher) raeume = raeumeAuswerten(z);   // neue Ehrenamtliche
@@ -162,6 +173,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       personenPruefen(z); raeume = raeumeAuswerten(z);
       return true;
     },
+    // Seelsorge-Fenster → 'ok' | 'keine' | 'geld'
+    seelsorgeAblehnen() { return seelsorgeAblehnen(z); },
+    seelsorgeRat(nr) { return seelsorgeRaten(z, nr, zufall); },
+    seelsorgeSchliessen() { return seelsorgeZu(z); },
     speicherText() { return JSON.stringify({ version: SPEICHER_VERSION, zustand: z }); },
 
     // ---------- Abfragen ----------
@@ -182,7 +197,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
           const pos = kaffeePosition(z, p) || p;
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
         }).filter(Boolean),
-        besucher: besucherPositionen(z, wegSpeicher)
+        besucher: [...besucherPositionen(z, wegSpeicher), ...passantenPositionen(z)]   // Gottesdienst-Besucher, dann Passanten
       };
     },
     // Anzeigen oben und in der Seitenleiste
@@ -198,7 +213,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         bekannteBesucher: z.besucher.length,
         verfuegbarkeit: verfuegbarkeit(z, raeume), personen,
         status: spielStatus(z, raeume),
-        beschaeftigt: !!(z.lauf && z.lauf.phase !== 'ende')
+        beschaeftigt: !!(z.lauf && z.lauf.phase !== 'ende') || anfrageOffen(z),
+        seelsorge: anfrageInfo(z),   // offene Seelsorge-Anfrage (sonst null)
+        meldung: ortMeldung(z)       // z. B. jemand ist neugierig am Tor stehen geblieben
       };
     },
     zelle(x, y) { const t = x >= 0 && y >= 0 && x < z.w && y < z.h ? z.zellen[idx(z, x, y)] : null; return t === WAND ? 'wand' : t === TUER ? 'tuer' : t === LEER ? 'leer' : null; },
@@ -241,21 +258,36 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return { fuellung: n, fassung: max, nachkaufen: { ...NACHKAUFEN }, imKirchkaffee: !!(r && r.typ && r.typ.id === 'kirchkaffee'),
         zuVoll: n + NACHKAUFEN.tassen > max, keinGeld: !kannBezahlen(z, NACHKAUFEN.preis) };
     },
-    // Besucher-Kärtchen
+    // Besucher-Kärtchen (auch für Passanten). zufriedenheit = Haltung zur Gemeinde.
     besucherInfo(id) {
-      const b = z.besucher.find(x => x.id === id);
-      return b ? { id: b.id, voll: b.voll, besuche: b.besuche, zufriedenheit: b.zufriedenheit, beduerfnisse: beduerfnisse(z, b) } : null;
+      const b = mensch(z, id);
+      if (!b) return null;
+      const besucher = z.besucher.includes(b);
+      return { id: b.id, voll: b.voll, besuche: b.besuche, zufriedenheit: b.zufriedenheit, status: statusVon(z, b),
+        beduerfnisse: besucher ? beduerfnisse(z, b) : null };
+    },
+    seelsorgeOffen() { return anfrageOffen(z); },
+    // Fenster „Menschen im Ort“: alle, die die Gemeinde kennt
+    menschen() {
+      const zeile = b => ({ id: b.id, art: 'besucher', voll: b.voll, haltung: b.zufriedenheit, besuche: b.besuche,
+        zuletzt: typeof b.zuletzt === 'number' ? b.zuletzt + 1 : null, kaffee: b.besuche || b.stamm ? b.kaffee : null, status: statusVon(z, b) });
+      const ea = z.personen.map(p => ({ p, d: daten(p) })).filter(x => x.d && x.d.art === 'ehrenamt').map(({ p, d }) => {
+        const h = d.herkunft || {};
+        return { id: p.id, art: 'person', voll: d.name, haltung: h.zufriedenheit ?? null, besuche: h.besuche ?? null,
+          zuletzt: typeof h.zuletzt === 'number' ? h.zuletzt + 1 : null, kaffee: h.kaffee ?? null, status: 'ehrenamtlich' };
+      });
+      return [...z.besucher.map(zeile), ...ea, ...z.ort.leute.map(zeile)];
     },
     // Charakter-Karte eines Mitarbeiters
     personInfo(id) {
       const p = z.personen.find(x => x.id === id), d = p && daten(p);
       if (!d) return null;
       const r = eingesetztIn(z, raeume, p);
-      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null };
+      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: id === 'pastor' ? stufeInfo(z) : null };
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'raumtypWahl', 'raumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten']) {
+  for (const name of ['lage', 'raumtypWahl', 'raumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

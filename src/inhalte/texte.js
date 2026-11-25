@@ -80,7 +80,7 @@ export const TEXTE = {
 
   // Besucher-Kärtchen
   karte: {
-    zufriedenheit: 'Zufriedenheit',
+    zufriedenheit: 'Haltung',
     beduerfnisse: 'Bedürfnisse',
     sitzplatz: 'Sitzplatz',
     kaffee: 'Kaffee',
@@ -90,7 +90,100 @@ export const TEXTE = {
     nichtErfuellt: 'nicht erfüllt',
     offen: 'offen',
     besuche: n => `${n} ${n === 1 ? 'Besuch' : 'Besuche'}`,
-    neu: 'Neu dabei'
+    neu: 'Neu dabei',
+    passant: 'Passant · noch nie in der Gemeinde',
+    neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst'
+  },
+
+  // ---- Menschen, Passanten, Seelsorge (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
+  // Fenster „Menschen im Ort“
+  menschen: {
+    knopf: 'Menschen',
+    titel: 'Menschen im Ort',
+    spalten: { name: 'Name', haltung: 'Haltung', besuche: 'Besuche', zuletzt: 'Zuletzt da', kaffee: 'Kaffee', status: 'Status' },
+    ja: 'ja', nein: 'nein', unbekannt: '–',
+    woche: n => `Woche ${n}`,
+    leer: 'Noch niemand bekannt.',
+    status: { passant: 'Passant', neugierig: 'Neugierig', besucher: 'Besucher', stammgast: 'Stammgast', ehrenamtlich: 'Ehrenamtlich' }
+  },
+  // Meldung unten rechts
+  meldung: { neugierig: name => `${name} ist am Tor stehen geblieben und schaut neugierig herein.` },
+
+  // Seelsorge-Fenster
+  seelsorge: {
+    titel: 'Seelsorge',
+    anfrage: voll => `${voll} möchte mit Pastor Harder sprechen.`,
+    annehmen: 'Gespräch annehmen',
+    ablehnen: 'Ablehnen',
+    abgelehnt: name => `${name} ist enttäuscht.`,
+    schliessen: 'Schließen',
+    weiter: 'Weiter',
+    keinGeld: 'Nicht genug Geld.',
+    folgen: {
+      haltung: n => `Haltung ${n > 0 ? '+' : '−'}${Math.abs(n)}`,
+      bekanntheit: n => `Bekanntheit ${n > 0 ? '+' : '−'}${Math.abs(n)}`,
+      spende: euro => `Spende +${euro}`,
+      kosten: euro => `Kosten −${euro}`,
+      neugierig: 'jetzt neugierig auf die Gemeinde'
+    },
+    neueStufe: n => `Pastor Harder ist jetzt Seelsorger Stufe ${n}.`,
+    // Charakter-Karte des Pastors
+    karte: {
+      titel: n => `Seelsorge – Stufe ${n}`,
+      fortschritt: (x, y, n) => `${x} von ${y} Punkten bis Stufe ${n}`,
+      hoechste: 'Höchste Stufe erreicht'
+    },
+    // Situationen: Anfrage und je 3 Ratschläge mit gutem und schlechtem Ausgang (Reihenfolge wie in inhalte/seelsorge.js)
+    situationen: {
+      nachbar: {
+        anfrage: n => `${n} hat Streit mit dem Nachbarn – wegen der Hecke. Seit Wochen grüßen sie sich nicht mehr.`,
+        raete: [
+          { text: 'Gehen Sie auf ihn zu und reden Sie in Ruhe mit ihm.', gut: n => `Die beiden haben sich ausgesprochen. ${n} ist erleichtert.`, schlecht: n => `Das Gespräch ist eskaliert. ${n} ist enttäuscht.` },
+          { text: 'Schreiben Sie ihm einen freundlichen Brief.', gut: () => 'Der Nachbar hat sich bedankt und die Hecke geschnitten.', schlecht: () => 'Der Brief kam falsch an. Jetzt ist es noch schlimmer.' },
+          { text: 'Lassen Sie es auf sich beruhen, das legt sich.', gut: () => 'Tatsächlich – nach ein paar Tagen grüßen sie sich wieder.', schlecht: n => `Es hat sich nicht gelegt. ${n} fühlt sich allein gelassen.` }
+        ]
+      },
+      job: {
+        anfrage: n => `${n} hat die Arbeit verloren und weiß nicht, wie es weitergehen soll.`,
+        raete: [
+          { text: 'Lassen Sie uns zusammen beten und überlegen, was jetzt dran ist.', gut: n => `${n} geht mit neuem Mut nach Hause.`, schlecht: n => `${n} hatte sich mehr praktische Hilfe erhofft.` },
+          { text: 'Die Gemeinde hilft mit einem Lebensmittelgutschein aus.', gut: n => `${n} ist sehr dankbar und erzählt es weiter.`, schlecht: n => `${n} ist es peinlich, Hilfe anzunehmen.` },
+          { text: 'Sehen Sie es als Chance – vielleicht kommt etwas Besseres.', gut: n => `Zwei Wochen später: eine neue Stelle! ${n} ist froh, dass Sie Mut gemacht haben.`, schlecht: n => `${n} fühlt sich nicht ernst genommen.` }
+        ]
+      },
+      zweifel: {
+        anfrage: n => `${n} zweifelt, ob es Gott überhaupt gibt, und möchte darüber reden.`,
+        raete: [
+          { text: 'Zweifel gehören dazu. Erzählen Sie mir mehr.', gut: n => `${n} fühlt sich verstanden und will wiederkommen.`, schlecht: n => `${n} hat noch mehr Fragen als vorher.` },
+          { text: 'Lesen Sie mal die Psalmen – da zweifeln viele.', gut: n => `${n} hat sich in den Psalmen wiedergefunden.`, schlecht: n => `${n} konnte mit den alten Texten nichts anfangen.` },
+          { text: 'Sie müssen einfach fester glauben.', gut: n => `Der klare Satz hat ${n} gutgetan.`, schlecht: n => `${n} fühlt sich unter Druck gesetzt.` }
+        ]
+      },
+      trauer: {
+        anfrage: n => `Die Mutter von ${n} ist gestorben. ${n} möchte mit jemandem reden.`,
+        raete: [
+          { text: 'Ich bin einfach da und höre zu.', gut: n => `${n} hat lange erzählt und ist dankbar für die Zeit.`, schlecht: n => `${n} hätte sich ein paar tröstende Worte gewünscht.` },
+          { text: 'Ich helfe Ihnen gern bei der Trauerfeier.', gut: () => 'Eine würdige Feier. Die Familie spendet 30 € an die Gemeinde.', schlecht: () => 'Bei der Feier lief einiges schief.' },
+          { text: 'Die Zeit heilt alle Wunden.', gut: n => `${n} nickt – irgendwie stimmt es ja.`, schlecht: n => `${n} wirkt verletzt.` }
+        ]
+      },
+      sohn: {
+        anfrage: n => `Der Sohn von ${n} ist 15 und redet kaum noch mit den Eltern.`,
+        raete: [
+          { text: 'Nehmen Sie sich Zeit für etwas, das ihm Spaß macht.', gut: () => 'Beim gemeinsamen Fußballschauen haben sie endlich wieder geredet.', schlecht: () => 'Der Sohn hatte keine Lust.' },
+          { text: 'Setzen Sie klare Regeln.', gut: () => 'Zu Hause ist es ruhiger geworden.', schlecht: () => 'Jetzt gibt es jeden Tag Streit.' },
+          { text: 'Das ist nur eine Phase.', gut: () => 'Ein paar Wochen später ist alles wieder besser.', schlecht: n => `${n} macht sich weiter große Sorgen.` }
+        ]
+      },
+      einsam: {
+        anfrage: n => `${n} ist vor Kurzem hergezogen und kennt hier noch niemanden.`,
+        raete: [
+          { text: 'Kommen Sie doch zum Kirchkaffee – da lernen Sie Leute kennen.', gut: n => `${n} freut sich auf Sonntag.`, schlecht: n => `${n} traut sich nicht so recht.` },
+          { text: 'Ich besuche Sie nächste Woche einmal.', gut: n => `Der Besuch hat ${n} sehr gefreut.`, schlecht: n => `${n} fand den Besuch etwas aufdringlich.` },
+          { text: 'Probieren Sie den Sportverein aus.', gut: n => `${n} hat im Verein erste Freunde gefunden.`, schlecht: n => `Im Verein war ${n} niemand sympathisch.` }
+        ]
+      }
+    }
   },
 
   // Editor

@@ -1,5 +1,7 @@
-// Spiellogik der Besucher: feste Personen mit Zufriedenheit und Kaffeewunsch.
+// Spiellogik der Besucher: feste Personen mit Haltung zur Gemeinde (intern „zufriedenheit“) und Kaffeewunsch.
+// Passanten aus dem Ort (z.ort.leute) haben dieselbe Form; kommen sie zum Gottesdienst, wechseln sie in z.besucher.
 import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte/namen.js';
+import { NEUGIER } from '../inhalte/ort.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, KAFFEE_ANTEIL, BEKANNTHEIT,
   EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 
@@ -21,19 +23,32 @@ export function besucherAnlegen(z, zufall = Math.random) {
   if (typeof z.bekanntheit !== 'number') z.bekanntheit = 0;
   if (!Array.isArray(z.besucher)) {
     z.besucher = [];
-    for (let i = 0; i < START_STAMMGAESTE; i++) neuerBesucher(z, START_ZUFRIEDENHEIT, zufall);
+    for (let i = 0; i < START_STAMMGAESTE; i++) neuerBesucher(z, START_ZUFRIEDENHEIT, zufall).stamm = true;
   }
+  // ältere Spielstände: die ersten vier sind die Start-Stammgäste
+  for (const b of z.besucher) if (b.stamm === undefined) b.stamm = ['b1', 'b2', 'b3', 'b4'].includes(b.id);
 }
 
-// Neue Person: Name möglichst nicht doppelt, Kaffeewunsch einmal ausgelost.
-export function neuerBesucher(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
-  const vergeben = new Set([...z.besucher.map(b => b.voll), ...(z.personen || []).map(p => p.daten && p.daten.name)]);
+// Neue Person: Name möglichst nicht doppelt, Kaffeewunsch einmal ausgelost. Wird noch nirgends eingetragen.
+export function neuePerson(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
+  const vergeben = new Set([...z.besucher.map(b => b.voll), ...(z.ort ? z.ort.leute : []).map(b => b.voll),
+    ...(z.personen || []).map(p => p.daten && p.daten.name)]);
   let name = null;
   for (const n of namenZiehen(30, zufall)) if (!vergeben.has(n.voll)) { name = n; break; }
   if (!name) [name] = namenZiehen(1, zufall);
-  const b = { id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, kaffee: zufall() < KAFFEE_ANTEIL, besuche: 0 };
+  return { id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, kaffee: zufall() < KAFFEE_ANTEIL, besuche: 0 };
+}
+export function neuerBesucher(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
+  const b = neuePerson(z, zufriedenheit, zufall);
   z.besucher.push(b);
   return b;
+}
+// Ein Passant kommt zum ersten Mal: wechselt aus dem Ort zu den Besuchern und behält seine Haltung.
+export function ausDemOrt(z, p) {
+  z.ort.leute = z.ort.leute.filter(x => x !== p);
+  delete p.neugierig;
+  z.besucher.push(p);
+  return p;
 }
 
 // Chance, dass jemand zum Gottesdienst kommt
@@ -45,11 +60,18 @@ export function neueBesucherZahl(bekanntheit, zufall = Math.random) {
   return n + (zufall() < s - n ? 1 : 0);
 }
 
-// Wer kommt diesmal? Bekannte Besucher nach ihrer Chance, dazu die neuen Besucher.
+// Wer kommt diesmal? Bekannte Besucher nach ihrer Chance, dazu Neugierige aus dem Ort und die neuen Besucher
+// über die Bekanntheit – diese zuerst aus den bekannten Passanten, sonst ganz neue Leute.
 export function werKommt(z, zufall = Math.random) {
   const bekannte = z.besucher.filter(b => zufall() < kommChance(b));
-  const neue = [];
-  for (let i = neueBesucherZahl(z.bekanntheit, zufall); i > 0; i--) neue.push(neuerBesucher(z, NEU_ZUFRIEDENHEIT, zufall));
+  const neue = [], ort = z.ort ? z.ort.leute : [];
+  for (const p of ort.filter(p => p.neugierig)) {
+    if (zufall() < NEUGIER.kommChance) neue.push(ausDemOrt(z, p)); else p.neugierig = false;
+  }
+  for (let i = neueBesucherZahl(z.bekanntheit, zufall); i > 0; i--) {
+    const rest = z.ort ? z.ort.leute : [];
+    neue.push(rest.length ? ausDemOrt(z, rest[Math.floor(zufall() * rest.length)]) : neuerBesucher(z, NEU_ZUFRIEDENHEIT, zufall));
+  }
   return [...bekannte, ...neue];
 }
 

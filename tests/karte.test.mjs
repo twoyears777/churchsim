@@ -121,6 +121,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
   const SONNTAG_10 = 6 * TAG_MIN + 600;
   const aufbau = () => {
     const z = neuesSpiel(() => 0.9);                                  // 0.9: niemand will Kaffee
+    z.ortRuhig = true;                                                // ohne Passanten und Seelsorge (eigene Tests weiter unten)
     const aus = () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
     const raumBei = (x, y) => { const a = aus(); return a.liste[a.gruppe[x + y * z.w]]; };
     wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);

@@ -18,7 +18,7 @@ Die vollständigen Regeln stehen im claude.ai-Projekt „Church-Sim“ (projektr
 - `src/kern/spiel.js` – die **Schalterwand**: einziger Zugang der Oberfläche zur Spiellogik (Befehle + Abfragen).
 - `src/ansicht/` – Darstellung (zeichnet nur, ändert nichts).
 - `src/oberflaeche/` – Bedienung: `start.js` (Uhr, Zeichnen), `eingaben.js`, `anzeigen.js`, `fenster.js`, `speicher.js`.
-- `tests/` – automatische Prüfungen: `node tests/karte.test.mjs`
+- `tests/` – automatische Prüfungen: `node tests/karte.test.mjs` und `node tests/menschen.test.mjs` (Passanten, Seelsorge)
 
 ## Trennung Spiellogik / Oberfläche (strikt)
 - Oberfläche und Ansicht importieren aus `src/kern/` **nur** `spiel.js` und aus `src/inhalte/` nur Texte, Farben, Stadt.

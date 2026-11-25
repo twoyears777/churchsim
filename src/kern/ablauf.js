@@ -18,6 +18,10 @@ import { buchen, kollekte, summe } from './finanzen.js';
 import { werKommt, kommChance, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
 import { zeitpunkt, slotBeginn } from './zeit.js';
+import { NEUGIER } from '../inhalte/ort.js';
+import { SEELSORGE } from '../inhalte/seelsorge.js';
+import { ortSchritt } from './ort.js';
+import { seelsorgeSchritt, anfrageOffen } from './seelsorge.js';
 
 export const HEIMWEG = 60;   // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause
 
@@ -101,18 +105,28 @@ function stehplaetze(z, zustand) {
 }
 
 // ---- Zeit vorrücken ----
-// Prüft, welcher Schritt als Nächstes ansteht, und führt alle Schritte bis zur Zielzeit aus.
+// Prüft, welcher Schritt als Nächstes ansteht (Gottesdienst, Passanten im Ort, Seelsorge-Anfrage),
+// und führt alle Schritte bis zur Zielzeit aus. Kommt eine Seelsorge-Anfrage, bleibt die Zeit genau dort stehen.
 export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
+  if (anfrageOffen(z)) return;
   const ziel = z.minuten + minuten;
-  for (let sicherung = 0; sicherung < 1000; sicherung++) {
+  for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
-    const s = naechsterSchritt(z);
+    let s = null;
+    for (const k of [naechsterSchritt(z), ortSchritt(z, zufall), seelsorgeSchritt(z, seelsorgeGesperrt, zufall)]) if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
     s.tun(z, raeume, zufall);
+    if (anfrageOffen(z)) { wochenbuchPruefen(z); return; }
   }
   z.minuten = ziel;
   wochenbuchPruefen(z);
+}
+// Keine Seelsorge-Anfrage in den 3 Stunden vor dem Gottesdienst und nicht während Gottesdienst/Kirchkaffee
+export function seelsorgeGesperrt(z) {
+  if (z.lauf && z.lauf.phase !== 'ende') return true;
+  const t = naechsterTermin(z);
+  return !!t && z.minuten >= t.beginn - SEELSORGE.sperreVorGottesdienst;
 }
 // Neue Woche (Montag 0:00): Wochenbuch für die Seitenleiste leeren
 function wochenbuchPruefen(z) {
@@ -227,14 +241,15 @@ function abschliessen(z, raeume, zufall = Math.random) {
     const b = z.besucher.find(x => x.id === g.id);
     if (!b) continue;
     if (!g.sitz) { zufriedenheitAendern(b, AENDERUNG.heimgeschickt); continue; }
-    anwesend.push(b); b.besuche++;
+    anwesend.push(b); b.besuche++; b.zuletzt = L.woche;
     zufriedenheitAendern(b, AENDERUNG.sitzplatz + AENDERUNG.gottesdienst);
     if (b.kaffee) zufriedenheitAendern(b, g.kaffee && g.kaffee.ergebnis === 'ja' ? AENDERUNG.kaffeeJa : AENDERUNG.kaffeeNein);
     g.zufriedenheit = b.zufriedenheit;
   }
   bekanntheitAendern(z, anwesend.filter(b => b.zufriedenheit >= BEKANNTHEIT.sehrZufrieden).length * BEKANNTHEIT.proSehrZufriedenem);
   const neueEA = ehrenamtWerden(z, anwesend, zufall).map(b =>
-    personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null }));
+    personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
+      herkunft: { besuche: b.besuche, zufriedenheit: b.zufriedenheit, kaffee: b.kaffee, zuletzt: b.zuletzt } }));
   Object.assign(L, { phase: 'ende', ende: z.minuten, neueEhrenamtliche: neueEA.map(p => p.daten.name) });
   z.letzterLauf = L.woche;
   z.letzterGottesdienst = { woche: L.woche, ausgefallen: false, besucher: anwesend.length, heim: L.gaeste.filter(g => !g.sitz).length };
@@ -244,11 +259,13 @@ function abschliessen(z, raeume, zufall = Math.random) {
 export function prognose(z, raeume) {
   const gd = gottesdienstRaeume(z, raeume).filter(g => g.veranstaltung && g.veranstaltung.id === 'gottesdienst');
   const bereit = gd.some(g => g.bereit), plaetze = gd.reduce((s, g) => s + g.stuehle.length, 0);
+  const neugierige = z.ort ? z.ort.leute.filter(p => p.neugierig) : [];
   const neu = z.bekanntheit / BEKANNTHEIT.teiler;
-  const erwartet = z.besucher.reduce((s, b) => s + kommChance(b), 0) + neu;
+  const erwartet = z.besucher.reduce((s, b) => s + kommChance(b), 0) + neu + neugierige.length * NEUGIER.kommChance;
   const anteil = erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
   if (!bereit) return { bereit, erwartet, plaetze, sitzend: 0, geld: 0, ehrenamt: 0, tassen: 0 };
-  const kaffeeWunsch = (z.besucher.filter(b => b.kaffee).reduce((s, b) => s + kommChance(b), 0) + neu * KAFFEE_ANTEIL) * anteil;
+  const kaffeeWunsch = (z.besucher.filter(b => b.kaffee).reduce((s, b) => s + kommChance(b), 0) + neu * KAFFEE_ANTEIL
+    + neugierige.filter(p => p.kaffee).length * NEUGIER.kommChance) * anteil;
   const zustand = kirchkaffeeZustand(z, raeume);
   const vorrat = zustand.flatMap(k => k.stationen).reduce((s, st) => s + (st.maschine.fuellung || 0), 0);
   const tassen = Math.min(kaffeeWunsch, vorrat, stehplaetze(z, zustand).length);
