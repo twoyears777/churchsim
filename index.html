@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Churchsim – Raum-Editor</title>
+<link rel="stylesheet" href="stil.css">
+</head>
+<body>
+<header class="leiste">
+  <div class="werkzeuge" role="toolbar" aria-label="Werkzeuge">
+    <button data-werkzeug="wand" aria-pressed="true">Wand</button>
+    <button data-werkzeug="tuer" aria-pressed="false">Tür</button>
+    <button data-werkzeug="abriss" aria-pressed="false">Abriss</button>
+    <button data-werkzeug="raum" aria-pressed="false">Raum festlegen</button>
+  </div>
+  <div class="werkzeuge">
+    <button id="zurueck">Rückgängig</button>
+    <button id="neu">Neu</button>
+  </div>
+</header>
+<p id="hinweis" class="hinweis"></p>
+<main id="flaeche" class="flaeche">
+  <canvas id="karte"></canvas>
+  <div id="maske" class="maske" hidden><div class="inhalt"></div></div>
+</main>
+<script type="module" src="src/oberflaeche/editor.js"></script>
+</body>
+</html>

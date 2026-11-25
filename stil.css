@@ -1,0 +1,31 @@
+/* Platzhalter-Design – Farben, Schriften und Stil legt Lukas fest. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  display: flex; flex-direction: column; background: #2b2a27; color: #f3efe6;
+  font: 16px/1.4 system-ui, sans-serif; -webkit-user-select: none; user-select: none;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.leiste { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px 12px; }
+.werkzeuge { display: flex; flex-wrap: wrap; gap: 6px; }
+button {
+  min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #55534d;
+  background: #3a3935; color: inherit; font: inherit; cursor: pointer;
+}
+button[aria-pressed="true"] { background: #f3efe6; color: #2b2a27; border-color: #f3efe6; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible { outline: 2px solid #8fb4ea; outline-offset: 2px; }
+.hinweis { margin: 0; padding: 0 14px 8px; font-size: 14px; color: #c9c4b8; }
+.flaeche { position: relative; flex: 1; min-height: 0; touch-action: none; }
+#karte { display: block; }
+.maske { position: absolute; right: 12px; bottom: 12px; width: min(340px, calc(100% - 24px)); }
+.inhalt { background: #f3efe6; color: #2b2a27; border-radius: 12px; padding: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+.inhalt h2 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
+.inhalt button { background: #fff; border-color: #cfc9bb; color: #2b2a27; }
+.typen { display: grid; gap: 8px; margin-bottom: 12px; }
+.typ { display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 12px; }
+.typ.aktiv { border: 2px solid #2d69be; }
+.typ small { display: block; color: #6b665b; font-size: 13px; }
+.farbe { width: 22px; height: 22px; border-radius: 4px; flex: none; border: 1px solid rgba(0,0,0,.15); }
+.zeile { display: flex; gap: 8px; justify-content: flex-end; }
+.warnung { margin: 0 0 10px; color: #b3261e; font-size: 14px; }
