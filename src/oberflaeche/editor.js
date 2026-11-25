@@ -2,11 +2,13 @@
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { neuerZustand, wandRechteck, abriss, tuerUmschalten, erkenneRaeume, pruefeRaum, raumTypVon, typZuweisen, idx } from '../kern/karte.js';
-import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten } from '../kern/personen.js';
+import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from '../kern/personen.js';
 import { moebelAnlegen, moebelSetzen, moebelEntfernen, moebelPruefen, moebelBei } from '../kern/moebel.js';
 import { raumBereitschaft, kannWocheBeenden, wocheBeenden } from '../kern/runde.js';
 import { sonntagDerWoche } from '../kern/kalender.js';
 import { weg } from '../kern/wege.js';
+import { wandBauen, wandKonflikte } from '../kern/bauen.js';
+import { namenZiehen } from '../kern/besucher.js';
 import { zeichne } from '../ansicht/zeichnen.js';
 
 const SPEICHER = 'churchsim-editor';
@@ -14,7 +16,7 @@ const VERSION = 2;
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
   tuer: 'Tippe auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
-  stuhl: 'Tippe oder zieh, um Stühle aufzustellen. Tippe auf einen Stuhl, um ihn zu entfernen.',
+  stuhl: 'Tippe um einen Stuhl aufzustellen',
   abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
   raum: 'Tippe in einen Raum, um seine Funktion festzulegen.'
 };
@@ -25,7 +27,7 @@ let z = laden() || neuerZustand();
 personenAnlegen(z); moebelAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
 let raeume = auswerten();
 let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
-let besucher = [], ablauf = null;
+let besucher = [], ablauf = null, stuhlStart = null;
 const verlauf = [];
 
 const $ = id => document.getElementById(id);
@@ -70,7 +72,8 @@ function figuren() {
 }
 function malen() {
   ctx.clearRect(0, 0, leinwand.width, leinwand.height);
-  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, auswahl, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
+  const konflikte = ziehen && ziehen.art === 'wand' ? wandKonflikte(z, ziehen.x0, ziehen.y0, ziehen.x1, ziehen.y1) : [];
+  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, konflikte, auswahl, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
   anzeigenAktualisieren();
 }
 
@@ -116,25 +119,31 @@ leinwand.addEventListener('pointerdown', e => {
   if (ablauf) return;
   if (!editorOffen) {
     const p = figurBei(e);
-    if (p) { leinwand.setPointerCapture(e.pointerId); tragen = { person: p, ...punktAus(e) }; malen(); }
+    if (p) { leinwand.setPointerCapture(e.pointerId); const a = punktAus(e); tragen = { person: p, ...a, start: a, bewegt: false }; malen(); }
     return;
   }
   const f = feldAus(e);
-  if (werkzeug === 'wand' || werkzeug === 'abriss' || werkzeug === 'stuhl') {
+  stuhlStart = f;
+  if (werkzeug === 'wand' || werkzeug === 'abriss') {
     leinwand.setPointerCapture(e.pointerId);
     ziehen = { x0: f.x, y0: f.y, x1: f.x, y1: f.y, art: werkzeug };
     malen();
   }
 });
 leinwand.addEventListener('pointermove', e => {
-  if (tragen) { Object.assign(tragen, punktAus(e)); malen(); return; }
+  if (tragen) {
+    const a = punktAus(e);
+    if (Math.hypot(a.px - tragen.start.px, a.py - tragen.start.py) > 6) tragen.bewegt = true;
+    Object.assign(tragen, a); malen(); return;
+  }
   if (!ziehen) return;
   const f = feldAus(e);
   if (f.x !== ziehen.x1 || f.y !== ziehen.y1) { ziehen.x1 = f.x; ziehen.y1 = f.y; malen(); }
 });
 leinwand.addEventListener('pointerup', e => {
   if (tragen) {
-    const f = feldAus(e), p = tragen.person; tragen = null;
+    const f = feldAus(e), p = tragen.person, bewegt = tragen.bewegt; tragen = null;
+    if (!bewegt) { karteOeffnen(p); return; }   // nur angetippt: Charakter-Karte
     if (p.x !== f.x || p.y !== f.y) aendern(() => versetzen(z, p, f.x, f.y)); else malen();
     return;
   }
@@ -142,13 +151,15 @@ leinwand.addEventListener('pointerup', e => {
   const f = feldAus(e);
   if (ziehen) {
     const v = ziehen; ziehen = null;
-    if (v.art === 'wand') aendern(() => wandRechteck(z, v.x0, v.y0, v.x1, v.y1));
-    else if (v.art === 'abriss') aendern(() => { abriss(z, v.x0, v.y0, v.x1, v.y1); moebelEntfernen(z, v.x0, v.y0, v.x1, v.y1); });
-    else if (v.x0 === v.x1 && v.y0 === v.y1 && moebelBei(z, v.x0, v.y0)) aendern(() => moebelEntfernen(z, v.x0, v.y0, v.x0, v.y0));
-    else aendern(() => moebelSetzen(z, 'stuhl', v.x0, v.y0, v.x1, v.y1, personAuf));
+    if (v.art === 'wand') { if (!wandKonflikte(z, v.x0, v.y0, v.x1, v.y1).length) aendern(() => wandBauen(z, v.x0, v.y0, v.x1, v.y1)); else malen(); }
+    else aendern(() => { abriss(z, v.x0, v.y0, v.x1, v.y1); moebelEntfernen(z, v.x0, v.y0, v.x1, v.y1); });
     return;
   }
-  if (werkzeug === 'tuer') {
+  if (werkzeug === 'stuhl') {
+    if (!stuhlStart || stuhlStart.x !== f.x || stuhlStart.y !== f.y) return;   // nur Tippen, kein Ziehen
+    if (moebelBei(z, f.x, f.y)) aendern(() => moebelEntfernen(z, f.x, f.y, f.x, f.y));
+    else aendern(() => moebelSetzen(z, 'stuhl', f.x, f.y, f.x, f.y, personAuf));
+  } else if (werkzeug === 'tuer') {
     if (z.zellen[idx(z, f.x, f.y)]) aendern(() => tuerUmschalten(z, f.x, f.y));
   } else if (werkzeug === 'raum') {
     const nr = raeume.gruppe[idx(z, f.x, f.y)];
@@ -172,6 +183,16 @@ function maskeOeffnen() {
     <div class="zeile">${r.typ ? '<button data-typ="">Funktion entfernen</button>' : ''}<button data-zu>Schließen</button></div>`;
   maske.hidden = false; malen();
 }
+// ---- Charakter-Karte eines Mitarbeiters ----
+const ART_TEXT = { hauptamt: 'Hauptamtlich', ehrenamt: 'Ehrenamtlich' };
+function karteOeffnen(p) {
+  const d = daten(p), raum = eingesetztIn(z, raeume, p);
+  maske.querySelector('.inhalt').innerHTML = `<h2>${d.name}</h2>
+    <p class="unter">${ART_TEXT[d.art]} · ${raum ? 'Im Einsatz: ' + raum.typ.name : 'Verfügbar'}</p>
+    <h3>Skills</h3><p class="leer">Skills folgen später</p>
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+  auswahl = null; maske.hidden = false; malen();
+}
 function maskeSchliessen() { maske.hidden = true; auswahl = null; malen(); }
 maske.addEventListener('click', e => {
   const b = e.target.closest('button');
@@ -193,10 +214,10 @@ function wocheStarten() {
   const g = GRUNDSTUECK, gehweg = GEHWEGE.find(w => w.w > w.h && w.y >= g.y + g.h);
   const plaetze = ergebnis.angebote.flatMap(a => a.plaetze);
   const blockiert = (x, y) => !!moebelBei(z, x, y) || personAuf(x, y);
-  const jetzt = performance.now();
+  const jetzt = performance.now(), namen = namenZiehen(plaetze.length);
   besucher = plaetze.map((ziel, i) => {
     const start = { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
-    return { pfad: weg(z, start, ziel, blockiert) || [ziel], beginn: jetzt + i * ABSTAND_MS, x: start.x, y: start.y, sichtbar: false };
+    return { name: namen[i], pfad: weg(z, start, ziel, blockiert) || [ziel], beginn: jetzt + i * ABSTAND_MS, x: start.x, y: start.y, sichtbar: false };
   });
   ablauf = { beendet, ergebnis };
   document.body.classList.add('laeuft');

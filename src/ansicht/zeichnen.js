@@ -8,7 +8,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', besucher: '#5b8a72', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', besucher: '#5b8a72', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
@@ -66,6 +66,14 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
     ctx.fillStyle = FARBEN.besucher; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
   }
+  // Vornamen klein neben den Besuchern
+  ctx.font = `500 11px system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (const b of extra.besucher || []) if (b.sichtbar && b.name) {
+    const cx = ox + (b.x + 0.5) * k + Math.max(5, k * 0.32) + 2, cy = oy + (b.y + 0.5) * k;
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.strokeText(b.name, cx, cy);
+    ctx.fillStyle = FARBEN.text; ctx.fillText(b.name, cx, cy);
+  }
+  ctx.textAlign = 'center';
 
   // Beschriftung der Räume
   const schrift = Math.max(11, Math.min(18, k * 0.75));
@@ -103,14 +111,12 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
       ctx.fillStyle = FARBEN.vorschauWand;
       for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++)
         if (x === ax || x === bx || y === ay || y === by) ctx.fillRect(ox + x * k, oy + y * k, k, k);
+      ctx.fillStyle = FARBEN.konflikt;
+      for (const c of extra.konflikte || []) ctx.fillRect(ox + c.x * k, oy + c.y * k, k, k);
       if (bx - ax >= 2 && by - ay >= 2) {
         ctx.font = `500 ${schrift}px system-ui, sans-serif`; ctx.fillStyle = FARBEN.auswahl;
         ctx.fillText(`${bx - ax - 1} × ${by - ay - 1}`, ox + (ax + bx + 1) / 2 * k, oy + (ay + by + 1) / 2 * k);
       }
-    } else if (v.art === 'stuhl') {
-      ctx.globalAlpha = 0.55;
-      for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) stuhl(ctx, ox + x * k, oy + y * k, k);
-      ctx.globalAlpha = 1;
     } else {
       ctx.fillStyle = FARBEN.vorschauAbriss;
       ctx.fillRect(ox + ax * k, oy + ay * k, (bx - ax + 1) * k, (by - ay + 1) * k);

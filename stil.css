@@ -52,3 +52,6 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .rueckblick .zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rueckblick .summe td { font-weight: 600; border-bottom: 0; }
 .rueckblick .zeile { margin-top: 16px; }
+.inhalt .unter { margin: -6px 0 6px; color: #6b665b; font-size: 14px; }
+.inhalt h3 { margin: 14px 0 4px; font-size: 15px; font-weight: 600; }
+.inhalt .leer { margin: 0 0 12px; color: #6b665b; font-style: italic; }

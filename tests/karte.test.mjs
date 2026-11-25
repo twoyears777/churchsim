@@ -56,6 +56,9 @@ console.log('Mitarbeiter-Tests bestanden.');
 import { moebelSetzen, moebelPruefen } from '../src/kern/moebel.js';
 import { kannWocheBeenden, wocheBeenden } from '../src/kern/runde.js';
 import { weg } from '../src/kern/wege.js';
+import { wandKonflikte, wandBauen } from '../src/kern/bauen.js';
+import { namenZiehen } from '../src/kern/besucher.js';
+import { VORNAMEN } from '../src/inhalte/namen.js';
 import { sonntagDerWoche } from '../src/kern/kalender.js';
 {
   const z6 = neuerZustand(); personenAnlegen(z6);
@@ -80,7 +83,15 @@ import { sonntagDerWoche } from '../src/kern/kalender.js';
   assert.ok(pfad.some(p => p.x === G.x + 2 && p.y === G.y + 5));    // läuft durch die Tür
   const raus = pfad.findIndex(p => aufGrundstueck(p.x, p.y));        // betritt das Grundstück nur durchs Tor
   assert.ok(pfad[raus].y === G.y + G.h - 1 && pfad[raus].x >= G.tor.x && pfad[raus].x < G.tor.x + G.tor.breite);
-  wandRechteck(z6, G.x + 8, G.y + 4, G.x + 8, G.y + 4); moebelPruefen(z6);
-  assert.equal(z6.moebel.length, 3);
+  // Wand über einen Stuhl wird nicht gebaut
+  assert.equal(wandKonflikte(z6, G.x + 7, G.y + 3, G.x + 12, G.y + 4).length, 3);
+  assert.equal(wandBauen(z6, G.x + 7, G.y + 3, G.x + 12, G.y + 4), false);
+  assert.equal(z6.moebel.length, 4);
+  assert.ok(wandBauen(z6, G.x + 25, G.y + 10, G.x + 30, G.y + 15));
+}
+{
+  const n = namenZiehen(VORNAMEN.length);
+  assert.equal(new Set(n).size, VORNAMEN.length);              // keine doppelten, solange die Liste reicht
+  assert.equal(namenZiehen(VORNAMEN.length + 5).length, VORNAMEN.length + 5);
 }
 console.log('Runden-Tests bestanden.');
