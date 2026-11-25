@@ -53,7 +53,7 @@ export const TEXTE = {
   veranstaltungKacheln: {
     gottesdienst: {
       bringt: ['Kollekte: 1 € pro Besucher', 'Zufriedenheit der Besucher', 'Bekanntheit der Gemeinde'],
-      bedingungen: ['Pastor im Raum', 'Stühle = Sitzplätze']
+      bedingungen: [{ text: 'Pastor im Raum', bedingung: 'leitung' }, 'Stühle = Sitzplätze']   // bedingung: wird im Fenster grün/rot markiert
     },
     keine: { bringt: ['Nichts'], bedingungen: ['Stammgäste werden unzufrieden'] }
   },

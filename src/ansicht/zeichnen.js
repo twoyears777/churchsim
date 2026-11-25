@@ -1,8 +1,8 @@
-// Darstellung: malt den Zustand der Karte auf die Zeichenfläche. Ändert selbst nichts.
-import { WAND, TUER, idx } from '../kern/karte.js';
+// Darstellung: malt die Karte auf die Zeichenfläche. Ändert nichts und rechnet keine Spielregeln –
+// alles, was gezeichnet wird, kommt fertig vom Spiel (spiel.karte()).
+import { FELD } from '../kern/spiel.js';
 import { ART_FARBE } from '../inhalte/mitarbeiter.js';
-import { MOEBEL } from '../inhalte/moebel.js';
-const FASSUNG = (MOEBEL.find(m => m.id === 'kaffeemaschine') || {}).fassung || 1;
+import { TEXTE } from '../inhalte/texte.js';
 import { GRUNDSTUECK, STRASSEN, GEHWEGE, NACHBARN, BAEUME } from '../inhalte/umgebung.js';
 
 // Platzhalter-Farben – das Design legt Lukas fest.
@@ -16,9 +16,16 @@ export const FARBEN = {
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
 };
 
-export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
+// Beschriftung unter dem Raumnamen: eingestellte Veranstaltung bzw. Zustand des Kirchkaffees
+function raumUntertitel(r) {
+  if (r.kirchkaffee) return TEXTE.kirchkaffee[r.kirchkaffee];
+  if (r.veranstaltungsraum) return r.veranstaltung || 'Keine Veranstaltung';
+  return null;
+}
+
+export function zeichne(ctx, z, ansicht, extra = {}) {
   const { k, ox, oy } = ansicht; // k = Kästchengröße in Pixeln, ox/oy = Versatz
-  const { gruppe, liste } = raeume;
+  const liste = z.raeume;        // z = Karte vom Spiel: w, h, zellen, raeume, moebel, personen, besucher
   umgebungZeichnen(ctx, z, ansicht);
 
   // Böden der Räume
@@ -39,10 +46,10 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
 
   // Wände und Türen
   for (let y = 0; y < z.h; y++) for (let x = 0; x < z.w; x++) {
-    const t = z.zellen[idx(z, x, y)], px = ox + x * k, py = oy + y * k;
-    if (t === WAND) {
+    const t = z.zellen[y * z.w + x], px = ox + x * k, py = oy + y * k;
+    if (t === FELD.WAND) {
       ctx.fillStyle = FARBEN.wand; ctx.fillRect(px, py, k, k);
-    } else if (t === TUER) {
+    } else if (t === FELD.TUER) {
       ctx.fillStyle = FARBEN.tuer; ctx.fillRect(px, py, k, k);
       ctx.fillStyle = FARBEN.tuerHell; ctx.fillRect(px + k * 0.2, py + k * 0.2, k * 0.6, k * 0.6);
     }
@@ -56,7 +63,7 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
 
   // Auswahl
   if (extra.auswahl != null) {
-    const r = liste[extra.auswahl];
+    const r = liste.find(x => x.nr === extra.auswahl);
     if (r) {
       ctx.strokeStyle = FARBEN.auswahl; ctx.lineWidth = 3;
       const b = r.box;
@@ -65,15 +72,15 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
   }
 
   // Möbel
-  for (const m of extra.moebel || []) {
+  for (const m of z.moebel) {
     const px = ox + m.x * k, py = oy + m.y * k;
     if (m.art === 'stuhl') stuhl(ctx, px, py, k);
     else if (m.art === 'theke') theke(ctx, px, py, k);
-    else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.fuellung || 0);
+    else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.anteil || 0);
   }
 
   // Besucher
-  for (const b of extra.besucher || []) if (b.sichtbar) {
+  for (const b of z.besucher) {
     const cx = ox + (b.x + 0.5) * k, cy = oy + (b.y + 0.5) * k, r = Math.max(5, k * 0.32);
     ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * 0.3, r, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = FARBEN.besucher; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
@@ -81,7 +88,7 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
   }
   // Vornamen klein neben den Besuchern
   ctx.font = `500 11px system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  for (const b of extra.besucher || []) if (b.sichtbar && b.name && !b.sitzt) { // beim Hinsetzen verschwindet der Name
+  for (const b of z.besucher) if (b.name && !b.sitzt) { // beim Hinsetzen verschwindet der Name
     const cx = ox + (b.x + 0.5) * k + Math.max(5, k * 0.32) + 2, cy = oy + (b.y + 0.5) * k;
     ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.strokeText(b.name, cx, cy);
     ctx.fillStyle = FARBEN.text; ctx.fillText(b.name, cx, cy);
@@ -97,7 +104,8 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
     ctx.fillStyle = FARBEN.text;
     const name = r.typ ? r.typ.name : 'Ohne Funktion', ny = cy - (r.probleme.length ? schrift * 0.7 : 0);
     ctx.fillText(name, cx, ny);
-    if (r.veranstaltungFehlt) warnsymbol(ctx, cx + ctx.measureText(name).width / 2 + schrift * 0.75, ny, schrift * 0.9);
+    const untertitel = raumUntertitel(r);
+    if (r.veranstaltungsraum && !r.veranstaltung) warnsymbol(ctx, cx + ctx.measureText(name).width / 2 + schrift * 0.75, ny, schrift * 0.9);
     if (r.probleme.length) {
       ctx.font = `400 ${schrift * 0.85}px system-ui, sans-serif`;
       ctx.fillStyle = FARBEN.fehler;
@@ -105,21 +113,21 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
         : p === 'verbindung' ? 'Verbindungstür zum Gottesdienstraum fehlt'
         : `zu klein (mind. ${r.typ.minGroesse[0]} × ${r.typ.minGroesse[1]})`).join(' · ');
       ctx.fillText(t, cx, cy + schrift * 0.7);
-    } else if (r.veranstaltungText) {
+    } else if (untertitel) {
       // eingestellte Veranstaltung klein unter dem Raumnamen
       ctx.font = `400 ${schrift * 0.8}px system-ui, sans-serif`;
       ctx.fillStyle = FARBEN.veranstaltung;
-      ctx.fillText(r.veranstaltungText, cx, cy + schrift * 0.95);
+      ctx.fillText(untertitel, cx, cy + schrift * 0.95);
     }
   }
 
   // Mitarbeiter-Figuren
-  for (const f of extra.personen || []) {
-    if (f.getragen) continue;
+  for (const f of z.personen) {
+    if (f.id === extra.getragen) continue;
     figur(ctx, ox + (f.x + 0.5) * k, oy + (f.y + 0.5) * k, k, f, false, schrift);
   }
   if (extra.tragen) {
-    const t = extra.tragen, f = (extra.personen || []).find(p => p.getragen);
+    const t = extra.tragen, f = z.personen.find(p => p.id === extra.getragen);
     const fx = Math.floor((t.px - ox) / k), fy = Math.floor((t.py - oy) / k);
     ctx.strokeStyle = FARBEN.auswahl; ctx.lineWidth = 2; ctx.strokeRect(ox + fx * k + 1, oy + fy * k + 1, k - 2, k - 2);
     if (f) figur(ctx, t.px, t.py, k, f, true, schrift);
@@ -274,11 +282,11 @@ function theke(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.thekeHell; ctx.fillRect(px, py + k * 0.15, k, k * 0.35);
 }
 
-// Kaffeemaschine mit kleinem Füllstand-Streifen (braun = Kaffee drin)
-function kaffeemaschine(ctx, px, py, k, fuellung) {
+// Kaffeemaschine mit kleinem Füllstand-Streifen (braun = Kaffee drin, rot = leer); anteil = 0 … 1
+function kaffeemaschine(ctx, px, py, k, anteil) {
   const r = k * 0.12;
   ctx.fillStyle = FARBEN.maschine; ctx.fillRect(px + r, py + r, k - 2 * r, k - 2 * r);
   ctx.fillStyle = '#d9d9d9'; ctx.fillRect(px + k * 0.3, py + k * 0.25, k * 0.4, k * 0.25);
-  ctx.fillStyle = fuellung > 0 ? FARBEN.maschineKaffee : '#b3261e';
-  ctx.fillRect(px + k * 0.3, py + k * 0.6, k * 0.4 * (fuellung > 0 ? Math.min(1, fuellung / FASSUNG) : 1), k * 0.14);
+  ctx.fillStyle = anteil > 0 ? FARBEN.maschineKaffee : '#b3261e';
+  ctx.fillRect(px + k * 0.3, py + k * 0.6, k * 0.4 * (anteil > 0 ? Math.min(1, anteil) : 1), k * 0.14);
 }

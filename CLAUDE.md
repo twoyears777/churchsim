@@ -13,11 +13,19 @@ Die vollständigen Regeln stehen im claude.ai-Projekt „Church-Sim“ (projektr
 7. **PC hat Vorrang** (Ziel ist Steam); iPad als Web-App ist zweitrangig.
 
 ## Aufbau
-- `src/inhalte/` – Inhaltsdateien (z. B. Raumtypen). Kann Lukas selbst erweitern.
-- `src/kern/` – Spiellogik ohne Grafik. Wird mit Tests geprüft.
+- `src/inhalte/` – Inhaltsdateien (z. B. Raumtypen, Zahlen, Texte in `texte.js`). Kann Lukas selbst erweitern.
+- `src/kern/` – Spiellogik ohne Grafik: Zahlen, Berechnungen, Tick-System. Wird mit Tests geprüft.
+- `src/kern/spiel.js` – die **Schalterwand**: einziger Zugang der Oberfläche zur Spiellogik (Befehle + Abfragen).
 - `src/ansicht/` – Darstellung (zeichnet nur, ändert nichts).
-- `src/oberflaeche/` – Bedienung: Werkzeuge, Eingaben, Speichern.
+- `src/oberflaeche/` – Bedienung: `start.js` (Uhr, Zeichnen), `eingaben.js`, `anzeigen.js`, `fenster.js`, `speicher.js`.
 - `tests/` – automatische Prüfungen: `node tests/karte.test.mjs`
+
+## Trennung Spiellogik / Oberfläche (strikt)
+- Oberfläche und Ansicht importieren aus `src/kern/` **nur** `spiel.js` und aus `src/inhalte/` nur Texte, Farben, Stadt.
+- Die Oberfläche rechnet keine Spielregeln und verändert den Spielstand nie direkt – sie gibt Befehle
+  (Antwort: Code wie 'ok'/'geld'/'platz') und stellt Abfragen (Antwort: Kopien mit Zahlen und Zustands-Codes).
+- Texte macht die Oberfläche aus den Codes; der Kern liefert keine Texte.
+- Der Trennungs-Test in `tests/karte.test.mjs` schlägt Alarm, wenn eine Datei an der Schalterwand vorbeigreift.
 
 Kein Build-Schritt: reine Browser-Module, läuft direkt über GitHub Pages.
 

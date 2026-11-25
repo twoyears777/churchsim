@@ -262,3 +262,78 @@ import { glaetten } from '../src/kern/wege.js';
   assert.ok(r[rein].x >= G.tor.x && r[rein].x < G.tor.x + G.tor.breite);
 }
 console.log('Weg-Tests bestanden.');
+
+// Schalterwand (kern/spiel.js): Befehle und Abfragen, wie die Oberfläche sie benutzt
+import { spielStarten } from '../src/kern/spiel.js';
+{
+  const spiel = spielStarten(null, () => 0.5);   // 0.5: alle kommen (60 %), niemand will Kaffee (50 %)
+  assert.equal(spiel.lage().konto, 50); assert.equal(spiel.lage().tag, 0); assert.equal(spiel.lage().stunde, 8);
+  assert.deepEqual(spiel.lage().status, { fehlt: 'raum' });
+  // Bauen über Befehle
+  assert.equal(spiel.wandBauen(G.x + 2, G.y + 2, G.x + 18, G.y + 8), 'ok');
+  spiel.tuerUmschalten(G.x + 2, G.y + 5);
+  const nr = spiel.raumNrBei(G.x + 5, G.y + 5);
+  spiel.raumTypSetzen(nr, 'gottesdienst');
+  assert.equal(spiel.veranstaltungsraumBei(G.x + 5, G.y + 5), nr);
+  assert.deepEqual(spiel.lage().status, { fehlt: 'veranstaltung' });
+  spiel.veranstaltungSetzen(nr, 'gottesdienst');
+  assert.deepEqual(spiel.lage().status, { fehlt: 'leitung' });
+  assert.equal(spiel.raumInfo(nr).bedingungen.leitung, false);
+  assert.ok(spiel.personVersetzen('pastor', G.x + 4, G.y + 5));
+  assert.equal(spiel.raumInfo(nr).bedingungen.leitung, true);
+  assert.deepEqual(spiel.lage().status, {});
+  // Möbel kaufen: Antwort-Codes
+  assert.equal(spiel.moebelKaufen('stuhl', G.x + 7, G.y + 4), 'ok');
+  assert.equal(spiel.moebelKaufen('stuhl', G.x + 7, G.y + 4), 'belegt');
+  assert.equal(spiel.moebelKaufen('kaffeemaschine', G.x + 8, G.y + 4), 'geld');   // 45 € reichen nicht
+  assert.equal(spiel.lage().konto, 45);
+  // Rückgängig gibt das Geld zurück
+  assert.ok(spiel.rueckgaengig()); assert.equal(spiel.lage().konto, 50); assert.equal(spiel.moebelBei(G.x + 7, G.y + 4), null);
+  // Wand-Vorschau rückt an bestehende Wand heran
+  assert.equal(spiel.wandVorschau(G.x + 19, G.y + 2, G.x + 25, G.y + 8).x0, G.x + 18);
+  // Abfragen liefern Kopien: Ändern an der Antwort ändert das Spiel nicht
+  const l = spiel.lage(); l.konto = 9999; l.personen.length = 0;
+  assert.equal(spiel.lage().konto, 50); assert.equal(spiel.lage().personen.length, 1);
+  const k = spiel.karte(); k.zellen.fill(0);
+  assert.equal(spiel.zelle(G.x + 2, G.y + 2), 'wand');
+  // Plan und Tempo werden geprüft
+  spiel.planSetzen(9, 'nachts'); assert.deepEqual(spiel.raumInfo(nr).plan, { tag: 6, slot: 'vormittag' });
+  spiel.planSetzen(2, 'abend'); assert.deepEqual(spiel.raumInfo(nr).plan, { tag: 2, slot: 'abend' });
+  spiel.tempoSetzen(7); assert.equal(spiel.lage().tempo, 1);
+  // Tick-System: Bau-Modus und Pause halten die Zeit an
+  spiel.bauModus(true); assert.equal(spiel.tick(0.2), false); assert.equal(spiel.lage().minute, 0);
+  spiel.bauModus(false); assert.equal(spiel.tick(0.15), true); assert.equal(spiel.lage().minute, 3);   // 0,15 s = 3 Spielminuten
+  spiel.tempoSetzen(0); assert.equal(spiel.tick(1), false);
+  for (let i = 0; i < 5; i++) assert.equal(spiel.moebelKaufen('stuhl', G.x + 7 + i, G.y + 4), 'ok');
+  // Bis Mittwochabend laufen lassen: Besucher sind unterwegs, Kärtchen hat Bedürfnisse
+  spiel.tempoSetzen(5);
+  for (let i = 0; i < 2000 && spiel.lage().status.phase !== 'gottesdienst'; i++) spiel.tick(0.25);
+  assert.equal(spiel.lage().tag, 2); assert.equal(spiel.lage().status.phase, 'gottesdienst');
+  const b = spiel.karte().besucher[0];
+  assert.ok(b && typeof b.x === 'number');
+  const info = spiel.besucherInfo(b.id);
+  assert.equal(info.beduerfnisse.sitzplatz, true); assert.equal(info.beduerfnisse.gottesdienst, true);
+  assert.equal(info.beduerfnisse.kaffee, 'keinWunsch');                          // niemand will Kaffee
+  // Speichern und wieder laden
+  const kopie = spielStarten(spiel.speicherText());
+  assert.equal(kopie.lage().tag, 2); assert.equal(kopie.zelle(G.x + 2, G.y + 2), 'wand');
+  spiel.zuruecksetzen(); assert.equal(spiel.zelle(G.x + 2, G.y + 2), 'leer'); assert.equal(spiel.lage().stunde, 8);
+}
+console.log('Schnittstellen-Tests bestanden.');
+
+// Trennung: Oberfläche und Ansicht reden nur über kern/spiel.js mit der Spiellogik
+import { readdirSync } from 'node:fs';
+{
+  for (const ordner of ['oberflaeche', 'ansicht']) {
+    const pfad = new URL(`../src/${ordner}/`, import.meta.url);
+    for (const datei of readdirSync(pfad)) {
+      const text = readFileSync(new URL(datei, pfad), 'utf8');
+      for (const [, ziel] of text.matchAll(/from\s+'([^']+)'/g)) {
+        if (ziel.includes('/kern/')) assert.equal(ziel, '../kern/spiel.js', `${ordner}/${datei} greift an der Schalterwand vorbei auf ${ziel} zu`);
+        // aus den Inhaltsdateien nur Texte, Farben und die Stadt – keine Spielzahlen
+        if (ziel.includes('/inhalte/')) assert.ok(['texte.js', 'umgebung.js', 'mitarbeiter.js', 'veranstaltungen.js'].some(n => ziel.endsWith('/' + n)), `${ordner}/${datei} liest Spielzahlen aus ${ziel}`);
+      }
+    }
+  }
+}
+console.log('Trennungs-Test bestanden.');
