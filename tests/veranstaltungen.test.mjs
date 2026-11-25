@@ -188,3 +188,22 @@ console.log('Frau-des-Pastors-Tests bestanden.');
   assert.equal(besucherPositionen(z, speicher).length, 0);                // ... aber alle sind schon zu Hause
 }
 console.log('Heimweg- und Kollekte-Zahlen-Tests bestanden.');
+
+// Anbauen (Nachbarraum mit Tür zum Gottesdienstraum) darf die Einstellungen nicht zurücksetzen
+{
+  const z = gemeinde();
+  veranstaltungEinstellen(z, raumBei(z), 'gottesdienst', 0);
+  assert.equal(terminEinstellen(z, raumBei(z), 0, 5, 'abend'), 'ok');
+  veranstaltungEinstellen(z, raumBei(z), 'lobpreis', 1);
+  const vorher = JSON.stringify(programmVon(z, raumBei(z)));
+  z.kaffeeZeiten = {}; for (const c of raumBei(z).zellen) z.kaffeeZeiten[c] = [{ tag: 6, slot: 'mittag' }];
+  wandRechteck(z, G.x + 18, G.y + 2, G.x + 26, G.y + 8);        // Nachbarraum an der rechten Wand
+  tuerUmschalten(z, G.x + 18, G.y + 5);                          // Tür zwischen beiden Räumen
+  tuerUmschalten(z, G.x + 22, G.y + 8);                          // Außentür des Nachbarraums
+  assert.equal(raumTypVon(z, raumBei(z)).id, 'gottesdienst');
+  assert.equal(JSON.stringify(programmVon(z, raumBei(z))), vorher);
+  assert.deepEqual(z.kaffeeZeiten[raumBei(z).zellen[0]], [{ tag: 6, slot: 'mittag' }]);
+  tuerUmschalten(z, G.x + 18, G.y + 5);                          // Tür wieder zu Wand: bleibt auch
+  assert.equal(JSON.stringify(programmVon(z, raumBei(z))), vorher);
+}
+console.log('Anbau-Test bestanden.');

@@ -126,17 +126,24 @@ export function hatVerbindungZu(z, raum, typId) {
 }
 
 // Nach jeder Baumaßnahme: Raumfunktionen den neu erkannten Räumen zuordnen.
-// Gilt für Raumfunktion und eingestellte Veranstaltung gleichermaßen.
+// Gilt für Raumfunktion, eingestellte Veranstaltungen und Kirchkaffee-Öffnungszeiten gleichermaßen.
+// Die Werte können Listen sein (z. B. Veranstaltung 1 und 2 mit Tag und Uhrzeit): Sie werden darum als Text
+// verglichen und unverändert übernommen – nicht in Text umgewandelt (sonst gingen die Einstellungen verloren).
 function abgleichen(z) {
   const { raeume } = erkenneRaeume(z);
-  for (const feld of ['raumTyp', 'veranstaltung']) {
-    if (!z[feld]) z[feld] = {};
+  for (const feld of ['raumTyp', 'veranstaltung', 'kaffeeZeiten']) {
+    if (!z[feld]) { if (feld === 'kaffeeZeiten') continue; z[feld] = {}; }
     const neu = {};
     for (const r of raeume) {
-      const zaehler = {};
-      for (const c of r.zellen) { const t = z[feld][c]; if (t) zaehler[t] = (zaehler[t] || 0) + 1; }
-      const wert = Object.keys(zaehler).sort((p, q) => zaehler[q] - zaehler[p])[0];
-      if (wert) for (const c of r.zellen) neu[c] = wert;
+      const zaehler = new Map();
+      for (const c of r.zellen) {
+        const t = z[feld][c];
+        if (!t) continue;
+        const k = JSON.stringify(t), e = zaehler.get(k);
+        if (e) e.n++; else zaehler.set(k, { n: 1, wert: t });
+      }
+      const best = [...zaehler.values()].sort((p, q) => q.n - p.n)[0];
+      if (best) for (const c of r.zellen) neu[c] = typeof best.wert === 'object' ? JSON.parse(JSON.stringify(best.wert)) : best.wert;
     }
     z[feld] = neu;
   }
