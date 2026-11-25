@@ -10,7 +10,8 @@ import { neuerZustand, LEER, WAND, TUER, idx, erkenneRaeume, pruefeRaum, raumTyp
   abriss, tuerUmschalten as tuerSchalten } from './karte.js';
 import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
-  kaffeeNachkaufen as nachkaufen, fassung } from './moebel.js';
+  kaffeeNachkaufen as nachkaufen, fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum } from './moebel.js';
 import { finanzenAnlegen, kannBezahlen, buchen } from './finanzen.js';
 import { besucherAnlegen } from './besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten } from './zeit.js';
@@ -19,12 +20,13 @@ import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVerans
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand } from './kalender.js';
 import { besucherPositionen, kaffeePosition } from './bewegung.js';
-import { ortAnlegen, passantenPositionen, ortMeldung, mensch } from './ort.js';
+import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance } from './ort.js';
 import { seelsorgeAnlegen, anfrageOffen, anfrageInfo, ablehnen as seelsorgeAblehnen, raten as seelsorgeRaten,
   schliessen as seelsorgeZu, stufeInfo, seelsorgePositionen, seelsorgeUnterwegs } from './seelsorge.js';
-import { STAMMGAST_AB_BESUCHEN } from '../inhalte/ort.js';
+import { STAMMGAST_AB_BESUCHEN, PLAKAT } from '../inhalte/ort.js';
+import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
-import { MOEBEL } from '../inhalte/moebel.js';
+import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
 import { NACHKAUFEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
 
@@ -143,11 +145,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     },
     abreissen(x0, y0, x1, y1) { aendern(() => { abriss(z, x0, y0, x1, y1); moebelAbreissen(z, x0, y0, x1, y1); }); },
     tuerUmschalten(x, y) { return z.zellen[idx(z, x, y)] ? aendern(() => tuerSchalten(z, x, y)) : false; },
-    // → 'ok' | 'geld' | 'platz' | 'belegt'
+    // → 'ok' | 'geld' | 'platz' | 'belegt' | 'grenze' (z. B. schon eine Kanzel im Raum)
     moebelKaufen(art, x, y) {
       if (moebelAuf(z, x, y)) return 'belegt';
       const typ = MOEBEL.find(m => m.id === art);
       if (!typ) return 'platz';
+      if (grenzeErreicht(z, raeume.liste[raumNr(x, y)], art)) return 'grenze';
       if (!kannBezahlen(z, typ.kosten)) return 'geld';
       return aendern(() => kaufen(z, art, x, y, personAuf));
     },
@@ -160,6 +163,31 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     veranstaltungSetzen(nr, id) { const r = raeume.liste[nr]; if (r) aendern(() => veranstaltungEinstellen(z, r, id || null)); },
     planSetzen(tag, slot) { if (tag >= 0 && tag <= 6 && SLOTS.some(s => s.id === slot)) z.plan = { tag, slot }; },
     // → 'ok' | 'voll' | 'geld' | 'keine'
+    // Stuhl verbessern (eine Stufe höher) → 'ok' | 'max' | 'geld' | 'keine'
+    stuhlVerbessern(x, y) {
+      const m = moebelAuf(z, x, y);
+      if (!m || m.art !== 'stuhl') return 'keine';
+      const n = naechsteStufe(m);
+      if (!n) return 'max';
+      if (!kannBezahlen(z, n.upgrade)) return 'geld';
+      return aendern(() => verbessern(z, m));
+    },
+    // Alle Stühle im Raum dieses Stuhls je eine Stufe höher → 'ok' | 'max' | 'geld' | 'keine'
+    alleStuehleVerbessern(x, y) {
+      const m = moebelAuf(z, x, y), r = raeume.liste[raumNr(x, y)];
+      if (!m || m.art !== 'stuhl' || !r) return 'keine';
+      if (!stuehleImRaum(z, r).length) return 'max';
+      if (!kannBezahlen(z, alleVerbessernPreis(z, r))) return 'geld';
+      return aendern(() => alleVerbessern(z, r));
+    },
+    // Plakat an der Pforte aufhängen → 'ok' | 'haengt' (hängt schon) | 'geld'
+    plakatKaufen() {
+      if (z.plakat) return 'haengt';
+      if (!kannBezahlen(z, PLAKAT.preis)) return 'geld';
+      z.plakat = { gekauft: z.minuten };
+      buchen(z, 'ausgaben', 'plakat', PLAKAT.preis);
+      return 'ok';
+    },
     kaffeeNachkaufen(x, y) { const m = moebelAuf(z, x, y); return m && m.art === 'kaffeemaschine' ? nachkaufen(z, m) : 'keine'; },
     rueckgaengig() {
       const e = verlauf.pop();
@@ -198,7 +226,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
             typ: r.typ ? { id: r.typ.id, name: r.typ.name, farbe: r.typ.farbe, minGroesse: [...r.typ.minGroesse] } : null,
             veranstaltungsraum: moeglich, veranstaltung: moeglich && v ? v.name : null, kirchkaffee: kk.get(r) || null };
         }),
-        moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung, anteil: m.art === 'kaffeemaschine' ? (m.fuellung || 0) / fassung(m.art) : null })),
+        moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung, anteil: m.art === 'kaffeemaschine' ? (m.fuellung || 0) / fassung(m.art) : null,
+          stufe: m.art === 'stuhl' ? stuhlStufe(m).stufe : null })),
+        plakat: !!z.plakat,
         personen: z.personen.map(p => {
           const d = daten(p); if (!d) return null;
           const pos = kaffeePosition(z, p) || p;
@@ -230,7 +260,27 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     raumNrBei: raumNr,
     veranstaltungsraumBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && moeglicheVeranstaltungen(r.typ).length ? nr : null; },
     moebelBei(x, y) { const m = moebelAuf(z, x, y); return m ? { art: m.art, x: m.x, y: m.y } : null; },
-    moebelArten() { return MOEBEL.map(m => ({ id: m.id, name: m.name, kosten: m.kosten, leistbar: kannBezahlen(z, m.kosten) })); },
+    moebelArten() { return MOEBEL.map(m => ({ id: m.id, name: m.name, kosten: m.kosten, max: m.max || null, leistbar: kannBezahlen(z, m.kosten) })); },
+    // Liegt dieses Kästchen am Tor (Einfahrt)? Dort öffnet sich das Menü der Pforte.
+    torBei(x, y) {
+      const g = GRUNDSTUECK;
+      return x >= g.tor.x && x < g.tor.x + g.tor.breite && (y === g.y + g.h - 1 || y === g.y + g.h);
+    },
+    // Menü der Pforte: Plakat. chance/chanceMit in Prozent.
+    torInfo() {
+      return { plakat: !!z.plakat, preis: PLAKAT.preis, faktor: PLAKAT.faktor, leistbar: kannBezahlen(z, PLAKAT.preis),
+        chance: Math.round(neugierChance(z) * 100), chanceOhne: Math.round(neugierChance(z, false) * 100), chanceMit: Math.round(neugierChance(z, true) * 100) };
+    },
+    // Menü eines Stuhls im Editor: Stufe, Wirkung, nächste Stufe, alle im Raum verbessern
+    stuhlInfo(x, y) {
+      const m = moebelAuf(z, x, y);
+      if (!m || m.art !== 'stuhl') return null;
+      const st = stuhlStufe(m), n = naechsteStufe(m), r = raeume.liste[raumNr(x, y)];
+      const alle = r ? stuehleImRaum(z, r) : [], preisAlle = r ? alleVerbessernPreis(z, r) : 0;
+      return { x, y, stufe: st.stufe, maxStufe: STUHL_STUFEN.length, name: st.name, haltung: st.haltung, kollekte: st.kollekte,
+        naechste: n ? { stufe: n.stufe, name: n.name, preis: n.upgrade, haltung: n.haltung, kollekte: n.kollekte, leistbar: kannBezahlen(z, n.upgrade) } : null,
+        alle: r ? { anzahl: alle.length, preis: preisAlle, leistbar: kannBezahlen(z, preisAlle) } : null };
+    },
     // Vorschau beim Ziehen einer Wand: angepasstes Rechteck und Kästchen, auf denen Möbel im Weg stehen
     wandVorschau(x0, y0, x1, y1) {
       [x0, y0, x1, y1] = wandAnpassen(z, x0, y0, x1, y1);
@@ -249,12 +299,15 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const r = raeume.liste[nr];
       if (!r || !moeglicheVeranstaltungen(r.typ).length) return null;
       const v = veranstaltungVon(z, r), info = gottesdienstRaeume(z, raeume).find(g => g.raum === r);
+      const a = info ? info.ausstattung : null, musiker = new Set(info ? info.musiker : []);
       return {
         nr, typName: r.typ.name, veranstaltung: v ? v.id : null,
         moeglich: moeglicheVeranstaltungen(r.typ).map(x => ({ id: x.id, name: x.name })),
-        bedingungen: { leitung: !!(info && info.leitung) },
+        bedingungen: { leitung: !!(info && info.leitung), gitarre: !!(a && a.gitarre) },
+        // Was die Möbel im Raum bringen (Kanzel, Altar, Blumen, Grünpflanzen, Gitarre) und ob Musik gemacht wird
+        ausstattung: a ? { teile: a.teile, musik: a.musik, musikFaktor: a.musikFaktor } : null,
         plan: { ...z.plan }, slots: SLOTS.map(s => ({ ...s })),
-        imRaum: (info ? info.imRaum : []).map(p => { const d = daten(p); return { name: d.name, art: d.art }; }),
+        imRaum: (info ? info.imRaum : []).map(p => { const d = daten(p); return { name: d.name, art: d.art, musiker: musiker.has(p) }; }),
         prognose: v ? { ...prognose(z, raeume), dieseWoche: terminDieseWoche(z) } : null
       };
     },
@@ -295,7 +348,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'raumtypWahl', 'raumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen']) {
+  for (const name of ['lage', 'raumtypWahl', 'raumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen', 'torInfo', 'stuhlInfo']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

@@ -12,6 +12,11 @@ export const FARBEN = {
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
   raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
+  // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
+  stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
+  kanzel: '#6b4a2c', kanzelHell: '#a07445', altar: '#efeae0', altarTuch: '#7b3b8c', vase: '#6d7fa3',
+  bluete: ['#e0567a', '#f2c94c', '#ffffff'], blatt: '#4f8a3a', blattHell: '#6fae55', topf: '#b5663d',
+  gitarre: '#c07a32', gitarreHals: '#4a3220', plakat: '#fff6d6', plakatRand: '#c23b2e',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
 };
@@ -43,6 +48,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   ctx.stroke();
   }
   zaunZeichnen(ctx, ansicht);
+  if (z.plakat) plakat(ctx, ansicht);
 
   // Wände und Türen
   for (let y = 0; y < z.h; y++) for (let x = 0; x < z.w; x++) {
@@ -74,8 +80,13 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   // Möbel
   for (const m of z.moebel) {
     const px = ox + m.x * k, py = oy + m.y * k;
-    if (m.art === 'stuhl') stuhl(ctx, px, py, k);
+    if (m.art === 'stuhl') stuhl(ctx, px, py, k, m.stufe || 1);
     else if (m.art === 'theke') theke(ctx, px, py, k);
+    else if (m.art === 'kanzel') kanzel(ctx, px, py, k);
+    else if (m.art === 'altar') altar(ctx, px, py, k);
+    else if (m.art === 'blumen') blumen(ctx, px, py, k);
+    else if (m.art === 'gruenpflanze') gruenpflanze(ctx, px, py, k);
+    else if (m.art === 'gitarre') gitarre(ctx, px, py, k);
     else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.anteil || 0);
   }
 
@@ -260,10 +271,47 @@ function figur(ctx, cx, cy, k, f, angehoben, schrift) {
   ctx.fillStyle = FARBEN.text; ctx.fillText(f.name, cx, cy + r + 5 + n / 2);
 }
 
-function stuhl(ctx, px, py, k) {
-  const r = k * 0.15;
-  ctx.fillStyle = FARBEN.stuhlSitz; ctx.fillRect(px + r, py + r * 1.6, k - 2 * r, k - r * 2.6);
-  ctx.fillStyle = FARBEN.stuhlLehne; ctx.fillRect(px + r, py + r, k - 2 * r, r * 0.9);
+function stuhl(ctx, px, py, k, stufe = 1) {
+  const r = k * 0.15, [sitz, lehne] = FARBEN.stuhlStufen[stufe - 1] || FARBEN.stuhlStufen[0];
+  ctx.fillStyle = sitz; ctx.fillRect(px + r, py + r * 1.6, k - 2 * r, k - r * 2.6);
+  ctx.fillStyle = lehne; ctx.fillRect(px + r, py + r, k - 2 * r, r * 0.9);
+}
+
+// ---- Ausstattung des Gottesdienstraums (Platzhalter-Grafik) ----
+function kanzel(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.kanzel; ctx.fillRect(px + k * 0.12, py + k * 0.2, k * 0.76, k * 0.68);
+  ctx.fillStyle = FARBEN.kanzelHell; ctx.fillRect(px + k * 0.2, py + k * 0.1, k * 0.6, k * 0.22);   // Pult
+}
+function altar(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.altar; ctx.fillRect(px + k * 0.06, py + k * 0.2, k * 0.88, k * 0.6);
+  ctx.fillStyle = FARBEN.altarTuch; ctx.fillRect(px + k * 0.42, py + k * 0.2, k * 0.16, k * 0.6);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.strokeRect(px + k * 0.06, py + k * 0.2, k * 0.88, k * 0.6);
+}
+function blumen(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.vase; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.62, k * 0.2, 0, Math.PI * 2); ctx.fill();
+  [[0.32, 0.36], [0.62, 0.32], [0.48, 0.56]].forEach(([x, y], i) => {
+    ctx.fillStyle = FARBEN.bluete[i]; ctx.beginPath(); ctx.arc(px + k * x, py + k * y, k * 0.14, 0, Math.PI * 2); ctx.fill();
+  });
+}
+function gruenpflanze(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.topf; ctx.fillRect(px + k * 0.3, py + k * 0.6, k * 0.4, k * 0.3);
+  ctx.fillStyle = FARBEN.blatt; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.42, k * 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.blattHell; ctx.beginPath(); ctx.arc(px + k * 0.4, py + k * 0.34, k * 0.13, 0, Math.PI * 2); ctx.fill();
+}
+function gitarre(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.gitarreHals; ctx.fillRect(px + k * 0.45, py + k * 0.06, k * 0.1, k * 0.45);
+  ctx.fillStyle = FARBEN.gitarre;
+  ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.72, k * 0.22, 0, Math.PI * 2); ctx.arc(px + k / 2, py + k * 0.48, k * 0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.gitarreHals; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.64, k * 0.06, 0, Math.PI * 2); ctx.fill();
+}
+// Plakat am Zaun links neben dem Tor (solange es hängt)
+function plakat(ctx, { k, ox, oy }) {
+  const g = GRUNDSTUECK, x = ox + (g.tor.x - 1.6) * k, y = oy + (g.y + g.h - 0.55) * k;
+  ctx.fillStyle = FARBEN.schatten; ctx.fillRect(x + 2, y + 2, k * 1.3, k * 0.9);
+  ctx.fillStyle = FARBEN.plakat; ctx.fillRect(x, y, k * 1.3, k * 0.9);
+  ctx.strokeStyle = FARBEN.plakatRand; ctx.lineWidth = Math.max(1.5, k * 0.1); ctx.strokeRect(x, y, k * 1.3, k * 0.9);
+  ctx.fillStyle = FARBEN.plakatRand;
+  ctx.fillRect(x + k * 0.15, y + k * 0.2, k * 1.0, k * 0.12); ctx.fillRect(x + k * 0.15, y + k * 0.45, k * 0.7, k * 0.1);
 }
 
 // Kleines Warndreieck mit Ausrufezeichen, Mittelpunkt (cx, cy)

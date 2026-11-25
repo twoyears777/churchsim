@@ -6,7 +6,6 @@ import { fensterOeffnen, fensterSchliessen, fensterOffen } from './fenster.js';
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
   tuer: 'Tippe auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
-  stuhl: 'Tippe um einen Stuhl aufzustellen',
   ...TEXTE.hinweise,
   abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
   raum: 'Tippe in einen Raum, um seine Funktion festzulegen.'
@@ -33,6 +32,7 @@ function naechste(e, liste, radius) {
 const figurBei = e => naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id, x: p.feldX, y: p.feldY })), Math.max(22, ui.ansicht.k * 1.1));
 const besucherBei = e => naechste(e, ui.spiel.karte().besucher, Math.max(12, ui.ansicht.k * 0.6));
 const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
+const stuhlBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'stuhl' ? m : null; };
 
 // Nach jedem Befehl: speichern, Anzeigen auffrischen, neu zeichnen
 function fertig() { ui.speichern(); ui.anzeigeErzwingen(); ui.malen(); }
@@ -50,7 +50,8 @@ function abbrechen() { if (ui.ziehen || ui.tragen) { ui.ziehen = null; ui.tragen
 function mauszeiger(e) {
   let c = 'default';
   if (ui.tragen) c = 'grabbing';
-  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null ? 'pointer' : 'default'; }
+  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) ? 'pointer' : 'default'; }
+  else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
   else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'raum' ? 'pointer' : 'crosshair';
   if (leinwand.style.cursor !== c) leinwand.style.cursor = c;
 }
@@ -94,14 +95,15 @@ function loslassen(e) {
     spiel.personVersetzen(id, f.x, f.y); return fertig();
   }
   if (!ui.editorOffen) {
-    // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Raum mit Veranstaltungen → Raum-Fenster
+    // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Raum mit Veranstaltungen → Raum-Fenster, Tor → Pforte (Plakat)
     const f = feldAus(e), s = ui.klickStart; ui.klickStart = null;
     if (!s || s.feld.x !== f.x || s.feld.y !== f.y) return;
     if (s.besucher) return fensterOeffnen({ art: 'besucher', id: s.besucher.id });
     const m = maschineBei(f);
     if (m) return fensterOeffnen({ art: 'maschine', x: m.x, y: m.y });
     const nr = spiel.veranstaltungsraumBei(f.x, f.y);
-    if (nr !== null) fensterOeffnen({ art: 'raum', nr });
+    if (nr !== null) return fensterOeffnen({ art: 'raum', nr });
+    if (spiel.torBei(f.x, f.y)) fensterOeffnen({ art: 'tor' });
     return;
   }
   const f = feldAus(e);
@@ -114,11 +116,12 @@ function loslassen(e) {
   if (istMoebelWerkzeug()) {
     const s = ui.moebelStart;
     if (!s || s.x !== f.x || s.y !== f.y) return;                    // nur Tippen, kein Ziehen
+    if (ui.werkzeug === 'stuhl' && stuhlBei(f)) return fensterOeffnen({ art: 'stuhl', x: f.x, y: f.y });   // Stuhl verbessern
     const ergebnis = spiel.moebelKaufen(ui.werkzeug, f.x, f.y);      // entfernen nur per Abriss
     if (ergebnis === 'geld') {
       const typ = spiel.moebelArten().find(m => m.id === ui.werkzeug);
       kurzerHinweis(typ.id === 'stuhl' ? `Nicht genug Geld für einen Stuhl (${euro(typ.kosten)}).` : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten)));
-    }
+    } else if (ergebnis === 'grenze') kurzerHinweis(TEXTE.grenze[ui.werkzeug]);
     return fertig();
   }
   if (ui.werkzeug === 'tuer') { spiel.tuerUmschalten(f.x, f.y); return fertig(); }

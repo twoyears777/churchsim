@@ -1,6 +1,6 @@
 // Spiellogik der Möbel. Möbel stehen auf freiem Boden des Grundstücks, ein Möbel pro Kästchen.
 import { LEER, idx, aufGrundstueck } from './karte.js';
-import { MOEBEL } from '../inhalte/moebel.js';
+import { MOEBEL, STUHL_STUFEN, MUSIK } from '../inhalte/moebel.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 import { NACHKAUFEN } from '../inhalte/kirchkaffee.js';
 
@@ -34,10 +34,16 @@ export function moebelKaufen(z, art, x, y, istBesetzt = () => false) {
   if (preis) buchen(z, 'ausgaben', 'moebel', preis);
   return 'ok';
 }
-// Abriss mit voller Rückerstattung
+// Was ein Möbel gekostet hat: Kaufpreis, bei Stühlen plus alle Verbesserungen
+export function moebelWert(m) {
+  const kauf = (MOEBEL.find(x => x.id === m.art) || {}).kosten || 0;
+  if (m.art !== 'stuhl') return kauf;
+  return kauf + STUHL_STUFEN.filter(s => s.stufe <= (m.stufe || 1)).reduce((a, s) => a + s.upgrade, 0);
+}
+// Abriss mit voller Rückerstattung (Kauf + Verbesserungen)
 export function moebelAbreissen(z, x0, y0, x1, y1) {
   const weg = moebelEntfernen(z, x0, y0, x1, y1);
-  const betrag = weg.reduce((s, m) => s + ((MOEBEL.find(x => x.id === m.art) || {}).kosten || 0), 0);
+  const betrag = weg.reduce((s, m) => s + moebelWert(m), 0);
   if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag);
   return betrag;
 }
@@ -59,3 +65,51 @@ export function kaffeeNachkaufen(z, maschine) {
   return 'ok';
 }
 export function fassung(art) { return (MOEBEL.find(m => m.id === art) || {}).fassung || 0; }
+
+// ---- Stühle verbessern ----
+export function stuhlStufe(m) { return STUHL_STUFEN[Math.min(STUHL_STUFEN.length, m && m.stufe || 1) - 1]; }
+export function naechsteStufe(m) { return STUHL_STUFEN[(m.stufe || 1)] || null; }
+// Einen Stuhl eine Stufe höher: 'ok', 'max' (schon höchste Stufe) oder 'geld'
+export function stuhlVerbessern(z, m) {
+  const n = naechsteStufe(m);
+  if (!n) return 'max';
+  if (!kannBezahlen(z, n.upgrade)) return 'geld';
+  m.stufe = n.stufe;
+  buchen(z, 'ausgaben', 'moebel', n.upgrade);
+  return 'ok';
+}
+// Alle Stühle eines Raums je eine Stufe höher (nur, wenn das Geld für alle reicht)
+export function stuehleImRaum(z, raum) { return moebelImRaum(z, raum, 'stuhl').filter(m => naechsteStufe(m)); }
+export function alleVerbessernPreis(z, raum) { return stuehleImRaum(z, raum).reduce((a, m) => a + naechsteStufe(m).upgrade, 0); }
+export function alleVerbessern(z, raum) {
+  const liste = stuehleImRaum(z, raum);
+  if (!liste.length) return 'max';
+  if (!kannBezahlen(z, alleVerbessernPreis(z, raum))) return 'geld';
+  for (const m of liste) stuhlVerbessern(z, m);
+  return 'ok';
+}
+
+// ---- Ausstattung des Gottesdienstraums ----
+// Steht in diesem Raum schon die Höchstzahl dieses Möbels? (z. B. 1 Kanzel, 4 Blumen)
+export function grenzeErreicht(z, raum, art) {
+  const typ = MOEBEL.find(m => m.id === art);
+  return !!(raum && typ && typ.max && moebelImRaum(z, raum, art).length >= typ.max);
+}
+// Was die Möbel eines Raums bewirken. musiker = ein Ehrenamtlicher ist im Raum.
+// haltung: + pro Besucher und Gottesdienst; faktor: Kollekte × (Altar, Grünpflanzen, Musik)
+export function raumAusstattung(z, raum, musiker = false) {
+  let haltung = 0, faktor = 1, gitarre = false;
+  const teile = [];
+  for (const typ of MOEBEL.filter(m => m.wirkung)) {
+    const anzahl = Math.min(typ.max || Infinity, moebelImRaum(z, raum, typ.id).length);
+    if (!anzahl) continue;
+    if (typ.wirkung.haltung) haltung += typ.wirkung.haltung * anzahl;
+    if (typ.wirkung.kollekte) faktor *= typ.wirkung.kollekte ** anzahl;
+    if (typ.wirkung.musik) gitarre = true;
+    teile.push({ id: typ.id, name: typ.name, anzahl, max: typ.max || null,
+      haltung: (typ.wirkung.haltung || 0) * anzahl, kollekte: typ.wirkung.kollekte ? typ.wirkung.kollekte ** anzahl : null });
+  }
+  const musik = gitarre && musiker;
+  if (musik) faktor *= MUSIK.kollekte;
+  return { haltung, faktor, gitarre, musik, musikFaktor: MUSIK.kollekte, teile };
+}

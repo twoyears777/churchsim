@@ -49,6 +49,9 @@ export const TEXTE = {
     prognosePlaetze: 'Sitzplätze',
     prognoseGeld: 'Einnahmen',
     prognoseEhrenamt: 'Neue Ehrenamtliche',
+    prognosePlakat: 'Plakat an der Pforte',
+    plakatJa: 'hängt',
+    plakatNein: 'keins',
     prognoseFaelltAus: 'Ohne Mitarbeiter im Raum fällt der Gottesdienst aus.',
     ca: wert => `ca. ${wert}`
   },
@@ -56,7 +59,8 @@ export const TEXTE = {
   veranstaltungKacheln: {
     gottesdienst: {
       bringt: ['Kollekte: 1 € pro Besucher', 'Zufriedenheit der Besucher', 'Bekanntheit der Gemeinde'],
-      bedingungen: [{ text: 'Pastor im Raum', bedingung: 'leitung' }, 'Stühle = Sitzplätze']   // bedingung: wird im Fenster grün/rot markiert
+      bedingungen: [{ text: 'Pastor im Raum', bedingung: 'leitung' }, 'Stühle = Sitzplätze',
+        { text: 'Für Musik: Gitarre im Raum', bedingung: 'gitarre' }]   // bedingung: wird im Fenster grün/rot markiert
     },
     keine: { bringt: ['Nichts'], bedingungen: ['Stammgäste werden unzufrieden'] }
   },
@@ -191,8 +195,54 @@ export const TEXTE = {
 
   // Editor
   hinweise: {
+    stuhl: 'Tippe, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
     kaffeemaschine: 'Tippe, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
-    theke: 'Tippe, um ein Thekenteil aufzustellen (fürs Kirchkaffee).'
+    theke: 'Tippe, um ein Thekenteil aufzustellen (fürs Kirchkaffee).',
+    // ---- Ausstattung des Gottesdienstraums (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
+    kanzel: 'Tippe, um eine Kanzel aufzustellen (Gottesdienstraum, 1 pro Raum).',
+    altar: 'Tippe, um einen Altar aufzustellen (Gottesdienstraum, 1 pro Raum).',
+    blumen: 'Tippe, um Blumen aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
+    gruenpflanze: 'Tippe, um eine Grünpflanze aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
+    gitarre: 'Tippe, um eine Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – dann macht ein Ehrenamtlicher im Raum Musik.'
+  },
+  // Kauf gesperrt, weil schon genug davon im Raum steht
+  grenze: {
+    kanzel: 'In diesem Raum steht schon eine Kanzel.',
+    altar: 'In diesem Raum steht schon ein Altar.',
+    blumen: 'In diesem Raum stehen schon 4 Blumen.',
+    gruenpflanze: 'In diesem Raum stehen schon 4 Grünpflanzen.',
+    gitarre: 'In diesem Raum steht schon eine Gitarre.'
+  },
+  // Menü eines Stuhls (im Editor auf einen Stuhl tippen)
+  stuhl: {
+    stufe: (n, max) => `Stufe ${n} von ${max}`,
+    wirkung: (haltung, kollekte) => `Haltung +${haltung} pro Gottesdienst · Kollekte ×${kollekte}`,
+    naechste: name => `Nächste Stufe: ${name}`,
+    verbessern: preis => `Verbessern (${preis})`,
+    alle: (n, preis) => `Alle Stühle in diesem Raum verbessern (${n} ${n === 1 ? 'Stuhl' : 'Stühle'}, ${preis})`,
+    alleInfo: 'Jeder Stuhl im Raum steigt eine Stufe.',
+    hoechste: 'Höchste Stufe erreicht.',
+    alleHoechste: 'Alle Stühle in diesem Raum sind auf der höchsten Stufe.',
+    keinGeld: 'Nicht genug Geld.'
+  },
+  // Menü der Pforte (in der Spielansicht aufs Tor tippen)
+  tor: {
+    titel: 'Pforte',
+    plakat: 'Plakat an der Pforte',
+    info: 'Ein Plakat am Tor macht Passanten neugierig: Sie bleiben dreimal so oft stehen. Es hängt bis zum nächsten Gottesdienst.',
+    chance: (ohne, mit) => `Neugier am Tor: ${ohne} % – mit Plakat ${mit} %`,
+    haengt: chance => `Das Plakat hängt bis zum nächsten Gottesdienst (Neugier am Tor: ${chance} %).`,
+    kaufen: preis => `Plakat aufhängen (${preis})`,
+    keinGeld: 'Nicht genug Geld.'
+  },
+  // Raum-Fenster: was die Möbel bringen
+  ausstattung: {
+    haltung: n => `Haltung +${n}`,
+    kollekte: f => `Kollekte ×${f}`,
+    anzahl: (n, max) => `${n}/${max}`,
+    musik: f => `Musik: Kollekte ×${f}`,
+    musiker: 'Musiker',
+    ohneGitarre: 'ohne Gitarre keine Musik'
   },
   nichtGenugGeld: (name, preis) => `Nicht genug Geld für ${name} (${preis}).`
 };

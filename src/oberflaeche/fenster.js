@@ -7,6 +7,7 @@ import { ui, $, euro, zahl1, esc } from './ui.js';
 
 const maske = () => $('maske');
 const ART_TEXT = { hauptamt: 'Hauptamtlich', ehrenamt: 'Ehrenamtlich' };
+const faktor = f => f.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 let letzterInhalt = '';
 
 export function fensterOeffnen(f) { ui.fenster = f; letzterInhalt = ''; ui.anzeigeErzwingen(); ui.malen(); }
@@ -21,7 +22,7 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster }[f.art](f);
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
@@ -67,9 +68,15 @@ function raumFenster(f) {
   const T = TEXTE.raum;
   // Bedingung mit Prüfung: grün/rot, je nachdem, was das Spiel meldet
   const bedingung = t => typeof t === 'string' ? `<li>${t}</li>` : `<li class="${r.bedingungen[t.bedingung] ? 'ok' : 'fehlt'}">${t.text}</li>`;
+  // Was die Möbel im Raum zusätzlich bringen (nur beim Gottesdienst)
+  const A = TEXTE.ausstattung, au = r.ausstattung;
+  const extra = id => id !== 'gottesdienst' || !au ? [] : [
+    ...au.teile.filter(t => t.haltung || t.kollekte).map(t => `${t.name}${t.max > 1 ? ' ' + A.anzahl(t.anzahl, t.max) : ''}: ${
+      [t.haltung && A.haltung(t.haltung), t.kollekte && A.kollekte(faktor(t.kollekte))].filter(Boolean).join(' · ')}`),
+    ...(au.musik ? [A.musik(faktor(au.musikFaktor))] : [])];
   const kachel = (id, name, k) => `<button class="kachel${(r.veranstaltung || '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}">
       <b>${name}</b>
-      <span class="klein">${TEXTE.bringt}</span><ul>${k.bringt.map(t => `<li>${t}</li>`).join('')}</ul>
+      <span class="klein">${TEXTE.bringt}</span><ul>${[...k.bringt, ...extra(id)].map(t => `<li>${t}</li>`).join('')}</ul>
       <span class="klein">${TEXTE.bedingungen}</span><ul>${k.bedingungen.map(bedingung).join('')}</ul></button>`;
   const kacheln = r.moeglich.map(v => kachel(v.id, v.name, TEXTE.veranstaltungKacheln[v.id])).join('')
     + kachel('', KEINE_VERANSTALTUNG, TEXTE.veranstaltungKacheln.keine);
@@ -81,7 +88,8 @@ function raumFenster(f) {
     plan = `<h3>${T.wochenplan}</h3><p class="unter">${T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>`;
   }
   const mitarbeiter = r.imRaum.length
-    ? r.imRaum.map(p => `<div class="kachel klein-kachel"><b>${esc(p.name)}</b><small>${ART_TEXT[p.art]} · ${T.skillsSpaeter}</small></div>`).join('')
+    ? r.imRaum.map(p => `<div class="kachel klein-kachel"><b>${esc(p.name)}</b><small>${ART_TEXT[p.art]} · ${
+      p.art === 'ehrenamt' ? (p.musiker ? A.musiker : A.ohneGitarre) : T.skillsSpaeter}</small></div>`).join('')
     : `<p class="warnung">${T.keinMitarbeiter}</p>`;
   let vorschau = '';
   if (r.prognose) {
@@ -92,7 +100,8 @@ function raumFenster(f) {
         <tr><td>${T.prognoseBesucher}</td><td class="zahl">${T.ca(zahl1(p.erwartet))}</td></tr>
         <tr><td>${T.prognosePlaetze}</td><td class="zahl">${p.plaetze}</td></tr>
         <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(p.geld)))}</td></tr>
-        <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(p.ehrenamt))}</td></tr></table>`;
+        <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(p.ehrenamt))}</td></tr>
+        <tr><td>${T.prognosePlakat}</td><td class="zahl">${p.plakat ? T.plakatJa : T.plakatNein}</td></tr></table>`;
   }
   return `<h2>${r.typName}</h2>
     <h3>${T.veranstaltung}</h3><div class="kacheln">${kacheln}</div>
@@ -114,6 +123,39 @@ function maschinenFenster(f) {
     ${m.imKirchkaffee ? '' : `<p class="warnung">${T.nichtImKaffee}</p>`}
     <div class="typen"><button data-nachkaufen ${m.zuVoll || m.keinGeld ? 'disabled' : ''}>${T.nachkaufen(m.nachkaufen.preis, m.nachkaufen.tassen)}</button></div>
     ${m.zuVoll ? `<p class="unter">${T.voll}</p>` : m.keinGeld ? `<p class="unter">${T.keinGeld}</p>` : ''}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Stuhl verbessern (Editor): Stufe, Wirkung, nächste Stufe, alle Stühle im Raum
+function stuhlFenster(f) {
+  const s = ui.spiel.stuhlInfo(f.x, f.y);
+  if (!s) return null;
+  const T = TEXTE.stuhl, n = s.naechste, a = s.alle;
+  const naechste = n
+    ? `<h3>${T.naechste(n.name)}</h3><p class="unter">${T.wirkung(n.haltung, faktor(n.kollekte))}</p>
+       <div class="typen"><button data-verbessern ${n.leistbar ? '' : 'disabled'}>${T.verbessern(euro(n.preis))}</button></div>
+       ${n.leistbar ? '' : `<p class="unter">${T.keinGeld}</p>`}`
+    : `<p class="unter">${T.hoechste}</p>`;
+  const alle = !a ? '' : a.anzahl
+    ? `<div class="typen"><button data-alle-verbessern ${a.leistbar ? '' : 'disabled'}>${T.alle(a.anzahl, euro(a.preis))}</button></div>
+       <p class="unter">${T.alleInfo}${a.leistbar ? '' : ' ' + T.keinGeld}</p>`
+    : `<p class="unter">${T.alleHoechste}</p>`;
+  return `<h2>${s.name}</h2>
+    <p class="unter staerker">${T.stufe(s.stufe, s.maxStufe)}</p>
+    <p class="unter">${T.wirkung(s.haltung, faktor(s.kollekte))}</p>
+    ${naechste}${alle}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Pforte (Tor): Plakat aufhängen
+function torFenster() {
+  const t = ui.spiel.torInfo(), T = TEXTE.tor;
+  const inhalt = t.plakat
+    ? `<p class="ok">${T.haengt(t.chance)}</p>`
+    : `<p class="unter">${T.chance(t.chanceOhne, t.chanceMit)}</p>
+       <div class="typen"><button data-plakat ${t.leistbar ? '' : 'disabled'}>${T.kaufen(euro(t.preis))}</button></div>
+       ${t.leistbar ? '' : `<p class="unter">${T.keinGeld}</p>`}`;
+  return `<h2>${T.titel}</h2><h3>${T.plakat}</h3><p>${T.info}</p>${inhalt}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
@@ -208,6 +250,9 @@ export function fensterEinrichten() {
     else if (b.dataset.veranstaltung !== undefined) spiel.veranstaltungSetzen(f.nr, b.dataset.veranstaltung);   // Fenster bleibt offen
     else if (b.dataset.plan) { const [tag, slot] = b.dataset.plan.split(':'); spiel.planSetzen(Number(tag), slot); }
     else if (b.hasAttribute('data-nachkaufen')) spiel.kaffeeNachkaufen(f.x, f.y);
+    else if (b.hasAttribute('data-verbessern')) spiel.stuhlVerbessern(f.x, f.y);
+    else if (b.hasAttribute('data-alle-verbessern')) spiel.alleStuehleVerbessern(f.x, f.y);
+    else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();
     else if (b.dataset.typ !== undefined) { spiel.raumTypSetzen(f.nr, b.dataset.typ); fensterSchliessen(); }
     ui.speichern(); ui.anzeigeErzwingen(); ui.malen();
   });

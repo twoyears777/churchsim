@@ -16,4 +16,8 @@ export const NEUGIER = {
   haltMinuten: 15           // so lange (Spielminuten) bleibt er am Tor stehen
 };
 
+// Plakat an der Pforte (Spielprinzip vom 25.11.): kostet 5 €, hängt bis zum nächsten Gottesdienst.
+// Solange es hängt, werden Passanten am Tor 3× so oft neugierig (höchstens 100 %).
+export const PLAKAT = { preis: 5, faktor: 3 };
+
 export const STAMMGAST_AB_BESUCHEN = 3;   // Status „Stammgast“ ab so vielen Besuchen (die 4 Start-Stammgäste gleich)

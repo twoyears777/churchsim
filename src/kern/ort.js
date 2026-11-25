@@ -2,7 +2,7 @@
 // Jeden Tag um 0:00 wird geplant, wer an diesem Tag vorbeiläuft. Kommt jemand am Tor vorbei, wird ausgelost,
 // ob er neugierig wird – dann bleibt er kurz stehen und kommt wahrscheinlich zum nächsten Gottesdienst.
 // Kennt keine Grafik: liefert nur Positionen und Zustände.
-import { ORT, NEUGIER } from '../inhalte/ort.js';
+import { ORT, NEUGIER, PLAKAT } from '../inhalte/ort.js';
 import { GRUNDSTUECK, GEHWEGE, WELT } from '../inhalte/umgebung.js';
 import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { TAG_MIN } from './zeit.js';
@@ -45,12 +45,17 @@ function tagPlanen(z, tag, zufall) {
   }
 }
 
-// Am Tor: Passanten (noch nie da gewesen) werden mit 5 % + halber Bekanntheit neugierig.
+// Chance, am Tor neugierig zu werden: 5 % + halbe Bekanntheit; mit Plakat 3×, höchstens 100 %
+export function neugierChance(z, mitPlakat = !!z.plakat) {
+  const c = NEUGIER.grund + z.bekanntheit * NEUGIER.proBekanntheit;
+  return Math.min(1, c * (mitPlakat ? PLAKAT.faktor : 1));
+}
+// Am Tor: Passanten (noch nie da gewesen) werden nach neugierChance neugierig.
 function amTor(z, g, zufall) {
   g.geprueft = true;
   const p = z.ort.leute.find(x => x.id === g.id);
   if (!p || p.neugierig) return;
-  if (zufall() < NEUGIER.grund + z.bekanntheit * NEUGIER.proBekanntheit) {
+  if (zufall() < neugierChance(z)) {
     p.neugierig = true; g.halt = NEUGIER.haltMinuten;
     z.ort.meldung = { code: 'neugierig', id: p.id, name: p.vorname, zeit: z.minuten };
   }

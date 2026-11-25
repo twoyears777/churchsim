@@ -8,7 +8,8 @@ export const RAUMTYPEN = [
     minGroesse: [5, 15],
     farbe: '#d8cdea',
     // Welche Veranstaltungen hier eingestellt werden können: siehe veranstaltungen.js
-    einsatz: ['hauptamt'],          // wer hier als eingesetzt zählt
+    einsatz: ['hauptamt', 'ehrenamt'], // wer hier als eingesetzt zählt
+    einsatzBraucht: { ehrenamt: 'gitarre' },   // Ehrenamtliche nur als Musiker: wenn eine Gitarre im Raum steht
     kosten: null,
     moebel: [],
     erweiterungen: []
