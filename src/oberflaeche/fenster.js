@@ -92,8 +92,8 @@ function raumFenster(f) {
     const extra = id => id !== 'gottesdienst' || !au ? [] : [
       ...au.teile.filter(t => t.haltung || t.kollekte).map(t => `${t.name}${t.max > 1 ? ' ' + A.anzahl(t.anzahl, t.max) : ''}: ${
         [t.haltung && A.haltung(t.haltung), t.kollekte && A.kollekte(faktor(t.kollekte))].filter(Boolean).join(' · ')}`),
-      ...(au.musik ? [A.lobpreisteam(Math.round(au.musikBonus * 100), au.musikLevel)]
-        : au.gitarre ? [`<span class="ausgegraut">${A.keinLobpreisteam}</span>`] : [])];
+      ...(au.musik ? [A.lobpreisteam(Math.round(au.musikBonus * 100), au.musiker)]
+        : au.instrument ? [`<span class="ausgegraut">${A.keinLobpreisteam}</span>`] : [])];
     const kachel = (id, name, k) => `<button class="kachel${(p.art || '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}">
         <b>${name}</b>
         <span class="klein">${TEXTE.bringt}</span><ul>${[...k.bringt, ...extra(id)].map(t => `<li>${t}</li>`).join('')}</ul>

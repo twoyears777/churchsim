@@ -5,8 +5,8 @@ import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { NEUGIER, PLAKAT } from '../src/inhalte/ort.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
-import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose } from '../src/kern/ablauf.js';
-import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, grenzeErreicht, musikLevel, musikBonus, musikErfahrungDazu, musikStand } from '../src/kern/moebel.js';
+import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose, gottesdienstRaeume } from '../src/kern/ablauf.js';
+import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, instrumenteImRaum, grenzeErreicht, musikLevel, musikBonus, musikErfahrungDazu, musikStand } from '../src/kern/moebel.js';
 import { MUSIK } from '../src/inhalte/moebel.js';
 import { versetzen, personHinzufuegen, eingesetztIn } from '../src/kern/personen.js';
 import { neugierChance } from '../src/kern/ort.js';
@@ -83,10 +83,44 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   assert.strictEqual(raumAusstattung(z, r, 0).musik, false);
   moebelSetzen(z, 'gitarre', G.x + 12, G.y + 6, G.x + 12, G.y + 6);
   assert.strictEqual(raumAusstattung(z, r).musik, false, 'Gitarre ohne Ehrenamtlichen bringt nichts');
-  assert.strictEqual(raumAusstattung(z, r).gitarre, true);
+  assert.strictEqual(raumAusstattung(z, r).instrument, true);
   assert.strictEqual(raumAusstattung(z, r, 0).musik, true);
   assert.ok(Math.abs(raumAusstattung(z, r, 0).faktor - 1.05) < 1e-9, 'Level 0: +5 %');
   assert.ok(Math.abs(raumAusstattung(z, r, 5).faktor - 1.10) < 1e-9, 'Level 5: +10 %');
+}
+// Mehrere Instrumente (Lukas, 25.11.): pro Instrument ein eigener Ehrenamtlicher; die mit dem höchsten Level spielen; Boni addieren sich
+{
+  const zufall = saat(11), z = gemeinde(zufall);
+  z.konto = 1000;
+  const r = () => raumBei(z, G.x + 5, G.y + 5);
+  for (const [art, dx] of [['gitarre', 12], ['schlagzeug', 14], ['keyboard', 16]]) assert.strictEqual(moebelSetzen(z, art, G.x + dx, G.y + 6, G.x + dx, G.y + 6), 1);
+  assert.strictEqual(instrumenteImRaum(z, r()), 3);
+  assert.ok(grenzeErreicht(z, r(), 'schlagzeug') && !grenzeErreicht(z, r(), 'bass'), 'Jedes Instrument nur 1× pro Raum');
+  const eas = [0, 1, 2, 5].map((lv, i) => {
+    const p = personHinzufuegen(z, { name: 'Musiker ' + i, kuerzel: 'M', art: 'ehrenamt' });
+    p.musikErfahrung = lv * MUSIK.erfahrungProLevel; versetzen(z, p, G.x + 12 + i, G.y + 7); return p;
+  });
+  const g = gottesdienstRaeume(z, aus(z))[0];
+  assert.deepStrictEqual(g.spieler.map(musikLevel), [5, 2, 1], 'Drei Instrumente: die drei mit dem höchsten Level spielen');
+  assert.strictEqual(g.ausstattung.musiker, 3);
+  assert.ok(Math.abs(g.ausstattung.musikBonus - (0.10 + 0.07 + 0.06)) < 1e-9, 'Boni werden addiert: +23 %');
+  assert.ok(Math.abs(raumAusstattung(z, r(), [0, 1, 2]).musikBonus - 0.18) < 1e-9, 'Beispiel: Level 0, 1, 2 → +18 %');
+  assert.strictEqual(raumAusstattung(z, r(), [0, 0, 0, 0, 0]).musiker, 3, 'Mehr Musiker als Instrumente zählen nicht');
+  bisNachGottesdienst(z, zufall);
+  assert.strictEqual(eas[0].musikErfahrung, 0, 'Wer kein Instrument hat, bekommt keine Erfahrung');
+  for (const p of eas.slice(1)) assert.ok(p.musikErfahrung > 0 && p.musikErfahrung % MUSIK.erfahrungProLevel === MUSIK.erfahrungProAuftritt, 'Alle Spieler bekommen Erfahrung');
+}
+// Ein Instrument ohne eigenen Spieler zählt nicht: 2 Instrumente, 1 Ehrenamtlicher → 1 Musiker
+{
+  const z = gemeinde(saat(12));
+  moebelSetzen(z, 'bass', G.x + 12, G.y + 6, G.x + 12, G.y + 6);
+  moebelSetzen(z, 'mikrofon', G.x + 14, G.y + 6, G.x + 14, G.y + 6);
+  const ea = personHinzufuegen(z, { name: 'Erna Musik', kuerzel: 'E', art: 'ehrenamt' });
+  versetzen(z, ea, G.x + 13, G.y + 7);
+  assert.ok(eingesetztIn(z, aus(z), ea), 'Auch ohne Gitarre: mit einem anderen Instrument ist der Ehrenamtliche eingesetzt');
+  const a = gottesdienstRaeume(z, aus(z))[0].ausstattung;
+  assert.strictEqual(a.musiker, 1);
+  assert.ok(Math.abs(a.musikBonus - 0.05) < 1e-9);
 }
 // Musik-Level: startet bei 0, ca. 50 Auftritte je Level, höchstens Level 10 (+15 %)
 {

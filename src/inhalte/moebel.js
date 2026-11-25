@@ -12,12 +12,19 @@ export const MOEBEL = [
   // max: höchstens so viele pro Raum (mehr kann man nicht aufstellen).
   // wirkung.haltung: + Haltung für jeden Besucher pro Gottesdienst (pro Stück)
   // wirkung.kollekte: Kollekte × diesen Wert (pro Stück)
-  // wirkung.musik: Bedingung, damit ein Ehrenamtlicher im Raum Musik macht
+  // wirkung.musik: Instrument – ein Ehrenamtlicher im Raum spielt es (pro Instrument ein eigener Ehrenamtlicher)
   { id: 'kanzel', kategorie: 'gottesdienst', name: 'Kanzel', kosten: 30, max: 1, wirkung: { haltung: 2 } },
   { id: 'altar', kategorie: 'gottesdienst', name: 'Altar', kosten: 40, max: 1, wirkung: { kollekte: 1.2 } },
   { id: 'blumen', kategorie: 'deko', name: 'Blumen', kosten: 10, max: 4, wirkung: { haltung: 1 } },
   { id: 'gruenpflanze', kategorie: 'deko', name: 'Grünpflanze', kosten: 10, max: 4, wirkung: { kollekte: 1.05 } },
+  // Instrumente (Lukas, 25.11.): jedes 1× pro Raum, jedes braucht einen eigenen Ehrenamtlichen, alle bringen gleich viel.
+  // Preise der neuen Instrumente sind PLATZHALTER von Claude (wie die Gitarre 25 €) – Lukas legt sie fest.
   { id: 'gitarre', kategorie: 'gottesdienst', name: 'Gitarre', kosten: 25, max: 1, wirkung: { musik: true } },
+  { id: 'keyboard', kategorie: 'gottesdienst', name: 'Keyboard', kosten: 25, max: 1, wirkung: { musik: true } },
+  { id: 'schlagzeug', kategorie: 'gottesdienst', name: 'Schlagzeug', kosten: 25, max: 1, wirkung: { musik: true } },
+  { id: 'bass', kategorie: 'gottesdienst', name: 'Bass', kosten: 25, max: 1, wirkung: { musik: true } },
+  { id: 'egitarre', kategorie: 'gottesdienst', name: 'E-Gitarre', kosten: 25, max: 1, wirkung: { musik: true } },
+  { id: 'mikrofon', kategorie: 'gottesdienst', name: 'Mikrofon', kosten: 25, max: 1, wirkung: { musik: true } },
 
   // Außen (Spielprinzip Einzugsgebiet, 25.11.): nur draußen auf dem Grundstück, nicht in Räumen. Man kann darüber laufen.
   // groesse: [Breite, Länge] in Kästchen (lässt sich drehen). Preise sind PLATZHALTER von Claude.
@@ -35,8 +42,9 @@ export const STUHL_STUFEN = [
   { stufe: 4, name: 'Ehrenstuhl', upgrade: 150, haltung: 6, kollekte: 1.6, trinkgeld: 1.3 }
 ];
 
-// Lobpreisteam (Spielprinzip vom 25.11., von Lukas festgelegt): Gitarre + Ehrenamtlicher, der sie spielt.
-// Die Gitarre allein bringt nichts. Wirkung pro Lobpreisteam: Kollekte + bonus und Haltung + bonus (vom aktuellen Wert jedes Besuchers).
+// Lobpreisteam (Spielprinzip vom 25.11., von Lukas festgelegt): Instrumente + Ehrenamtliche, die sie spielen (1 pro Instrument).
+// Ein Instrument ohne Spieler bringt nichts. Jeder Musiker bringt seinen Bonus, die Boni werden addiert:
+// Kollekte + Summe und Haltung + Summe (vom aktuellen Wert jedes Besuchers). Beispiel: Level 0, 1, 2 → +5 % +6 % +7 % = +18 %.
 // start: Bonus bei Musik-Level 0 (0.05 = 5 %); proLevel: dazu je Level; maxLevel: höchstes Level.
 // Erfahrung gibt es nur durchs Musikmachen in einer Veranstaltung: erfahrungProAuftritt, erfahrungProLevel → ca. 1 Level je 50 Auftritte.
 export const MUSIK = { start: 0.05, proLevel: 0.01, maxLevel: 10, erfahrungProAuftritt: 2, erfahrungProLevel: 100 };

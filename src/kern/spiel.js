@@ -11,7 +11,7 @@ import { neuerZustand, LEER, WAND, TUER, idx, erkenneRaeume, pruefeRaum, raumTyp
 import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
-  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand } from './moebel.js';
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand, instrumenteImRaum } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht } from './finanzen.js';
@@ -536,9 +536,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return {
         nr, typName: r.typ.name,
         moeglich: moeglicheVeranstaltungen(r.typ).map(x => ({ id: x.id, name: x.name })),
-        bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre') },
-        // Was die Möbel im Raum bringen (Kanzel, Altar, Blumen, Grünpflanzen, Gitarre) und ob Musik gemacht wird
-        ausstattung: a ? { teile: a.teile, gitarre: a.gitarre, musik: a.musik, musikBonus: a.musikBonus, musikLevel: a.musikLevel } : null,
+        bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre'), instrument: instrumenteImRaum(z, r) > 0 },
+        // Was die Möbel im Raum bringen (Kanzel, Altar, Blumen, Grünpflanzen, Instrumente) und ob Musik gemacht wird
+        ausstattung: a ? { teile: a.teile, instrument: a.instrument, musik: a.musik, musiker: a.musiker, musikBonus: a.musikBonus } : null,
         slots: SLOTS.map(s => ({ ...s })),
         // Veranstaltung 1, 2: Art, Zeit, ob der Platz frei ist, was fehlt, Prognose. nutzbar: lässt sich einstellen.
         programm: programm.map(p => ({ platz: p.platz, art: p.art, tag: p.tag, slot: p.slot, frei: p.frei, fehlt: p.fehlt, bereit: p.bereit,

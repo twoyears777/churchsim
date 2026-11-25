@@ -81,7 +81,7 @@ export const TEXTE = {
     gottesdienst: {
       bringt: ['Kollekte: 1 € pro Besucher', 'Sonntagvormittag: Kollekte ×2', 'Zufriedenheit der Besucher', 'Bekanntheit der Gemeinde'],
       bedingungen: [{ text: 'Pastor im Raum', bedingung: 'leitung' }, 'Stühle = Sitzplätze',
-        { text: 'Für Musik: Gitarre im Raum', bedingung: 'gitarre' }]   // bedingung: wird im Fenster grün/rot markiert
+        { text: 'Für Musik: Instrument im Raum', bedingung: 'instrument' }]   // ENTWURF von Claude (25.11., Instrumente)   // bedingung: wird im Fenster grün/rot markiert
     },
     lobpreis: {   // Lukas, 25.11.
       bringt: ['Kollekte: 1 € pro Besucher', 'Haltung je nach Lobpreis-Vorliebe', 'Bekanntheit der Gemeinde'],
@@ -321,7 +321,13 @@ export const TEXTE = {
     altar: 'Tippe, um einen Altar aufzustellen (Gottesdienstraum, 1 pro Raum).',
     blumen: 'Tippe, um Blumen aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
     gruenpflanze: 'Tippe, um eine Grünpflanze aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
-    gitarre: 'Tippe, um eine Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – dann macht ein Ehrenamtlicher im Raum Musik.'
+    // Instrumente (Muster von Lukas freigegeben 25.11.): jedes braucht einen eigenen Ehrenamtlichen
+    gitarre: 'Tippe, um eine Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der sie spielt.',
+    keyboard: 'Tippe, um ein Keyboard aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der es spielt.',
+    schlagzeug: 'Tippe, um ein Schlagzeug aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der es spielt.',
+    bass: 'Tippe, um einen Bass aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der ihn spielt.',
+    egitarre: 'Tippe, um eine E-Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der sie spielt.',
+    mikrofon: 'Tippe, um ein Mikrofon aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der singt.'
   },
   // Kauf gesperrt, weil schon genug davon im Raum steht
   grenze: {
@@ -329,7 +335,13 @@ export const TEXTE = {
     altar: 'In diesem Raum steht schon ein Altar.',
     blumen: 'In diesem Raum stehen schon 4 Blumen.',
     gruenpflanze: 'In diesem Raum stehen schon 4 Grünpflanzen.',
-    gitarre: 'In diesem Raum steht schon eine Gitarre.'
+    gitarre: 'In diesem Raum steht schon eine Gitarre.',
+    // ENTWÜRFE von Claude nach demselben Muster (25.11.)
+    keyboard: 'In diesem Raum steht schon ein Keyboard.',
+    schlagzeug: 'In diesem Raum steht schon ein Schlagzeug.',
+    bass: 'In diesem Raum steht schon ein Bass.',
+    egitarre: 'In diesem Raum steht schon eine E-Gitarre.',
+    mikrofon: 'In diesem Raum steht schon ein Mikrofon.'
   },
   // Menü eines Stuhls (im Editor auf einen Stuhl tippen)
   stuhl: {
@@ -359,12 +371,12 @@ export const TEXTE = {
     haltung: n => `Haltung +${n}`,
     kollekte: f => `Kollekte ×${f}`,
     anzahl: (n, max) => `${n}/${max}`,
-    // Lobpreisteam (Texte von Lukas gewählt am 25.11.); p = Prozent, level = Musik-Level des Ehrenamtlichen
-    lobpreisteam: (p, level) => `Lobpreisteam (1×) – Kollekte +${p} %, Haltung +${p} % (Musik-Level ${level})`,
-    keinLobpreisteam: 'Lobpreisteam (0×) – kein Musiker eingeteilt',
+    // Lobpreisteam (Texte von Lukas freigegeben 25.11., Instrumente); p = Prozent (Summe aller Musiker), n = Zahl der Musiker
+    lobpreisteam: (p, n) => `Lobpreisteam (${n} Musiker) – Kollekte +${p} %, Haltung +${p} %`,
+    keinLobpreisteam: 'Lobpreisteam – kein Musiker eingeteilt',
     musikLevel: level => `Musik: Level ${level}`,
     musiker: 'Musiker',
-    ohneGitarre: 'ohne Gitarre keine Musik'
+    ohneGitarre: 'ohne Instrument keine Musik'
   },
   nichtGenugGeld: (name, preis) => `Nicht genug Geld für ${name} (${preis}).`,
 

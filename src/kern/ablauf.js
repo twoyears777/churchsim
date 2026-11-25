@@ -16,7 +16,7 @@ import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '..
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
-import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, musikLevel, musikErfahrungDazu } from './moebel.js';
+import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, musikLevel, musikErfahrungDazu, instrumenteImRaum } from './moebel.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { werKommt, kommChance, besuchChance, lobpreisVorliebe, kaffeeVorliebe, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
@@ -87,10 +87,12 @@ export function gottesdienstRaeume(z, raeume) {
     const zellen = new Set(r.zellen);
     const imRaum = z.personen.filter(p => zellen.has(idx(z, p.x, p.y)) && daten(p));
     const hauptamt = imRaum.filter(p => daten(p).art === 'hauptamt');
-    // Musiker: Ehrenamtliche im Raum, die dort eingesetzt sind (das geht nur, wenn eine Gitarre im Raum steht)
-    const musiker = imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r);
-    // Eine Gitarre = ein Lobpreisteam: Es spielt der Musiker mit dem höchsten Musik-Level.
-    const spieler = musiker.reduce((best, p) => !best || musikLevel(p) > musikLevel(best) ? p : best, null);
+    // Ehrenamtliche im Raum, die dort eingesetzt sind (das geht nur, wenn mindestens ein Instrument im Raum steht)
+    const ehrenamtliche = imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r);
+    // Pro Instrument spielt ein Ehrenamtlicher. Sind es mehr Ehrenamtliche als Instrumente, spielen die mit dem höchsten Musik-Level.
+    const spieler = ehrenamtliche.map((p, i) => ({ p, i })).sort((a, b) => musikLevel(b.p) - musikLevel(a.p) || a.i - b.i)
+      .slice(0, instrumenteImRaum(z, r)).map(x => x.p);
+    const musiker = spieler;
     const hat = art => moebelImRaum(z, r, art).length > 0;
     const programm = programmVon(z, r).map((e, i) => {
       const v = VERANSTALTUNGEN.find(x => x.id === e.art) || null, frei = PLAETZE[i].braucht.every(hat);
@@ -99,7 +101,7 @@ export function gottesdienstRaeume(z, raeume) {
       return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, leitung, fehlt, bereit: !fehlt };
     });
     return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt,
-      leitung: hauptamt[0] || null, musiker, spieler, ausstattung: raumAusstattung(z, r, spieler ? musikLevel(spieler) : null), bereit: programm.some(p => p.bereit) };
+      leitung: hauptamt[0] || null, musiker, spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)), bereit: programm.some(p => p.bereit) };
   });
 }
 // Räume, in denen Veranstaltung 1 als Gottesdienst stattfinden kann (für Tests und Übersichten)
@@ -342,9 +344,9 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
     const gabe = Math.round(w.kollekte * faktor * 100) / 100;
     if (gabe > 0) zahlZeigen(z, g.sitz, gabe);
   }
-  // Lobpreisteam: Wer die Gitarre gespielt hat, bekommt etwas Musik-Erfahrung.
+  // Lobpreisteam: Jeder, der ein Instrument gespielt hat, bekommt etwas Musik-Erfahrung.
   const info = terminInfo(z, raeume, L);
-  if (info && info.g.ausstattung.musik && info.g.spieler) musikErfahrungDazu(info.g.spieler);
+  if (info && info.g.ausstattung.musik) for (const p of info.g.spieler) musikErfahrungDazu(p);
   const betrag = Math.round(summeKollekte * faktor);
   if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag, { veranstaltung: L.art || 'gottesdienst' });
   bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');

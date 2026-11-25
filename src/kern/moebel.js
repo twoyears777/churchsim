@@ -118,23 +118,30 @@ export function musikStand(person) {
   return { level, maxLevel: MUSIK.maxLevel, fortschritt };
 }
 
-// Was die Möbel eines Raums bewirken. musikerLevel = Musik-Level des Ehrenamtlichen, der die Gitarre spielt (null = keiner).
+// Instrumente (Möbel mit wirkung.musik), die im Raum stehen – jedes zählt höchstens so oft wie sein max
+export function instrumenteImRaum(z, raum) {
+  return MOEBEL.filter(m => m.wirkung && m.wirkung.musik).reduce((n, m) => n + Math.min(m.max || Infinity, moebelImRaum(z, raum, m.id).length), 0);
+}
+
+// Was die Möbel eines Raums bewirken. musikerLevels = Musik-Level der Ehrenamtlichen, die ein Instrument spielen
+// (Liste; eine einzelne Zahl = ein Musiker; null/leer = keiner). Es zählen höchstens so viele Musiker wie Instrumente.
 // haltung: + pro Besucher und Gottesdienst; faktor: Kollekte × (Altar, Grünpflanzen, Lobpreisteam)
-// musikBonus: Lobpreisteam bringt Kollekte × (1 + musikBonus) und Haltung + musikBonus × aktuelle Haltung
-export function raumAusstattung(z, raum, musikerLevel = null) {
-  let haltung = 0, faktor = 1, gitarre = false;
+// musikBonus: Summe der Boni aller Musiker; Lobpreisteam bringt Kollekte × (1 + musikBonus) und Haltung + musikBonus × aktuelle Haltung
+export function raumAusstattung(z, raum, musikerLevels = null) {
+  let haltung = 0, faktor = 1, instrumente = 0;
   const teile = [];
   for (const typ of MOEBEL.filter(m => m.wirkung)) {
     const anzahl = Math.min(typ.max || Infinity, moebelImRaum(z, raum, typ.id).length);
     if (!anzahl) continue;
     if (typ.wirkung.haltung) haltung += typ.wirkung.haltung * anzahl;
     if (typ.wirkung.kollekte) faktor *= typ.wirkung.kollekte ** anzahl;
-    if (typ.wirkung.musik) gitarre = true;
+    if (typ.wirkung.musik) instrumente += anzahl;
     teile.push({ id: typ.id, name: typ.name, anzahl, max: typ.max || null,
       haltung: (typ.wirkung.haltung || 0) * anzahl, kollekte: typ.wirkung.kollekte ? typ.wirkung.kollekte ** anzahl : null });
   }
-  const musik = gitarre && musikerLevel !== null && musikerLevel !== false;
-  const bonus = musik ? musikBonus(musikerLevel) : 0;
+  const levels = (musikerLevels === null || musikerLevels === false ? [] : [].concat(musikerLevels)).slice(0, instrumente);
+  const musik = levels.length > 0;
+  const bonus = Math.round(levels.reduce((s, l) => s + musikBonus(l), 0) * 100) / 100;
   if (musik) faktor *= 1 + bonus;
-  return { haltung, faktor, gitarre, musik, musikLevel: musik ? musikerLevel : null, musikBonus: bonus, teile };
+  return { haltung, faktor, instrument: instrumente > 0, instrumente, musik, musiker: levels.length, musikBonus: bonus, teile };
 }

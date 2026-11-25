@@ -62,7 +62,7 @@ export const HILFE = {
           '**Stühle** sind die Sitzplätze. Wer keinen Stuhl findet, muss wieder heim. Klicke auf einen Stuhl, um ihn zu verbessern (Holzstuhl → Polsterstuhl → Komfortstuhl → Ehrenstuhl). Bessere Stühle bringen mehr Haltung und mehr Kollekte.',
           '**Kanzel** und **Altar** (je 1 pro Raum): verbessern den Gottesdienst und schalten gemeinsam eine zweite Veranstaltung im Raum frei.',
           '**Blumen** und **Grünpflanzen** (bis zu 4 pro Raum): mehr Haltung bzw. mehr Kollekte.',
-          '**Gitarre** (1 pro Raum): Dann macht ein Ehrenamtlicher im Raum Musik. Für den Lobpreisgottesdienst ist sie Pflicht.',
+          '**Instrumente** (Gitarre, Keyboard, Schlagzeug, Bass, E-Gitarre, Mikrofon; je 1 pro Raum): Jedes Instrument braucht einen eigenen Ehrenamtlichen, der es spielt. Jeder Musiker erhöht den Bonus des Lobpreisteams. Für den Lobpreisgottesdienst ist die Gitarre Pflicht.',   // ENTWURF von Claude (25.11.)
           '**Kaffeemaschine**, **Theke** und **Tisch**: für das Kirchkaffee.'
         ] }
       ]
@@ -74,7 +74,7 @@ export const HILFE = {
         'Links siehst du deine Mitarbeiter. Zieh eine Figur mit der Maus in einen Raum, um sie dort einzusetzen. Klick auf eine Figur zeigt ihre Karte.',
         { punkte: [
           '**Hauptamtliche** (blau), z. B. Pastor Harder, leiten die Veranstaltungen.',
-          '**Ehrenamtliche** (orange) machen im Gottesdienstraum Musik (wenn eine Gitarre dasteht) oder öffnen das Kirchkaffee.',
+          '**Ehrenamtliche** (orange) machen im Gottesdienstraum Musik (ein Ehrenamtlicher pro Instrument) oder öffnen das Kirchkaffee.',
           `Wer oft kommt, wird mit der Zeit selbst Ehrenamtlicher (ab ${EHRENAMT_AB_BESUCHEN} Besuchen).`
         ] }
       ]

@@ -16,7 +16,10 @@ export const FARBEN = {
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
   kanzel: '#6b4a2c', kanzelHell: '#a07445', altar: '#efeae0', altarTuch: '#7b3b8c', vase: '#6d7fa3',
   bluete: ['#e0567a', '#f2c94c', '#ffffff'], blatt: '#4f8a3a', blattHell: '#6fae55', topf: '#b5663d',
-  gitarre: '#c07a32', gitarreHals: '#4a3220', plakat: '#fff6d6', plakatRand: '#c23b2e',
+  gitarre: '#c07a32', gitarreHals: '#4a3220',
+  // Weitere Instrumente (25.11.) – PLATZHALTER von Claude, Lukas legt Aussehen fest
+  keyTasten: '#f4f1ea', keySchwarz: '#2a2a2e', trommel: '#b8433a', trommelFell: '#ece6da', becken: '#d9b54a',
+  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', plakat: '#fff6d6', plakatRand: '#c23b2e',
   // Außen (Einzugsgebiet) – Platzhalter
   strasse: '#6a6d72', strasseRand: '#55585c', parkLinie: '#f2efe6', nichtAngeschlossen: 'rgba(200,55,45,0.45)',
   busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
@@ -108,6 +111,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     else if (m.art === 'blumen') blumen(ctx, px, py, k);
     else if (m.art === 'gruenpflanze') gruenpflanze(ctx, px, py, k);
     else if (m.art === 'gitarre') gitarre(ctx, px, py, k);
+    else if (INSTRUMENT_BILD[m.art]) INSTRUMENT_BILD[m.art](ctx, px, py, k);
     else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.anteil || 0);
   }
   // Kaffeemaschine lädt: kleiner Balken über der Maschine
@@ -363,6 +367,34 @@ function gitarre(ctx, px, py, k) {
   ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.72, k * 0.22, 0, Math.PI * 2); ctx.arc(px + k / 2, py + k * 0.48, k * 0.15, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = FARBEN.gitarreHals; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.64, k * 0.06, 0, Math.PI * 2); ctx.fill();
 }
+// Weitere Instrumente (Platzhalter-Bilder von Claude)
+function keyboard(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.keySchwarz; ctx.fillRect(px + k * 0.08, py + k * 0.3, k * 0.84, k * 0.42);
+  ctx.fillStyle = FARBEN.keyTasten; ctx.fillRect(px + k * 0.13, py + k * 0.46, k * 0.74, k * 0.22);
+  ctx.fillStyle = FARBEN.keySchwarz;
+  for (let i = 1; i < 6; i++) ctx.fillRect(px + k * (0.13 + i * 0.123) - k * 0.02, py + k * 0.46, k * 0.04, k * 0.13);
+}
+function schlagzeug(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.becken; ctx.beginPath(); ctx.ellipse(px + k * 0.22, py + k * 0.24, k * 0.17, k * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.trommel; ctx.beginPath(); ctx.arc(px + k * 0.55, py + k * 0.62, k * 0.27, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.trommelFell; ctx.beginPath(); ctx.arc(px + k * 0.55, py + k * 0.62, k * 0.19, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.trommel; ctx.beginPath(); ctx.arc(px + k * 0.75, py + k * 0.28, k * 0.13, 0, Math.PI * 2); ctx.fill();
+}
+function saitenInstrument(ctx, px, py, k, farbe) {
+  ctx.fillStyle = FARBEN.gitarreHals; ctx.fillRect(px + k * 0.46, py + k * 0.04, k * 0.08, k * 0.5);
+  ctx.fillStyle = farbe; ctx.beginPath();
+  ctx.moveTo(px + k * 0.3, py + k * 0.5); ctx.lineTo(px + k * 0.7, py + k * 0.46); ctx.lineTo(px + k * 0.74, py + k * 0.86);
+  ctx.lineTo(px + k * 0.28, py + k * 0.9); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = FARBEN.metall; ctx.fillRect(px + k * 0.4, py + k * 0.68, k * 0.2, k * 0.05);
+}
+function bass(ctx, px, py, k) { saitenInstrument(ctx, px, py, k, FARBEN.bass); }
+function egitarre(ctx, px, py, k) { saitenInstrument(ctx, px, py, k, FARBEN.egitarre); }
+function mikrofon(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.metall;
+  ctx.fillRect(px + k * 0.47, py + k * 0.32, k * 0.06, k * 0.55); ctx.fillRect(px + k * 0.3, py + k * 0.84, k * 0.4, k * 0.06);
+  ctx.fillStyle = FARBEN.mikroKopf; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.24, k * 0.13, 0, Math.PI * 2); ctx.fill();
+}
+const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon };
 // Plakat am Zaun links neben dem Tor (solange es hängt)
 function plakat(ctx, { k, ox, oy }) {
   const g = GRUNDSTUECK, x = ox + (g.tor.x - 1.6) * k, y = oy + (g.y + g.h - 0.55) * k;
@@ -448,7 +480,7 @@ function bushaltestelle(ctx, { k, ox, oy }, b) {
 export function symbolZeichnen(ctx, id, g) {
   ctx.clearRect(0, 0, g, g);
   const k = g * 0.72, p = (g - k) / 2;
-  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, kanzel, altar, blumen, gruenpflanze, gitarre,
+  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
     kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
   if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();

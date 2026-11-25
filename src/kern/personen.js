@@ -2,7 +2,7 @@
 import { START_MITARBEITER } from '../inhalte/mitarbeiter.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { LEER, idx, aufGrundstueck } from './karte.js';
-import { hindernisBei, moebelImRaum } from './moebel.js';
+import { hindernisBei, moebelImRaum, instrumenteImRaum } from './moebel.js';
 
 // Startplatz: innen am Tor
 export function startPlatz() {
@@ -64,8 +64,9 @@ export function eingesetztIn(z, raeume, person) {
   const r = nr >= 0 ? raeume.liste[nr] : null, d = daten(person);
   if (!r || !r.typ || r.probleme.length || !d) return null;
   if (r.typ.einsatz && !r.typ.einsatz.includes(d.art)) return null;
-  const braucht = r.typ.einsatzBraucht && r.typ.einsatzBraucht[d.art];   // z. B. Ehrenamtliche im Gottesdienstraum: nur mit Gitarre
-  return !braucht || moebelImRaum(z, r, braucht).length ? r : null;
+  const braucht = r.typ.einsatzBraucht && r.typ.einsatzBraucht[d.art];   // z. B. Ehrenamtliche im Gottesdienstraum: nur mit Instrument
+  if (!braucht) return r;
+  return (braucht === 'instrument' ? instrumenteImRaum(z, r) : moebelImRaum(z, r, braucht).length) ? r : null;
 }
 
 export function verfuegbarkeit(z, raeume) {
