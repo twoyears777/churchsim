@@ -3,6 +3,34 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.7
+
+**Hauptmenü**
+- Beim Start erscheint ein Hauptmenü: Weiterspielen, Neues Spiel und Spiel beenden
+- Im Spiel öffnest du es mit Escape oder dem Knopf „Hauptmenü“ unten links
+
+**Gottesdienst**
+- Wer nach dem Gottesdienst keinen Kaffee möchte, geht jetzt gleich nach Hause, statt bis zum Ende des Kirchkaffees sitzen zu bleiben.
+- Nach dem Gottesdienst siehst du über jedem Kopf kurz, wie viel er in die Kollekte gegeben hat.
+- Die Gitarre zählt nur noch, wenn ein Ehrenamtlicher sie spielt: Das Lobpreisteam bringt mehr Kollekte und bessere Haltung
+- Ehrenamtliche sammeln beim Spielen Musik-Level und werden so besser
+
+**Kirchenjahr**
+- Klick auf das Kirchenjahr öffnet ein Fenster mit den nächsten Festen
+- Feste und Adventszeit bringen mehr Besucher und mehr Kollekte, an Feiertagen sind mehr Passanten unterwegs
+- Vor großen Festen planst du einen besonderen Gottesdienst
+
+**Kirchkaffee**
+- Neu: Tische. Stühle kannst du jetzt auch im Kirchkaffee aufstellen
+- Wer sitzt, gibt beim Gehen Trinkgeld – bessere Stühle und ein Tisch daneben bringen mehr
+- Kunden bleiben jetzt länger
+
+**Finanzen**
+- Klick auf die Finanzen öffnet ein Fenster mit Wochenübersicht, Kirchkaffee, Verlauf und Kassenbuch
+
+**Spielstart**
+- Ein neues Spiel beginnt mit der Frau des Pastors als erster Ehrenamtlicher.
+
 ## 0.1.6
 
 **Kirchkaffee**
