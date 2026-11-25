@@ -3,6 +3,21 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.3
+
+**Neu**
+- Knopf „Menschen“ oben: Fenster „Menschen im Ort“ mit sortierbarer Liste (Haltung, Besuche, zuletzt da, Kaffee, Status)
+- Passanten laufen tagsüber auf dem Gehweg vorbei und sind anklickbar; manche werden neugierig, bleiben am Tor stehen und kommen wahrscheinlich zum nächsten Gottesdienst
+- Seelsorge: Ab und zu bittet jemand den Pastor um ein Gespräch (die Zeit hält an); ablehnen oder einen von 3 Ratschlägen geben – mal geht es gut aus, mal schlecht
+- Seelsorge-Skill des Pastors (Stufe 1–5) in seiner Charakter-Karte
+
+**Geändert**
+- „Zufriedenheit“ heißt jetzt „Haltung“
+- Schnellerer Spielanfang: neue Besucher kommen auch über Passanten; neue über die Bekanntheit sind zuerst bekannte Gesichter aus dem Ort
+
+**Technik**
+- Spiellogik und Oberfläche strikt getrennt (keine sichtbaren Änderungen)
+
 ## 0.1.2
 
 **Echtzeit**
