@@ -82,11 +82,13 @@ function personenListen(personen) {
 // Hinweis unten rechts: Das Spiel meldet einen Zustand, hier wird der passende Text gewählt.
 function hinweisText(s) {
   if (s.phase === 'anreise' || s.phase === 'gottesdienst' || s.phase === 'kirchkaffee') return TEXTE.laeuft[s.phase] + (s.heim ? ' ' + TEXTE.heimgeschickt(s.heim) : '');
-  if (s.phase === 'ausgefallen') return TEXTE.ausgefallen;
+  if (s.phase === 'ausgefallen') return s.grund === 'gesperrt' ? TEXTE.fehltGesperrt(s.platz + 1) : s.grund === 'gitarre' ? TEXTE.ausgefallenGitarre : TEXTE.ausgefallen;
   if (s.phase === 'vorbei') return TEXTE.heimgeschickt(s.heim);
   if (s.fehlt === 'raum') return TEXTE.fehltRaum;
   if (s.fehlt === 'veranstaltung') return TEXTE.fehltVeranstaltung;
   if (s.fehlt === 'leitung') return TEXTE.fehltLeitung;
+  if (s.fehlt === 'gitarre') return TEXTE.fehltGitarre;
+  if (s.fehlt === 'gesperrt') return TEXTE.fehltGesperrt(s.platz + 1);
   return '';
 }
 

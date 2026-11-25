@@ -5,7 +5,7 @@ import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { NEUGIER, PLAKAT } from '../src/inhalte/ort.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
-import { zeitVorruecken, veranstaltungEinstellen, prognose } from '../src/kern/ablauf.js';
+import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, grenzeErreicht } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen, eingesetztIn } from '../src/kern/personen.js';
 import { neugierChance } from '../src/kern/ort.js';
@@ -30,8 +30,8 @@ function gemeinde(zufall) {
 }
 // Bis nach dem nächsten Gottesdienst laufen lassen (Seelsorge-Anfragen ablehnen wir nicht, sondern raten Nr. 0)
 function bisNachGottesdienst(z, zufall) {
-  const vorher = z.letzterLauf;
-  for (let i = 0; i < 2 * WOCHE_MIN / 60 && z.letzterLauf === vorher; i++) {
+  const vorher = z.letzterGottesdienst;
+  for (let i = 0; i < 2 * WOCHE_MIN / 60 && z.letzterGottesdienst === vorher; i++) {
     z.ort.leute = [];                                // keine Neugierigen – die Besucherzahl bleibt genau 10
     zeitVorruecken(z, aus(z), 60, zufall);
     if (anfrageOffen(z)) { raten(z, 0, zufall); schliessen(z); }
@@ -49,7 +49,7 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
 // Anderer Termin (Sonntag abends): einfache Kollekte, 10 €
 {
   const zufall = saat(3), z = gemeinde(zufall);
-  z.plan = { tag: 6, slot: 'abend' };
+  assert.strictEqual(terminEinstellen(z, raumBei(z, G.x + 5, G.y + 5), 0, 6, 'abend'), 'ok');
   assert.strictEqual(prognose(z, aus(z)).sonntagvormittag, false);
   bisNachGottesdienst(z, zufall);
   assert.strictEqual(z.letzterGottesdienst.besucher, 10);

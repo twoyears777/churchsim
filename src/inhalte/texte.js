@@ -28,6 +28,10 @@ export const TEXTE = {
   fehltRaum: 'Für den Gottesdienst fehlt ein fertiger Gottesdienstraum.',
   fehltVeranstaltung: 'Im Gottesdienstraum ist noch kein Gottesdienst eingestellt (Raum anklicken).',
   fehltLeitung: 'Für den Gottesdienst fehlt der Pastor im Gottesdienstraum.',
+  // Mehrere Veranstaltungen (25.11.): Text zu „gesperrt“ von Lukas freigegeben; die zwei Gitarren-Texte sind Platzhalter von Claude
+  fehltGesperrt: n => `Veranstaltung ${n} fällt aus – Kanzel und Altar fehlen im Raum.`,
+  fehltGitarre: 'Für den Lobpreisgottesdienst fehlt eine Gitarre im Raum.',
+  ausgefallenGitarre: 'Der Lobpreisgottesdienst ist ausgefallen – keine Gitarre im Raum.',
 
   // Seitenleiste „Besucher“
   besucherLetzter: 'Letzter Gottesdienst',
@@ -37,6 +41,13 @@ export const TEXTE = {
   // Raum-Fenster Gottesdienstraum
   raum: {
     veranstaltung: 'Veranstaltung',
+    platz: n => `Veranstaltung ${n}`,                       // Lukas, 25.11.
+    platzEinstellen: n => `Veranstaltung ${n} einstellen`,
+    art: 'Art',
+    zeit: 'Zeit',
+    gesperrt: 'Gesperrt – braucht Kanzel und Altar im Raum',
+    termin: (tag, slot, uhr) => `${tag} ${slot.toLowerCase()} · ${uhr}`,
+    zurueck: 'Zurück',                                       // Platzhalter von Claude
     wochenplan: 'Wochenplan',
     wochenplanInfo: 'Wann findet der Gottesdienst statt? Er dauert 1 Stunde, danach 1 Stunde Kirchkaffee.',
     slots: { vormittag: 'Vormittags', nachmittag: 'Nachmittags', abend: 'Abends' },
@@ -62,6 +73,10 @@ export const TEXTE = {
       bringt: ['Kollekte: 1 € pro Besucher', 'Sonntagvormittag: Kollekte ×2', 'Zufriedenheit der Besucher', 'Bekanntheit der Gemeinde'],
       bedingungen: [{ text: 'Pastor im Raum', bedingung: 'leitung' }, 'Stühle = Sitzplätze',
         { text: 'Für Musik: Gitarre im Raum', bedingung: 'gitarre' }]   // bedingung: wird im Fenster grün/rot markiert
+    },
+    lobpreis: {   // Lukas, 25.11.
+      bringt: ['Kollekte: 1 € pro Besucher', 'Haltung je nach Lobpreis-Vorliebe', 'Bekanntheit der Gemeinde'],
+      bedingungen: [{ text: 'Hauptamtlicher im Raum', bedingung: 'leitung' }, { text: 'Gitarre im Raum', bedingung: 'gitarre' }]
     },
     keine: { bringt: ['Nichts'], bedingungen: ['Stammgäste werden unzufrieden'] }
   },
@@ -100,7 +115,8 @@ export const TEXTE = {
     besuche: n => `${n} ${n === 1 ? 'Besuch' : 'Besuche'}`,
     neu: 'Neu dabei',
     passant: 'Passant · noch nie in der Gemeinde',
-    neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst'
+    neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst',
+    lobpreis: prozent => `Mag Lobpreis: ${prozent} %`   // Lukas, 25.11.
   },
 
   // ---- Fenster „Bekanntheit“ (Klick oben auf Bekanntheit; Entwürfe von Claude, von Lukas freigegeben 25.11.) ----

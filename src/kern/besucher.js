@@ -2,6 +2,7 @@
 // Passanten aus dem Ort (z.ort.leute) haben dieselbe Form; kommen sie zum Gottesdienst, wechseln sie in z.besucher.
 import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte/namen.js';
 import { NEUGIER } from '../inhalte/ort.js';
+import { ZWEITER_BESUCH } from '../inhalte/veranstaltungen.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, KAFFEE_ANTEIL, BEKANNTHEIT,
   EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 
@@ -54,6 +55,22 @@ export function ausDemOrt(z, p) {
 // Chance, dass jemand zum Gottesdienst kommt
 export function kommChance(b) { return Math.max(MIN_CHANCE, b.zufriedenheit / 100); }
 
+// Lobpreis-Vorliebe 0–1: für jeden Menschen zufällig, aber fest (aus Kennung und Name abgeleitet).
+// So bekommt auch jeder aus alten Spielständen gleich seine eigene Vorliebe, ohne dass etwas gespeichert werden muss.
+export function lobpreisVorliebe(b) {
+  if (typeof b.lobpreis === 'number') return b.lobpreis;
+  let h = 2166136261;
+  for (const c of `${b.id}|${b.voll}`) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return Math.round((h % 1001) / 10) / 100;   // 0,00 … 1,00
+}
+// Chance für eine bestimmte Veranstaltung: × Lobpreis-Vorliebe beim Lobpreisgottesdienst, × 0,5 beim 2. Besuch derselben Woche
+export function besuchChance(b, o = {}) {
+  let c = kommChance(b);
+  if (o.art === 'lobpreis') c *= lobpreisVorliebe(b);
+  if (o.woche !== undefined && b.besuchtWoche === o.woche) c *= ZWEITER_BESUCH;
+  return c;
+}
+
 // Neue Besucher pro Woche: Bekanntheit ÷ 10, der Rest als Chance (15 → 1 sicher + 50 % auf einen zweiten)
 export function neueBesucherZahl(bekanntheit, zufall = Math.random) {
   const s = bekanntheit / BEKANNTHEIT.teiler, n = Math.floor(s);
@@ -62,13 +79,15 @@ export function neueBesucherZahl(bekanntheit, zufall = Math.random) {
 
 // Wer kommt diesmal? Bekannte Besucher nach ihrer Chance, dazu Neugierige aus dem Ort und die neuen Besucher
 // über die Bekanntheit – diese zuerst aus den bekannten Passanten, sonst ganz neue Leute.
-export function werKommt(z, zufall = Math.random) {
-  const bekannte = z.besucher.filter(b => zufall() < kommChance(b));
+// o: { art, woche, ausschluss (Kennungen, die gerade woanders sind), neuAnteil (Anteil der Wochen-Neuen für diesen Termin) }
+export function werKommt(z, zufall = Math.random, o = {}) {
+  const aus = o.ausschluss || new Set();
+  const bekannte = z.besucher.filter(b => !aus.has(b.id) && zufall() < besuchChance(b, o));
   const neue = [], ort = z.ort ? z.ort.leute : [];
   for (const p of ort.filter(p => p.neugierig)) {
     if (zufall() < NEUGIER.kommChance) neue.push(ausDemOrt(z, p)); else p.neugierig = false;
   }
-  for (let i = neueBesucherZahl(z.bekanntheit, zufall); i > 0; i--) {
+  for (let i = neueBesucherZahl(z.bekanntheit * (o.neuAnteil ?? 1), zufall); i > 0; i--) {
     const rest = z.ort ? z.ort.leute : [];
     neue.push(rest.length ? ausDemOrt(z, rest[Math.floor(zufall() * rest.length)]) : neuerBesucher(z, NEU_ZUFRIEDENHEIT, zufall));
   }

@@ -115,7 +115,7 @@ console.log('Zeit-Tests bestanden.');
 
 // Gottesdienst und Kirchkaffee in Echtzeit
 import { neuesSpiel, ausRundenSpielstand } from '../src/kern/spiel.js';
-import { zeitVorruecken, veranstaltungEinstellen, prognose, kirchkaffeeOffen, gottesdienstBereit } from '../src/kern/ablauf.js';
+import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose, kirchkaffeeOffen, gottesdienstBereit } from '../src/kern/ablauf.js';
 import { personHinzufuegen } from '../src/kern/personen.js';
 {
   const SONNTAG_10 = 6 * TAG_MIN + 600;
@@ -151,18 +151,18 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.4) < 1e-9);    // 4 × 60 %
     assert.ok(Math.abs(prognose(z, aus()).geld - 4.8) < 1e-9);       // Sonntagvormittag: Kollekte × 2
     zeitVorruecken(z, aus(), SONNTAG_10 - 180 - z.minuten, () => 0);  // Anreise
-    assert.equal(z.lauf.phase, 'anreise'); assert.equal(z.lauf.gaeste.length, 4);
-    assert.equal(z.lauf.gaeste.filter(g => !g.sitz).length, 1);
+    assert.equal(z.laeufe[0].phase, 'anreise'); assert.equal(z.laeufe[0].gaeste.length, 4);
+    assert.equal(z.laeufe[0].gaeste.filter(g => !g.sitz).length, 1);
     zeitVorruecken(z, aus(), 180 + 60, () => 0);                       // Gottesdienst vorbei
     assert.equal(z.konto, 50 + 6); assert.equal(z.bekanntheit, 0.6);
     assert.deepEqual(z.bekanntheitLog.map(e => [e.quelle, e.wert]), [['gottesdienst', 0.6]]);   // fürs Bekanntheit-Fenster gemerkt
     zeitVorruecken(z, aus(), 60, () => 0);                            // Kirchkaffee vorbei
-    const heim = z.besucher.find(b => b.id === z.lauf.gaeste.find(g => !g.sitz).id);
+    const heim = z.besucher.find(b => b.id === z.laeufe[0].gaeste.find(g => !g.sitz).id);
     assert.equal(heim.zufriedenheit, 45);
     assert.equal(z.besucher.filter(b => b.zufriedenheit === 70).length, 3);   // +5 Platz, +5 Gottesdienst
-    assert.deepEqual(z.letzterGottesdienst, { woche: 0, ausgefallen: false, besucher: 3, heim: 1 });
+    assert.deepEqual(z.letzterGottesdienst, { woche: 0, platz: 0, ausgefallen: false, besucher: 3, heim: 1 });
     zeitVorruecken(z, aus(), 121, () => 0);                           // Heimweg (2 Stunden) vorbei
-    assert.equal(z.lauf, null);
+    assert.equal(z.laeufe.length, 0);
   }
   // Kirchkaffee mit Maschine, Theke und Ehrenamtlichem; Maschine reicht nur für 2 Tassen
   {
@@ -183,7 +183,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     m.fuellung = 25; assert.equal(kaffeeNachkaufen(z, m), 'voll');
     m.fuellung = 2; z.konto = 200;
     zeitVorruecken(z, aus(), SONNTAG_10 + 120 - z.minuten, () => 0);
-    const gaeste = z.lauf.gaeste.filter(g => g.sitz);
+    const gaeste = z.laeufe[0].gaeste.filter(g => g.sitz);
     assert.deepEqual(gaeste.map(g => g.kaffee.ergebnis).sort(), ['ja', 'ja', 'leer']);
     assert.equal(m.fuellung, 0);
     assert.equal(z.konto, 200 + 6 + 2);                               // Kollekte 3 × 2 (Sonntagvormittag) + 2 Tassen
@@ -198,8 +198,8 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     versetzen(z, z.personen[0], G.x + 4, G.y + 5);
     z.bekanntheit = 20; z.besucher.forEach(b => { b.besuche = 2; });
     zeitVorruecken(z, aus(), SONNTAG_10 + 121 - z.minuten, () => 0);
-    assert.equal(z.lauf.gaeste.length, 6);                           // 4 bekannte + 2 neue
-    assert.equal(z.lauf.neueEhrenamtliche.length, 3);                 // die 3 mit Sitzplatz und 3. Besuch
+    assert.equal(z.laeufe[0].gaeste.length, 6);                           // 4 bekannte + 2 neue
+    assert.equal(z.laeufe[0].neueEhrenamtliche.length, 3);                 // die 3 mit Sitzplatz und 3. Besuch
     assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 3);
     assert.equal(z.besucher.length, 3);
   }
@@ -207,11 +207,12 @@ import { personHinzufuegen } from '../src/kern/personen.js';
   {
     const { z, aus } = aufbau();
     versetzen(z, z.personen[0], G.x + 4, G.y + 5);
-    z.plan = { tag: 2, slot: 'abend' };
+    const a = aus(), raum = a.liste[a.gruppe[G.x + 5 + (G.y + 5) * z.w]];
+    assert.equal(terminEinstellen(z, raum, 0, 2, 'abend'), 'ok');
     zeitVorruecken(z, aus(), 2 * TAG_MIN + 19 * 60 + 1 - z.minuten, () => 0);
-    assert.equal(z.lauf.phase, 'gottesdienst');
+    assert.equal(z.laeufe[0].phase, 'gottesdienst');
     zeitVorruecken(z, aus(), 4 * TAG_MIN, () => 0);                   // Sonntag: nichts Neues
-    assert.equal(z.lauf, null); assert.equal(z.letzterLauf, 0);
+    assert.equal(z.laeufe.length, 0); assert.equal(z.termineErledigt.length, 1);
   }
   // Spielstand aus 0.1.1 übernehmen
   {
@@ -286,8 +287,8 @@ import { spielStarten } from '../src/kern/spiel.js';
   spiel.raumTypSetzen(nr, 'gottesdienst');
   assert.equal(spiel.veranstaltungsraumBei(G.x + 5, G.y + 5), nr);
   assert.deepEqual(spiel.lage().status, { fehlt: 'veranstaltung' });
-  spiel.veranstaltungSetzen(nr, 'gottesdienst');
-  assert.deepEqual(spiel.lage().status, { fehlt: 'leitung' });
+  assert.equal(spiel.veranstaltungSetzen(nr, 0, 'gottesdienst'), 'ok');
+  assert.deepEqual(spiel.lage().status, { fehlt: 'leitung', platz: 0 });
   assert.equal(spiel.raumInfo(nr).bedingungen.leitung, false);
   assert.ok(spiel.personVersetzen('pastor', G.x + 4, G.y + 5));
   assert.equal(spiel.raumInfo(nr).bedingungen.leitung, true);
@@ -307,8 +308,12 @@ import { spielStarten } from '../src/kern/spiel.js';
   const k = spiel.karte(); k.zellen.fill(0);
   assert.equal(spiel.zelle(G.x + 2, G.y + 2), 'wand');
   // Plan und Tempo werden geprüft
-  spiel.planSetzen(9, 'nachts'); assert.deepEqual(spiel.raumInfo(nr).plan, { tag: 6, slot: 'vormittag' });
-  spiel.planSetzen(2, 'abend'); assert.deepEqual(spiel.raumInfo(nr).plan, { tag: 2, slot: 'abend' });
+  const zeit = () => { const p = spiel.raumInfo(nr).programm[0]; return { tag: p.tag, slot: p.slot }; };
+  assert.equal(spiel.terminSetzen(nr, 0, 9, 'nachts'), 'zeit'); assert.deepEqual(zeit(), { tag: 6, slot: 'vormittag' });
+  assert.equal(spiel.terminSetzen(nr, 0, 2, 'abend'), 'ok'); assert.deepEqual(zeit(), { tag: 2, slot: 'abend' });
+  // Veranstaltung 2: ohne Kanzel und Altar gesperrt
+  assert.equal(spiel.raumInfo(nr).programm[1].nutzbar, false);
+  assert.equal(spiel.veranstaltungSetzen(nr, 1, 'gottesdienst'), 'gesperrt');
   spiel.tempoSetzen(7); assert.equal(spiel.lage().tempo, 1);
   // Tick-System: Bau-Modus und Pause halten die Zeit an
   spiel.bauModus(true); assert.equal(spiel.tick(0.2), false); assert.equal(spiel.lage().minute, 0);

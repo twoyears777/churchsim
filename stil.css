@@ -131,3 +131,8 @@ table.menschen tr[data-mensch]:hover td { background: #ebe5d6; }
 .inhalt p.ok { color: #2e7d32; } .inhalt p.fehlt { color: #b3261e; }
 .rat small { display: block; margin-top: 2px; }
 .meldung { background: rgba(45,105,190,.92); color: #fff; }
+/* Raum-Fenster: Veranstaltung 1, 2 */
+.kachel > span:not(.klein) { display: block; font-size: 13px; }
+.kachel p.fehlt { margin: 6px 0 0; font-size: 13px; }
+.kachel:disabled { opacity: .6; cursor: default; }
+.kachel:disabled small { display: block; font-size: 13px; margin-top: 4px; }

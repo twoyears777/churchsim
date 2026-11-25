@@ -63,52 +63,70 @@ function personenKarte(f) {
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
-// Raum-Fenster in der Spielansicht (Gottesdienstraum): Veranstaltung, Wochenplan, Mitarbeiter, Prognose
+// Raum-Fenster in der Spielansicht (Gottesdienstraum): Veranstaltung 1, 2, Mitarbeiter, Prognosen.
+// f.platz gesetzt → Menü „Veranstaltung n einstellen“ mit Art (Kacheln) und Zeit (Wochenplan).
 function raumFenster(f) {
   const r = ui.spiel.raumInfo(f.nr);
   if (!r) return null;
-  const T = TEXTE.raum;
-  // Bedingung mit Prüfung: grün/rot, je nachdem, was das Spiel meldet
-  const bedingung = t => typeof t === 'string' ? `<li>${t}</li>` : `<li class="${r.bedingungen[t.bedingung] ? 'ok' : 'fehlt'}">${t.text}</li>`;
-  // Was die Möbel im Raum zusätzlich bringen (nur beim Gottesdienst)
-  const A = TEXTE.ausstattung, au = r.ausstattung;
-  const extra = id => id !== 'gottesdienst' || !au ? [] : [
-    ...au.teile.filter(t => t.haltung || t.kollekte).map(t => `${t.name}${t.max > 1 ? ' ' + A.anzahl(t.anzahl, t.max) : ''}: ${
-      [t.haltung && A.haltung(t.haltung), t.kollekte && A.kollekte(faktor(t.kollekte))].filter(Boolean).join(' · ')}`),
-    ...(au.musik ? [A.musik(faktor(au.musikFaktor))] : [])];
-  const kachel = (id, name, k) => `<button class="kachel${(r.veranstaltung || '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}">
-      <b>${name}</b>
-      <span class="klein">${TEXTE.bringt}</span><ul>${[...k.bringt, ...extra(id)].map(t => `<li>${t}</li>`).join('')}</ul>
-      <span class="klein">${TEXTE.bedingungen}</span><ul>${k.bedingungen.map(bedingung).join('')}</ul></button>`;
-  const kacheln = r.moeglich.map(v => kachel(v.id, v.name, TEXTE.veranstaltungKacheln[v.id])).join('')
-    + kachel('', KEINE_VERANSTALTUNG, TEXTE.veranstaltungKacheln.keine);
-  let plan = '';
-  if (r.veranstaltung) {
+  const T = TEXTE.raum, A = TEXTE.ausstattung, au = r.ausstattung;
+  const p = f.platz !== undefined ? r.programm[f.platz] : null;
+  if (p && !p.nutzbar) { delete f.platz; return raumFenster(f); }
+  const uhr = slot => `${String(r.slots.find(s => s.id === slot).stunde).padStart(2, '0')}:00`;
+  const terminText = e => T.termin(TEXTE.tage[e.tag], T.slots[e.slot], uhr(e.slot));
+  const artName = id => id ? (r.moeglich.find(v => v.id === id) || {}).name : KEINE_VERANSTALTUNG;
+
+  if (p) {
+    // ---- Menü: Art und Zeit einer Veranstaltung ----
+    const bedingung = t => typeof t === 'string' ? `<li>${t}</li>` : `<li class="${r.bedingungen[t.bedingung] ? 'ok' : 'fehlt'}">${t.text}</li>`;
+    const extra = id => id !== 'gottesdienst' || !au ? [] : [
+      ...au.teile.filter(t => t.haltung || t.kollekte).map(t => `${t.name}${t.max > 1 ? ' ' + A.anzahl(t.anzahl, t.max) : ''}: ${
+        [t.haltung && A.haltung(t.haltung), t.kollekte && A.kollekte(faktor(t.kollekte))].filter(Boolean).join(' · ')}`),
+      ...(au.musik ? [A.musik(faktor(au.musikFaktor))] : [])];
+    const kachel = (id, name, k) => `<button class="kachel${(p.art || '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}">
+        <b>${name}</b>
+        <span class="klein">${TEXTE.bringt}</span><ul>${[...k.bringt, ...extra(id)].map(t => `<li>${t}</li>`).join('')}</ul>
+        <span class="klein">${TEXTE.bedingungen}</span><ul>${k.bedingungen.map(bedingung).join('')}</ul></button>`;
+    const kacheln = r.moeglich.map(v => kachel(v.id, v.name, TEXTE.veranstaltungKacheln[v.id])).join('')
+      + kachel('', KEINE_VERANSTALTUNG, TEXTE.veranstaltungKacheln.keine);
+    // Zeiten, zu denen im Raum schon eine andere Veranstaltung ist, sind gesperrt
+    const belegt = (tag, slot) => r.programm.some(e => e.platz !== p.platz && e.art && e.tag === tag && e.slot === slot);
     const kopf = TEXTE.tageKurz.map(t => `<th>${t}</th>`).join('');
-    const reihen = r.slots.map(s => `<tr><th class="slot">${T.slots[s.id]}<small>${String(s.stunde).padStart(2, '0')}:00</small></th>${
-      TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${r.plan.tag === tag && r.plan.slot === s.id ? ' aktiv' : ''}" data-plan="${tag}:${s.id}" aria-label="${TEXTE.tage[tag]} ${T.slots[s.id]}"></button></td>`).join('')}</tr>`).join('');
-    plan = `<h3>${T.wochenplan}</h3><p class="unter">${T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>`;
+    const reihen = r.slots.map(s => `<tr><th class="slot">${T.slots[s.id]}<small>${uhr(s.id)}</small></th>${
+      TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${p.tag === tag && p.slot === s.id ? ' aktiv' : ''}" data-plan="${tag}:${s.id}" ${belegt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${T.slots[s.id]}"></button></td>`).join('')}</tr>`).join('');
+    return `<h2>${T.platzEinstellen(p.platz + 1)}</h2><p class="unter">${r.typName}</p>
+      <h3>${T.art}</h3><div class="kacheln">${kacheln}</div>
+      <h3>${T.zeit}</h3><p class="unter">${T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
+      <div class="zeile"><button data-zurueck>${T.zurueck}</button><button data-zu>Schließen</button></div>`;
   }
+
+  // ---- Übersicht: Veranstaltung 1, 2 ----
+  const warnung = e => e.fehlt === 'gesperrt' && e.art ? TEXTE.fehltGesperrt(e.platz + 1)
+    : e.art && e.fehlt === 'gitarre' ? TEXTE.fehltGitarre : e.art && e.fehlt === 'leitung' ? T.keinMitarbeiter : '';
+  const plaetze = r.programm.map(e => {
+    if (!e.nutzbar) return `<button class="kachel" disabled><b>${T.platz(e.platz + 1)}</b><small class="unter">${T.gesperrt}</small></button>`;
+    const w = warnung(e);
+    return `<button class="kachel${e.art ? ' aktiv' : ''}" data-platz="${e.platz}"><b>${T.platz(e.platz + 1)}</b>
+      <span class="klein">${artName(e.art)}</span>${e.art ? `<span>${terminText(e)}</span>` : ''}
+      ${w ? `<p class="fehlt">${w}</p>` : ''}</button>`;
+  }).join('');
   const mitarbeiter = r.imRaum.length
-    ? r.imRaum.map(p => `<div class="kachel klein-kachel"><b>${esc(p.name)}</b><small>${ART_TEXT[p.art]} · ${
-      p.art === 'ehrenamt' ? (p.musiker ? A.musiker : A.ohneGitarre) : T.skillsSpaeter}</small></div>`).join('')
+    ? r.imRaum.map(m => `<div class="kachel klein-kachel"><b>${esc(m.name)}</b><small>${ART_TEXT[m.art]} · ${
+      m.art === 'ehrenamt' ? (m.musiker ? A.musiker : A.ohneGitarre) : T.skillsSpaeter}</small></div>`).join('')
     : `<p class="warnung">${T.keinMitarbeiter}</p>`;
-  let vorschau = '';
-  if (r.prognose) {
-    const p = r.prognose;
-    vorschau = `<h3>${p.dieseWoche ? T.prognose : T.prognoseNaechste}</h3>
-      ${p.bereit ? '' : `<p class="warnung">${T.prognoseFaelltAus}</p>`}
+  const vorschau = r.programm.filter(e => e.prognose && (e.art || e.platz === 0)).map(e => {
+    const v = e.prognose;
+    return `<h3>${T.platz(e.platz + 1)} · ${v.dieseWoche ? T.prognose : T.prognoseNaechste}</h3>
+      ${v.bereit ? '' : `<p class="warnung">${warnung(e) || T.prognoseFaelltAus}</p>`}
       <table class="finanzen hell">
-        <tr><td>${T.prognoseBesucher}</td><td class="zahl">${T.ca(zahl1(p.erwartet))}</td></tr>
-        <tr><td>${T.prognosePlaetze}</td><td class="zahl">${p.plaetze}</td></tr>
-        <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(p.geld)))}</td></tr>
-        <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(p.ehrenamt))}</td></tr>
-        ${p.sonntagvormittag ? `<tr><td colspan="2">${T.prognoseSonntagvormittag}</td></tr>` : ''}
-        <tr><td>${T.prognosePlakat}</td><td class="zahl">${p.plakat ? T.plakatJa : T.plakatNein}</td></tr></table>`;
-  }
+        <tr><td>${T.prognoseBesucher}</td><td class="zahl">${T.ca(zahl1(v.erwartet))}</td></tr>
+        <tr><td>${T.prognosePlaetze}</td><td class="zahl">${v.plaetze}</td></tr>
+        <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(v.geld)))}</td></tr>
+        <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(v.ehrenamt))}</td></tr>
+        ${v.sonntagvormittag ? `<tr><td colspan="2">${T.prognoseSonntagvormittag}</td></tr>` : ''}
+        <tr><td>${T.prognosePlakat}</td><td class="zahl">${v.plakat ? T.plakatJa : T.plakatNein}</td></tr></table>`;
+  }).join('');
   return `<h2>${r.typName}</h2>
-    <h3>${T.veranstaltung}</h3><div class="kacheln">${kacheln}</div>
-    ${plan}
+    <h3>${T.veranstaltung}</h3><div class="kacheln">${plaetze}</div>
     <h3>${T.mitarbeiter}</h3>${mitarbeiter}
     ${vorschau}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
@@ -171,7 +189,8 @@ function besucherKarte(f) {
   const kopf = `<h2>${esc(b.voll)}</h2>
     <p class="unter">${b.status === 'passant' ? T.passant : b.status === 'neugierig' ? T.neugierig : b.besuche ? T.besuche(b.besuche) : T.neu}</p>
     <h3>${T.zufriedenheit}</h3>
-    <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>`;
+    <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>
+    <p class="unter">${T.lobpreis(Math.round(b.lobpreis * 100))}</p>`;
   if (!n) return `${kopf}<div class="zeile"><button data-zu>Schließen</button></div>`;   // Passant: keine Bedürfnisse
   return `${kopf}
     <h3>${T.beduerfnisse}</h3>
@@ -289,8 +308,10 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-ablehnen')) spiel.seelsorgeAblehnen();
     else if (b.dataset.rat !== undefined) spiel.seelsorgeRat(Number(b.dataset.rat));
     else if (b.hasAttribute('data-seelsorge-zu')) { spiel.seelsorgeSchliessen(); ui.speichern(); return fensterSchliessen(); }
-    else if (b.dataset.veranstaltung !== undefined) spiel.veranstaltungSetzen(f.nr, b.dataset.veranstaltung);   // Fenster bleibt offen
-    else if (b.dataset.plan) { const [tag, slot] = b.dataset.plan.split(':'); spiel.planSetzen(Number(tag), slot); }
+    else if (b.dataset.platz !== undefined) f.platz = Number(b.dataset.platz);   // Menü „Veranstaltung n einstellen“
+    else if (b.hasAttribute('data-zurueck')) delete f.platz;
+    else if (b.dataset.veranstaltung !== undefined) spiel.veranstaltungSetzen(f.nr, f.platz ?? 0, b.dataset.veranstaltung);   // Fenster bleibt offen
+    else if (b.dataset.plan) { const [tag, slot] = b.dataset.plan.split(':'); spiel.terminSetzen(f.nr, f.platz ?? 0, Number(tag), slot); }
     else if (b.hasAttribute('data-nachkaufen')) spiel.kaffeeNachkaufen(f.x, f.y);
     else if (b.hasAttribute('data-verbessern')) spiel.stuhlVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-alle-verbessern')) spiel.alleStuehleVerbessern(f.x, f.y);

@@ -10,7 +10,6 @@ export function zeitAnlegen(z) {
   if (typeof z.minuten !== 'number') z.minuten = startMinuten();
   if (!z.plan) z.plan = { ...STANDARD_PLAN };
   if (typeof z.letzterLauf !== 'number') z.letzterLauf = -1;   // Woche, in der zuletzt ein Gottesdienst-Termin war
-  if (!('lauf' in z)) z.lauf = null;
   if (typeof z.tempo !== 'number') z.tempo = 1;
   if (typeof z.buchWoche !== 'number') z.buchWoche = zeitpunkt(z.minuten).woche;   // Woche des Wochenbuchs
 }

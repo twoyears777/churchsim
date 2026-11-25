@@ -75,7 +75,7 @@ export function ortSchritt(z, zufall) {
 // Wo laufen die Passanten gerade? Wer gerade zum Gottesdienst unterwegs ist, wird hier nicht doppelt gezeigt.
 export function passantenPositionen(z) {
   if (!z.ort) return [];
-  const t = z.minuten, y = gehwegY(), imGottesdienst = new Set(z.lauf && z.lauf.gaeste ? z.lauf.gaeste.map(g => g.id) : []);
+  const t = z.minuten, y = gehwegY(), imGottesdienst = new Set((z.laeufe || []).filter(L => L.gaeste).flatMap(L => L.gaeste.map(g => g.id)));
   return z.ort.gaenge.map(g => {
     if (t < g.start || imGottesdienst.has(g.id)) return null;
     const p = mensch(z, g.id);

@@ -33,12 +33,20 @@ export function strasse(i) {
 
 // Ein Besucher geht nacheinander Wegstücke: von der Straße zum Stuhl (oder bis zur Tür und wieder heim),
 // nach dem Gottesdienst zum Stehplatz im Kirchkaffee und am Ende nach Hause.
+// Bei mehreren Abläufen zählt der jüngste: Wer schon zur nächsten Veranstaltung unterwegs ist, wird nur dort gezeigt.
 export function besucherPositionen(z, speicher) {
-  const L = z.lauf, t = z.minuten;
-  if (!L || !L.gaeste) return [];
+  const gezeigt = new Set(), alle = [];
+  for (const L of (z.laeufe || []).slice().reverse()) {
+    for (const b of laufPositionen(z, speicher, L)) if (!gezeigt.has(b.id)) { gezeigt.add(b.id); alle.push(b); }
+  }
+  return alle;
+}
+function laufPositionen(z, speicher, L) {
+  const t = z.minuten;
+  if (!L.gaeste) return [];
   const st = (s, a, b) => strecke(z, speicher, s, a, b);
   return L.gaeste.map((g, i) => {
-    const s = `${L.woche}:${i}:`, start = strasse(i), t0 = L.ankunft + i * ABSTAND;
+    const s = `${L.id}:${i}:`, start = strasse(i), t0 = L.ankunft + i * ABSTAND;
     if (t < t0) return null;
     const hin = st(s + 'hin', start, g.sitz || g.tuer);
     let ort = punktAufWeg(hin, (t - t0) * LAUFTEMPO), sitzt = !!g.sitz && !ort.unterwegs, ziel = g.sitz;
@@ -68,10 +76,9 @@ export function besucherPositionen(z, speicher) {
 // Ehrenamtlicher an der Kaffeemaschine: holt Tasse für Tasse an der Maschine und bringt sie zur Theke.
 // Liefert null, wenn die Person gerade nicht im Kirchkaffee arbeitet (dann steht sie an ihrem Platz).
 export function kaffeePosition(z, p) {
-  const L = z.lauf;
-  if (!L || L.phase !== 'kirchkaffee' || !L.stationen) return null;
+  const L = (z.laeufe || []).find(l => l.phase === 'kirchkaffee' && l.stationen && l.stationen.some(s => s.ea === p.id));
+  if (!L) return null;
   const si = L.stationen.findIndex(s => s.ea === p.id);
-  if (si < 0) return null;
   const st = L.stationen[si], t = z.minuten;
   const zeiten = L.gaeste.filter(g => g.kaffee && g.kaffee.station === si).map(g => g.kaffee.zeit).sort((a, b) => a - b);
   const zwischen = (a, b, f) => ({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
