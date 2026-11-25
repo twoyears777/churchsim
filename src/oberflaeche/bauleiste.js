@@ -5,9 +5,9 @@ import { ui, $, euro, esc } from './ui.js';
 import { symbolZeichnen } from '../ansicht/zeichnen.js';
 
 const T = TEXTE.bauleiste;
-const KATEGORIEN = ['bauen', 'gottesdienst', 'kirchkaffee', 'gemeindesaal', 'deko', 'aussen'];
-const SYMBOL = { bauen: 'wand', gottesdienst: 'kanzel', kirchkaffee: 'kaffeemaschine', gemeindesaal: 'klavier', deko: 'blumen', aussen: 'parkplatz' };
-const WERKZEUGE = { bauen: ['wand', 'tuer', 'raum'] };          // Werkzeuge ohne Preis
+const KATEGORIEN = ['bauen', 'gottesdienst', 'kirchkaffee', 'gemeindesaal', 'foyer', 'deko', 'aussen'];
+const SYMBOL = { bauen: 'wand', gottesdienst: 'kanzel', kirchkaffee: 'kaffeemaschine', gemeindesaal: 'klavier', foyer: 'garderobe', deko: 'blumen', aussen: 'parkplatz' };
+const WERKZEUGE = { bauen: ['wand', 'tuer', 'fenster', 'raum'] };   // Werkzeuge; Wand und Fenster haben einen Preis (Baukosten, 25.11.)
 let kategorie = 'bauen', aufWahl = () => {}, aufBus = () => {};
 
 const symbol = id => `<canvas class="symbol" data-symbol="${id}" width="56" height="56"></canvas>`;
@@ -55,11 +55,18 @@ export function werkzeugWaehlen(id) {
 // Preise, „zu teuer“ und „gesperrt“ auffrischen (nach jedem Kauf und wenn sich das Geld ändert)
 let letzterStand = '';
 export function bauleisteAktualisieren() {
-  const arten = ui.spiel.moebelArten(), stand = JSON.stringify([kategorie, ui.werkzeug, arten.map(m => [m.leistbar, m.gesperrt])]);
+  const arten = ui.spiel.moebelArten(), bk = ui.spiel.baukosten();
+  const stand = JSON.stringify([kategorie, ui.werkzeug, arten.map(m => [m.leistbar, m.gesperrt]), bk.wandLeistbar, bk.fensterLeistbar]);
   if (stand === letzterStand) return;
   letzterStand = stand;
   for (const el of document.querySelectorAll('.bauleiste [data-preis]')) {
     const m = arten.find(x => x.id === el.dataset.preis), karte = el.closest('button');
+    if (el.dataset.preis === 'wand' || el.dataset.preis === 'fenster') {   // Baukosten
+      const wand = el.dataset.preis === 'wand';
+      el.textContent = wand ? T.jeStueck(euro(bk.wand)) : euro(bk.fenster);
+      karte.classList.toggle('zu-teuer', !(wand ? bk.wandLeistbar : bk.fensterLeistbar));
+      continue;
+    }
     if (!m) { el.textContent = ''; continue; }
     el.textContent = m.gesperrt ? T.abBekanntheit(m.abBekanntheit) : euro(m.kosten) + (m.gelaende ? ' · ' + TEXTE.gelaendeKarte(m.gelaende) : '');   // Außendeko: + Gelände-Punkte
     karte.classList.toggle('zu-teuer', !m.leistbar);

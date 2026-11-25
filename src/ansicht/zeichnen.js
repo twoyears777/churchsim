@@ -11,7 +11,7 @@ export const FARBEN = {
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
   raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
-  wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
+  wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878', glas: '#a9d3ea', glasHell: '#dff0f9', garderobe: '#6b4f36', jacke1: '#8a3b3b', jacke2: '#3b5f8a', infotisch: '#7c6a54', infoBlatt: '#f4f0e4',   // Fenster, Garderobe, Infotisch: PLATZHALTER
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
   kanzel: '#6b4a2c', kanzelHell: '#a07445', altar: '#efeae0', altarTuch: '#7b3b8c', vase: '#6d7fa3',
@@ -85,6 +85,10 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     } else if (t === FELD.TUER) {
       ctx.fillStyle = FARBEN.tuer; ctx.fillRect(px, py, k, k);
       ctx.fillStyle = FARBEN.tuerHell; ctx.fillRect(px + k * 0.2, py + k * 0.2, k * 0.6, k * 0.6);
+    } else if (t === FELD.FENSTER) {
+      // Fenster: Glasstreifen in Richtung der Wand (waagrecht, wenn links/rechts Wand steht)
+      const nb = (dx, dy) => { const v = z.zellen[(y + dy) * z.w + x + dx]; return v === FELD.WAND || v === FELD.TUER || v === FELD.FENSTER; };
+      fenster(ctx, px, py, k, nb(-1, 0) || nb(1, 0) || !(nb(0, -1) || nb(0, 1)));
     }
   }
 
@@ -112,6 +116,8 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     else if (m.art === 'stuhl') stuhl(ctx, px, py, k, m.stufe || 1);
     else if (m.art === 'theke') theke(ctx, px, py, k);
     else if (m.art === 'tisch') tisch(ctx, px, py, k);
+    else if (m.art === 'garderobe') garderobe(ctx, px, py, k);
+    else if (m.art === 'infotisch') infotisch(ctx, px, py, k);
     else if (m.art === 'kanzel') kanzel(ctx, px, py, k);
     else if (m.art === 'altar') altar(ctx, px, py, k);
     else if (m.art === 'blumen') blumen(ctx, px, py, k);
@@ -224,6 +230,10 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
       if (bx - ax >= 2 && by - ay >= 2) {
         ctx.font = `500 ${schrift}px system-ui, sans-serif`; ctx.fillStyle = FARBEN.auswahl;
         ctx.fillText(`${bx - ax - 1} × ${by - ay - 1}`, ox + (ax + bx + 1) / 2 * k, oy + (ay + by + 1) / 2 * k);
+      }
+      if (v.stuecke) {   // Baukosten (25.11.): Wandstücke und Preis über dem Rechteck, rot wenn das Geld nicht reicht
+        ctx.font = `500 ${schrift}px system-ui, sans-serif`; ctx.fillStyle = v.leistbar ? FARBEN.auswahl : '#c8281e';
+        ctx.fillText(TEXTE.bauGeld.vorschau(v.stuecke, `${v.kosten.toLocaleString('de-DE')} €`), ox + (ax + bx + 1) / 2 * k, oy + ay * k - schrift * 0.8);
       }
     } else if (v.art === 'strasse' || v.art === 'weg') {
       ctx.fillStyle = v.art === 'weg' ? 'rgba(216,200,164,0.7)' : 'rgba(90,93,98,0.55)';
@@ -429,6 +439,25 @@ function warnsymbol(ctx, cx, cy, g) {
   ctx.restore();
 }
 
+// Fenster in der Wand (Platzhalter-Aussehen von Claude, Lukas entscheidet); waagrecht: Wand läuft von links nach rechts
+function fenster(ctx, px, py, k, waagrecht) {
+  ctx.fillStyle = FARBEN.wand; ctx.fillRect(px, py, k, k);
+  ctx.fillStyle = FARBEN.glas;
+  if (waagrecht) ctx.fillRect(px, py + k * 0.3, k, k * 0.4); else ctx.fillRect(px + k * 0.3, py, k * 0.4, k);
+  ctx.fillStyle = FARBEN.glasHell;
+  if (waagrecht) ctx.fillRect(px, py + k * 0.42, k, k * 0.1); else ctx.fillRect(px + k * 0.42, py, k * 0.1, k);
+}
+// Garderobe und Infotisch im Foyer (Platzhalter-Aussehen von Claude)
+function garderobe(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.garderobe; ctx.fillRect(px + k * 0.1, py + k * 0.15, k * 0.8, k * 0.1);
+  ctx.fillStyle = FARBEN.jacke1; ctx.fillRect(px + k * 0.18, py + k * 0.25, k * 0.25, k * 0.5);
+  ctx.fillStyle = FARBEN.jacke2; ctx.fillRect(px + k * 0.55, py + k * 0.25, k * 0.25, k * 0.45);
+}
+function infotisch(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.infotisch; ctx.fillRect(px + k * 0.08, py + k * 0.2, k * 0.84, k * 0.6);
+  ctx.fillStyle = FARBEN.infoBlatt; ctx.fillRect(px + k * 0.18, py + k * 0.3, k * 0.22, k * 0.28); ctx.fillRect(px + k * 0.5, py + k * 0.34, k * 0.3, k * 0.2);
+}
+
 function theke(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.theke; ctx.fillRect(px, py, k, k);
   ctx.fillStyle = FARBEN.thekeHell; ctx.fillRect(px, py + k * 0.15, k, k * 0.35);
@@ -546,7 +575,7 @@ const AUSSENDEKO = {
 export function symbolZeichnen(ctx, id, g) {
   ctx.clearRect(0, 0, g, g);
   const k = g * 0.72, p = (g - k) / 2;
-  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
+  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, garderobe, infotisch, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
     kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
   if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();
@@ -557,6 +586,9 @@ export function symbolZeichnen(ctx, id, g) {
   if (id === 'wand') {
     ctx.fillStyle = FARBEN.boden; ctx.fillRect(p, p, k, k);
     ctx.strokeStyle = FARBEN.wand; ctx.lineWidth = k * 0.2; ctx.strokeRect(p + k * 0.1, p + k * 0.1, k * 0.8, k * 0.8);
+  } else if (id === 'fenster') {
+    ctx.fillStyle = FARBEN.boden; ctx.fillRect(p, p, k, k);
+    fenster(ctx, p, p, k, true);
   } else if (id === 'tuer') {
     ctx.fillStyle = FARBEN.wand; ctx.fillRect(p, p + k * 0.35, k, k * 0.3);
     ctx.fillStyle = FARBEN.tuer; ctx.fillRect(p + k * 0.3, p + k * 0.3, k * 0.4, k * 0.4);

@@ -8,6 +8,7 @@
 // Ein paar Zahlen (Raumgrößen, Besuche bis zum Ehrenamt) kommen direkt aus den Spielwerten, damit die Hilfe nicht veraltet.
 import { GELAENDE, SCHAUKASTEN } from './gelaende.js';
 import { RAUMTYPEN } from './raumtypen.js';
+import { BAUKOSTEN, FENSTER, FOYER } from './bau.js';
 import { EHRENAMT_AB_BESUCHEN } from './besucher.js';
 import { EINZUGSGEBIET, PARKPLATZ } from './einzugsgebiet.js';
 
@@ -33,9 +34,11 @@ export const HILFE = {
       inhalt: [
         'Mit „Bauen“ öffnest du den Bau-Modus. Die Zeit ist dann angehalten. Unten siehst du die Bauleiste mit den Reitern Bauen, Gottesdienst, Kirchkaffee, Deko und Außen. Ein Klick auf ein Kärtchen wählt das Werkzeug.',
         { punkte: [
-          '**Wand:** Zieh ein Rechteck – daraus werden die Wände eines Raums.',
+          `**Wand:** Zieh ein Rechteck – daraus werden die Wände eines Raums. Jedes neue Wandstück kostet ${BAUKOSTEN.wand} €.`,   // Zusatz ENTWURF 25.11.
           '**Tür:** Klicke auf eine Wand, um eine Tür zu setzen oder wieder zu entfernen. Jeder Raum braucht eine Tür.',
-          '**Abriss:** Zieh über einen Bereich, um Wände und Möbel abzureißen. Möbel bekommst du voll erstattet.',
+          // ENTWURF von Claude (Fenster, 25.11.) – Lukas formuliert selbst
+          `**Fenster:** Klicke auf eine Wand, um ein Fenster einzusetzen (${BAUKOSTEN.fenster} €) oder wieder zu entfernen. Jedes Fenster bringt in den angrenzenden Räumen +${FENSTER.haltung} Haltung pro Gottesdienst.`,
+          '**Abriss:** Zieh über einen Bereich, um Wände und Möbel abzureißen. Möbel, Wände und Fenster bekommst du voll erstattet.',   // ergänzt 25.11.
           '**Außen:** Straße, Parkplätze und Bushaltestelle (siehe „Einzugsgebiet“). Parkplätze dreht man mit R. Dazu Wege und Außendeko (siehe „Bekanntheit, Passanten und Pforte“).',   // Zusatz ENTWURF 25.11.
           'Unter der Maus zeigt ein grüner oder roter Umriss, ob ein Möbel dort passt.',
           '**Rückgängig** nimmt den letzten Schritt zurück, **Neu** fängt das Grundstück neu an.',
@@ -50,7 +53,9 @@ export const HILFE = {
         'Mit „Raum festlegen“ klickst du in einen fertigen Raum und gibst ihm eine Funktion.',
         { punkte: [
           `**Gottesdienstraum** (mindestens ${groesse('gottesdienst')} Kästchen): Hier finden Gottesdienste und Lobpreisgottesdienste statt.`,
-          `**Kirchkaffee** (mindestens ${groesse('kirchkaffee')} Kästchen): braucht eine Verbindungstür zu einem Gottesdienstraum. Nach dem Gottesdienst und zu eigenen Öffnungszeiten gibt es hier Kaffee.`
+          `**Kirchkaffee** (mindestens ${groesse('kirchkaffee')} Kästchen): braucht eine Verbindungstür zu einem Gottesdienstraum. Nach dem Gottesdienst und zu eigenen Öffnungszeiten gibt es hier Kaffee.`,
+          // ENTWURF von Claude (Foyer, 25.11.) – Lukas formuliert selbst
+          `**Foyer** (mindestens ${groesse('foyer')} Kästchen): Wer auf dem Weg zu seinem Platz hindurchläuft, bekommt Haltung dazu – +${FOYER.begruessung} für den Begrüßungsdienst (ein Ehrenamtlicher im Foyer), dazu Garderobe und Infotisch (je Stück +2).`
         ] }
       ]
     },

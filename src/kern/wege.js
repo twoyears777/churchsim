@@ -1,5 +1,5 @@
 // Wegsuche auf dem Raster: kürzester Weg um Wände und Möbel herum (Türen sind offen).
-import { WAND, idx, aufGrundstueck } from './karte.js';
+import { WAND, FENSTER, idx, aufGrundstueck } from './karte.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 
 // Der Zaun: zwischen Grundstück und draußen kommt man nur durch das Tor (unten).
@@ -21,7 +21,7 @@ export function weg(z, start, ziel, blockiert = () => false) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= z.w || ny >= z.h) continue;
       const j = idx(z, nx, ny);
-      if (vorher[j] !== -1 || z.zellen[j] === WAND || !durchZaun(x, y, nx, ny) || (j !== e && blockiert(nx, ny))) continue;
+      if (vorher[j] !== -1 || z.zellen[j] === WAND || z.zellen[j] === FENSTER || !durchZaun(x, y, nx, ny) || (j !== e && blockiert(nx, ny))) continue;
       vorher[j] = i; schlange.push(j);
     }
   }
@@ -46,7 +46,7 @@ export function glaetten(z, pfad, blockiert = () => false) {
       for (const [ox, oy] of [[0, 0], [0.3, 0.3], [-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3]]) {
         const cx = Math.round(px + ox), cy = Math.round(py + oy);
         if (cx < 0 || cy < 0 || cx >= z.w || cy >= z.h) return false;
-        if (z.zellen[idx(z, cx, cy)] === WAND) return false;
+        if (z.zellen[idx(z, cx, cy)] === WAND || z.zellen[idx(z, cx, cy)] === FENSTER) return false;
         const amEnde = (cx === b.x && cy === b.y) || (cx === a.x && cy === a.y);
         if (!amEnde && blockiert(cx, cy)) return false;
       }

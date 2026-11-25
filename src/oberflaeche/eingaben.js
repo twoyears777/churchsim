@@ -67,7 +67,7 @@ function mauszeiger(e) {
   else if (!ui.werkzeug) c = 'default';                       // nichts zum Bauen gewählt
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
   else if (istMoebelWerkzeug()) c = 'crosshair';
-  else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'raum' ? 'pointer' : 'crosshair';
+  else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'fenster' || ui.werkzeug === 'raum' ? 'pointer' : 'crosshair';
   if (leinwand.style.cursor !== c) leinwand.style.cursor = c;
 }
 
@@ -123,6 +123,8 @@ function loslassen(e) {
     if (sk) return fensterOeffnen({ art: 'schaukasten', x: sk.x, y: sk.y });
     const nr = spiel.veranstaltungsraumBei(f.x, f.y);
     if (nr !== null) return fensterOeffnen({ art: 'raum', nr });
+    const fy = spiel.foyerBei(f.x, f.y);
+    if (fy !== null) return fensterOeffnen({ art: 'foyer', nr: fy });   // Foyer → was es bringt
     const kk = spiel.kirchkaffeeBei(f.x, f.y);
     if (kk !== null) return fensterOeffnen({ art: 'kaffee', nr: kk });   // Kirchkaffee → Öffnungszeiten
     if (spiel.torBei(f.x, f.y)) return fensterOeffnen({ art: 'tor' });
@@ -132,7 +134,10 @@ function loslassen(e) {
   const f = feldAus(e);
   if (ui.ziehen) {
     const v = ui.ziehen; ui.ziehen = null;
-    if (v.art === 'wand') spiel.wandBauen(v.x0, v.y0, v.x1, v.y1);   // bei Möbeln im Weg baut das Spiel nicht
+    if (v.art === 'wand') {   // bei Möbeln im Weg baut das Spiel nicht; ohne genug Geld auch nicht (Baukosten)
+      const pv = spiel.wandVorschau(v.x0, v.y0, v.x1, v.y1);
+      if (spiel.wandBauen(v.x0, v.y0, v.x1, v.y1) === 'geld') kurzerHinweis(TEXTE.bauGeld.wand(euro(pv.kosten), pv.stuecke));
+    }
     else if (v.art === 'strasse') {
       const r = spiel.strasseBauen(v.x0, v.y0, v.x1, v.y1);
       if (r.ergebnis === 'geld') kurzerHinweis(r.gebaut ? TEXTE.aussenMeldung.strasseGeld : TEXTE.nichtGenugGeld('Straße', euro(spiel.moebelArten().find(m => m.id === 'strasse').kosten)));
@@ -161,6 +166,10 @@ function loslassen(e) {
     return fertig();
   }
   if (ui.werkzeug === 'tuer') { spiel.tuerUmschalten(f.x, f.y); return fertig(); }
+  if (ui.werkzeug === 'fenster') {
+    if (spiel.fensterUmschalten(f.x, f.y) === 'geld') kurzerHinweis(TEXTE.bauGeld.fenster(euro(spiel.baukosten().fenster)));
+    return fertig();
+  }
   if (ui.werkzeug === 'raum') {
     const nr = spiel.raumNrBei(f.x, f.y);
     if (nr >= 0) fensterOeffnen({ art: 'raumtyp', nr }); else fensterSchliessen();

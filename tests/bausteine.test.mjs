@@ -38,15 +38,15 @@ function gottesdienstraum() {
 {
   const z = gottesdienstraum(), t = tabelle(z, ['gottesdienst', 'lobpreis']);
   const g = t.gottesdienst;
-  assert.deepEqual(g.zeilen.map(b => b.id), ['hauptamt', 'moebel', 'moebel', 'moebel', 'moebel', 'besserStuhl', 'instrumentOhne', 'musiker', 'musiker']);
-  assert.deepEqual(g.zeilen.map(b => b.imRaum), [true, true, false, true, false, false, true, true, false]);
+  assert.deepEqual(g.zeilen.map(b => b.id), ['hauptamt', 'moebel', 'moebel', 'moebel', 'moebel', 'fenster', 'besserStuhl', 'instrumentOhne', 'musiker', 'musiker']);
+  assert.deepEqual(g.zeilen.map(b => b.imRaum), [true, true, false, true, false, false, false, true, true, false]);
   assert.deepEqual(text(g.zeilen[0]), { name: 'Hauptamtlicher (Pflicht)', besucher: 'normal', haltung: '+5 Gottesdienst, +5 Platz', geld: '1 € je Besucher' });
   assert.equal(text(g.zeilen[3]).name, 'Blumen (2 von 4)');
   assert.equal(text(g.zeilen[4]).geld, 'Kollekte ×1,05 je Stück');
-  assert.equal(text(g.zeilen[6]).name, 'Gitarre ohne Ehrenamtlichen');
-  assert.deepEqual(text(g.zeilen[7]), { name: '1 Ehrenamtlicher am Instrument (Level 2)', besucher: '×0,5 bis ×1,5 je nach Lobpreis-Vorliebe',
+  assert.equal(text(g.zeilen[7]).name, 'Gitarre ohne Ehrenamtlichen');
+  assert.deepEqual(text(g.zeilen[8]), { name: '1 Ehrenamtlicher am Instrument (Level 2)', besucher: '×0,5 bis ×1,5 je nach Lobpreis-Vorliebe',
     haltung: '+7 % je nach Lobpreis-Vorliebe', geld: 'Kollekte +7 %' });
-  assert.deepEqual(text(g.zeilen[8]), { name: '2. Ehrenamtlicher (braucht 2. Instrument)', besucher: null,
+  assert.deepEqual(text(g.zeilen[9]), { name: '2. Ehrenamtlicher (braucht 2. Instrument)', besucher: null,
     haltung: 'weitere +5 % oder mehr (je nach Level)', geld: 'weitere +5 % oder mehr' });
   assert.equal(g.summe.bereit, true);
   assert.deepEqual(B.summe(g.summe), { besucher: '×0,5 bis ×1,5 je nach Lobpreis-Vorliebe', haltung: '+14 und +7 % je nach Lobpreis-Vorliebe', geld: '1,07 € je Besucher' });

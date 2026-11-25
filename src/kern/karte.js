@@ -3,10 +3,12 @@ import { WELT, GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { STARTGELD } from '../inhalte/finanzen.js';
 
 // Spiellogik der Karte. Kennt keine Grafik und keine Bedienung.
-export const LEER = 0, WAND = 1, TUER = 2;
+// FENSTER: ein Wandstück mit Fenster – zählt überall als Wand (man kann nicht hindurchgehen, es schließt Räume ab).
+export const LEER = 0, WAND = 1, TUER = 2, FENSTER = 3;
+export const istWandStueck = t => t === WAND || t === TUER || t === FENSTER;
 
 export function neuerZustand() {
-  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {}, veranstaltung: {}, moebel: [], personen: [], woche: 0, konto: STARTGELD, wochenbuch: { einnahmen: {}, ausgaben: {} } };
+  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {}, veranstaltung: {}, moebel: [], personen: [], woche: 0, konto: STARTGELD, wochenbuch: { einnahmen: {}, ausgaben: {} }, baukosten: true };   // baukosten: Spielstand kennt die Baukosten schon
 }
 export function idx(z, x, y) { return y * z.w + x; }
 function imFeld(z, x, y) { return x >= 0 && y >= 0 && x < z.w && y < z.h; }
@@ -20,22 +22,66 @@ function begrenzen(x0, y0, x1, y1) {
   return [kx(x0), ky(y0), kx(x1), ky(y1)];
 }
 
+// Wie viele Wandstücke kämen neu dazu? (Kästchen am Rand des Rechtecks, auf denen noch keine Wand steht – fürs Bezahlen)
+export function neueWandStuecke(z, x0, y0, x1, y1) {
+  [x0, y0, x1, y1] = begrenzen(x0, y0, x1, y1);
+  const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
+  let n = 0;
+  for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++)
+    if ((x === ax || x === bx || y === ay || y === by) && z.zellen[idx(z, x, y)] === LEER) n++;
+  return n;
+}
+// Baut die Wände; Türen und Fenster bleiben, wie sie sind. → Anzahl der neuen Wandstücke
 export function wandRechteck(z, x0, y0, x1, y1) {
   [x0, y0, x1, y1] = begrenzen(x0, y0, x1, y1);
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
+  let neu = 0;
   for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
     if (x === ax || x === bx || y === ay || y === by) {
       const i = idx(z, x, y);
-      if (z.zellen[i] !== TUER) z.zellen[i] = WAND;
+      if (z.zellen[i] === LEER) { z.zellen[i] = WAND; neu++; }
     }
   }
   abgleichen(z);
+  return neu;
 }
+// Reißt alles im Rechteck ab. → was weg ist (fürs Erstatten): { waende: Wandstücke inkl. Türen/Fenster, fenster, gratis }
+// gratis: Wandstücke aus alten Spielständen, die nichts gekostet haben (z.gratisWaende) – dafür gibt es kein Geld zurück.
 export function abriss(z, x0, y0, x1, y1) {
   [x0, y0, x1, y1] = begrenzen(x0, y0, x1, y1);
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
-  for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) z.zellen[idx(z, x, y)] = LEER;
+  const gratis = new Set(z.gratisWaende || []), weg = { waende: 0, fenster: 0, gratis: 0 };
+  for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
+    const i = idx(z, x, y), t = z.zellen[i];
+    if (istWandStueck(t)) { if (gratis.delete(i)) weg.gratis++; else weg.waende++; }
+    if (t === FENSTER) weg.fenster++;
+    z.zellen[i] = LEER;
+  }
+  if (z.gratisWaende) z.gratisWaende = [...gratis];
   abgleichen(z);
+  return weg;
+}
+// Fenster setzen (auf eine Wand) oder wieder zur Wand machen. → 'gesetzt' | 'entfernt' | false
+export function fensterUmschalten(z, x, y) {
+  if (!aufGrundstueck(x, y)) return false;
+  const i = idx(z, x, y);
+  if (z.zellen[i] === WAND) z.zellen[i] = FENSTER;
+  else if (z.zellen[i] === FENSTER) z.zellen[i] = WAND;
+  else return false;
+  return z.zellen[i] === FENSTER ? 'gesetzt' : 'entfernt';
+}
+// Fenster in den Wänden rund um einen Raum (jedes Fenster, das direkt an ein Kästchen des Raums grenzt)
+export function fensterAnRaum(z, raum) {
+  const gesehen = new Set();
+  for (const c of raum.zellen) {
+    const x = c % z.w, y = (c / z.w) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (!imFeld(z, x + dx, y + dy)) continue;
+      const j = idx(z, x + dx, y + dy);
+      if (z.zellen[j] === FENSTER) gesehen.add(j);
+    }
+  }
+  return gesehen.size;
 }
 export function tuerUmschalten(z, x, y) {
   if (!aufGrundstueck(x, y)) return false;

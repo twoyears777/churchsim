@@ -9,6 +9,8 @@ import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
 import { moebelImRaum, stuhlStufe, musikLevel, musikBonus, instrumenteImRaum } from './moebel.js';
 import { daten } from './personen.js';
+import { fensterAnRaum } from './karte.js';
+import { FENSTER } from '../inhalte/bau.js';
 
 const MAX_MUSIKER = MOEBEL.filter(m => m.wirkung && m.wirkung.musik).length;   // so viele Instrumente gibt es
 const prozent = b => Math.round(b * 100);
@@ -55,6 +57,10 @@ function gottesdienstraum(z, raum, info, v) {
     zeilen.push({ id: 'moebel', moebel: id, name: m.name, imRaum: anzahl > 0, anzahl, max: m.max || null,
       haltung: m.wirkung.haltung || 0, kollekte: m.wirkung.kollekte || null });
   }
+  // Fenster (25.11.): + Haltung je Fenster, ohne Obergrenze
+  const fenster = fensterAnRaum(z, raum);
+  haltungFest += FENSTER.haltung * fenster;
+  zeilen.push({ id: 'fenster', imRaum: fenster > 0, anzahl: fenster, haltung: FENSTER.haltung });
   zeilen.push({ id: 'besserStuhl', imRaum: stuehle.some(s => stuhlStufe(s).stufe > 1), kollekte: true });
 
   // Instrument ohne Spieler (nur beim normalen Gottesdienst; beim Lobpreisgottesdienst ist die Gitarre Pflicht)

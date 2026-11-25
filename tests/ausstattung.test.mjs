@@ -8,6 +8,7 @@ import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose, gottesdienstRaeume } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, instrumenteImRaum, grenzeErreicht, musikLevel, musikBonus, musikErfahrungDazu, musikStand } from '../src/kern/moebel.js';
 import { MUSIK } from '../src/inhalte/moebel.js';
+import { STARTGELD } from '../src/inhalte/finanzen.js';
 import { versetzen, personHinzufuegen, eingesetztIn } from '../src/kern/personen.js';
 import { neugierChance } from '../src/kern/ort.js';
 import { raten, schliessen, anfrageOffen } from '../src/kern/seelsorge.js';
@@ -192,9 +193,12 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
 console.log('Stuhl- und Möbel-Tests bestanden.');
 
 // Über die Schalterwand: Obergrenze, Stuhl-Menü, alle verbessern, Rückgängig
+// Seit den Baukosten (25.11.) startet man mit 1.000 €: Nach dem Bauen wird der Kontostand für diese Tests auf 50 € gesetzt.
+const aufKonto = (sp, betrag) => { const d = JSON.parse(sp.speicherText()); d.zustand.konto = betrag; return spielStarten(JSON.stringify(d), saat(4)); };
 {
-  const spiel = spielStarten(null, saat(4));
+  let spiel = spielStarten(null, saat(4));
   spiel.wandBauen(G.x + 2, G.y + 2, G.x + 18, G.y + 8); spiel.tuerUmschalten(G.x + 2, G.y + 5);
+  spiel = aufKonto(spiel, 50);
   const nr = spiel.raumNrBei(G.x + 5, G.y + 5);
   spiel.raumTypSetzen(nr, 'gottesdienst');
   assert.strictEqual(spiel.moebelKaufen('kanzel', G.x + 5, G.y + 5), 'ok');
@@ -208,8 +212,9 @@ console.log('Stuhl- und Möbel-Tests bestanden.');
   assert.strictEqual(spiel.alleStuehleVerbessern(G.x + 7, G.y + 5), 'geld');
   assert.strictEqual(spiel.stuhlVerbessern(G.x + 7, G.y + 5), 'geld');        // 10 € übrig
   // Blumen: 4 gehen, die 5. nicht
-  const s2 = spielStarten(null, saat(4));
+  let s2 = spielStarten(null, saat(4));
   s2.wandBauen(G.x + 2, G.y + 2, G.x + 18, G.y + 8); s2.tuerUmschalten(G.x + 2, G.y + 5);
+  s2 = aufKonto(s2, 50);
   s2.raumTypSetzen(s2.raumNrBei(G.x + 5, G.y + 5), 'gottesdienst');
   for (let i = 0; i < 4; i++) assert.strictEqual(s2.moebelKaufen('blumen', G.x + 4 + i, G.y + 4), 'ok');
   assert.strictEqual(s2.moebelKaufen('blumen', G.x + 9, G.y + 4), 'grenze');
@@ -248,7 +253,7 @@ console.log('Ausstattungs-Schnittstellen-Tests bestanden.');
   assert.strictEqual(t.plakat, false); assert.strictEqual(t.chanceOhne, 5); assert.strictEqual(t.chanceMit, 15);
   assert.strictEqual(spiel.plakatKaufen(), 'ok');
   assert.strictEqual(spiel.plakatKaufen(), 'haengt');
-  assert.strictEqual(spiel.lage().konto, 45);
+  assert.strictEqual(spiel.lage().konto, STARTGELD - 5);
   assert.strictEqual(spiel.torInfo().chance, 15);
   assert.strictEqual(spiel.karte().plakat, true);
 }

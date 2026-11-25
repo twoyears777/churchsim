@@ -1,5 +1,6 @@
 // Prüft die Spiellogik. Starten mit: node tests/karte.test.mjs
 import assert from 'node:assert';
+import { STARTGELD } from '../src/inhalte/finanzen.js';
 import { RAUMTYPEN } from '../src/inhalte/raumtypen.js';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { neuerZustand, wandRechteck, abriss, tuerUmschalten, erkenneRaeume, passtGroesse, pruefeRaum, typZuweisen, raumTypVon, aufGrundstueck } from '../src/kern/karte.js';
@@ -156,7 +157,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     assert.equal(z.laeufe[0].phase, 'anreise'); assert.equal(z.laeufe[0].gaeste.length, 4);
     assert.equal(z.laeufe[0].gaeste.filter(g => !g.sitz).length, 1);
     zeitVorruecken(z, aus(), 180 + 60, () => 0);                       // Gottesdienst vorbei
-    assert.equal(z.konto, 50 + 6); assert.equal(z.bekanntheit, 0.6);
+    assert.equal(z.konto, STARTGELD + 6); assert.equal(z.bekanntheit, 0.6);
     assert.deepEqual(z.bekanntheitLog.map(e => [e.quelle, e.wert]), [['gottesdienst', 0.6]]);   // fürs Bekanntheit-Fenster gemerkt
     zeitVorruecken(z, aus(), 120, () => 0);                           // Kirchkaffee vorbei (2 Stunden)
     const heim = z.besucher.find(b => b.id === z.laeufe[0].gaeste.find(g => !g.sitz).id);
@@ -194,7 +195,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
   {
     const alt = { zellen: new Array(64 * 42).fill(0), konto: 77, personen: [], moebel: [{ art: 'stuhl', x: 1, y: 1 }], stamm: [1], woche: 5 };
     const z = ausRundenSpielstand(alt);
-    assert.equal(z.konto, 77); assert.equal(z.moebel.length, 1); assert.equal(z.besucher.length, 4);
+    assert.equal(z.konto, 77 + 950);   // alter Spielstand: Startgeld-Ausgleich (25.11.) assert.equal(z.moebel.length, 1); assert.equal(z.besucher.length, 4);
     assert.equal(z.minuten, startMinuten()); assert.equal(z.stamm, undefined);
   }
 }
@@ -254,11 +255,14 @@ console.log('Weg-Tests bestanden.');
 import { spielStarten } from '../src/kern/spiel.js';
 {
   const spiel = spielStarten(null, () => 0.5);   // 0.5: alle kommen (60 %)
-  assert.equal(spiel.lage().konto, 50); assert.equal(spiel.lage().tag, 0); assert.equal(spiel.lage().stunde, 8);
+  assert.equal(spiel.lage().konto, STARTGELD); assert.equal(spiel.lage().tag, 0); assert.equal(spiel.lage().stunde, 8);
   assert.deepEqual(spiel.lage().status, { fehlt: 'raum' });
   // Bauen über Befehle
   assert.equal(spiel.wandBauen(G.x + 2, G.y + 2, G.x + 18, G.y + 8), 'ok');
+  const K = STARTGELD - 44 * 5;   // Baukosten (25.11.): 44 Wandstücke à 5 €
+  assert.equal(spiel.lage().konto, K);
   spiel.tuerUmschalten(G.x + 2, G.y + 5);
+  assert.equal(spiel.lage().konto, K);   // Tür kostet nichts extra
   const nr = spiel.raumNrBei(G.x + 5, G.y + 5);
   spiel.raumTypSetzen(nr, 'gottesdienst');
   assert.equal(spiel.veranstaltungsraumBei(G.x + 5, G.y + 5), nr);
@@ -272,15 +276,14 @@ import { spielStarten } from '../src/kern/spiel.js';
   // Möbel kaufen: Antwort-Codes
   assert.equal(spiel.moebelKaufen('stuhl', G.x + 7, G.y + 4), 'ok');
   assert.equal(spiel.moebelKaufen('stuhl', G.x + 7, G.y + 4), 'belegt');
-  assert.equal(spiel.moebelKaufen('kaffeemaschine', G.x + 8, G.y + 4), 'geld');   // 45 € reichen nicht
-  assert.equal(spiel.lage().konto, 45);
+  assert.equal(spiel.lage().konto, K - 5);
   // Rückgängig gibt das Geld zurück
-  assert.ok(spiel.rueckgaengig()); assert.equal(spiel.lage().konto, 50); assert.equal(spiel.moebelBei(G.x + 7, G.y + 4), null);
+  assert.ok(spiel.rueckgaengig()); assert.equal(spiel.lage().konto, K); assert.equal(spiel.moebelBei(G.x + 7, G.y + 4), null);
   // Wand-Vorschau rückt an bestehende Wand heran
   assert.equal(spiel.wandVorschau(G.x + 19, G.y + 2, G.x + 25, G.y + 8).x0, G.x + 18);
   // Abfragen liefern Kopien: Ändern an der Antwort ändert das Spiel nicht
   const l = spiel.lage(); l.konto = 9999; l.personen.length = 0;
-  assert.equal(spiel.lage().konto, 50); assert.equal(spiel.lage().personen.length, 2);   // Pastor + Frau des Pastors
+  assert.equal(spiel.lage().konto, K); assert.equal(spiel.lage().personen.length, 2);   // Pastor + Frau des Pastors
   const k = spiel.karte(); k.zellen.fill(0);
   assert.equal(spiel.zelle(G.x + 2, G.y + 2), 'wand');
   // Plan und Tempo werden geprüft

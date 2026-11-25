@@ -93,6 +93,7 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
 {
   const d = JSON.parse(spielStarten(null, () => 0.5).speicherText());
   delete d.zustand.heiligkeit; delete d.zustand.forschung;
+  d.zustand.konto = 0;   // seit dem Startgeld von 1.000 € (25.11.): ohne Geld bleibt die Forschung „geld“
   const sp = spielStarten(JSON.stringify(d), () => 0.5);
   assert.equal(sp.lage().heiligkeit, 0);
   assert.equal(sp.forschungInfo().forschungen[0].zustand, 'geld');

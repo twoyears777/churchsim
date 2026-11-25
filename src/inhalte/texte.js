@@ -151,6 +151,7 @@ export const TEXTE = {
       moebel: b => ({ name: b.max > 1 ? `${b.name} (${b.anzahl} von ${b.max})` : b.name,
         haltung: b.haltung ? (b.max > 1 ? `+${b.haltung} je Stück` : `+${b.haltung}`) : null,
         geld: b.kollekte ? `Kollekte ×${zahl(b.kollekte)}${b.max > 1 ? ' je Stück' : ''}` : null }),
+      fenster: b => ({ name: `Fenster (${b.anzahl})`, haltung: `+${b.haltung} je Fenster` }),   // ENTWURF von Claude (25.11.)
       besserStuhl: b => ({ name: 'Bessere Stühle', haltung: '+ Stufe des Stuhls', geld: b.kollekte ? 'Kollekte × Stufe' : null }),
       instrumentOhne: b => ({ name: `${b.name} ohne Ehrenamtlichen` }),
       musiker: b => ({
@@ -440,7 +441,27 @@ export const TEXTE = {
     schlagzeug: 'Tippe, um ein Schlagzeug aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der es spielt.',
     bass: 'Tippe, um einen Bass aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der ihn spielt.',
     egitarre: 'Tippe, um eine E-Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der sie spielt.',
-    mikrofon: 'Tippe, um ein Mikrofon aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der singt.'
+    mikrofon: 'Tippe, um ein Mikrofon aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der singt.',
+    // ---- Baukosten, Fenster, Foyer (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
+    wand: 'Zieh ein Rechteck, um Wände zu bauen. Jedes neue Wandstück kostet 5 €.',
+    fenster: 'Tippe auf eine Wand, um ein Fenster einzusetzen (10 €) oder wieder zu entfernen. Jedes Fenster bringt +1 Haltung im Raum.',
+    garderobe: 'Tippe, um eine Garderobe aufzustellen (wirkt im Foyer: +2 Haltung für jeden, der hindurchläuft).',
+    infotisch: 'Tippe, um einen Infotisch aufzustellen (wirkt im Foyer: +2 Haltung für jeden, der hindurchläuft).'
+  },
+  // ---- Baukosten, Fenster, Foyer (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
+  bauGeld: {
+    wand: (kosten, stuecke) => `Nicht genug Geld für diese Wände (${stuecke} Stück, ${kosten}).`,
+    fenster: preis => `Nicht genug Geld für ein Fenster (${preis}).`,
+    vorschau: (stuecke, kosten) => `${stuecke} Wandstücke · ${kosten}`
+  },
+  foyerFenster: {
+    info: 'Wer auf dem Weg zu seinem Platz durchs Foyer läuft, bekommt am Ende der Veranstaltung Haltung dazu.',
+    zusammen: n => `Haltung +${n} für jeden, der hindurchläuft`,
+    begruessung: (da, n) => `Begrüßungsdienst (ein Ehrenamtlicher im Foyer): ${da ? `+${n}` : `fehlt – würde +${n} bringen`}`,
+    teil: (name, anzahl, n) => `${name} (${anzahl}): ${anzahl ? `+${anzahl * n}` : `je Stück +${n}`}`,
+    nichtFertig: 'Das Foyer ist noch nicht fertig (Tür oder Größe fehlt) – es bringt noch nichts.',
+    mitarbeiter: 'Im Foyer',
+    keiner: 'Niemand im Foyer – zieh einen Ehrenamtlichen hierher für den Begrüßungsdienst.'
   },
   // Kauf gesperrt, weil schon genug davon im Raum steht
   grenze: {
@@ -495,8 +516,9 @@ export const TEXTE = {
 
   // ---- Bauleiste unten (25.11.; Reiter von Lukas freigegeben, übrige Texte ENTWÜRFE von Claude) ----
   bauleiste: {
-    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', deko: 'Deko', aussen: 'Außen' },
-    werkzeuge: { wand: 'Wand', tuer: 'Tür', raum: 'Raum festlegen', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },
+    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', deko: 'Deko', aussen: 'Außen' },   // „Foyer“: ENTWURF
+    werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', raum: 'Raum festlegen', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF
+    jeStueck: preis => `${preis} je Stück`,   // Preis der Wand (ENTWURF von Claude, 25.11.)
     abBekanntheit: n => `ab Bekanntheit ${n}`,
     drehen: 'Drehen (R)'
   },

@@ -1,5 +1,6 @@
 // Spiellogik der Möbel. Möbel stehen auf freiem Boden des Grundstücks, ein Möbel pro Kästchen.
-import { LEER, idx, aufGrundstueck } from './karte.js';
+import { LEER, idx, aufGrundstueck, fensterAnRaum } from './karte.js';
+import { FENSTER } from '../inhalte/bau.js';
 import { MOEBEL, STUHL_STUFEN, MUSIK } from '../inhalte/moebel.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 
@@ -141,6 +142,9 @@ export function raumAusstattung(z, raum, musikerLevels = null) {
     teile.push({ id: typ.id, name: typ.name, anzahl, max: typ.max || null,
       haltung: (typ.wirkung.haltung || 0) * anzahl, kollekte: typ.wirkung.kollekte ? typ.wirkung.kollekte ** anzahl : null });
   }
+  // Fenster (25.11.): + Haltung je Fenster in den Wänden des Raums, ohne Obergrenze
+  const fenster = raum && raum.zellen ? fensterAnRaum(z, raum) : 0;
+  if (fenster) { haltung += FENSTER.haltung * fenster; teile.push({ id: 'fenster', name: FENSTER.name, anzahl: fenster, max: null, haltung: FENSTER.haltung * fenster, kollekte: null }); }
   const levels = (musikerLevels === null || musikerLevels === false ? [] : [].concat(musikerLevels)).slice(0, instrumente);
   const musik = levels.length > 0;
   const bonus = Math.round(levels.reduce((s, l) => s + musikBonus(l), 0) * 100) / 100;

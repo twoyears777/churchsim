@@ -34,6 +34,8 @@ import { faktorAmTag } from './kalender.js';
 import { FESTE, ZEITEN } from '../inhalte/kirchenjahr.js';
 import { festSchritt, festPlaeneDerWoche, festeAufraeumen, festAusSchluessel } from './feste.js';
 import { festAktiv, konfiTeilnahme, konfirmieren } from './konfi.js';
+import { foyers, foyerBonus } from './foyer.js';
+import { strasse } from './bewegung.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: Sonntagvormittag doppelt (Gottesdienst und Lobpreisgottesdienst)
@@ -468,6 +470,8 @@ function haltungFuer(art, b, L = {}) {
 function abschliessen(z, raeume, zufall = Math.random, L) {
   const anwesend = [], v = VERANSTALTUNGEN.find(x => x.id === L.art) || {};
   const sitzplatz = v.sitzplatzHaltung === false ? 0 : AENDERUNG.sitzplatz;   // Konfirmandenunterricht: Sitzplatz ist nur Bedingung
+  const foyerListe = foyers(z, raeume);   // Foyer (25.11.): wer auf dem Weg hindurchgelaufen ist, bekommt Haltung
+  L.gaeste.forEach((g, i) => { if (g.sitz) g.foyer = foyerBonus(z, raeume, strasse(i), g.sitz, foyerListe); });
   for (const g of L.gaeste) {
     const b = z.besucher.find(x => x.id === g.id);
     if (!b) continue;
@@ -476,7 +480,7 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
     // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
     const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
-    zufriedenheitAendern(b, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik);
+    zufriedenheitAendern(b, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0));
     if (v.konfiTeilnahme) konfiTeilnahme(z, b);   // zählt für die Konfirmation
     if (g.kaffee && g.kaffee.ergebnis === 'keinPlatz') zufriedenheitAendern(b, AENDERUNG.kaffeeNein);   // sonst: beim Bedienen (kirchkaffee.js)
     g.zufriedenheit = b.zufriedenheit;

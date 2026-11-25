@@ -27,7 +27,7 @@ export function fensterAktualisieren() {
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('sehr-breit', f.art === 'finanzen');
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
@@ -214,6 +214,24 @@ function kaffeeFenster(f) {
     ${voll ? `<p class="unter">${T.voll}</p>` : ''}
     <p class="unter staerker">${T.sitzplaetze(r.sitzplaetze.anzahl, r.sitzplaetze.amTisch)}</p>
     <p class="unter">${T.sitzInfo(r.sitzChance)}</p>
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Foyer (25.11.): was es jedem bringt, der hindurchläuft, und wer dort steht
+function foyerFenster(f) {
+  const r = ui.spiel.foyerInfo(f.nr);
+  if (!r) return null;
+  const T = TEXTE.foyerFenster;
+  const zeilen = [T.begruessung(r.begruessung.da, r.begruessung.haltung), ...r.teile.map(t => T.teil(esc(t.name), t.anzahl, t.haltung))];
+  const leute = r.imRaum.length
+    ? r.imRaum.map(m => `<div class="kachel klein-kachel"><b>${esc(m.name)}</b><small>${ART_TEXT[m.art]}</small></div>`).join('')
+    : `<p class="warnung">${T.keiner}</p>`;
+  return `<h2>${esc(r.typName)}</h2>
+    <p class="unter">${T.info}</p>
+    ${r.fertig ? '' : `<p class="warnung">${T.nichtFertig}</p>`}
+    <p class="unter staerker">${T.zusammen(r.haltung)}</p>
+    <ul class="quellen">${zeilen.map(z => `<li>${z}</li>`).join('')}</ul>
+    <h3>${T.mitarbeiter}</h3>${leute}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 

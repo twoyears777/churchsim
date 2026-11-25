@@ -38,5 +38,16 @@ export const RAUMTYPEN = [
     kosten: null,
     moebel: [],
     erweiterungen: []
+  },
+  {
+    // Foyer (Lukas, 25.11.): mind. 4 × 4. Wer hindurchläuft, bekommt Haltung (Begrüßungsdienst, Garderobe, Infotisch – siehe bau.js).
+    id: 'foyer',
+    name: 'Foyer',
+    minGroesse: [4, 4],
+    farbe: '#e6dcc6',               // PLATZHALTER-Farbe von Claude – Lukas legt sie fest
+    einsatz: ['ehrenamt'],          // Begrüßungsdienst: Ehrenamtliche
+    kosten: null,
+    moebel: [],
+    erweiterungen: []
   }
 ];

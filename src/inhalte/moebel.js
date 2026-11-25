@@ -29,6 +29,11 @@ export const MOEBEL = [
   // Gemeindesaal (Lukas, 25.11.): Klavier für die Kirchenchorprobe, 1× pro Raum. Kein Instrument fürs Lobpreisteam.
   { id: 'klavier', kategorie: 'gemeindesaal', name: 'Klavier', kosten: 100, max: 1 },
 
+  // Foyer (Lukas, 25.11.): wirkt nur im Foyer. foyer.haltung: + Haltung für jeden, der durchs Foyer läuft (pro Stück).
+  // Namen sind PLATZHALTER, Preise und Wirkung von Lukas freigegeben.
+  { id: 'garderobe', kategorie: 'foyer', name: 'Garderobe', kosten: 30, foyer: { haltung: 2 } },
+  { id: 'infotisch', kategorie: 'foyer', name: 'Infotisch', kosten: 40, foyer: { haltung: 2 } },
+
   // Außen (Spielprinzip Einzugsgebiet, 25.11.): nur draußen auf dem Grundstück, nicht in Räumen. Man kann darüber laufen.
   // groesse: [Breite, Länge] in Kästchen (lässt sich drehen). Preise sind PLATZHALTER von Claude.
   { id: 'strasse', kategorie: 'aussen', name: 'Straße', kosten: 2, aussen: true },
