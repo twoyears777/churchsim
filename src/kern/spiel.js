@@ -21,7 +21,7 @@ import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten, TAG_MIN } from '.
 import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, programmVon,
   veranstaltungEinstellen, terminEinstellen, prognose, finanzPrognose, terminDieseWoche, ablaufAnlegen, laufVon,
   naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon } from './ablauf.js';
-import { kaffeeAnlegen, kaffeeKundenPositionen, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
+import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
   schichtHinzufuegen, schichtEntfernen, offenBei } from './kirchkaffee.js';
 import { PLAETZE, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { lobpreisVorliebe, kaffeeVorliebe } from './besucher.js';
@@ -40,7 +40,7 @@ import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
-import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE } from '../inhalte/kirchkaffee.js';
+import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
 
 export const FELD = { LEER, WAND, TUER };   // Inhalt eines Kästchens auf der Karte
@@ -463,7 +463,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     moebelBei(x, y) { const m = moebelAuf(z, x, y); return m ? { art: m.art, x: m.x, y: m.y, dreh: !!m.dreh } : null; },
     moebelArten() {
       return MOEBEL.map(m => ({ id: m.id, name: m.name, kosten: m.kosten, max: m.max || null, leistbar: kannBezahlen(z, m.kosten),
-        kategorie: m.kategorie || null, groesse: m.groesse ? [...m.groesse] : null, aussen: !!m.aussen,
+        kategorie: m.kategorie || null, auchIn: m.auchIn ? [...m.auchIn] : [], groesse: m.groesse ? [...m.groesse] : null, aussen: !!m.aussen,
         abBekanntheit: m.id === 'parkplatz' ? PARKPLATZ.abBekanntheit : null,
         gesperrt: m.id === 'parkplatz' && z.bekanntheit < PARKPLATZ.abBekanntheit }));
     },
@@ -506,8 +506,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (!m || m.art !== 'stuhl') return null;
       const st = stuhlStufe(m), n = naechsteStufe(m), r = raeume.liste[raumNr(x, y)];
       const alle = r ? stuehleImRaum(z, r) : [], preisAlle = r ? alleVerbessernPreis(z, r) : 0;
-      return { x, y, stufe: st.stufe, maxStufe: STUHL_STUFEN.length, name: st.name, haltung: st.haltung, kollekte: st.kollekte,
-        naechste: n ? { stufe: n.stufe, name: n.name, preis: n.upgrade, haltung: n.haltung, kollekte: n.kollekte, leistbar: kannBezahlen(z, n.upgrade) } : null,
+      return { x, y, stufe: st.stufe, maxStufe: STUHL_STUFEN.length, name: st.name, haltung: st.haltung, kollekte: st.kollekte, trinkgeld: st.trinkgeld,
+        naechste: n ? { stufe: n.stufe, name: n.name, preis: n.upgrade, haltung: n.haltung, kollekte: n.kollekte, trinkgeld: n.trinkgeld, leistbar: kannBezahlen(z, n.upgrade) } : null,
         alle: r ? { anzahl: alle.length, preis: preisAlle, leistbar: kannBezahlen(z, preisAlle) } : null };
     },
     // Vorschau beim Ziehen einer Wand: angepasstes Rechteck und Kästchen, auf denen Möbel im Weg stehen
@@ -563,6 +563,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const zustand = !k ? 'raum' : !k.stationen.length ? k.fehlt : offenBei(z, r) ? 'offen' : 'zu';
       return { nr, typName: r.typ.name, zustand, naechste: zp ? { tag: zp.tag, stunde: zp.stunde, minute: zp.minute } : null,
         schichten: schichtenVon(z, r), max: MAX_SCHICHTEN, stationen: k ? k.stationen.length : 0,
+        sitzplaetze: sitzplaetzeVon(z, r), sitzChance: Math.round(SITZEN.chance * 100),
         slots: SLOTS.map(s => ({ id: s.id, stunde: s.stunde, ende: SCHICHT_ENDE[s.id] })) };
     },
     // Besucher-Kärtchen (auch für Passanten). zufriedenheit = Haltung zur Gemeinde.

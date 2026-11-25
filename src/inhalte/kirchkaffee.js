@@ -17,5 +17,15 @@ export const EINKAUF = {
   wiederholen: 60        // Platzhalter von Claude: war zu wenig Geld da, versucht er es nach so vielen Spielminuten wieder
 };
 
-// Platzhalter von Claude: so lange (Spielminuten) bleibt ein Passant nach dem Kaffee im Kirchkaffee stehen
-export const STEHEN_PASSANT = 30;
+// So lange (Spielminuten) bleibt ein Kunde nach dem Kaffee im Kirchkaffee – stehend oder sitzend (Lukas, 25.11.: 60).
+// Gottesdienst-Gäste bleiben stattdessen, bis das Kirchkaffee nach dem Gottesdienst schließt.
+export const STEHEN_PASSANT = 60;
+
+// Sitzplätze (Spielprinzip vom 25.11., claude/spielprinzip-kirchkaffee-sitzplaetze.md):
+// Nach dem Kaffee setzt sich ein Kunde mit chance auf einen freien Stuhl im Kirchkaffee und gibt beim Gehen Trinkgeld.
+// Trinkgeld = trinkgeld × Stufe des Stuhls (STUHL_STUFEN in moebel.js) × tisch (wenn ein Tisch direkt angrenzt).
+export const SITZEN = {
+  chance: 0.5,       // 50 % setzen sich hin, wenn ein Stuhl frei ist
+  trinkgeld: 1,      // € Grundwert
+  tisch: 1.2         // Stuhl grenzt an einen Tisch (links/rechts/oben/unten); mehrere Tische zählen einmal
+};

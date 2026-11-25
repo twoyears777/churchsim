@@ -195,6 +195,8 @@ function kaffeeFenster(f) {
     ${liste ? `<div class="kacheln">${liste}</div>` : ''}
     <div class="typen"><button data-schicht-neu ${voll ? 'disabled' : ''}>${T.hinzufuegen}</button></div>
     ${voll ? `<p class="unter">${T.voll}</p>` : ''}
+    <p class="unter staerker">${T.sitzplaetze(r.sitzplaetze.anzahl, r.sitzplaetze.amTisch)}</p>
+    <p class="unter">${T.sitzInfo(r.sitzChance)}</p>
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
@@ -204,7 +206,7 @@ function stuhlFenster(f) {
   if (!s) return null;
   const T = TEXTE.stuhl, n = s.naechste, a = s.alle;
   const naechste = n
-    ? `<h3>${T.naechste(n.name)}</h3><p class="unter">${T.wirkung(n.haltung, faktor(n.kollekte))}</p>
+    ? `<h3>${T.naechste(n.name)}</h3><p class="unter">${T.wirkung(n.haltung, faktor(n.kollekte))}</p><p class="unter">${T.trinkgeld(faktor(n.trinkgeld))}</p>
        <div class="typen"><button data-verbessern ${n.leistbar ? '' : 'disabled'}>${T.verbessern(euro(n.preis))}</button></div>
        ${n.leistbar ? '' : `<p class="unter">${T.keinGeld}</p>`}`
     : `<p class="unter">${T.hoechste}</p>`;
@@ -215,6 +217,7 @@ function stuhlFenster(f) {
   return `<h2>${s.name}</h2>
     <p class="unter staerker">${T.stufe(s.stufe, s.maxStufe)}</p>
     <p class="unter">${T.wirkung(s.haltung, faktor(s.kollekte))}</p>
+    <p class="unter">${T.trinkgeld(faktor(s.trinkgeld))}</p>
     ${naechste}${alle}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }

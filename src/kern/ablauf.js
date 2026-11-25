@@ -169,7 +169,7 @@ export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
   ablaufAnlegen(z); kaffeeAnlegen(z);
   if (anfrageOffen(z)) return;
   const ziel = z.minuten + minuten, gesperrt = zz => seelsorgeGesperrt(zz, raeume);
-  kaffeeAktualisieren(z, raeume);
+  kaffeeAktualisieren(z, raeume, zufall);
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
@@ -178,11 +178,11 @@ export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
     s.tun(z, raeume, zufall);
-    kaffeeAktualisieren(z, raeume);   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
+    kaffeeAktualisieren(z, raeume, zufall);   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
     if (anfrageOffen(z)) { wochenbuchPruefen(z); return; }
   }
   z.minuten = ziel;
-  kaffeeAktualisieren(z, raeume);
+  kaffeeAktualisieren(z, raeume, zufall);
   wochenbuchPruefen(z);
 }
 // Alte Spielstände: ein einzelner laufender Termin (z.lauf) wird zum ersten Eintrag in z.laeufe

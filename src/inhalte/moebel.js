@@ -3,9 +3,10 @@
 // Namen sind Platzhalter – Lukas legt sie fest.
 // kategorie: unter welchem Reiter der Bauleiste es steht (Namen der Reiter in texte.js → bauleiste).
 export const MOEBEL = [
-  { id: 'stuhl', name: 'Stuhl', kosten: 5, kategorie: 'gottesdienst' },
+  { id: 'stuhl', name: 'Stuhl', kosten: 5, kategorie: 'gottesdienst', auchIn: ['kirchkaffee'] },   // auchIn: steht zusätzlich unter diesem Reiter
   { id: 'kaffeemaschine', name: 'Kaffeemaschine', kosten: 50, fassung: 30, startFuellung: 0, kategorie: 'kirchkaffee' },  // für das Kirchkaffee
   { id: 'theke', name: 'Theke', kosten: 20, kategorie: 'kirchkaffee' },  // für das Kirchkaffee; mehrere Thekenteile nebeneinander = eine Theke
+  { id: 'tisch', name: 'Tisch', kosten: 15, kategorie: 'kirchkaffee' },  // Kirchkaffee: Stühle direkt daneben bringen mehr Trinkgeld (SITZEN.tisch)
 
   // Ausstattung des Gottesdienstraums (Spielprinzip vom 25.11.). Wirkt nur im Gottesdienstraum.
   // max: höchstens so viele pro Raum (mehr kann man nicht aufstellen).
@@ -26,11 +27,12 @@ export const MOEBEL = [
 
 // Stühle verbessern: Stufe 1 ist der gekaufte Stuhl. upgrade = Preis für den Schritt auf diese Stufe.
 // haltung: + Haltung pro Gottesdienst für den, der darauf sitzt. kollekte: Kollekte dieser Person × Wert.
+// trinkgeld: im Kirchkaffee Trinkgeld × Wert (Lukas, 25.11.)
 export const STUHL_STUFEN = [
-  { stufe: 1, name: 'Holzstuhl', upgrade: 0, haltung: 0, kollekte: 1 },
-  { stufe: 2, name: 'Polsterstuhl', upgrade: 20, haltung: 2, kollekte: 1.2 },
-  { stufe: 3, name: 'Komfortstuhl', upgrade: 60, haltung: 4, kollekte: 1.4 },
-  { stufe: 4, name: 'Ehrenstuhl', upgrade: 150, haltung: 6, kollekte: 1.6 }
+  { stufe: 1, name: 'Holzstuhl', upgrade: 0, haltung: 0, kollekte: 1, trinkgeld: 1 },
+  { stufe: 2, name: 'Polsterstuhl', upgrade: 20, haltung: 2, kollekte: 1.2, trinkgeld: 1.1 },
+  { stufe: 3, name: 'Komfortstuhl', upgrade: 60, haltung: 4, kollekte: 1.4, trinkgeld: 1.2 },
+  { stufe: 4, name: 'Ehrenstuhl', upgrade: 150, haltung: 6, kollekte: 1.6, trinkgeld: 1.3 }
 ];
 
 // Lobpreisteam (Spielprinzip vom 25.11., von Lukas festgelegt): Gitarre + Ehrenamtlicher, der sie spielt.

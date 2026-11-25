@@ -3,7 +3,7 @@
 // Starten mit: node tests/kirchkaffee.test.mjs
 import assert from 'node:assert';
 import { GRUNDSTUECK as G, LADEN } from '../src/inhalte/umgebung.js';
-import { EINKAUF, LADEN_MINUTEN, MAX_SCHICHTEN } from '../src/inhalte/kirchkaffee.js';
+import { EINKAUF, LADEN_MINUTEN, MAX_SCHICHTEN, STEHEN_PASSANT, SITZEN } from '../src/inhalte/kirchkaffee.js';
 import { AENDERUNG } from '../src/inhalte/besucher.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
@@ -11,7 +11,7 @@ import { zeitVorruecken, veranstaltungEinstellen, seelsorgeGesperrt, prognose } 
 import { moebelSetzen, moebelKaufen } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
 import { kaffeeVorliebe } from '../src/kern/besucher.js';
-import { schichtHinzufuegen, schichtEntfernen, schichtenVon, offenBei, naechsteSchicht, passantKommt, kirchkaffeeOffen } from '../src/kern/kirchkaffee.js';
+import { schichtHinzufuegen, schichtEntfernen, schichtenVon, offenBei, naechsteSchicht, passantKommt, kirchkaffeeOffen, amTisch, trinkgeldFuer, sitzplaetzeVon, kaffeeKundenPositionen, kaffeeZahlen } from '../src/kern/kirchkaffee.js';
 import { TAG_MIN } from '../src/kern/zeit.js';
 
 const SO = 6 * TAG_MIN, MI = 2 * TAG_MIN;
@@ -302,3 +302,92 @@ console.log('Prognose-Tests bestanden.');
   assert.equal(typeof spiel.menschen()[0].kaffee, 'number');
 }
 console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
+
+// Sitzplätze (Spielprinzip 25.11.): Stühle + Tische im Kirchkaffee, 50 % setzen sich, Trinkgeld beim Gehen
+{
+  assert.equal(STEHEN_PASSANT, 60); assert.equal(SITZEN.chance, 0.5); assert.equal(SITZEN.trinkgeld, 1); assert.equal(SITZEN.tisch, 1.2);
+  const aufbau = () => {
+    const g = gemeinde();
+    const { z } = g;
+    assert.equal(moebelKaufen(z, 'stuhl', G.x + 20, G.y + 8), 'ok');
+    assert.equal(moebelKaufen(z, 'stuhl', G.x + 22, G.y + 8), 'ok');
+    assert.equal(moebelKaufen(z, 'tisch', G.x + 23, G.y + 8), 'ok');
+    z.moebel.find(m => m.art === 'stuhl' && m.x === G.x + 20 && m.y === G.y + 8).stufe = 4;   // Ehrenstuhl ×1,3
+    g.maschinen()[0].fuellung = 30;
+    besucherMitKaffee(z, 4, 1);
+    return g;
+  };
+  // Tisch daneben und Stufe
+  {
+    const { z, kk } = aufbau();
+    const s1 = z.moebel.find(m => m.art === 'stuhl' && m.x === G.x + 20 && m.y === G.y + 8);
+    const s2 = z.moebel.find(m => m.art === 'stuhl' && m.x === G.x + 22 && m.y === G.y + 8);
+    assert.equal(amTisch(z, s1), false); assert.equal(amTisch(z, s2), true);
+    assert.equal(trinkgeldFuer(z, s1), 1.3); assert.equal(trinkgeldFuer(z, s2), 1.2);
+    s2.stufe = 4; assert.equal(trinkgeldFuer(z, s2), 1.56);                     // Ehrenstuhl am Tisch
+    moebelKaufen(z, 'tisch', G.x + 22, G.y + 7);                                // zweiter Tisch daneben zählt nicht nochmal
+    assert.equal(trinkgeldFuer(z, s2), 1.56);
+    assert.deepEqual(sitzplaetzeVon(z, kk()), { anzahl: 2, amTisch: 1 });
+  }
+  // Nach dem Gottesdienst: wer bedient ist und einen freien Stuhl findet, setzt sich; Trinkgeld erst beim Gehen
+  {
+    const { z, aus } = aufbau();
+    const sassen = new Map(), zahlen = new Set();
+    let geprueft = false, saehtSitzen = false;
+    for (let t = SO + 600; t < SO + 600 + 300; t++) {
+      bis(z, aus, t);
+      for (const e of kaffeeZahlen(z)) if (e.art === 'trinkgeld') zahlen.add(e.nr);
+      if (kaffeeKundenPositionen(z).some(p => p.sitzt)) saehtSitzen = true;
+      for (const k of z.kaffee.kunden) if (k.phase === 'sitzt') {
+        sassen.set(k.id, k.trinkgeld);
+        if (!geprueft) {                                                        // beim Sitzen noch kein Trinkgeld gebucht
+          const tassen = z.kaffee.zahlen.filter(e => e.betrag === 1 && !e.art).length;
+          assert.equal(z.wochenbuch.einnahmen.kirchkaffee, tassen);
+          geprueft = true;
+        }
+      }
+    }
+    assert.ok(sassen.size >= 1, 'mindestens einer setzt sich');
+    assert.ok([...sassen.values()].every(v => v === 1.3 || v === 1.2));
+    const trinkgeld = [...sassen.values()].reduce((a, b) => a + b, 0);
+    assert.ok(Math.abs(z.wochenbuch.einnahmen.kirchkaffee - (3 + trinkgeld)) < 1e-9);   // 3 Gäste (3 Plätze im Gottesdienst)
+    assert.equal(zahlen.size, sassen.size);                                     // grüne Zahl beim Gehen
+    assert.ok(saehtSitzen);                                                     // Anzeige: sitzt (Name verschwindet)
+  }
+  // Würfel über 50 %: niemand setzt sich, kein Trinkgeld
+  {
+    const { z, aus } = aufbau();
+    bis(z, aus, SO + 600 + 300, () => 0.9);
+    assert.equal(z.wochenbuch.einnahmen.kirchkaffee, 3);
+  }
+  // Passant zu Öffnungszeiten: bleibt 60 Spielminuten sitzen, dann Trinkgeld
+  {
+    const { z, aus, kk, maschinen } = gemeinde();
+    assert.equal(moebelKaufen(z, 'stuhl', G.x + 20, G.y + 8), 'ok');
+    maschinen()[0].fuellung = 30;
+    schichtHinzufuegen(z, kk(), 1, 'vormittag');
+    bis(z, aus, TAG_MIN + 10 * 60);
+    assert.ok(passantKommt(z, aus(), { id: 'p1', name: 'Paula' }));
+    let k;
+    for (let i = 0; i < 600 && !(k = z.kaffee.kunden.find(x => x.id === 'p1' && x.phase === 'sitzt')); i++) bis(z, aus, z.minuten + 1);
+    assert.ok(k, 'Passant setzt sich');
+    const gesetzt = z.minuten;
+    assert.ok(Math.abs(k.stehBis - (gesetzt + STEHEN_PASSANT)) <= 1);
+    const vorher = z.wochenbuch.einnahmen.kirchkaffee;
+    bis(z, aus, k.stehBis + 1);
+    assert.equal(z.wochenbuch.einnahmen.kirchkaffee, vorher + 1);              // Holzstuhl ohne Tisch: 1 €
+  }
+  // Schalterwand
+  {
+    const { z } = aufbau();
+    const spiel = spielStarten(JSON.stringify({ version: 3, zustand: z }), () => 0.9);
+    const info = spiel.kaffeeRaumInfo(spiel.kirchkaffeeBei(G.x + 20, G.y + 5));
+    assert.deepEqual(info.sitzplaetze, { anzahl: 2, amTisch: 1 }); assert.equal(info.sitzChance, 50);
+    assert.equal(spiel.stuhlInfo(G.x + 20, G.y + 8).trinkgeld, 1.3);
+    assert.equal(spiel.stuhlInfo(G.x + 22, G.y + 8).naechste.trinkgeld, 1.1);
+    const arten = spiel.moebelArten();
+    assert.equal(arten.find(m => m.id === 'tisch').kategorie, 'kirchkaffee');
+    assert.deepEqual(arten.find(m => m.id === 'stuhl').auchIn, ['kirchkaffee']);
+  }
+}
+console.log('Sitzplatz- und Trinkgeld-Tests bestanden.');

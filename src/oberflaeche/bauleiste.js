@@ -21,11 +21,12 @@ function symboleMalen(wurzel) {
 function kategorieVon(id) {
   if (WERKZEUGE.bauen.includes(id)) return 'bauen';
   const m = ui.spiel.moebelArten().find(x => x.id === id);
+  if (m && m.auchIn.includes(kategorie)) return kategorie;   // z. B. Stuhl: steht auch unter „Kirchkaffee“ – Reiter bleibt
   return m ? m.kategorie : null;
 }
 function eintraege(kat) {
   if (WERKZEUGE[kat]) return WERKZEUGE[kat].map(id => ({ id, name: T.werkzeuge[id], werkzeug: true }));
-  const liste = ui.spiel.moebelArten().filter(m => m.kategorie === kat);
+  const liste = ui.spiel.moebelArten().filter(m => m.kategorie === kat || m.auchIn.includes(kat));
   if (kat === 'aussen') liste.push({ id: 'bushaltestelle', name: T.werkzeuge.bushaltestelle, fenster: true });
   return liste;
 }

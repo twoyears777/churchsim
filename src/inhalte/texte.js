@@ -99,7 +99,8 @@ export const TEXTE = {
     zuBis: (tag, uhr) => `Geschlossen · öffnet ${tag} ${uhr} Uhr`,   // Lukas, 25.11.
     keinEhrenamt: 'Geschlossen – kein Ehrenamtlicher',
     keineMaschine: 'Geschlossen – keine Kaffeemaschine',
-    keineTheke: 'Geschlossen – keine Theke'
+    keineTheke: 'Geschlossen – keine Theke',
+    trinkgeld: 'Trinkgeld'   // hinter der grünen Zahl beim Gehen: „+1,56 € Trinkgeld“ (Lukas, 25.11.)
   },
 
   // Besucher-Kärtchen
@@ -128,7 +129,10 @@ export const TEXTE = {
     slot: { vormittag: 'Vormittags · 10–15 Uhr', nachmittag: 'Nachmittags · 15–19 Uhr', abend: 'Abends · 19–23 Uhr' },
     hinzufuegen: 'Öffnungszeit hinzufügen',
     entfernen: 'Entfernen',
-    voll: 'Höchstens 3 Öffnungszeiten pro Woche.'
+    voll: 'Höchstens 3 Öffnungszeiten pro Woche.',
+    // Sitzplätze (Lukas, 25.11.)
+    sitzplaetze: (n, tisch) => `Sitzplätze: ${n} (davon ${tisch} am Tisch)`,
+    sitzInfo: prozent => `Nach dem Kaffee setzen sich Kunden mit ${prozent} % Wahrscheinlichkeit auf einen freien Stuhl. Beim Gehen geben sie Trinkgeld: 1 €, mehr mit besseren Stühlen und einem Tisch daneben.`
   },
   laden: 'Laden',   // Beschriftung des Ladens auf der Karte (Lukas, 25.11.)
 
@@ -302,6 +306,7 @@ export const TEXTE = {
     stuhl: 'Tippe, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
     kaffeemaschine: 'Tippe, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
     theke: 'Tippe, um ein Thekenteil aufzustellen (fürs Kirchkaffee).',
+    tisch: 'Stühle direkt daneben bringen mehr Trinkgeld (×1,2).',   // Lukas, 25.11.
     // ---- Ausstattung des Gottesdienstraums (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
     kanzel: 'Tippe, um eine Kanzel aufzustellen (Gottesdienstraum, 1 pro Raum).',
     altar: 'Tippe, um einen Altar aufzustellen (Gottesdienstraum, 1 pro Raum).',
@@ -321,6 +326,7 @@ export const TEXTE = {
   stuhl: {
     stufe: (n, max) => `Stufe ${n} von ${max}`,
     wirkung: (haltung, kollekte) => `Haltung +${haltung} pro Gottesdienst · Kollekte ×${kollekte}`,
+    trinkgeld: f => `Im Kirchkaffee: Trinkgeld ×${f}`,   // Lukas, 25.11.
     naechste: name => `Nächste Stufe: ${name}`,
     verbessern: preis => `Verbessern (${preis})`,
     alle: (n, preis) => `Alle Stühle in diesem Raum verbessern (${n} ${n === 1 ? 'Stuhl' : 'Stühle'}, ${preis})`,

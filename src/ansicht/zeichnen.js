@@ -10,7 +10,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
@@ -102,6 +102,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     if (m.art === 'strasse' || m.art === 'parkplatz') continue;
     if (m.art === 'stuhl') stuhl(ctx, px, py, k, m.stufe || 1);
     else if (m.art === 'theke') theke(ctx, px, py, k);
+    else if (m.art === 'tisch') tisch(ctx, px, py, k);
     else if (m.art === 'kanzel') kanzel(ctx, px, py, k);
     else if (m.art === 'altar') altar(ctx, px, py, k);
     else if (m.art === 'blumen') blumen(ctx, px, py, k);
@@ -181,7 +182,8 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   // „+1 €“ über Kunden, „−5 €“ über dem Ehrenamtlichen: steigen kurz auf und verblassen (anteil 0 → 1)
   for (const e of extra.zahlen || []) {
     const cx = ox + (e.x + 0.5) * k, cy = oy + (e.y - 0.3 - e.anteil * 1.2) * k;
-    const text = `${e.betrag > 0 ? '+' : '−'}${Math.abs(e.betrag).toLocaleString('de-DE')} €`;
+    const betrag = Math.abs(e.betrag).toLocaleString('de-DE', e.art === 'trinkgeld' && !Number.isInteger(e.betrag) ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {});
+    const text = `${e.betrag > 0 ? '+' : '−'}${betrag} €${e.art === 'trinkgeld' ? ' ' + TEXTE.kirchkaffee.trinkgeld : ''}`;
     ctx.globalAlpha = Math.max(0, 1 - e.anteil * e.anteil);
     ctx.font = `700 ${Math.max(12, k * 0.7)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.strokeText(text, cx, cy);
@@ -387,6 +389,13 @@ function theke(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.thekeHell; ctx.fillRect(px, py + k * 0.15, k, k * 0.35);
 }
 
+// Tisch im Kirchkaffee: runde Tischplatte (Platzhalter-Aussehen, Lukas entscheidet)
+function tisch(ctx, px, py, k) {
+  const cx = px + k / 2, cy = py + k / 2;
+  ctx.fillStyle = FARBEN.tisch; ctx.beginPath(); ctx.arc(cx, cy, k * 0.42, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.tischHell; ctx.beginPath(); ctx.arc(cx, cy, k * 0.34, 0, Math.PI * 2); ctx.fill();
+}
+
 // Kaffeemaschine mit kleinem Füllstand-Streifen (braun = Kaffee drin, rot = leer); anteil = 0 … 1
 function kaffeemaschine(ctx, px, py, k, anteil) {
   const r = k * 0.12;
@@ -439,7 +448,7 @@ function bushaltestelle(ctx, { k, ox, oy }, b) {
 export function symbolZeichnen(ctx, id, g) {
   ctx.clearRect(0, 0, g, g);
   const k = g * 0.72, p = (g - k) / 2;
-  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, kanzel, altar, blumen, gruenpflanze, gitarre,
+  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, kanzel, altar, blumen, gruenpflanze, gitarre,
     kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
   if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();

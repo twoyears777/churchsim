@@ -6,12 +6,13 @@
 //   • Kunden stellen sich an der Theke an. Steht der vorderste an der Theke, bestellt er: Der Ehrenamtliche geht zur
 //     Maschine, sie lädt, er geht zurück und gibt den Kaffee – erst dann gibt es 1 € (grüne Zahl) und +5 Haltung.
 //   • Wer beim Schließen noch ansteht, wird fertig bedient.
+//   • Danach setzt er sich mit SITZEN.chance auf einen freien Stuhl (sonst Stehplatz) und gibt beim Gehen Trinkgeld.
 //   • Hat das Kirchkaffee zu und ist die Maschine nicht voll, geht der Ehrenamtliche in den Laden und kauft nach.
 //
 // Jede Figur hat eine „Bewegung“ { pfad, laenge, t0 }: Ab Zeit t0 läuft sie den Pfad entlang. Die Spiellogik wartet
 // immer, bis sie wirklich angekommen ist – so stimmen Geld und Haltung mit dem überein, was man sieht.
 import { LEER, idx } from './karte.js';
-import { moebelImRaum, moebelBei, hindernisBei, fassung } from './moebel.js';
+import { moebelImRaum, moebelBei, hindernisBei, fassung, stuhlStufe } from './moebel.js';
 import { eingesetztIn, daten } from './personen.js';
 import { buchen, kannBezahlen } from './finanzen.js';
 import { zufriedenheitAendern } from './besucher.js';
@@ -20,7 +21,7 @@ import { punktAufWeg, strasse } from './bewegung.js';
 import { slotBeginn, zeitpunkt } from './zeit.js';
 import { LAUFTEMPO, SLOTS, DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
-import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT } from '../inhalte/kirchkaffee.js';
+import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN } from '../inhalte/kirchkaffee.js';
 import { GRUNDSTUECK, GEHWEGE, LADEN } from '../inhalte/umgebung.js';
 
 const EPS = 1e-6;
@@ -174,10 +175,10 @@ const TOR = () => {
 // ---- Menschen finden, Geld und Haltung ----
 const menschVon = (z, id) => z.besucher.find(b => b.id === id) || (z.ort ? z.ort.leute.find(p => p.id === id) : null) || null;
 // Geld-Zahl über einem Kopf (Kaffee, Einkauf, Kollekte nach dem Gottesdienst)
-export function zahlZeigen(z, ort, betrag) {
+export function zahlZeigen(z, ort, betrag, art = null) {
   kaffeeAnlegen(z);
   const K = z.kaffee;
-  K.zahlen.push({ nr: ++K.nr, x: ort.x, y: ort.y, betrag, zeit: z.minuten });
+  K.zahlen.push({ nr: ++K.nr, x: ort.x, y: ort.y, betrag, art, zeit: z.minuten });
 }
 // Ergebnis beim Gottesdienst-Gast eintragen (für das Besucher-Kärtchen)
 function ergebnisEintragen(z, k, ergebnis) {
@@ -230,14 +231,38 @@ function stehplatz(z, stationen, s) {
     for (const p of [x.standTheke, x.standMaschine]) schon.add(idx(z, p.x, p.y));
     plaetzeFuer(z, stationen, x).slice(0, schlangeVon(K, x.ea.id).length + 2).forEach(p => schon.add(idx(z, p.x, p.y)));
   }
-  for (const k of K.kunden) if (k.phase === 'steht' || k.phase === 'schlange') { const e = k.bew.pfad[k.bew.pfad.length - 1]; schon.add(idx(z, e.x, e.y)); }
+  for (const k of K.kunden) if (k.phase === 'steht' || k.phase === 'sitzt' || k.phase === 'schlange') { const e = k.bew.pfad[k.bew.pfad.length - 1]; schon.add(idx(z, e.x, e.y)); }
   const zellen = new Set(s.raum.zellen);
   const liste = s.raum.zellen.map(c => ({ x: c % z.w, y: (c / z.w) | 0 })).filter(p => frei(z, zellen, p) && !schon.has(idx(z, p.x, p.y))
     && !z.personen.some(q => q.x === p.x && q.y === p.y));
   liste.sort((a, b) => Math.hypot(a.x - s.theke.x, a.y - s.theke.y) - Math.hypot(b.x - s.theke.x, b.y - s.theke.y));
   return liste[0] || null;
 }
+// ---- Sitzplätze ----
+// Grenzt ein Tisch direkt an diesen Stuhl (links, rechts, oben, unten)?
+export function amTisch(z, m) { return NACHBARN.some(([dx, dy]) => { const n = moebelBei(z, m.x + dx, m.y + dy); return !!n && n.art === 'tisch'; }); }
+// Trinkgeld, das ein Kunde auf diesem Stuhl beim Gehen gibt (auf Cent gerundet)
+export function trinkgeldFuer(z, m) {
+  return Math.round(SITZEN.trinkgeld * stuhlStufe(m).trinkgeld * (amTisch(z, m) ? SITZEN.tisch : 1) * 100) / 100;
+}
+// Sitzplätze eines Kirchkaffees: alle Stühle im Raum, davon wie viele am Tisch
+export function sitzplaetzeVon(z, raum) {
+  const stuehle = moebelImRaum(z, raum, 'stuhl');
+  return { anzahl: stuehle.length, amTisch: stuehle.filter(m => amTisch(z, m)).length };
+}
+// Freier Stuhl im Raum der Station (der nächste zur Theke) – oder null
+function freierStuhl(z, s) {
+  const belegt = new Set(z.kaffee.kunden.filter(k => k.phase === 'sitzt' && k.stuhl).map(k => idx(z, k.stuhl.x, k.stuhl.y)));
+  const liste = moebelImRaum(z, s.raum, 'stuhl').filter(m => !belegt.has(idx(z, m.x, m.y)) && !z.personen.some(q => q.x === m.x && q.y === m.y));
+  liste.sort((a, b) => Math.hypot(a.x - s.theke.x, a.y - s.theke.y) - Math.hypot(b.x - s.theke.x, b.y - s.theke.y));
+  return liste[0] || null;
+}
+
 function heimSchicken(z, k, t) {
+  if (k.phase === 'sitzt' && k.trinkgeld) {   // Trinkgeld beim Gehen
+    buchen(z, 'einnahmen', 'kirchkaffee', k.trinkgeld, { tassen: 0, anlass: k.lauf ? 'gottesdienst' : 'oeffnungszeit', trinkgeld: true });
+    zahlZeigen(z, posBei(k.bew, t), k.trinkgeld, 'trinkgeld');
+  }
   k.phase = 'heim';
   k.bew = gehen(z, posBei(k.bew, t), k.heimweg, t);
 }
@@ -248,8 +273,8 @@ function ohneKaffee(z, k, t) {
   ergebnisEintragen(z, k, 'leer');
   heimSchicken(z, k, t);
 }
-// Kaffee übergeben: 1 €, +5 Haltung, dann auf einen Stehplatz (Gottesdienst-Gäste bis zum Ende, Passanten eine Weile)
-function uebergeben(z, stationen, s, k, t) {
+// Kaffee übergeben: 1 €, +5 Haltung, dann auf einen Sitz- oder Stehplatz (Gottesdienst-Gäste bis zum Ende, Passanten eine Weile)
+function uebergeben(z, stationen, s, k, t, zufall) {
   buchen(z, 'einnahmen', 'kirchkaffee', PREIS_TASSE, { tassen: 1, anlass: k.lauf ? 'gottesdienst' : 'oeffnungszeit' });
   zahlZeigen(z, posBei(k.bew, t), PREIS_TASSE);
   const m = menschVon(z, k.id);
@@ -257,7 +282,14 @@ function uebergeben(z, stationen, s, k, t) {
   ergebnisEintragen(z, k, 'ja');
   const L = k.lauf && (z.laeufe || []).find(l => l.id === k.lauf);
   const bis = k.lauf ? (L && L.phase === 'kirchkaffee' ? L.beginn + DAUER.gottesdienst + DAUER.kirchkaffee : t) : t + STEHEN_PASSANT;
-  const platz = bis > t + EPS ? stehplatz(z, stationen, s) : null;
+  if (bis <= t + EPS) return heimSchicken(z, k, t);
+  const stuhl = freierStuhl(z, s);
+  if (stuhl && zufall() < SITZEN.chance) {
+    k.phase = 'sitzt'; k.stehBis = bis; k.stuhl = { x: stuhl.x, y: stuhl.y }; k.trinkgeld = trinkgeldFuer(z, stuhl);
+    k.bew = gehen(z, posBei(k.bew, t), stuhl, t);
+    return;
+  }
+  const platz = stehplatz(z, stationen, s);
   if (!platz) return heimSchicken(z, k, t);
   k.phase = 'steht'; k.stehBis = bis;
   k.bew = gehen(z, posBei(k.bew, t), platz, t);
@@ -305,7 +337,7 @@ function abbrechen(z, id) {
 }
 
 // Ein Schritt für eine Station → true, wenn sich etwas geändert hat
-function stationSchritt(z, stationen, s, t) {
+function stationSchritt(z, stationen, s, t, zufall) {
   const K = z.kaffee, p = s.ea, id = p.id;
   const m = K.ma[id] || (K.ma[id] = { heim: { x: p.x, y: p.y }, bew: stehen(p, t), aufgabe: null });
   const a = m.aufgabe, da = angekommen(m.bew, t), hier = posBei(m.bew, t);
@@ -317,7 +349,7 @@ function stationSchritt(z, stationen, s, t) {
     if (a.phase === 'laden' && t >= a.bis - EPS) { a.phase = 'zurueck'; geh(s.standTheke, true); return true; }
     if (a.phase === 'zurueck' && da) {
       m.aufgabe = null;
-      if (k) { uebergeben(z, stationen, s, k, t); nachruecken(z, stationen, s, t); }
+      if (k) { uebergeben(z, stationen, s, k, t, zufall); nachruecken(z, stationen, s, t); }
       return true;
     }
     return false;
@@ -373,13 +405,13 @@ function keinGeld(z, p, t) {
 
 function kundeSchritt(z, k, t) {
   const K = z.kaffee;
-  if (k.phase === 'steht' && t >= k.stehBis - EPS) { heimSchicken(z, k, t); return true; }
+  if ((k.phase === 'steht' || k.phase === 'sitzt') && t >= k.stehBis - EPS) { heimSchicken(z, k, t); return true; }
   if (k.phase === 'heim' && angekommen(k.bew, t)) { K.kunden = K.kunden.filter(x => x !== k); return true; }
   return false;
 }
 
 // ---- Alles, was bis jetzt fällig ist, ausführen ----
-export function kaffeeAktualisieren(z, raeume) {
+export function kaffeeAktualisieren(z, raeume, zufall = Math.random) {
   kaffeeAnlegen(z);
   const K = z.kaffee, t = z.minuten;
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
@@ -398,7 +430,7 @@ export function kaffeeAktualisieren(z, raeume) {
   for (const s of stationen) nachruecken(z, stationen, s, t);
   for (let runde = 0; runde < 200; runde++) {
     let geaendert = false;
-    for (const s of stationen) if (stationSchritt(z, stationen, s, t)) geaendert = true;
+    for (const s of stationen) if (stationSchritt(z, stationen, s, t, zufall)) geaendert = true;
     for (const k of [...K.kunden]) if (kundeSchritt(z, k, t)) geaendert = true;
     if (!geaendert) break;
   }
@@ -417,7 +449,7 @@ export function kaffeeSchritt(z, raeume) {
   for (const k of K.kunden) { zeiten.push(ankunft(k.bew), k.ab); if (k.stehBis !== null) zeiten.push(k.stehBis); }
   for (const r of raeume.liste) if (r.typ && r.typ.id === 'kirchkaffee') for (const f of schichtFenster(z, r, t)) zeiten.push(f.von, f.bis);
   const naechste = Math.min(...zeiten.filter(x => x > t + EPS));
-  return Number.isFinite(naechste) ? { zeit: naechste, tun: (zz, rr) => kaffeeAktualisieren(zz, rr) } : null;
+  return Number.isFinite(naechste) ? { zeit: naechste, tun: (zz, rr, zf) => kaffeeAktualisieren(zz, rr, zf) } : null;
 }
 
 // ---- Abfragen für die Anzeige ----
@@ -428,7 +460,7 @@ export function kaffeeKundenPositionen(z) {
   return z.kaffee.kunden.filter(k => t >= k.ab).map(k => {
     const p = posBei(k.bew, t);
     if (k.phase === 'heim' && !p.unterwegs) return null;
-    return { id: k.id, name: k.name, x: p.x, y: p.y, sitzt: false };
+    return { id: k.id, name: k.name, x: p.x, y: p.y, sitzt: k.phase === 'sitzt' && !p.unterwegs };
   }).filter(Boolean);
 }
 // Wo ist ein Ehrenamtlicher gerade? (null = an seinem Platz)
@@ -444,7 +476,7 @@ export function kaffeeLaden(z) {
   return Object.values(z.kaffee.ma).filter(m => m.aufgabe && m.aufgabe.art === 'bedienen' && m.aufgabe.phase === 'laden')
     .map(m => ({ x: m.aufgabe.maschine.x, y: m.aufgabe.maschine.y, anteil: Math.max(0, Math.min(1, 1 - (m.aufgabe.bis - z.minuten) / LADEN_MINUTEN)) }));
 }
-export function kaffeeZahlen(z) { return z.kaffee ? z.kaffee.zahlen.map(e => ({ nr: e.nr, x: e.x, y: e.y, betrag: e.betrag })) : []; }
+export function kaffeeZahlen(z) { return z.kaffee ? z.kaffee.zahlen.map(e => ({ nr: e.nr, x: e.x, y: e.y, betrag: e.betrag, art: e.art || null })) : []; }
 export const MELDUNG_KAFFEE = 120;
 export function kaffeeMeldung(z) {
   const m = z.kaffee && z.kaffee.meldung;
