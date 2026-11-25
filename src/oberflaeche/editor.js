@@ -14,7 +14,7 @@ const HINWEISE = {
 
 let z = laden() || neuerZustand();
 let raeume = auswerten();
-let werkzeug = 'wand', ziehen = null, auswahl = null;
+let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false;
 const verlauf = [];
 
 const leinwand = document.getElementById('karte');
@@ -60,7 +60,7 @@ function groesseAnpassen() {
 
 function malen() {
   ctx.clearRect(0, 0, leinwand.width, leinwand.height);
-  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, auswahl });
+  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, auswahl, raster: editorOffen });
 }
 
 function feldAus(e) {
@@ -71,6 +71,7 @@ function feldAus(e) {
 }
 
 leinwand.addEventListener('pointerdown', e => {
+  if (!editorOffen) return;
   const f = feldAus(e);
   if (werkzeug === 'wand' || werkzeug === 'abriss') {
     leinwand.setPointerCapture(e.pointerId);
@@ -84,6 +85,7 @@ leinwand.addEventListener('pointermove', e => {
   if (f.x !== ziehen.x1 || f.y !== ziehen.y1) { ziehen.x1 = f.x; ziehen.y1 = f.y; malen(); }
 });
 leinwand.addEventListener('pointerup', e => {
+  if (!editorOffen) return;
   const f = feldAus(e);
   if (ziehen) {
     const v = ziehen; ziehen = null;
@@ -150,6 +152,16 @@ neuKnopf.addEventListener('click', () => {
     neuTimer = setTimeout(() => { delete neuKnopf.dataset.sicher; neuKnopf.textContent = 'Neu'; }, 3000);
   }
 });
+
+// Editor öffnen und schließen: die normale Leiste (HUD) und die Bauwerkzeuge wechseln sich ab.
+function editorUmschalten(offen) {
+  editorOffen = offen; ziehen = null;
+  document.body.classList.toggle('modus-editor', offen);
+  document.body.classList.toggle('modus-spiel', !offen);
+  maskeSchliessen();
+}
+document.getElementById('editorAuf').addEventListener('click', () => editorUmschalten(true));
+document.getElementById('editorZu').addEventListener('click', () => editorUmschalten(false));
 
 new ResizeObserver(groesseAnpassen).observe(flaeche);
 hinweis.textContent = HINWEISE[werkzeug];

@@ -26,10 +26,12 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
 
   // Feine Bauhilfe, nur auf dem eigenen Grundstück
   const g = GRUNDSTUECK;
+  if (extra.raster) {
   ctx.strokeStyle = FARBEN.raster; ctx.lineWidth = 1; ctx.beginPath();
   for (let x = g.x + 1; x < g.x + g.w; x++) { ctx.moveTo(ox + x * k + 0.5, oy + g.y * k); ctx.lineTo(ox + x * k + 0.5, oy + (g.y + g.h) * k); }
   for (let y = g.y + 1; y < g.y + g.h; y++) { ctx.moveTo(ox + g.x * k, oy + y * k + 0.5); ctx.lineTo(ox + (g.x + g.w) * k, oy + y * k + 0.5); }
   ctx.stroke();
+  }
   zaunZeichnen(ctx, ansicht);
 
   // Wände und Türen

@@ -6,8 +6,12 @@
 <title>Churchsim – Raum-Editor</title>
 <link rel="stylesheet" href="stil.css">
 </head>
-<body>
-<header class="leiste">
+<body class="modus-spiel">
+<header class="leiste hud">
+  <div class="werkzeuge"></div>
+  <div class="werkzeuge"><button id="editorAuf">Bauen</button></div>
+</header>
+<header class="leiste editor">
   <div class="werkzeuge" role="toolbar" aria-label="Werkzeuge">
     <button data-werkzeug="wand" aria-pressed="true">Wand</button>
     <button data-werkzeug="tuer" aria-pressed="false">Tür</button>
@@ -17,9 +21,10 @@
   <div class="werkzeuge">
     <button id="zurueck">Rückgängig</button>
     <button id="neu">Neu</button>
+    <button id="editorZu" class="haupt">Fertig</button>
   </div>
 </header>
-<p id="hinweis" class="hinweis"></p>
+<p id="hinweis" class="hinweis editor"></p>
 <main id="flaeche" class="flaeche">
   <canvas id="karte"></canvas>
   <div id="maske" class="maske" hidden><div class="inhalt"></div></div>
