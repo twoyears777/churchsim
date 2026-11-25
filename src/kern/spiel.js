@@ -21,7 +21,7 @@ import { sonntagDerWoche, kirchenjahrStand } from './kalender.js';
 import { besucherPositionen, kaffeePosition } from './bewegung.js';
 import { ortAnlegen, passantenPositionen, ortMeldung, mensch } from './ort.js';
 import { seelsorgeAnlegen, anfrageOffen, anfrageInfo, ablehnen as seelsorgeAblehnen, raten as seelsorgeRaten,
-  schliessen as seelsorgeZu, stufeInfo } from './seelsorge.js';
+  schliessen as seelsorgeZu, stufeInfo, seelsorgePositionen, seelsorgeUnterwegs } from './seelsorge.js';
 import { STAMMGAST_AB_BESUCHEN } from '../inhalte/ort.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
@@ -204,7 +204,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
           const pos = kaffeePosition(z, p) || p;
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
         }).filter(Boolean),
-        besucher: [...besucherPositionen(z, wegSpeicher), ...passantenPositionen(z)]   // Gottesdienst-Besucher, dann Passanten
+        // Gottesdienst-Besucher, Passanten (ohne den, der gerade zum Pastor geht) und wer zur Seelsorge läuft
+        besucher: [...besucherPositionen(z, wegSpeicher), ...passantenPositionen(z).filter(b => b.id !== seelsorgeUnterwegs(z)), ...seelsorgePositionen(z)]
       };
     },
     // Anzeigen oben und in der Seitenleiste

@@ -2,7 +2,8 @@
 // Zahlen von Lukas freigegeben (25.11.), nach dem Testen leicht anpassbar.
 export const SEELSORGE = {
   stufeAb: [0, 3, 8, 15, 25],              // Erfahrungspunkte für Stufe 1, 2, 3, 4, 5
-  anfragenProWoche: [0.5, 1, 1.5, 2, 3],   // so oft im Schnitt fragt jemand, je nach Stufe 1–5
+  anfragenProWoche: [1, 1, 1.5, 2, 3],     // so oft im Schnitt fragt jemand, je nach Stufe 1–5 (Stufe 1 am 25.11. von 0,5 auf 1)
+  anfangsSchub: { anfragen: 10, faktor: 2 }, // die ersten 10 Anfragen: anfangs doppelt so oft, mit jeder Anfrage weniger, ab der 11. normal
   von: 8, bis: 20,                          // Anfragen kommen nur zwischen diesen Uhrzeiten
   sperreVorGottesdienst: 180,               // nicht in den 3 Stunden (Minuten) vor dem Gottesdienst, nicht währenddessen
   anteilBesucher: 2 / 3,                    // so oft fragt ein Besucher, sonst ein bekannter Passant

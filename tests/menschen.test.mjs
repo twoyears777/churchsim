@@ -10,7 +10,7 @@ import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 import { werKommt } from '../src/kern/besucher.js';
 import { ortSchritt, passantenPositionen } from '../src/kern/ort.js';
-import { stufe, raten, ablehnen, schliessen, anfrageOffen } from '../src/kern/seelsorge.js';
+import { stufe, raten, ablehnen, schliessen, anfrageOffen, schub, seelsorgePositionen } from '../src/kern/seelsorge.js';
 import { TAG_MIN, WOCHE_MIN } from '../src/kern/zeit.js';
 
 // Wiederholbarer Zufall (immer dieselbe Folge)
@@ -145,9 +145,9 @@ console.log('Seelsorge-Tests bestanden.');
   assert.ok(stunde >= SEELSORGE.von && stunde < SEELSORGE.bis);
   zeitVorruecken(z, aus(), 600, zufall); assert.equal(z.minuten, t);
   ablehnen(z); schliessen(z);
-  // Über viele Wochen: Stufe 1 (immer ablehnen) etwa alle 2 Wochen eine Anfrage
+  // Über viele Wochen: Stufe 1 (immer ablehnen) etwa 1 Anfrage pro Woche (plus Anfangsschub)
   const wochen = 60, n = laufen(z, aus, wochen * WOCHE_MIN, zufall, () => ablehnen(z));
-  assert.ok(n / wochen > 0.3 && n / wochen < 0.7, `Anfragen pro Woche: ${n / wochen}`);
+  assert.ok(n / wochen > 0.8 && n / wochen < 1.4, `Anfragen pro Woche: ${n / wochen}`);
 }
 {
   // Stufe 5 (immer guter Rat) etwa 3 pro Woche
@@ -155,6 +155,28 @@ console.log('Seelsorge-Tests bestanden.');
   z.seelsorge.punkte = 25;
   const n = laufen(z, aus, 30 * WOCHE_MIN, zufall);
   assert.ok(n / 30 > 2.3 && n / 30 < 3.4, `Anfragen pro Woche: ${n / 30}`);
+}
+{
+  // Anfangsschub: 1. Anfrage doppelt so oft, wird kleiner, ab der 11. normal
+  assert.equal(schub(0), 2); assert.ok(schub(5) > 1 && schub(5) < 2); assert.equal(schub(10), 1); assert.equal(schub(30), 1);
+}
+{
+  // Hinlaufen: erst läuft jemand vom Tor zum Pastor, dann kommt die Anfrage; danach geht er wieder heim
+  const zufall = saat(21), { z, aus } = gemeinde(zufall);
+  for (let i = 0; i < 5000 && !z.seelsorge.gang && !anfrageOffen(z); i++) zeitVorruecken(z, aus(), 10, zufall);
+  const G = z.seelsorge.gang;
+  assert.ok(G && !G.da && !anfrageOffen(z), 'jemand ist unterwegs zum Pastor');
+  const p0 = seelsorgePositionen(z)[0];
+  assert.ok(p0 && p0.y >= 30, 'startet unten am Tor');
+  for (let i = 0; i < 500 && !anfrageOffen(z); i++) zeitVorruecken(z, aus(), 1, zufall);
+  assert.ok(anfrageOffen(z), 'Anfrage kommt bei der Ankunft');
+  const pastor = z.personen.find(p => p.id === 'pastor'), da = seelsorgePositionen(z)[0];
+  assert.ok(Math.hypot(da.x - pastor.x, da.y - pastor.y) <= 1.5, 'steht neben dem Pastor');
+  ablehnen(z); schliessen(z);
+  zeitVorruecken(z, aus(), 5, zufall);
+  assert.ok(seelsorgePositionen(z).length === 1, 'geht wieder heim');
+  zeitVorruecken(z, aus(), 300, zufall);
+  assert.equal(z.seelsorge.gang, null); assert.deepEqual(seelsorgePositionen(z), []);
 }
 console.log('Seelsorge-Zeitablauf-Tests bestanden.');
 
