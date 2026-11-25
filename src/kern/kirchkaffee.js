@@ -7,6 +7,7 @@
 //     Maschine, sie lädt, er geht zurück und gibt den Kaffee – erst dann gibt es 1 € (grüne Zahl) und +5 Haltung.
 //   • Wer beim Schließen noch ansteht, wird fertig bedient.
 //   • Danach setzt er sich mit SITZEN.chance auf einen freien Stuhl (sonst Stehplatz) und gibt beim Gehen Trinkgeld.
+//     Wer sitzt, bleibt ab Ankunft am Stuhl mindestens SITZEN.mindestens Minuten (auch nach Schluss).
 //   • Hat das Kirchkaffee zu und ist die Maschine nicht voll, geht der Ehrenamtliche in den Laden und kauft nach.
 //
 // Jede Figur hat eine „Bewegung“ { pfad, laenge, t0 }: Ab Zeit t0 läuft sie den Pfad entlang. Die Spiellogik wartet
@@ -307,13 +308,15 @@ function uebergeben(z, stationen, s, k, t, zufall) {
   ergebnisEintragen(z, k, 'ja');
   const L = k.lauf && (z.laeufe || []).find(l => l.id === k.lauf);
   const bis = k.lauf ? (L && L.phase === 'kirchkaffee' ? L.beginn + DAUER.gottesdienst + DAUER.kirchkaffee : t) : t + STEHEN_PASSANT;
-  if (bis <= t + EPS) return heimSchicken(z, k, t);
+  // Hinsetzen: ab Ankunft am Stuhl mindestens SITZEN.mindestens Minuten, auch wenn das Kirchkaffee schon zu ist
   const stuhl = freierStuhl(z, s);
   if (stuhl && zufall() < SITZEN.chance) {
-    k.phase = 'sitzt'; k.stehBis = bis; k.stuhl = { x: stuhl.x, y: stuhl.y }; k.trinkgeld = trinkgeldFuer(z, stuhl);
+    k.phase = 'sitzt'; k.stuhl = { x: stuhl.x, y: stuhl.y }; k.trinkgeld = trinkgeldFuer(z, stuhl);
     k.bew = gehen(z, posBei(k.bew, t), stuhl, t);
+    k.stehBis = Math.max(bis, ankunft(k.bew) + SITZEN.mindestens);
     return;
   }
+  if (bis <= t + EPS) return heimSchicken(z, k, t);
   const platz = stehplatz(z, stationen, s);
   if (!platz) return heimSchicken(z, k, t);
   k.phase = 'steht'; k.stehBis = bis;

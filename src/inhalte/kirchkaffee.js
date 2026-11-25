@@ -27,5 +27,6 @@ export const STEHEN_PASSANT = 60;
 export const SITZEN = {
   chance: 0.5,       // 50 % setzen sich hin, wenn ein Stuhl frei ist
   trinkgeld: 1,      // € Grundwert
-  tisch: 1.2         // Stuhl grenzt an einen Tisch (links/rechts/oben/unten); mehrere Tische zählen einmal
+  tisch: 1.2,        // Stuhl grenzt an einen Tisch (links/rechts/oben/unten); mehrere Tische zählen einmal
+  mindestens: 60     // Spielminuten: so lange bleibt ein Gast mindestens sitzen, ab Ankunft am Stuhl – auch nach Schluss (Lukas, 25.11.)
 };

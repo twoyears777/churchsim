@@ -13,6 +13,7 @@ import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
 import { kaffeeVorliebe } from '../src/kern/besucher.js';
 import { schichtHinzufuegen, schichtEntfernen, schichtenVon, offenBei, naechsteSchicht, passantKommt, kirchkaffeeOffen, amTisch, trinkgeldFuer, sitzplaetzeVon, kaffeeKundenPositionen, kaffeeZahlen } from '../src/kern/kirchkaffee.js';
 import { TAG_MIN } from '../src/kern/zeit.js';
+import { LAUFTEMPO, DAUER } from '../src/inhalte/zeit.js';
 
 const SO = 6 * TAG_MIN, MI = 2 * TAG_MIN;
 const saat = s => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
@@ -371,12 +372,32 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
     let k;
     for (let i = 0; i < 600 && !(k = z.kaffee.kunden.find(x => x.id === 'p1' && x.phase === 'sitzt')); i++) bis(z, aus, z.minuten + 1);
     assert.ok(k, 'Passant setzt sich');
-    const gesetzt = z.minuten;
-    assert.ok(Math.abs(k.stehBis - (gesetzt + STEHEN_PASSANT)) <= 1);
+    const amStuhl = k.bew.t0 + k.bew.laenge / LAUFTEMPO;                        // 60 Minuten ab Ankunft am Stuhl (SITZEN.mindestens)
+    assert.ok(Math.abs(k.stehBis - (amStuhl + SITZEN.mindestens)) < 1e-9);
     const vorher = z.wochenbuch.einnahmen.kirchkaffee;
     bis(z, aus, k.stehBis + 1);
     assert.equal(z.wochenbuch.einnahmen.kirchkaffee, vorher + 1);              // Holzstuhl ohne Tisch: 1 €
   }
+  // Spät bedient (25.11.): wer sich setzt, bleibt ab Ankunft am Stuhl mindestens 60 Minuten – auch nach Schluss –
+  // und ist vorher wirklich sitzend zu sehen (Fehler: brach auf, bevor er den Stuhl erreichte)
+  {
+    const { z, aus } = aufbau();
+    const ende = SO + 600 + DAUER.gottesdienst + DAUER.kirchkaffee;
+    let gesehen = false;
+    const geprueft = new Set();
+    for (let t = SO + 600; t < ende + 200; t++) {
+      bis(z, aus, t);
+      if (kaffeeKundenPositionen(z).some(p => p.sitzt)) gesehen = true;
+      for (const k of z.kaffee.kunden) if (k.phase === 'sitzt' && !geprueft.has(k.id)) {
+        geprueft.add(k.id);
+        const amStuhl = k.bew.t0 + k.bew.laenge / LAUFTEMPO;
+        assert.ok(k.stehBis >= amStuhl + SITZEN.mindestens - 1e-9);
+        assert.ok(k.stehBis >= ende - 1e-9 || k.stehBis === amStuhl + SITZEN.mindestens);
+      }
+    }
+    assert.ok(geprueft.size >= 1 && gesehen);
+  }
+  assert.equal(SITZEN.mindestens, 60);
   // Schalterwand
   {
     const { z } = aufbau();
