@@ -99,9 +99,29 @@ export function grenzeErreicht(z, raum, art) {
   const typ = MOEBEL.find(m => m.id === art);
   return !!(raum && typ && typ.max && moebelImRaum(z, raum, art).length >= typ.max);
 }
-// Was die Möbel eines Raums bewirken. musiker = ein Ehrenamtlicher ist im Raum.
-// haltung: + pro Besucher und Gottesdienst; faktor: Kollekte × (Altar, Grünpflanzen, Musik)
-export function raumAusstattung(z, raum, musiker = false) {
+// ---- Musik-Level der Ehrenamtlichen ----
+// Erfahrung steht an der Person (person.musikErfahrung). Level 0 … MUSIK.maxLevel.
+export function musikLevel(person) {
+  return Math.min(MUSIK.maxLevel, Math.floor(((person && person.musikErfahrung) || 0) / MUSIK.erfahrungProLevel));
+}
+// Bonus des Lobpreisteams bei diesem Level (0.05 = 5 %), auf ganze Prozent gerundet
+export function musikBonus(level) { return Math.round((MUSIK.start + MUSIK.proLevel * level) * 100) / 100; }
+// Nach einem Auftritt: etwas Erfahrung dazu (beim höchsten Level bleibt es stehen)
+export function musikErfahrungDazu(person) {
+  const max = MUSIK.maxLevel * MUSIK.erfahrungProLevel;
+  person.musikErfahrung = Math.min(max, (person.musikErfahrung || 0) + MUSIK.erfahrungProAuftritt);
+}
+// Stand fürs Anzeigen (Karte des Ehrenamtlichen): Level und Fortschritt bis zum nächsten Level (0 … 1)
+export function musikStand(person) {
+  const level = musikLevel(person), e = (person && person.musikErfahrung) || 0;
+  const fortschritt = level >= MUSIK.maxLevel ? 1 : (e - level * MUSIK.erfahrungProLevel) / MUSIK.erfahrungProLevel;
+  return { level, maxLevel: MUSIK.maxLevel, fortschritt };
+}
+
+// Was die Möbel eines Raums bewirken. musikerLevel = Musik-Level des Ehrenamtlichen, der die Gitarre spielt (null = keiner).
+// haltung: + pro Besucher und Gottesdienst; faktor: Kollekte × (Altar, Grünpflanzen, Lobpreisteam)
+// musikBonus: Lobpreisteam bringt Kollekte × (1 + musikBonus) und Haltung + musikBonus × aktuelle Haltung
+export function raumAusstattung(z, raum, musikerLevel = null) {
   let haltung = 0, faktor = 1, gitarre = false;
   const teile = [];
   for (const typ of MOEBEL.filter(m => m.wirkung)) {
@@ -113,7 +133,8 @@ export function raumAusstattung(z, raum, musiker = false) {
     teile.push({ id: typ.id, name: typ.name, anzahl, max: typ.max || null,
       haltung: (typ.wirkung.haltung || 0) * anzahl, kollekte: typ.wirkung.kollekte ? typ.wirkung.kollekte ** anzahl : null });
   }
-  const musik = gitarre && musiker;
-  if (musik) faktor *= MUSIK.kollekte;
-  return { haltung, faktor, gitarre, musik, musikFaktor: MUSIK.kollekte, teile };
+  const musik = gitarre && musikerLevel !== null && musikerLevel !== false;
+  const bonus = musik ? musikBonus(musikerLevel) : 0;
+  if (musik) faktor *= 1 + bonus;
+  return { haltung, faktor, gitarre, musik, musikLevel: musik ? musikerLevel : null, musikBonus: bonus, teile };
 }

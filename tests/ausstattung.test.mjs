@@ -6,7 +6,8 @@ import { NEUGIER, PLAKAT } from '../src/inhalte/ort.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose } from '../src/kern/ablauf.js';
-import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, grenzeErreicht } from '../src/kern/moebel.js';
+import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, grenzeErreicht, musikLevel, musikBonus, musikErfahrungDazu, musikStand } from '../src/kern/moebel.js';
+import { MUSIK } from '../src/inhalte/moebel.js';
 import { versetzen, personHinzufuegen, eingesetztIn } from '../src/kern/personen.js';
 import { neugierChance } from '../src/kern/ort.js';
 import { raten, schliessen, anfrageOffen } from '../src/kern/seelsorge.js';
@@ -55,7 +56,7 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   assert.strictEqual(z.letzterGottesdienst.besucher, 10);
   assert.strictEqual(kollekte(z), 10);
 }
-// Beispiel aus dem Spielprinzip: Polsterstühle, Altar, Musiker → 10 × 1,2 × 1,2 × 1,1 = 15,84, am Sonntagvormittag × 2 = 31,68 → 32 €
+// Beispiel aus dem Spielprinzip: Polsterstühle, Altar, Lobpreisteam Level 0 → 10 × 1,2 × 1,2 × 1,05 = 15,12, am Sonntagvormittag × 2 = 30,24 → 30 €
 {
   const zufall = saat(3), z = gemeinde(zufall);
   z.konto = 1000;
@@ -66,9 +67,10 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   versetzen(z, ea, G.x + 13, G.y + 6);
   assert.ok(eingesetztIn(z, aus(z), ea), 'Ehrenamtlicher mit Gitarre ist im Gottesdienstraum eingesetzt');
   const p = prognose(z, aus(z));
-  assert.ok(Math.abs(p.kollekte - 31.68) < 1e-9, 'Prognose rechnet Stuhl, Altar und Musik mit');
+  assert.ok(Math.abs(p.kollekte - 30.24) < 1e-9, 'Prognose rechnet Stuhl, Altar und Lobpreisteam mit');
   bisNachGottesdienst(z, zufall);
-  assert.strictEqual(kollekte(z), 32);
+  assert.strictEqual(kollekte(z), 30);
+  assert.strictEqual(ea.musikErfahrung, MUSIK.erfahrungProAuftritt, 'Der Musiker bekommt nach dem Auftritt etwas Erfahrung');
   // Polsterstuhl +2 Haltung: 100 bleibt 100 (Obergrenze) – Haltung testen wir unten mit niedrigerem Wert
 }
 // Ohne Gitarre ist der Ehrenamtliche im Gottesdienstraum nicht eingesetzt und es gibt keine Musik
@@ -78,10 +80,39 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   versetzen(z, ea, G.x + 13, G.y + 6);
   assert.strictEqual(eingesetztIn(z, aus(z), ea), null);
   const r = raumBei(z, G.x + 5, G.y + 5);
-  assert.strictEqual(raumAusstattung(z, r, true).musik, false);
+  assert.strictEqual(raumAusstattung(z, r, 0).musik, false);
   moebelSetzen(z, 'gitarre', G.x + 12, G.y + 6, G.x + 12, G.y + 6);
-  assert.strictEqual(raumAusstattung(z, r, true).musik, true);
-  assert.ok(Math.abs(raumAusstattung(z, r, true).faktor - 1.1) < 1e-9);
+  assert.strictEqual(raumAusstattung(z, r).musik, false, 'Gitarre ohne Ehrenamtlichen bringt nichts');
+  assert.strictEqual(raumAusstattung(z, r).gitarre, true);
+  assert.strictEqual(raumAusstattung(z, r, 0).musik, true);
+  assert.ok(Math.abs(raumAusstattung(z, r, 0).faktor - 1.05) < 1e-9, 'Level 0: +5 %');
+  assert.ok(Math.abs(raumAusstattung(z, r, 5).faktor - 1.10) < 1e-9, 'Level 5: +10 %');
+}
+// Musik-Level: startet bei 0, ca. 50 Auftritte je Level, höchstens Level 10 (+15 %)
+{
+  const p = {};
+  assert.strictEqual(musikLevel(p), 0);
+  for (let i = 0; i < 49; i++) musikErfahrungDazu(p);
+  assert.strictEqual(musikLevel(p), 0);
+  musikErfahrungDazu(p);
+  assert.strictEqual(musikLevel(p), 1, 'nach 50 Auftritten Level 1');
+  assert.ok(Math.abs(musikStand(p).fortschritt) < 1e-9);
+  for (let i = 0; i < 1000; i++) musikErfahrungDazu(p);
+  assert.strictEqual(musikLevel(p), 10);
+  assert.strictEqual(musikStand(p).fortschritt, 1);
+  assert.strictEqual(musikBonus(10), 0.15);
+  assert.strictEqual(musikBonus(0), 0.05);
+}
+// Lobpreisteam: Haltung + 5 % der aktuellen Haltung (bei 50: +3, gerundet), zusätzlich zu Sitzplatz und Gottesdienst
+{
+  const zufall = saat(9), z = gemeinde(zufall);
+  z.besucher = z.besucher.slice(0, 1);
+  moebelSetzen(z, 'gitarre', G.x + 12, G.y + 6, G.x + 12, G.y + 6);
+  const ea = personHinzufuegen(z, { name: 'Erna Musik', kuerzel: 'E', art: 'ehrenamt' });
+  versetzen(z, ea, G.x + 13, G.y + 6);
+  for (let w = 0; w < 20 && !z.besucher[0].besuche; w++) { z.besucher[0].zufriedenheit = 50; bisNachGottesdienst(z, zufall); }
+  assert.strictEqual(z.besucher[0].besuche, 1);
+  assert.strictEqual(z.besucher[0].zufriedenheit, 50 + 5 + 5 + Math.round(50 * 0.05));
 }
 // Haltung: Kanzel +2, Blumen +1 je Stück (höchstens 4 zählen), Stuhlstufe 3 +4; dazu die üblichen +5 Sitzplatz, +5 Gottesdienst
 {

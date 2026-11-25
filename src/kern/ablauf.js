@@ -15,7 +15,7 @@ import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '..
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
-import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe } from './moebel.js';
+import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, musikLevel, musikErfahrungDazu } from './moebel.js';
 import { buchen, summe } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { werKommt, kommChance, besuchChance, lobpreisVorliebe, kaffeeVorliebe, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden } from './besucher.js';
@@ -83,6 +83,8 @@ export function gottesdienstRaeume(z, raeume) {
     const hauptamt = imRaum.filter(p => daten(p).art === 'hauptamt');
     // Musiker: Ehrenamtliche im Raum, die dort eingesetzt sind (das geht nur, wenn eine Gitarre im Raum steht)
     const musiker = imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r);
+    // Eine Gitarre = ein Lobpreisteam: Es spielt der Musiker mit dem höchsten Musik-Level.
+    const spieler = musiker.reduce((best, p) => !best || musikLevel(p) > musikLevel(best) ? p : best, null);
     const hat = art => moebelImRaum(z, r, art).length > 0;
     const programm = programmVon(z, r).map((e, i) => {
       const v = VERANSTALTUNGEN.find(x => x.id === e.art) || null, frei = PLAETZE[i].braucht.every(hat);
@@ -91,7 +93,7 @@ export function gottesdienstRaeume(z, raeume) {
       return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, leitung, fehlt, bereit: !fehlt };
     });
     return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt,
-      leitung: hauptamt[0] || null, musiker, ausstattung: raumAusstattung(z, r, musiker.length > 0), bereit: programm.some(p => p.bereit) };
+      leitung: hauptamt[0] || null, musiker, spieler, ausstattung: raumAusstattung(z, r, spieler ? musikLevel(spieler) : null), bereit: programm.some(p => p.bereit) };
   });
 }
 // Räume, in denen Veranstaltung 1 als Gottesdienst stattfinden kann (für Tests und Übersichten)
@@ -144,8 +146,8 @@ export function sitzplaetze(liste) {
 function platzWirkung(z, raeume, sitz, liste) {
   const nr = raeume.gruppe[idx(z, sitz.x, sitz.y)], g = liste.find(x => x.raum.nr === nr);
   const m = moebelBei(z, sitz.x, sitz.y), st = m && m.art === 'stuhl' ? stuhlStufe(m) : stuhlStufe(null);
-  const a = g ? g.ausstattung : { faktor: 1, haltung: 0 };
-  return { kollekte: KOLLEKTE_PRO_BESUCHER * st.kollekte * a.faktor, haltung: st.haltung + a.haltung };
+  const a = g ? g.ausstattung : { faktor: 1, haltung: 0, musikBonus: 0 };
+  return { kollekte: KOLLEKTE_PRO_BESUCHER * st.kollekte * a.faktor, haltung: st.haltung + a.haltung, musikHaltung: a.musikBonus || 0 };
 }
 
 // ---- Zeit vorrücken ----
@@ -290,7 +292,10 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   // Dazu merkt sich jeder Gast, wie viel Haltung ihm Stuhl, Kanzel und Blumen bringen (wird am Ende gutgeschrieben).
   const liste = gottesdienstRaeume(z, raeume);
   let summeKollekte = 0;
-  for (const g of sitzend) { const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte; g.bonus = w.haltung; }
+  for (const g of sitzend) { const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte; g.bonus = w.haltung; g.musikHaltung = w.musikHaltung; }
+  // Lobpreisteam: Wer die Gitarre gespielt hat, bekommt etwas Musik-Erfahrung.
+  const info = terminInfo(z, raeume, L);
+  if (info && info.g.ausstattung.musik && info.g.spieler) musikErfahrungDazu(info.g.spieler);
   const betrag = Math.round(summeKollekte * zeitFaktor(L.plan));
   if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag);
   bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
@@ -318,7 +323,9 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     if (!b) continue;
     if (!g.sitz) { zufriedenheitAendern(b, AENDERUNG.heimgeschickt); continue; }
     anwesend.push(b); b.besuche++; b.zuletzt = L.woche; b.besuchtWoche = L.woche;
-    zufriedenheitAendern(b, AENDERUNG.sitzplatz + haltungFuer(L.art, b) + (g.bonus || 0));   // bonus: Stuhl, Kanzel, Blumen
+    // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: + musikHaltung (z. B. 5 %) der aktuellen Haltung
+    const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0));
+    zufriedenheitAendern(b, AENDERUNG.sitzplatz + haltungFuer(L.art, b) + (g.bonus || 0) + musik);
     if (g.kaffee && g.kaffee.ergebnis === 'keinPlatz') zufriedenheitAendern(b, AENDERUNG.kaffeeNein);   // sonst: beim Bedienen (kirchkaffee.js)
     g.zufriedenheit = b.zufriedenheit;
   }

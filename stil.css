@@ -126,6 +126,7 @@ table.menschen tr[data-mensch] { cursor: pointer; }
 table.menschen tr[data-mensch]:hover td { background: #ebe5d6; }
 .inhalt button.sortieren { min-height: 32px; padding: 0 6px; border: none; background: none; font-weight: 600; font-size: 13px; }
 .inhalt button.sortieren.aktiv { color: #2d69be; }
+.ausgegraut { color: #9a9385; }
 .balken.mini { width: 70px; height: 8px; margin: 0; }
 .inhalt .staerker { color: #2b2a27; font-weight: 600; }
 .inhalt p.ok { color: #2e7d32; } .inhalt p.fehlt { color: #b3261e; }

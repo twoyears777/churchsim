@@ -313,7 +313,10 @@ export const TEXTE = {
     haltung: n => `Haltung +${n}`,
     kollekte: f => `Kollekte ×${f}`,
     anzahl: (n, max) => `${n}/${max}`,
-    musik: f => `Musik: Kollekte ×${f}`,
+    // Lobpreisteam (Texte von Lukas gewählt am 25.11.); p = Prozent, level = Musik-Level des Ehrenamtlichen
+    lobpreisteam: (p, level) => `Lobpreisteam (1×) – Kollekte +${p} %, Haltung +${p} % (Musik-Level ${level})`,
+    keinLobpreisteam: 'Lobpreisteam (0×) – kein Musiker eingeteilt',
+    musikLevel: level => `Musik: Level ${level}`,
     musiker: 'Musiker',
     ohneGitarre: 'ohne Gitarre keine Musik'
   },

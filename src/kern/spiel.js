@@ -11,7 +11,7 @@ import { neuerZustand, LEER, WAND, TUER, idx, erkenneRaeume, pruefeRaum, raumTyp
 import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
-  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon } from './moebel.js';
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen } from './finanzen.js';
@@ -453,7 +453,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         moeglich: moeglicheVeranstaltungen(r.typ).map(x => ({ id: x.id, name: x.name })),
         bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre') },
         // Was die Möbel im Raum bringen (Kanzel, Altar, Blumen, Grünpflanzen, Gitarre) und ob Musik gemacht wird
-        ausstattung: a ? { teile: a.teile, musik: a.musik, musikFaktor: a.musikFaktor } : null,
+        ausstattung: a ? { teile: a.teile, gitarre: a.gitarre, musik: a.musik, musikBonus: a.musikBonus, musikLevel: a.musikLevel } : null,
         slots: SLOTS.map(s => ({ ...s })),
         // Veranstaltung 1, 2: Art, Zeit, ob der Platz frei ist, was fehlt, Prognose. nutzbar: lässt sich einstellen.
         programm: programm.map(p => ({ platz: p.platz, art: p.art, tag: p.tag, slot: p.slot, frei: p.frei, fehlt: p.fehlt, bereit: p.bereit,
@@ -506,7 +506,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const p = z.personen.find(x => x.id === id), d = p && daten(p);
       if (!d) return null;
       const r = eingesetztIn(z, raeume, p);
-      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: id === 'pastor' ? stufeInfo(z) : null };
+      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: id === 'pastor' ? stufeInfo(z) : null,
+        musik: d.art === 'ehrenamt' ? musikStand(p) : null };
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.

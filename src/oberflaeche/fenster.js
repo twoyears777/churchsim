@@ -52,6 +52,11 @@ function personenKarte(f) {
   const p = ui.spiel.personInfo(f.id);
   if (!p) return null;
   let skills = '<p class="leer">Skills folgen später</p>';
+  if (p.musik) {
+    // Musik-Level des Ehrenamtlichen mit Fortschrittsbalken bis zum nächsten Level
+    skills = `<p class="unter staerker">${TEXTE.ausstattung.musikLevel(p.musik.level)}</p>
+      <div class="balken"><span style="width:${Math.round(p.musik.fortschritt * 100)}%"></span></div>`;
+  }
   if (p.seelsorge) {
     const s = p.seelsorge, T = TEXTE.seelsorge.karte;
     skills = `<p class="unter staerker">${T.titel(s.stufe)}</p>
@@ -84,7 +89,8 @@ function raumFenster(f) {
     const extra = id => id !== 'gottesdienst' || !au ? [] : [
       ...au.teile.filter(t => t.haltung || t.kollekte).map(t => `${t.name}${t.max > 1 ? ' ' + A.anzahl(t.anzahl, t.max) : ''}: ${
         [t.haltung && A.haltung(t.haltung), t.kollekte && A.kollekte(faktor(t.kollekte))].filter(Boolean).join(' · ')}`),
-      ...(au.musik ? [A.musik(faktor(au.musikFaktor))] : [])];
+      ...(au.musik ? [A.lobpreisteam(Math.round(au.musikBonus * 100), au.musikLevel)]
+        : au.gitarre ? [`<span class="ausgegraut">${A.keinLobpreisteam}</span>`] : [])];
     const kachel = (id, name, k) => `<button class="kachel${(p.art || '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}">
         <b>${name}</b>
         <span class="klein">${TEXTE.bringt}</span><ul>${[...k.bringt, ...extra(id)].map(t => `<li>${t}</li>`).join('')}</ul>

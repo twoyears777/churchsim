@@ -33,5 +33,8 @@ export const STUHL_STUFEN = [
   { stufe: 4, name: 'Ehrenstuhl', upgrade: 150, haltung: 6, kollekte: 1.6 }
 ];
 
-// Ein Ehrenamtlicher im Gottesdienstraum spielt Musik, wenn eine Gitarre im Raum steht (ohne Musik-Skill).
-export const MUSIK = { kollekte: 1.1 };
+// Lobpreisteam (Spielprinzip vom 25.11., von Lukas festgelegt): Gitarre + Ehrenamtlicher, der sie spielt.
+// Die Gitarre allein bringt nichts. Wirkung pro Lobpreisteam: Kollekte + bonus und Haltung + bonus (vom aktuellen Wert jedes Besuchers).
+// start: Bonus bei Musik-Level 0 (0.05 = 5 %); proLevel: dazu je Level; maxLevel: höchstes Level.
+// Erfahrung gibt es nur durchs Musikmachen in einer Veranstaltung: erfahrungProAuftritt, erfahrungProLevel → ca. 1 Level je 50 Auftritte.
+export const MUSIK = { start: 0.05, proLevel: 0.01, maxLevel: 10, erfahrungProAuftritt: 2, erfahrungProLevel: 100 };
