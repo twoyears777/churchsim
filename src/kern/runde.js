@@ -42,6 +42,7 @@ export function wocheBeenden(z, raeume) {
     angebote,
     neueEhrenamtliche: 0
   };
+  z.letzteWoche = { besucher: besucherGesamt };   // für die Anzeige „Besucher letzte Woche“
   z.woche++;
   return rueckblick;
 }

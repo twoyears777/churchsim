@@ -108,6 +108,10 @@ function anzeigenAktualisieren() {
   }
   $('kontostand').textContent = euro(z.konto);
   $('kontoEditor').textContent = euro(z.konto);
+  $('kontoKurz').textContent = euro(z.konto);
+  const letzte = z.letzteWoche ? z.letzteWoche.besucher : null;
+  $('besucherLetzteWoche').textContent = letzte === null ? '–' : letzte;
+  $('besucherKurz').textContent = letzte === null ? '–' : letzte;
   const f = finanzPrognose(z, raeume);
   $('progEinnahmen').textContent = euro(f.einnahmen);
   $('progAusgaben').textContent = euro(f.ausgaben);

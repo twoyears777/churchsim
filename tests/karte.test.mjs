@@ -141,6 +141,7 @@ import { finanzPrognose } from '../src/kern/runde.js';
   const rb = wocheBeenden(z7, aus());
   assert.deepEqual(rb.finanzen, { einnahmen: { rueckerstattung: 5, kollekte: 9 }, ausgaben: { moebel: 50 } });
   assert.equal(z7.konto, 14); assert.equal(rb.kontostand, 14);
+  assert.deepEqual(z7.letzteWoche, { besucher: 9 });
   assert.deepEqual(z7.wochenbuch, { einnahmen: {}, ausgaben: {} });              // neue Woche, leeres Buch
 }
 console.log('Finanz-Tests bestanden.');

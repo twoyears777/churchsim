@@ -84,3 +84,6 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .kontoEditor b { font-variant-numeric: tabular-nums; }
 .hinweis.warnung { color: #ffb4a8; }
 .rueckblick td.einzug { padding-left: 12px; }
+/* Zahl neben der Überschrift nur bei zugeklapptem Bereich */
+.seitenleiste summary .zugeklappt { display: none; float: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.seitenleiste details:not([open]) summary .zugeklappt { display: inline; }
