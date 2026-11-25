@@ -311,7 +311,7 @@ export const TEXTE = {
 
   // Editor
   hinweise: {
-    keinWerkzeug: 'ENTWURF: Wähle unten aus, was du bauen möchtest.',   // nach Rechtsklick: nichts gewählt (Entwurf von Claude)
+    keinWerkzeug: 'Wähle unten aus, was du bauen möchtest.',   // nach Rechtsklick: nichts gewählt (Entwurf von Claude, von Lukas freigegeben 25.11.)
     stuhl: 'Tippe, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
     kaffeemaschine: 'Tippe, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
     theke: 'Tippe, um ein Thekenteil aufzustellen (fürs Kirchkaffee).',
