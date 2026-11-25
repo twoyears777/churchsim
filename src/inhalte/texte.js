@@ -1,6 +1,9 @@
 // Inhaltsdatei: sichtbare Texte, die mit 0.1.2 neu dazugekommen sind.
 // ENTWÜRFE von Claude – Lukas formuliert sie selbst, seine Fassung wird hier übernommen.
 // Zahlen im deutschen Format: 1.05 → „1,05“; Geld: 1.07 → „1,07 €“ (stellen = Nachkommastellen, 0 bei glatten Beträgen)
+import { BAUKOSTEN, FENSTER } from './bau.js';
+import { MOEBEL } from './moebel.js';
+const foyerHaltung = id => MOEBEL.find(m => m.id === id).foyer.haltung;   // Zahlen aus den Inhaltsdateien (25.11.): ändern sie sich dort, stimmen die Hinweise mit
 const zahl = n => n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 const geld = (n, stellen = 2) => n.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: 2 }) + ' €';
 export const TEXTE = {
@@ -426,33 +429,33 @@ export const TEXTE = {
   // Editor
   hinweise: {
     keinWerkzeug: 'Wähle unten aus, was du bauen möchtest.',   // nach Rechtsklick: nichts gewählt (Entwurf von Claude, von Lukas freigegeben 25.11.)
-    stuhl: 'Tippe, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
-    kaffeemaschine: 'Tippe, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
-    theke: 'Tippe, um ein Thekenteil aufzustellen (fürs Kirchkaffee).',
+    stuhl: 'Klicke, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
+    kaffeemaschine: 'Klicke, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
+    theke: 'Klicke, um ein Thekenteil aufzustellen (fürs Kirchkaffee).',
     tisch: 'Stühle direkt daneben bringen mehr Trinkgeld (×1,2).',   // Lukas, 25.11.
     // ---- Ausstattung des Gottesdienstraums (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
-    kanzel: 'Tippe, um eine Kanzel aufzustellen (Gottesdienstraum, 1 pro Raum).',
-    altar: 'Tippe, um einen Altar aufzustellen (Gottesdienstraum, 1 pro Raum).',
-    blumen: 'Tippe, um Blumen aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
-    gruenpflanze: 'Tippe, um eine Grünpflanze aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
+    kanzel: 'Klicke, um eine Kanzel aufzustellen (Gottesdienstraum, 1 pro Raum).',
+    altar: 'Klicke, um einen Altar aufzustellen (Gottesdienstraum, 1 pro Raum).',
+    blumen: 'Klicke, um Blumen aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
+    gruenpflanze: 'Klicke, um eine Grünpflanze aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
     // Instrumente (Muster von Lukas freigegeben 25.11.): jedes braucht einen eigenen Ehrenamtlichen
-    gitarre: 'Tippe, um eine Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der sie spielt.',
-    keyboard: 'Tippe, um ein Keyboard aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der es spielt.',
-    schlagzeug: 'Tippe, um ein Schlagzeug aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der es spielt.',
-    bass: 'Tippe, um einen Bass aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der ihn spielt.',
-    egitarre: 'Tippe, um eine E-Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der sie spielt.',
-    mikrofon: 'Tippe, um ein Mikrofon aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der singt.',
+    gitarre: 'Klicke, um eine Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der sie spielt.',
+    keyboard: 'Klicke, um ein Keyboard aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der es spielt.',
+    schlagzeug: 'Klicke, um ein Schlagzeug aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der es spielt.',
+    bass: 'Klicke, um einen Bass aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der ihn spielt.',
+    egitarre: 'Klicke, um eine E-Gitarre aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der sie spielt.',
+    mikrofon: 'Klicke, um ein Mikrofon aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht einen eigenen Ehrenamtlichen, der singt.',
     // ---- Baukosten, Fenster, Foyer (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
-    wand: 'Zieh ein Rechteck, um Wände zu bauen. Jedes neue Wandstück kostet 5 €.',
-    fenster: 'Tippe auf eine Wand, um ein Fenster einzusetzen (10 €) oder wieder zu entfernen. Jedes Fenster bringt +1 Haltung im Raum.',
-    garderobe: 'Tippe, um eine Garderobe aufzustellen (wirkt im Foyer: +2 Haltung für jeden, der hindurchläuft).',
-    infotisch: 'Tippe, um einen Infotisch aufzustellen (wirkt im Foyer: +2 Haltung für jeden, der hindurchläuft).'
+    wand: `Zieh ein Rechteck, um Wände zu bauen. Jedes neue Wandstück kostet ${BAUKOSTEN.wand} €.`,
+    fenster: `Klicke auf eine Wand, um ein Fenster einzusetzen (${BAUKOSTEN.fenster} €) oder wieder zu entfernen. Jedes Fenster bringt +${FENSTER.haltung} Haltung im Raum.`,
+    garderobe: `Klicke, um eine Garderobe aufzustellen (wirkt im Foyer: +${foyerHaltung('garderobe')} Haltung für jeden, der hindurchläuft).`,
+    infotisch: `Klicke, um einen Infotisch aufzustellen (wirkt im Foyer: +${foyerHaltung('infotisch')} Haltung für jeden, der hindurchläuft).`
   },
   // ---- Baukosten, Fenster, Foyer (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
   bauGeld: {
     wand: (kosten, stuecke) => `Nicht genug Geld für diese Wände (${stuecke} Stück, ${kosten}).`,
     fenster: preis => `Nicht genug Geld für ein Fenster (${preis}).`,
-    vorschau: (stuecke, kosten) => `${stuecke} Wandstücke · ${kosten}`
+    vorschau: (stuecke, kosten) => `${stuecke} ${stuecke === 1 ? 'Wandstück' : 'Wandstücke'} · ${kosten}`
   },
   foyerFenster: {
     info: 'Wer auf dem Weg zu seinem Platz durchs Foyer läuft, bekommt am Ende der Veranstaltung Haltung dazu.',
@@ -524,17 +527,17 @@ export const TEXTE = {
   },
   hinweiseAussen: {
     strasse: 'Zieh ein Rechteck, um Straße zu bauen. Die Straße muss im Tor beginnen.',
-    parkplatz: 'Tippe, um einen Parkplatz zu bauen (R dreht ihn). Er zählt, wenn er an einer Straße liegt, die bis zum Tor führt.',
+    parkplatz: 'Klicke, um einen Parkplatz zu bauen (R dreht ihn). Er zählt, wenn er an einer Straße liegt, die bis zum Tor führt.',
     bushaltestelle: 'Die Bushaltestelle steht am Gehweg neben dem Tor.',
     // ---- Wege und Außendeko (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
     weg: 'Zieh ein Rechteck, um einen Weg anzulegen. Wege machen das Gelände schöner.',
-    busch: 'Tippe, um einen Busch zu pflanzen. Außendeko macht Passanten neugieriger.',
-    hecke: 'Tippe, um ein Stück Hecke zu pflanzen.',
-    blumenbeet: 'Tippe, um ein Blumenbeet anzulegen.',
-    bank: 'Tippe, um eine Bank aufzustellen.',
-    laterne: 'Tippe, um eine Laterne aufzustellen.',
-    baum: 'Tippe, um einen Baum zu pflanzen (2 × 2 Kästchen).',
-    schaukasten: 'Tippe, um einen Schaukasten aufzustellen. In der Spielansicht wählst du per Klick, wofür er wirbt.'
+    busch: 'Klicke, um einen Busch zu pflanzen. Außendeko macht Passanten neugieriger.',
+    hecke: 'Klicke, um ein Stück Hecke zu pflanzen.',
+    blumenbeet: 'Klicke, um ein Blumenbeet anzulegen.',
+    bank: 'Klicke, um eine Bank aufzustellen.',
+    laterne: 'Klicke, um eine Laterne aufzustellen.',
+    baum: 'Klicke, um einen Baum zu pflanzen (2 × 2 Kästchen).',
+    schaukasten: 'Klicke, um einen Schaukasten aufzustellen. In der Spielansicht wählst du per Klick, wofür er wirbt.'
   },
   aussenMeldung: {
     innen: 'Straße und Parkplätze gehören nach draußen, nicht in einen Raum.',

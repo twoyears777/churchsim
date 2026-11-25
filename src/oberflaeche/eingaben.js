@@ -7,11 +7,11 @@ import { hauptmenueEinrichten, menueOeffnen, menueEscape } from './hauptmenue.js
 
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
-  tuer: 'Tippe auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
+  tuer: 'Klicke auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
   ...TEXTE.hinweise,
   ...TEXTE.hinweiseAussen,
   abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
-  raum: 'Tippe in einen Raum, um seine Funktion festzulegen.'
+  raum: 'Klicke in einen Raum, um seine Funktion festzulegen.'
 };
 const hinweisFuer = id => HINWEISE[id || 'keinWerkzeug'];   // ohne gewähltes Werkzeug: eigener Hinweis
 const leinwand = $('karte');
