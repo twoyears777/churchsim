@@ -3,6 +3,28 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.8
+
+**Gottesdienst**
+- Neue Instrumente: Keyboard, Schlagzeug, Bass, E-Gitarre und Mikrofon. Jedes Instrument braucht einen eigenen Ehrenamtlichen, der es spielt – je größer die Band, desto mehr Kollekte und Haltung
+- Ob Besucher Lobpreis mögen, zählt jetzt auch beim normalen Gottesdienst: Mit Lobpreisteam kommen die Fans eher, ohne Lobpreisteam die Muffel
+
+**Finanzen**
+- Neu: Dauerspender. Wer eine Haltung ab 80 hat, spendet ab sofort oft jeden Montag – mit 5 € fängt es an, jede Woche kommt 1 € dazu
+- Im Finanz-Fenster siehst du alle Dauerspender und was sie geben
+
+**Gelände**
+- Neu unter Außen: Wege, Büsche, Hecken, Blumenbeete, Bänke, Laternen und Bäume. Ein schönes Gelände macht Passanten neugierig auf deine Gemeinde
+- Neu: der Schaukasten. Häng dort eine Veranstaltung aus, damit mehr Passanten hereinschauen
+
+**Anzeige**
+- Oben rechts steht jetzt das Datum statt der Woche
+- Darunter siehst du, wann das nächste Event ansteht
+
+**Bauen**
+- Ein Rechtsklick hebt die Bauauswahl auf
+- Fehler behoben: Anbauen an einen Gottesdienstraum hat die eingestellten Veranstaltungen und die Kirchkaffee-Zeiten gelöscht
+
 ## 0.1.7
 
 **Hauptmenü**
