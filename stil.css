@@ -217,3 +217,23 @@ p .farbe, .kirchenjahr-zeiten .farbe { display: inline-block; width: 14px; heigh
 .kirchenjahr-zeiten li { margin-bottom: 6px; }
 .kachel .feiertag { color: #6b665b; font-size: 13px; }
 .kacheln + p.unter { margin-top: 6px; }
+
+/* Hauptmenü – Holz und Messing (Lukas, 25.11.2026), Karte dahinter unscharf */
+.hauptmenue { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+  background: rgba(25,18,10,.35); backdrop-filter: blur(5px) brightness(.7); -webkit-backdrop-filter: blur(5px) brightness(.7); }
+.hauptmenue[hidden] { display: none; }
+.menue-schild { min-width: 320px; max-width: 420px; padding: 28px 34px 32px; text-align: center; border-radius: 14px;
+  background: linear-gradient(180deg, #7a5532 0%, #5e3f22 55%, #4b311a 100%);
+  border: 3px solid #c9a24a; box-shadow: inset 0 0 0 2px #3a2614, inset 0 2px 0 4px rgba(255,220,150,.12), 0 14px 40px rgba(0,0,0,.55);
+  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', 'Times New Roman', serif; }
+.menue-titel { margin: 0 0 22px; font-size: 40px; font-weight: normal; letter-spacing: 1px; color: #e9c873;
+  text-shadow: 0 2px 0 #3a2614, 0 0 12px rgba(233,200,115,.25); }
+.menue-knoepfe { display: flex; flex-direction: column; gap: 12px; }
+.menue-knoepfe[hidden] { display: none; }
+.menue-knopf { min-height: 50px; font-family: inherit; font-size: 20px; color: #f3e6c4; cursor: pointer; border-radius: 10px;
+  background: linear-gradient(180deg, #8d6640 0%, #6b4a2b 100%); border: 2px solid #c9a24a;
+  box-shadow: inset 0 1px 0 rgba(255,230,170,.25), 0 3px 0 #3a2614; transition: filter .1s, transform .1s; }
+.menue-knopf:hover:not(:disabled), .menue-knopf:focus-visible { filter: brightness(1.15); outline: none; border-color: #f0cf7a; }
+.menue-knopf:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,230,170,.25), 0 1px 0 #3a2614; }
+.menue-knopf:disabled { cursor: default; color: #a8916c; border-color: #8a7444; filter: saturate(.4); opacity: .7; }
+.menue-frage { margin: 0 0 6px; font-size: 17px; line-height: 1.45; color: #f3e6c4; }

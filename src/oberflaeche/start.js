@@ -65,6 +65,7 @@ function schleife(t) {
   const sekunden = (t - letzteZeit) / 1000;
   letzteZeit = t;
   const hilfeOffen = !!ui.fenster && ui.fenster.art === 'hilfe';   // Hilfe offen: dem Spiel keine Zeit melden → Zeit steht
+  if (ui.menueOffen) { requestAnimationFrame(schleife); return; }   // Hauptmenü offen: Zeit steht, keine Dialoge
   if (!hilfeOffen && ui.spiel.tick(sekunden)) {
     malen();
     if (t - letztesSpeichern > 2000) { letztesSpeichern = t; speichern(ui.spiel); }

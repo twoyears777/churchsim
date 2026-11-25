@@ -2,3 +2,4 @@
 const SPEICHER = 'churchsim-editor';
 export function ladenText() { try { return localStorage.getItem(SPEICHER); } catch (e) { return null; } }
 export function speichern(spiel) { try { localStorage.setItem(SPEICHER, spiel.speicherText()); } catch (e) {} }
+export function hatSpielstand() { try { return localStorage.getItem(SPEICHER) !== null; } catch (e) { return false; } }

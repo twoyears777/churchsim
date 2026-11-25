@@ -10,9 +10,16 @@ export const TEXTE = {
   kontostand: 'Kontostand',
   bekanntheit: 'Bekanntheit',
 
-  // Zurücksetzen (Test-Werkzeug)
-  zuruecksetzen: 'Spiel auf Start zurücksetzen',
-  zuruecksetzenSicher: 'Wirklich zurücksetzen?',
+  // Hauptmenü (Texte von Lukas freigegeben, 25.11.2026)
+  hauptmenue: {
+    titel: 'Churchsim',
+    weiterspielen: 'Weiterspielen',
+    neuesSpiel: 'Neues Spiel',
+    rueckfrage: 'Neues Spiel starten? Der bisherige Spielstand wird überschrieben.',
+    neuStarten: 'Neu starten',
+    abbrechen: 'Abbrechen',
+    knopf: 'Hauptmenü'
+  },
   // Geld geben (Test-Werkzeug) – ENTWURF, Lukas formuliert selbst
   testGeld: '+ Geld',
   testGeldFeld: 'Betrag in €',

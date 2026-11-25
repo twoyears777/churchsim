@@ -3,6 +3,7 @@ import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro } from './ui.js';
 import { fensterOeffnen, fensterSchliessen, fensterOffen } from './fenster.js';
 import { bauleisteEinrichten, werkzeugWaehlen } from './bauleiste.js';
+import { hauptmenueEinrichten, menueOeffnen, menueEscape } from './hauptmenue.js';
 
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
@@ -182,13 +183,15 @@ export function eingabenEinrichten() {
   leinwand.addEventListener('pointercancel', abbrechen);
   leinwand.addEventListener('pointerleave', () => { ui.maus = null; ui.schwebe = null; ui.malen(); });
 
-  // Escape: erst Ziehen abbrechen, dann Fenster schließen, dann Editor schließen
+  // Escape: erst Ziehen abbrechen, dann Fenster schließen, dann Editor schließen, dann Hauptmenü öffnen
   document.addEventListener('keydown', e => {
     if ((e.key === 'r' || e.key === 'R') && ui.editorOffen && !e.target.closest('input')) { drehen(); return; }
     if (e.key !== 'Escape') return;
+    if (ui.menueOffen) return menueEscape();
     if (ui.ziehen || ui.tragen) return abbrechen();
     if (fensterOffen()) return fensterSchliessen();
-    if (ui.editorOffen) editorUmschalten(false);
+    if (ui.editorOffen) return editorUmschalten(false);
+    menueOeffnen();   // nichts mehr offen: Hauptmenü
   });
 
   bauleisteEinrichten({
@@ -199,7 +202,8 @@ export function eingabenEinrichten() {
   $('drehen').addEventListener('click', drehen);
   werkzeugWaehlen(ui.werkzeug);
   $('zurueck').addEventListener('click', () => { if (ui.spiel.rueckgaengig()) { ui.fenster = null; fensterSchliessen(); fertig(); } });
-  sicherKnopf($('zuruecksetzen'), TEXTE.zuruecksetzen, TEXTE.zuruecksetzenSicher, zuruecksetzen);
+  hauptmenueEinrichten(zuruecksetzen);
+  $('hauptmenueAuf').addEventListener('click', () => menueOeffnen(() => { ui.fenster = null; fensterSchliessen(); }));
   $('testGeld').textContent = TEXTE.testGeld;
   $('testGeldBetrag').setAttribute('aria-label', TEXTE.testGeldFeld);
   $('testGeld').addEventListener('click', () => { if (ui.spiel.testGeld($('testGeldBetrag').value) === 'ok') fertig(); });
