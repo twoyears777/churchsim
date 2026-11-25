@@ -3,6 +3,28 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.9
+
+**Gemeindesaal**
+- Neu: der Gemeindesaal (mindestens 5 × 10 Kästchen, mit Tür). Zwei Veranstaltungen sind von Anfang an frei
+- Seniorennachmittag: braucht einen Hauptamtlichen, einen Ehrenamtlichen, einen Tisch und mindestens 2 Stühle
+- Kirchenchorprobe: braucht einen Ehrenamtlichen ab Musik-Level 1 und ein Klavier – Stühle sind egal, alle passen hinein
+- Neuer Reiter „Gemeindesaal“ in der Bauleiste mit Stuhl, Tisch und Klavier
+
+**Forschung**
+- Neu: Heiligkeit – jeder Gottesdienstbesucher bringt 1 Heiligkeit
+- Neu: Knopf „Forschung“ mit der ersten Forschung „Schulungen 1“ (kostet Geld und Heiligkeit)
+
+**Veranstaltungen**
+- Beim Einstellen einer Veranstaltung zeigt eine Tabelle, was jeder Baustein bringt und was in deinem Raum schon steht
+
+**Kirchkaffee**
+- Fehler behoben: Zwei Theken nebeneinander waren nur ein Arbeitsplatz – jetzt arbeiten beide Ehrenamtlichen
+- Fehler behoben: Gäste setzen sich wieder auf die Stühle. Wer sitzt, bleibt mindestens eine Stunde
+
+**Mitarbeiter**
+- Wer gerade nichts zu tun hat, läuft ein wenig umher
+
 ## 0.1.8
 
 **Gottesdienst**
