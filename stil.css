@@ -260,3 +260,4 @@ table.baustein tr.summe td { border-top: 2px solid #2b2a27; border-bottom: none;
 table.baustein tr.summe td.fehlt { color: #b3261e; }
 table.baustein .haken { color: #2e7d32; font-weight: 700; } table.baustein .nein { color: #9a9385; }
 ul.keine-info { margin: 0 0 6px; padding-left: 20px; font-size: 14px; }
+.forschung-knoten.multiplikator { width: auto; max-width: 540px; margin: 0 auto 12px; }

@@ -1,6 +1,6 @@
 // Spiellogik der Seelsorge: Ab und zu bittet eine Person den Pastor um ein Gespräch. Solange die Anfrage offen ist,
 // steht die Zeit still. Der Pastor kann ablehnen oder einen von 3 Ratschlägen geben; je nach Rat (und etwas Zufall)
-// geht es gut oder schlecht aus. Mit jedem Gespräch sammelt der Pastor Erfahrung (Stufe 1–5).
+// geht es gut oder schlecht aus. Mit jedem Gespräch sammelt der Pastor Erfahrung (Stufe 1–20).
 // Kennt keine Texte: Situationen und Ergebnisse sind Codes, die Oberfläche macht Text daraus.
 import { SEELSORGE, SITUATIONEN } from '../inhalte/seelsorge.js';
 import { TAG_MIN } from './zeit.js';
@@ -46,10 +46,15 @@ export function stufe(punkte) {
   SEELSORGE.stufeAb.forEach((ab, i) => { if (punkte >= ab) s = i + 1; });
   return s;
 }
+// Für die Charakter-Karte: Stufe, Punkte, Bonus auf die Erfolgschance (in %), letzte und nächste Freischaltung
 export function stufeInfo(z) {
-  const p = z.seelsorge.punkte, s = stufe(p);
-  return { stufe: s, punkte: p, von: SEELSORGE.stufeAb[s - 1], bis: s < SEELSORGE.stufeAb.length ? SEELSORGE.stufeAb[s] : null };
+  const p = z.seelsorge.punkte, s = stufe(p), F = SEELSORGE.freischaltungen;
+  return { stufe: s, maxStufe: SEELSORGE.stufeAb.length, punkte: p, von: SEELSORGE.stufeAb[s - 1],
+    bis: s < SEELSORGE.stufeAb.length ? SEELSORGE.stufeAb[s] : null, bonus: bonusProzent(s),
+    freigeschaltet: [...F].reverse().find(n => n <= s) || null, naechsteFreischaltung: F.find(n => n > s) || null };
 }
+// Bonus auf die Erfolgschance in Prozentpunkten (z. B. Stufe 3 → 3)
+export const bonusProzent = st => Math.round(SEELSORGE.bonusProStufe * (st - 1) * 1000) / 10;
 
 // Pro Stunde zwischen 8 und 20 Uhr wird einmal geprüft, ob jemand fragt. Die Chance ist so gewählt,
 // dass es im Schnitt so viele Anfragen pro Woche gibt, wie für die Stufe festgelegt.
@@ -132,7 +137,11 @@ export function raten(z, nr, zufall = Math.random) {
   if (p) { e.haltungNachher = p.zufriedenheit; if (!passant) e.kommChance = Math.round(kommChance(p) * 100); }
   S.punkte += SEELSORGE.erfahrung.gespraech + (gut ? SEELSORGE.erfahrung.gutExtra : 0);
   const nachher = stufe(S.punkte);
-  if (nachher > vorher) e.neueStufe = nachher;
+  if (nachher > vorher) {
+    e.neueStufe = nachher;
+    e.stufeBonus = Math.round(SEELSORGE.bonusProStufe * (nachher - vorher) * 1000) / 10;   // so viel % mehr Erfolgschance
+    e.freischaltung = SEELSORGE.freischaltungen.includes(nachher) ? nachher : null;          // neu freigeschaltet auf dieser Stufe
+  }
   A.phase = 'ergebnis'; A.ergebnis = e;
   return 'ok';
 }
@@ -158,15 +167,15 @@ export function anfrageInfo(z) {
   return { id: p.id, voll: p.voll, vorname: p.vorname, situation: sit.id, phase: A.phase, ergebnis: A.ergebnis,
     besuche: p.besuche || 0, haltung: p.zufriedenheit,
     raete: sit.raete.map((r, i) => ({ kosten: r.kosten || 0, leistbar: !r.kosten || kannBezahlen(z, r.kosten),
-      // Was der Pastor auf seiner Stufe erkennt: beste (Stufe 2), Einschätzung (ab 3), genaue Chance in % (ab 4)
+      // Was der Pastor auf seiner Stufe erkennt: beste (Stufe 5–9), Einschätzung (ab 10), genaue Chance in % (ab 15)
       beste: st >= E.besteAb && st < E.alleAb && i === beste,
       einschaetzung: st >= E.alleAb ? einschaetzen(chancen[i]) : null,
       prozent: st >= E.prozentAb ? Math.round(chancen[i] * 100) : null })) };
 }
 
-// Chance, dass ein Rat gut ausgeht: Grundchance + Bonus je Stufe über 1, höchstens 95 %
+// Chance, dass ein Rat gut ausgeht: Grundchance + Bonus je Stufe über 1, höchstens 95 % (auf 0,1 % gerundet)
 export function chanceVon(rat, st) {
-  return Math.min(SEELSORGE.hoechsteChance, rat.chance + SEELSORGE.bonusProStufe * (st - 1));
+  return Math.min(SEELSORGE.hoechsteChance, Math.round((rat.chance + SEELSORGE.bonusProStufe * (st - 1)) * 1000) / 1000);
 }
 // 'gut' | 'unsicher' | 'riskant'
 export function einschaetzen(chance) {

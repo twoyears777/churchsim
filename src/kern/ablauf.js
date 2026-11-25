@@ -29,7 +29,7 @@ import { seelsorgeSchritt, anfrageOffen } from './seelsorge.js';
 import { kirchkaffeeZustand, kirchkaffeeOffen, gottesdienstKunden, kaffeeAktualisieren, kaffeeSchritt, naechsteSchicht, kaffeeAnlegen, zahlZeigen } from './kirchkaffee.js';
 import { fassung } from './moebel.js';
 import { dauerspenderSchritt } from './dauerspender.js';
-import { forschungSchritt, heiligkeitFuerGottesdienst } from './forschung.js';
+import { forschungSchritt, heiligkeitFuerGottesdienst, mitMultiplikator } from './forschung.js';
 import { faktorAmTag } from './kalender.js';
 import { FESTE, ZEITEN } from '../inhalte/kirchenjahr.js';
 import { festSchritt, festPlaeneDerWoche, festeAufraeumen, festAusSchluessel } from './feste.js';
@@ -480,7 +480,8 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
     // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
     const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
-    zufriedenheitAendern(b, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0));
+    // Haltungs-Multiplikator (Gottesdienst, Lobpreisgottesdienst): vervielfacht die Summe nach allen Boni, nur Pluswerte
+    zufriedenheitAendern(b, mitMultiplikator(z, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0)));
     if (v.konfiTeilnahme) konfiTeilnahme(z, b);   // zählt für die Konfirmation
     if (g.kaffee && g.kaffee.ergebnis === 'keinPlatz') zufriedenheitAendern(b, AENDERUNG.kaffeeNein);   // sonst: beim Bedienen (kirchkaffee.js)
     g.zufriedenheit = b.zufriedenheit;

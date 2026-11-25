@@ -154,7 +154,8 @@ export const TEXTE = {
       moebel: b => ({ name: b.max > 1 ? `${b.name} (${b.anzahl} von ${b.max})` : b.name,
         haltung: b.haltung ? (b.max > 1 ? `+${b.haltung} je Stück` : `+${b.haltung}`) : null,
         geld: b.kollekte ? `Kollekte ×${zahl(b.kollekte)}${b.max > 1 ? ' je Stück' : ''}` : null }),
-      fenster: b => ({ name: `Fenster (${b.anzahl})`, haltung: `+${b.haltung} je Fenster` }),   // ENTWURF von Claude (25.11.)
+      fenster: b => ({ name: `Fenster (${b.anzahl})`, haltung: `+${b.haltung} je Fenster` }),
+      multiplikator: b => ({ name: 'Haltungs-Multiplikator', haltung: `alles ×${zahl(b.faktor)} (nur Pluswerte)` }),   // freigegeben 25.11. abends   // ENTWURF von Claude (25.11.)
       besserStuhl: b => ({ name: 'Bessere Stühle', haltung: '+ Stufe des Stuhls', geld: b.kollekte ? 'Kollekte × Stufe' : null }),
       instrumentOhne: b => ({ name: `${b.name} ohne Ehrenamtlichen` }),
       musiker: b => ({
@@ -184,9 +185,10 @@ export const TEXTE = {
         : s.besucher.art === 'vorliebe' ? '× Lobpreis-Vorliebe'
         : s.besucher.art === 'plaetze' ? `${s.art === 'konfi' ? 'nur Jugendliche' : 'normal'}, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}`
         : s.besucher.art === 'egal' ? 'normal, Stühle egal' : 'normal',
-      haltung: s.haltung.vorliebeMax !== null
+      haltung: (s.haltung.vorliebeMax !== null
         ? `+${s.haltung.fest}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` : '') + ' je nach Lobpreis-Vorliebe'
-        : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' ? ' je nach Lobpreis-Vorliebe' : '') : ''),
+        : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' ? ' je nach Lobpreis-Vorliebe' : '') : ''))
+        + (s.haltung.faktor > 1 ? `, dann alles ×${zahl(s.haltung.faktor)}` : ''),   // Multiplikator, freigegeben 25.11. abends
       geld: s.geld.keins ? null : s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher` : `${geld(s.geld.jeBesucher)} je Besucher`,
       ...(s.ehrenamt ? { ehrenamt: `+${s.ehrenamt} Haltung` } : {})   // Konfirmandenunterricht: Plus durch die Ehrenamtlichen im Raum
     })
@@ -355,6 +357,9 @@ export const TEXTE = {
       neugierig: 'jetzt neugierig auf die Gemeinde'
     },
     neueStufe: n => `Pastor Harder ist jetzt Seelsorger Stufe ${n}.`,
+    // Von Lukas freigegeben (25.11. abends): Aufstieg zwischen den Freischaltungen und auf einer Freischaltung
+    stufeBonus: n => `Seine Ratschläge gelingen jetzt ${zahl(n)} % öfter.`,
+    neuFreigeschaltet: t => `Neu: ${t}`,
     // Wer fragt (unter dem Namen) und was das Ergebnis bewirkt – freigegeben 25.11.
     person: (status, besuche, haltung) => `${status} · ${besuche} ${besuche === 1 ? 'Besuch' : 'Besuche'} · Haltung ${haltung}`,
     haltungVorherNachher: (vorher, nachher) => `Haltung ${vorher} → ${nachher}`,
@@ -365,13 +370,15 @@ export const TEXTE = {
     prozent: n => `${n} %`,
     // Charakter-Karte des Pastors
     karte: {
-      titel: n => `Seelsorge – Stufe ${n}`,
+      titel: (n, max) => `Seelsorge – Stufe ${n} von ${max}`,   // freigegeben 25.11. abends
+      bonus: n => `Erfolgschance +${zahl(n)} %`,                // freigegeben 25.11. abends
       fortschritt: (x, y, n) => `${x} von ${y} Punkten bis Stufe ${n}`,
       hoechste: 'Höchste Stufe erreicht',
       // Was jede Stufe bringt (Stufe 1 bringt noch nichts Besonderes) – freigegeben 25.11.
-      kann: { 2: 'erkennt den passendsten Rat', 3: 'schätzt jeden Rat ein', 4: 'sieht die genaue Chance', 5: 'Ratschläge gelingen am häufigsten' },
+      // Freischaltungen jetzt nur alle 5 Stufen (25.11. abends); Texte unverändert, nur die Stufen verschoben
+      kann: { 5: 'erkennt den passendsten Rat', 10: 'schätzt jeden Rat ein', 15: 'sieht die genaue Chance', 20: 'Ratschläge gelingen am häufigsten' },
       jetzt: t => `Jetzt: ${t}`,
-      ab: (n, t) => n === 5 ? `Stufe 5: ${t}` : `Ab Stufe ${n}: ${t}`
+      ab: (n, t) => n === 20 ? `Stufe 20: ${t}` : `Ab Stufe ${n}: ${t}`
     },
     // Situationen: Anfrage und je 3 Ratschläge mit gutem und schlechtem Ausgang (Reihenfolge wie in inhalte/seelsorge.js)
     situationen: {
@@ -682,6 +689,16 @@ export const TEXTE = {
     abbrechenFrage: 'Wirklich abbrechen? Geld und Heiligkeit sind dann weg.',
     abbrechenJa: 'Ja, abbrechen',
     abbrechenNein: 'Weiterforschen',
+    // Von Lukas freigegeben (25.11. abends): Haltungs-Multiplikator im Forschungs-Fenster
+    multiplikator: {
+      titel: 'Haltungs-Multiplikator',
+      erklaerung: 'Vervielfacht die Haltung, die Besucher am Ende eines Gottesdienstes oder Lobpreisgottesdienstes bekommen – nach allen anderen Boni. Minuswerte bleiben, wie sie sind.',
+      stufe: (n, max, faktor) => `Stufe ${n} von ${max} · jetzt ×${zahl(faktor)}`,
+      naechste: (faktor, preis) => `Nächste Stufe: ×${zahl(faktor)} für ${preis} Heiligkeit`,
+      kaufen: 'Kaufen',
+      zuWenig: 'Zu wenig Heiligkeit',
+      fertig: 'Höchste Stufe erreicht'
+    },
     zustand: { gesperrt: 'Erst die vorherige Forschung abschließen', besetzt: 'Es läuft schon eine andere Forschung', geld: 'Zu wenig Geld', heiligkeit: 'Zu wenig Heiligkeit' },
     schliessen: 'Schließen'
   }

@@ -63,11 +63,12 @@ function personenKarte(f) {
   }
   if (p.seelsorge) {
     const s = p.seelsorge, T = TEXTE.seelsorge.karte;
-    skills = `<p class="unter staerker">${T.titel(s.stufe)}</p>
+    skills = `<p class="unter staerker">${T.titel(s.stufe, s.maxStufe)}</p>
       <div class="balken"><span style="width:${s.bis === null ? 100 : Math.round((s.punkte - s.von) / (s.bis - s.von) * 100)}%"></span></div>
       <p class="unter">${s.bis === null ? T.hoechste : T.fortschritt(s.punkte, s.bis, s.stufe + 1)}</p>
-      ${T.kann[s.stufe] ? `<p class="unter">${T.jetzt(T.kann[s.stufe])}</p>` : ''}
-      ${T.kann[s.stufe + 1] ? `<p class="unter">${T.ab(s.stufe + 1, T.kann[s.stufe + 1])}</p>` : ''}`;
+      ${s.bonus > 0 ? `<p class="unter">${T.bonus(s.bonus)}</p>` : ''}
+      ${s.freigeschaltet && T.kann[s.freigeschaltet] ? `<p class="unter">${T.jetzt(T.kann[s.freigeschaltet])}</p>` : ''}
+      ${s.naechsteFreischaltung && T.kann[s.naechsteFreischaltung] ? `<p class="unter">${T.ab(s.naechsteFreischaltung, T.kann[s.naechsteFreischaltung])}</p>` : ''}`;
   }
   return `<h2>${esc(p.name)}</h2>
     <p class="unter">${ART_TEXT[p.art]} · ${p.einsatz ? 'Im Einsatz: ' + p.einsatz : 'Verfügbar'}</p>
@@ -598,7 +599,8 @@ function seelsorgeFenster(f) {
     inhalt = `<p class="unter">„${rat.text}“</p>
       <p class="${e.gut ? 'ok' : 'fehlt'}">${(e.gut ? rat.gut : rat.schlecht)(name)}</p>
       <p class="unter">${folgen.join(' · ')}</p>
-      ${e.neueStufe ? `<p class="unter staerker">${T.neueStufe(e.neueStufe)}</p>` : ''}
+      ${e.neueStufe ? `<p class="unter staerker">${T.neueStufe(e.neueStufe)}</p>
+        <p class="unter">${T.stufeBonus(e.stufeBonus)}${e.freischaltung && T.karte.kann[e.freischaltung] ? ' ' + T.neuFreigeschaltet(T.karte.kann[e.freischaltung]) : ''}</p>` : ''}
       <div class="zeile"><button class="haupt" data-seelsorge-zu>${T.weiter}</button></div>`;
   }
   return `<h2>${T.titel}</h2>${inhalt}`;
@@ -630,7 +632,20 @@ function forschungFenster(f) {
   return `<h2>${T.titel}</h2>
     <p class="unter">${T.vorrat(Math.floor(info.heiligkeit), euro(info.konto))}</p>
     <div class="forschung-baum">${knoten}</div>
+    ${multiplikatorAbschnitt(info.multiplikator)}
     <div class="zeile"><button data-zu>${T.schliessen}</button></div>`;
+}
+// Haltungs-Multiplikator: eigener Abschnitt unter dem Baum, sofort mit Heiligkeit kaufen
+function multiplikatorAbschnitt(m) {
+  const T = TEXTE.forschung.multiplikator, n = m.naechste;
+  return `<div class="forschung-knoten multiplikator">
+    <b>${T.titel}</b>
+    <p class="unter">${T.erklaerung}</p>
+    <p class="unter staerker">${T.stufe(m.stufe, m.maxStufe, m.faktor)}</p>
+    ${n ? `<p class="unter">${T.naechste(n.faktor, n.preis)}</p>${n.leistbar ? '' : `<p class="fehlt">${T.zuWenig}</p>`}
+      <div class="zeile"><button class="haupt" data-multiplikator ${n.leistbar ? '' : 'disabled'}>${T.kaufen}</button></div>`
+      : `<p class="ok">${T.fertig}</p>`}
+  </div>`;
 }
 
 // Knöpfe in den Fenstern → Befehle ans Spiel
@@ -674,6 +689,7 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);
     else if (b.dataset.forschung) { spiel.forschungStarten(b.dataset.forschung); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-forschung-abbrechen')) f.abbrechenFragen = true;
+    else if (b.hasAttribute('data-multiplikator')) spiel.multiplikatorKaufen();
     else if (b.hasAttribute('data-forschung-abbrechen-nein')) delete f.abbrechenFragen;
     else if (b.hasAttribute('data-forschung-abbrechen-ja')) { spiel.forschungAbbrechen(); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-bus-ausbauen')) spiel.busAusbauen();

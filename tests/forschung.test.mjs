@@ -3,9 +3,10 @@
 // dauert 1 echte Minute bei x1 (an die Spielzeit gekoppelt), nur eine Forschung gleichzeitig, Abbrechen = Bezahltes weg, wird gespeichert.
 // Starten mit: node tests/forschung.test.mjs
 import assert from 'node:assert';
-import { FORSCHUNGEN, HEILIGKEIT } from '../src/inhalte/forschung.js';
+import { FORSCHUNGEN, HEILIGKEIT, HALTUNG_MULTIPLIKATOR } from '../src/inhalte/forschung.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
-import { heiligkeitFuerGottesdienst, forschungStarten, forschungAbbrechen, forschungSchritt, forschungListe, istErforscht, dauerMinuten } from '../src/kern/forschung.js';
+import { heiligkeitFuerGottesdienst, forschungStarten, forschungAbbrechen, forschungSchritt, forschungListe, istErforscht, dauerMinuten,
+  multiplikatorFaktor, mitMultiplikator, multiplikatorKaufen, multiplikatorInfo } from '../src/kern/forschung.js';
 import { SEKUNDEN_PRO_STUNDE } from '../src/inhalte/zeit.js';
 
 const S1 = FORSCHUNGEN.find(f => f.id === 'schulungen1');
@@ -97,6 +98,38 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
   const sp = spielStarten(JSON.stringify(d), () => 0.5);
   assert.equal(sp.lage().heiligkeit, 0);
   assert.equal(sp.forschungInfo().forschungen[0].zustand, 'geld');
+}
+
+// Haltungs-Multiplikator (Lukas, 25.11. abends): Stufe 0 = ×1, dann ×1,3 / 1,6 / 2,0 / 2,5 / 3,0 für 100 / 250 / 500 / 1000 / 2000 Heiligkeit
+{
+  assert.deepEqual(HALTUNG_MULTIPLIKATOR.stufen.map(x => [x.faktor, x.preis]), [[1.3, 100], [1.6, 250], [2.0, 500], [2.5, 1000], [3.0, 2000]]);
+  const z = neuesSpiel(() => 0.5);
+  assert.equal(z.multiplikator, 0);
+  assert.equal(multiplikatorFaktor(z, 'gottesdienst'), 1);
+  assert.deepEqual(multiplikatorInfo(z), { stufe: 0, maxStufe: 5, faktor: 1, naechste: { stufe: 1, faktor: 1.3, preis: 100, leistbar: false } });
+  z.heiligkeit = 99; assert.equal(multiplikatorKaufen(z), 'heiligkeit'); assert.equal(z.heiligkeit, 99);
+  z.heiligkeit = 120; assert.equal(multiplikatorKaufen(z), 'ok'); assert.equal(z.heiligkeit, 20); assert.equal(z.multiplikator, 1);
+  // wirkt bei Gottesdienst und Lobpreisgottesdienst, nicht im Gemeindesaal; nur Pluswerte, gerundet
+  assert.equal(mitMultiplikator(z, 'gottesdienst', 15), 20);   // 19,5 → 20
+  assert.equal(mitMultiplikator(z, 'lobpreis', 10), 13);
+  assert.equal(mitMultiplikator(z, 'senioren', 10), 10);
+  assert.equal(mitMultiplikator(z, 'gottesdienst', -10), -10);
+  assert.equal(mitMultiplikator(z, 'gottesdienst', 0), 0);
+  z.heiligkeit = 10000;
+  ['ok', 'ok', 'ok', 'ok', 'max'].forEach(e => assert.equal(multiplikatorKaufen(z), e));
+  assert.equal(z.heiligkeit, 10000 - 250 - 500 - 1000 - 2000);
+  assert.equal(multiplikatorFaktor(z, 'gottesdienst'), 3);
+  assert.equal(multiplikatorInfo(z).naechste, null);
+  // Schalterwand + Speichern; alter Spielstand ohne Multiplikator → Stufe 0
+  const spiel = spielStarten(null, () => 0.5);
+  const d = JSON.parse(spiel.speicherText()); d.zustand.heiligkeit = 300;
+  const sp = spielStarten(JSON.stringify(d), () => 0.5);
+  assert.equal(sp.multiplikatorKaufen(), 'ok');
+  assert.equal(sp.forschungInfo().multiplikator.stufe, 1);
+  const sp2 = spielStarten(sp.speicherText(), () => 0.5);
+  assert.equal(sp2.forschungInfo().multiplikator.faktor, 1.3); assert.equal(sp2.lage().heiligkeit, 200);
+  const alt = JSON.parse(spiel.speicherText()); delete alt.zustand.multiplikator;
+  assert.equal(spielStarten(JSON.stringify(alt), () => 0.5).forschungInfo().multiplikator.stufe, 0);
 }
 
 console.log('Forschung: alle Tests bestanden');

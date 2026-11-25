@@ -91,7 +91,7 @@ console.log('Neugier-Tests bestanden.');
 
 // Seelsorge: Stufen, Ablehnen, Rat, Kosten, Spende, Passant wird neugierig
 {
-  assert.deepEqual([0, 2, 3, 7, 8, 15, 24, 25, 99].map(stufe), [1, 1, 2, 2, 3, 4, 4, 5, 5]);
+  assert.deepEqual([0, 1, 2, 3, 7, 8, 11, 23, 43, 67, 68, 99].map(stufe), [1, 1, 2, 2, 4, 5, 6, 10, 15, 19, 20, 20]);
   const z = neuesSpiel(() => 0.5), b = z.besucher[0];
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
   assert.equal(schliessen(z), 'keine');                              // erst antworten
@@ -101,17 +101,25 @@ console.log('Neugier-Tests bestanden.');
   // guter Ausgang: Haltung +10, Bekanntheit +1, 2 Punkte
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
   assert.equal(raten(z, 0, () => 0.69), 'ok');                       // 0,69 < 70 %
-  assert.equal(z.seelsorge.anfrage.ergebnis.gut, true);
+  let e0 = z.seelsorge.anfrage.ergebnis;
+  assert.equal(e0.gut, true);
   assert.equal(b.zufriedenheit, 65); assert.equal(z.bekanntheit, 0.2); assert.equal(z.seelsorge.punkte, 2);
+  // 2 Punkte → Stufe 2: +1,5 % Erfolgschance, noch keine Freischaltung
+  assert.equal(e0.neueStufe, 2); assert.equal(e0.stufeBonus, 1.5); assert.equal(e0.freischaltung, null);
   schliessen(z);
-  // schlechter Ausgang: −10, 1 Punkt → Stufe 2 erreicht
+  // schlechter Ausgang: −10, 1 Punkt, keine neue Stufe
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
-  raten(z, 0, () => 0.71);
-  assert.equal(b.zufriedenheit, 55); assert.equal(z.seelsorge.punkte, 3); assert.equal(z.seelsorge.anfrage.ergebnis.neueStufe, 2);
+  raten(z, 0, () => 0.715);
+  assert.equal(b.zufriedenheit, 55); assert.equal(z.seelsorge.punkte, 3); assert.equal(z.seelsorge.anfrage.ergebnis.neueStufe, null);
   schliessen(z);
-  // Stufe 2: derselbe Rat gelingt jetzt bis 75 %
+  // Stufe 2: derselbe Rat gelingt jetzt bis 71,5 %
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
-  raten(z, 0, () => 0.74); assert.equal(z.seelsorge.anfrage.ergebnis.gut, true); schliessen(z);
+  raten(z, 0, () => 0.714); assert.equal(z.seelsorge.anfrage.ergebnis.gut, true); schliessen(z);
+  // Aufstieg auf Stufe 5: Freischaltung „bester Rat“
+  z.seelsorge.punkte = 7;
+  z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
+  raten(z, 0, () => 0.99); e0 = z.seelsorge.anfrage.ergebnis;
+  assert.equal(e0.neueStufe, 5); assert.equal(e0.freischaltung, 5); schliessen(z);
   // Gutschein kostet 20 €, geht nicht ohne Geld
   z.konto = 10;
   z.seelsorge.anfrage = { id: b.id, situation: 'job', phase: 'frage', ergebnis: null };
@@ -133,22 +141,26 @@ console.log('Neugier-Tests bestanden.');
 // Einschätzung je Stufe, Angaben zur Person, Haltung vorher → nachher
 {
   assert.deepEqual([0.65, 0.64, 0.4, 0.39].map(einschaetzen), ['gut', 'unsicher', 'unsicher', 'riskant']);
-  assert.equal(chanceVon({ chance: 0.8 }, 5), 0.95);                 // höchstens 95 %
+  assert.equal(chanceVon({ chance: 0.8 }, 11), 0.95);                // höchstens 95 %
+  assert.equal(chanceVon({ chance: 0.8 }, 10), 0.935);               // Stufe 10: +13,5 %
   const z = neuesSpiel(() => 0.5), b = z.besucher[0];
   const frage = () => { z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null }; return anfrageInfo(z); };
   // Stufe 1: nichts zu sehen
   let a = frage();
   assert.equal(a.haltung, b.zufriedenheit); assert.equal(a.besuche, b.besuche || 0);
   assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[false, null, null], [false, null, null], [false, null, null]]);
-  // Stufe 2: nur der passendste Rat ist markiert
-  z.seelsorge.punkte = 3; a = frage();
-  assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[true, null, null], [false, null, null], [false, null, null]]);
-  // Stufe 3: Einschätzung für jeden Rat (Nachbar: 80 %, 60 %, 40 %), keine Markierung, keine Prozent
+  // Stufe 4: noch nichts zu sehen
+  z.seelsorge.punkte = 6; a = frage();
+  assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[false, null, null], [false, null, null], [false, null, null]]);
+  // Stufe 5–9: nur der passendste Rat ist markiert
   z.seelsorge.punkte = 8; a = frage();
+  assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[true, null, null], [false, null, null], [false, null, null]]);
+  // Stufe 10: Einschätzung für jeden Rat (Nachbar: 70 %, 50 %, 30 % + 13,5), keine Markierung, keine Prozent
+  z.seelsorge.punkte = 23; a = frage();
   assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[false, 'gut', null], [false, 'unsicher', null], [false, 'unsicher', null]]);
-  // Stufe 4: dazu die genaue Chance (Bonus +15)
-  z.seelsorge.punkte = 15; a = frage();
-  assert.deepEqual(a.raete.map(r => r.prozent), [85, 65, 45]);
+  // Stufe 15: dazu die genaue Chance (Bonus +21)
+  z.seelsorge.punkte = 43; a = frage();
+  assert.deepEqual(a.raete.map(r => r.prozent), [91, 71, 51]);
   assert.deepEqual(a.raete.map(r => r.einschaetzung), ['gut', 'gut', 'unsicher']);
   // Ergebnis: Haltung vorher → nachher und Chance zu kommen (nur bei Besuchern)
   const vorher = b.zufriedenheit;
@@ -186,9 +198,9 @@ console.log('Seelsorge-Tests bestanden.');
   assert.ok(n / wochen > 0.8 && n / wochen < 1.4, `Anfragen pro Woche: ${n / wochen}`);
 }
 {
-  // Stufe 5 (immer guter Rat) etwa 3 pro Woche
+  // Stufe 20 (immer guter Rat) etwa 3 pro Woche
   const zufall = saat(5), { z, aus } = gemeinde(zufall);
-  z.seelsorge.punkte = 25;
+  z.seelsorge.punkte = 68;
   const n = laufen(z, aus, 30 * WOCHE_MIN, zufall);
   assert.ok(n / 30 > 2.3 && n / 30 < 3.8, `Anfragen pro Woche: ${n / 30}`);   // 3 + Anfangsschub; Zufall streut (12 Läufe: 2,4–3,7)
 }
@@ -242,7 +254,7 @@ console.log('Spielanfang-Test bestanden.');
   assert.ok(passant && passant.kaffee === null && passant.zuletzt === null);
   const info = spiel.besucherInfo(passant.id);
   assert.equal(info.status, 'passant'); assert.equal(info.beduerfnisse, null);
-  assert.deepEqual(spiel.personInfo('pastor').seelsorge, { stufe: 1, punkte: 0, von: 0, bis: 3 });
+  assert.deepEqual(spiel.personInfo('pastor').seelsorge, { stufe: 1, maxStufe: 20, punkte: 0, von: 0, bis: 2, bonus: 0, freigeschaltet: null, naechsteFreischaltung: 5 });
   assert.equal(spiel.lage().seelsorge, null); assert.equal(spiel.seelsorgeOffen(), false);
   assert.equal(spiel.seelsorgeRat(0), 'keine');
   // Spielstand mit Ort und Seelsorge speichern und laden

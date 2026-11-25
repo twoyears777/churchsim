@@ -11,6 +11,7 @@ import { moebelImRaum, stuhlStufe, musikLevel, musikBonus, instrumenteImRaum } f
 import { daten } from './personen.js';
 import { fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
+import { multiplikatorFaktor } from './forschung.js';
 
 const MAX_MUSIKER = MOEBEL.filter(m => m.wirkung && m.wirkung.musik).length;   // so viele Instrumente gibt es
 const prozent = b => Math.round(b * 100);
@@ -78,6 +79,10 @@ function gottesdienstraum(z, raum, info, v) {
       besucher: nr === 1 && musikWirktAufBesucher ? { min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : null });
   }
 
+  // Haltungs-Multiplikator (gekauft mit Heiligkeit): erst ab Stufe 1 eine Zeile
+  const mult = multiplikatorFaktor(z, v.id);
+  if (mult > 1) zeilen.push({ id: 'multiplikator', imRaum: true, faktor: mult });
+
   // Zusammen: so wie der Raum jetzt ist
   const bonus = Math.round(levels.reduce((s, l) => s + musikBonus(l), 0) * 100) / 100;
   const pflichtDa = zeilen.filter(x => x.pflicht).every(x => x.imRaum);
@@ -85,7 +90,7 @@ function gottesdienstraum(z, raum, info, v) {
     art: lobpreis ? 'lobpreis' : 'gottesdienst', bereit: pflichtDa,
     besucher: lobpreis ? { art: 'vorliebe' } : levels.length ? { art: 'musik', min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : { art: 'normal' },
     haltung: { fest: AENDERUNG.sitzplatz + (lobpreis ? 0 : AENDERUNG.gottesdienst) + haltungFest, vorliebeMax: lobpreis ? v.haltungNachVorliebe : null,
-      prozent: prozent(bonus) },
+      prozent: prozent(bonus), faktor: mult },
     geld: { jeBesucher: Math.round(KOLLEKTE_PRO_BESUCHER * faktor * (levels.length ? 1 + bonus : 1) * 100) / 100, spende: false }
   };
   return { zeilen, summe };

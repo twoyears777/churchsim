@@ -34,7 +34,7 @@ import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
-import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
+import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe, multiplikatorKaufen, multiplikatorInfo } from './forschung.js';
 import { HEILIGKEIT } from '../inhalte/forschung.js';
 import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
@@ -389,6 +389,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     forschungStarten(id) { return forschungStarten(z, id); },
     // Laufende Forschung abbrechen (Geld und Heiligkeit sind weg) → 'ok' | 'keine'
     forschungAbbrechen() { return forschungAbbrechen(z); },
+    // Haltungs-Multiplikator: nächste Stufe sofort mit Heiligkeit kaufen → 'ok' | 'max' | 'heiligkeit'
+    multiplikatorKaufen() { return multiplikatorKaufen(z); },
     // Seelsorge-Fenster → 'ok' | 'keine' | 'geld'
     seelsorgeAblehnen() { return seelsorgeAblehnen(z); },
     seelsorgeRat(nr) { return seelsorgeRaten(z, nr, zufall); },
@@ -466,7 +468,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       };
     },
     // Forschungs-Fenster: Heiligkeit, Kontostand und alle Forschungen mit Zustand, Kosten, Dauer (echte Sekunden bei x1) und Fortschritt
-    forschungInfo() { return { heiligkeit: z.heiligkeit, konto: z.konto, forschungen: forschungListe(z) }; },
+    forschungInfo() { return { heiligkeit: z.heiligkeit, konto: z.konto, forschungen: forschungListe(z), multiplikator: multiplikatorInfo(z) }; },
     // Finanz-Fenster: diese Woche (nach Kategorien, Kirchkaffee im Detail), Kassenbuch der Woche, Verlauf früherer Wochen.
     // Wochen und Zeiten wie überall in der Anzeige: Woche ab 1, Tag 0 = Montag. Namen von Möbeln/Veranstaltungen kommen aus den Inhaltsdateien.
     finanzInfo() {

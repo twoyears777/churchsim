@@ -104,6 +104,22 @@ console.log('Zwei-Veranstaltungen-Tests bestanden.');
   const fan = z.besucher[0].zufriedenheit, halb = z.besucher[9].zufriedenheit;
   assert.equal(fan - halb, 5);
 }
+// Haltungs-Multiplikator (25.11. abends): vervielfacht die Summe nach allen Boni; Stufe 3 = ×2
+{
+  const lauf = stufe => {
+    const z = gemeinde(), r = raumBei(z);
+    ausstatten(z); z.multiplikator = stufe;
+    veranstaltungEinstellen(z, r, 'lobpreis');
+    z.besucher.forEach(b => { b.zufriedenheit = 30; b.lobpreis = 1; });
+    z.besucher[9].lobpreis = 0.5;
+    zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
+    return z.besucher.map(b => b.zufriedenheit - 30);
+  };
+  const ohne = lauf(0), mit = lauf(3);
+  assert.ok(ohne[0] > 0);
+  assert.deepEqual(mit, ohne.map(x => Math.round(x * 2)));
+}
+console.log('Multiplikator-Gottesdienst-Tests bestanden.');
 console.log('Lobpreis-Haltungs-Tests bestanden.');
 
 // Ausfälle: Lobpreis ohne Gitarre; Veranstaltung 2 ohne Kanzel/Altar bleibt eingestellt, fällt aber aus

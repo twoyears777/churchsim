@@ -4,7 +4,7 @@
 // Die Dauer wird beim Start in Spielminuten umgerechnet (1 echte Minute bei x1 = 300 Spielminuten). Weil sie an der
 // Spielzeit hängt, hält sie bei Pause/geschlossenem Spiel an und läuft bei schnellerem Tempo entsprechend schneller.
 // Gespeichert wird: z.heiligkeit, z.forschung = { laeuft: { id, beginn, ende } | null, fertig: [ids] }
-import { FORSCHUNGEN, HEILIGKEIT } from '../inhalte/forschung.js';
+import { FORSCHUNGEN, HEILIGKEIT, HALTUNG_MULTIPLIKATOR } from '../inhalte/forschung.js';
 import { spielMinuten } from './zeit.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 
@@ -13,6 +13,7 @@ export function forschungAnlegen(z) {
   if (!z.forschung) z.forschung = { laeuft: null, fertig: [] };
   if (!Array.isArray(z.forschung.fertig)) z.forschung.fertig = [];
   if (z.forschung.laeuft === undefined) z.forschung.laeuft = null;
+  if (typeof z.multiplikator !== 'number') z.multiplikator = 0;   // Stufe des Haltungs-Multiplikators (0 = noch nicht gekauft)
 }
 
 // Gottesdienst zu Ende: Heiligkeit für die anwesenden Besucher
@@ -81,4 +82,33 @@ export function forschungListe(z) {
       // Restzeit in echten Sekunden bei x1 (die Oberfläche rechnet nichts selbst)
       restSekunden: laeuft ? Math.max(0, Math.ceil((L.ende - z.minuten) / dauerMinuten(f) * f.dauer)) : null };
   });
+}
+
+// ── Haltungs-Multiplikator (Lukas, 25.11. abends) ──
+// Gespeichert wird nur die Stufe: z.multiplikator (0, 1, 2, …)
+const MS = HALTUNG_MULTIPLIKATOR.stufen;
+export function multiplikatorFaktor(z, art) {
+  const st = (z && z.multiplikator) || 0;
+  return st > 0 && HALTUNG_MULTIPLIKATOR.veranstaltungen.includes(art) ? MS[st - 1].faktor : 1;
+}
+// Haltung nach dem Multiplikator: nur Pluswerte werden vervielfacht, gerundet auf ganze Punkte
+export function mitMultiplikator(z, art, haltung) {
+  return haltung > 0 ? Math.round(haltung * multiplikatorFaktor(z, art)) : haltung;
+}
+// Nächste Stufe kaufen → 'ok' | 'max' (alle Stufen gekauft) | 'heiligkeit'
+export function multiplikatorKaufen(z) {
+  forschungAnlegen(z);
+  const n = MS[z.multiplikator];
+  if (!n) return 'max';
+  if (z.heiligkeit < n.preis) return 'heiligkeit';
+  z.heiligkeit -= n.preis;
+  z.multiplikator++;
+  return 'ok';
+}
+// Für das Forschungs-Fenster: jetzige Stufe/Faktor, nächste Stufe mit Preis (null, wenn alles gekauft) und Zustand
+export function multiplikatorInfo(z) {
+  forschungAnlegen(z);
+  const st = z.multiplikator, n = MS[st];
+  return { stufe: st, maxStufe: MS.length, faktor: st ? MS[st - 1].faktor : 1,
+    naechste: n ? { stufe: st + 1, faktor: n.faktor, preis: n.preis, leistbar: z.heiligkeit >= n.preis } : null };
 }
