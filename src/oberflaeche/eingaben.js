@@ -13,6 +13,7 @@ const HINWEISE = {
   abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
   raum: 'Tippe in einen Raum, um seine Funktion festzulegen.'
 };
+const hinweisFuer = id => HINWEISE[id || 'keinWerkzeug'];   // ohne gewähltes Werkzeug: eigener Hinweis
 const leinwand = $('karte');
 const istMoebelWerkzeug = () => ui.werkzeug !== 'strasse' && ui.spiel.moebelArten().some(m => m.id === ui.werkzeug);
 const ZIEH_WERKZEUGE = ['wand', 'abriss', 'strasse'];   // Rechteck ziehen
@@ -46,9 +47,14 @@ let hinweisTimer = null;
 function kurzerHinweis(text) {
   const h = $('hinweis'); h.textContent = text; h.classList.add('warnung');
   clearTimeout(hinweisTimer);
-  hinweisTimer = setTimeout(() => { h.textContent = HINWEISE[ui.werkzeug]; h.classList.remove('warnung'); }, 3000);
+  hinweisTimer = setTimeout(() => { h.textContent = hinweisFuer(ui.werkzeug); h.classList.remove('warnung'); }, 3000);
 }
 function abbrechen() { if (ui.ziehen || ui.tragen) { ui.ziehen = null; ui.tragen = null; ui.malen(); } }
+// Rechtsklick: erst ein laufendes Ziehen abbrechen, sonst im Editor die Bauauswahl aufheben (dann baut ein Klick nichts)
+function rechtsklick() {
+  if (ui.ziehen || ui.tragen) return abbrechen();
+  if (ui.editorOffen && ui.werkzeug) werkzeugWaehlen(null);
+}
 
 // Mauszeiger zeigt, was man tun kann
 function mauszeiger(e) {
@@ -56,6 +62,7 @@ function mauszeiger(e) {
   if (ui.tragen) c = 'grabbing';
   else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
       || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) ? 'pointer' : 'default'; }
+  else if (!ui.werkzeug) c = 'default';                       // nichts zum Bauen gewählt
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
   else if (istMoebelWerkzeug()) c = 'crosshair';
   else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'raum' ? 'pointer' : 'crosshair';
@@ -63,7 +70,7 @@ function mauszeiger(e) {
 }
 
 function druecken(e) {
-  if (e.button === 2) { abbrechen(); return; }        // Rechtsklick bricht Ziehen ab
+  if (e.button === 2) { rechtsklick(); return; }      // Rechtsklick bricht Ziehen bzw. Bauauswahl ab
   if (!ui.editorOffen) {
     const p = figurBei(e);
     if (p) { leinwand.setPointerCapture(e.pointerId); const a = punktAus(e); ui.tragen = { id: p.id, ...a, start: a, bewegt: false }; ui.malen(); }
@@ -195,7 +202,7 @@ export function eingabenEinrichten() {
   });
 
   bauleisteEinrichten({
-    beiWahl: id => { $('hinweis').textContent = HINWEISE[id]; $('hinweis').classList.remove('warnung'); $('drehen').hidden = !drehbar(); fensterSchliessen(); ui.malen(); },
+    beiWahl: id => { $('hinweis').textContent = hinweisFuer(id); $('hinweis').classList.remove('warnung'); $('drehen').hidden = !drehbar(); fensterSchliessen(); ui.malen(); },
     beiBus: () => { $('hinweis').textContent = HINWEISE.bushaltestelle; fensterOeffnen({ art: 'bus' }); }
   });
   $('drehen').textContent = TEXTE.bauleiste.drehen;
@@ -210,5 +217,5 @@ export function eingabenEinrichten() {
   sicherKnopf($('neu'), 'Neu', 'Wirklich leeren?', zuruecksetzen);
   $('editorAuf').addEventListener('click', () => editorUmschalten(true));
   $('editorZu').addEventListener('click', () => editorUmschalten(false));
-  $('hinweis').textContent = HINWEISE[ui.werkzeug];
+  $('hinweis').textContent = hinweisFuer(ui.werkzeug);
 }

@@ -41,7 +41,7 @@ function malen() {
   const f = ui.fenster, auswahl = f && (f.art === 'raum' || f.art === 'raumtyp' || f.art === 'kaffee') ? f.nr : null;
   zeichne(ctx, karte, ui.ansicht, {
     vorschau, konflikte: vorschau && vorschau.konflikte || [], auswahl, preisSchild, geist, raster: ui.editorOffen,
-    schwebe: ui.editorOffen && !z ? ui.schwebe : null, tragen: ui.tragen, getragen: ui.tragen ? ui.tragen.id : null,
+    schwebe: ui.editorOffen && !z && ui.werkzeug ? ui.schwebe : null, tragen: ui.tragen, getragen: ui.tragen ? ui.tragen.id : null,
     markiert: f && f.art === 'besucher' ? f.id : null, zahlen: zahlenAnzeigen(karte.zahlen)
   });
   anzeigenAktualisieren();
