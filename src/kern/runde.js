@@ -41,3 +41,8 @@ export function wocheBeenden(z, raeume) {
   z.woche++;
   return rueckblick;
 }
+
+// Voraussichtliche Finanzen der laufenden Woche. Regeln folgen später – bis dahin 0.
+export function finanzPrognose(z, raeume) {
+  return { einnahmen: 0, ausgaben: 0 };
+}

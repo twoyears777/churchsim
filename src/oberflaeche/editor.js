@@ -4,8 +4,8 @@ import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { neuerZustand, wandRechteck, abriss, tuerUmschalten, erkenneRaeume, pruefeRaum, raumTypVon, typZuweisen, idx } from '../kern/karte.js';
 import { personenAnlegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from '../kern/personen.js';
 import { moebelAnlegen, moebelSetzen, moebelEntfernen, moebelPruefen, moebelBei } from '../kern/moebel.js';
-import { raumBereitschaft, kannWocheBeenden, wocheBeenden } from '../kern/runde.js';
-import { sonntagDerWoche } from '../kern/kalender.js';
+import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose } from '../kern/runde.js';
+import { sonntagDerWoche, kirchenjahrStand } from '../kern/kalender.js';
 import { weg } from '../kern/wege.js';
 import { wandBauen, wandKonflikte } from '../kern/bauen.js';
 import { namenZiehen } from '../kern/besucher.js';
@@ -28,10 +28,11 @@ let z = laden() || neuerZustand();
 personenAnlegen(z); moebelAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
 let raeume = auswerten();
 let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
-let besucher = [], ablauf = null, stuhlStart = null;
+let besucher = [], ablauf = null, stuhlStart = null, schwebe = null;
 const verlauf = [];
 
 const $ = id => document.getElementById(id);
+const euro = n => `${n.toLocaleString('de-DE')} €`;
 const leinwand = $('karte'), ctx = leinwand.getContext('2d'), flaeche = $('flaeche');
 const maske = $('maske'), rueckblick = $('rueckblick');
 let ansicht = { k: 16, ox: 0, oy: 0 };
@@ -74,21 +75,68 @@ function figuren() {
 function malen() {
   ctx.clearRect(0, 0, leinwand.width, leinwand.height);
   const konflikte = ziehen && ziehen.art === 'wand' ? wandKonflikte(z, ziehen.x0, ziehen.y0, ziehen.x1, ziehen.y1) : [];
-  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, konflikte, auswahl, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
+  zeichne(ctx, z, raeume, ansicht, { vorschau: ziehen, konflikte, auswahl, schwebe: editorOffen && !ziehen ? schwebe : null, raster: editorOffen, personen: figuren(), tragen, moebel: z.moebel, besucher });
   anzeigenAktualisieren();
 }
 
-// ---- Anzeigen in der Spiel-Leiste ----
+// ---- Anzeigen: Seitenleiste, Datum mit Kirchenjahr-Rad, Hinweis ----
+const ART_TEXT_MEHRZAHL = { hauptamt: 'listeHauptamt', ehrenamt: 'listeEhrenamt' };
+const LEERTEXT = { hauptamt: 'Noch keine Hauptamtlichen', ehrenamt: 'Noch keine Ehrenamtlichen' };
+let letzteAnzeige = '';
 function anzeigenAktualisieren() {
   const v = verfuegbarkeit(z, raeume);
   $('anzHauptamt').textContent = `${v.hauptamt.frei}/${v.hauptamt.gesamt}`;
   $('anzEhrenamt').textContent = `${v.ehrenamt.frei}/${v.ehrenamt.gesamt}`;
-  const s = ablauf ? ablauf.beendet : sonntagDerWoche(z.woche); // während des Gottesdienstes noch der laufende Sonntag
+  // Personenlisten nur neu aufbauen, wenn sich etwas geändert hat (sonst flackert die Maus-Hervorhebung)
+  const zeilen = z.personen.map(p => { const d = daten(p), r = eingesetztIn(z, raeume, p); return d && { id: p.id, art: d.art, name: d.name, ort: r ? r.typ.name : 'verfügbar' }; }).filter(Boolean);
+  const schluessel = JSON.stringify(zeilen);
+  if (schluessel !== letzteAnzeige) {
+    letzteAnzeige = schluessel;
+    for (const art of ['hauptamt', 'ehrenamt']) {
+      const ul = $(ART_TEXT_MEHRZAHL[art]); ul.replaceChildren();
+      const eigene = zeilen.filter(x => x.art === art);
+      if (!eigene.length) { const li = document.createElement('li'); li.className = 'leer'; li.textContent = LEERTEXT[art]; ul.append(li); }
+      for (const x of eigene) {
+        const li = document.createElement('li'), n = document.createElement('span'), o = document.createElement('small');
+        n.textContent = x.name; o.textContent = x.ort; li.append(n, o); li.dataset.person = x.id;
+        ul.append(li);
+      }
+    }
+  }
+  const f = finanzPrognose(z, raeume);
+  $('progEinnahmen').textContent = euro(f.einnahmen);
+  $('progAusgaben').textContent = euro(f.ausgaben);
+  const woche = ablauf ? ablauf.woche : z.woche;   // während des Gottesdienstes noch der laufende Sonntag
+  const s = sonntagDerWoche(woche);
   $('sonntag').textContent = `${s.name} · ${s.datum}`;
+  radZeichnen(kirchenjahrStand(woche));
   const kann = kannWocheBeenden(z, raeume);
   $('wocheBeenden').disabled = !kann || !!ablauf;
   $('spielHinweis').textContent = kann || ablauf ? '' : wasFehlt();
 }
+document.querySelector('.seitenleiste').addEventListener('click', e => {
+  const li = e.target.closest('li[data-person]');
+  if (li && !ablauf) karteOeffnen(z.personen.find(p => p.id === li.dataset.person));
+});
+
+// Kirchenjahr-Rad: Abschnitte wie Tortenstücke, Zeiger wie bei einer Uhr (oben = 1. Advent, im Uhrzeigersinn)
+let letztesRad = '';
+function radZeichnen(stand) {
+  const schluessel = stand.fortschritt.toFixed(4);
+  $('zeit').textContent = stand.aktuell.name;
+  if (schluessel === letztesRad) return;
+  letztesRad = schluessel;
+  const punkt = (a, r) => [Math.sin(a * 2 * Math.PI) * r, -Math.cos(a * 2 * Math.PI) * r].map(n => n.toFixed(2)).join(' ');
+  const stuecke = stand.zeiten.map(zt => {
+    const gross = zt.bis - zt.von > 0.5 ? 1 : 0;
+    return `<path d="M0 0 L${punkt(zt.von, 46)} A46 46 0 ${gross} 1 ${punkt(zt.bis, 46)} Z" fill="${zt.farbe}" stroke="#2b2a27" stroke-width="1.5"><title>${zt.name}</title></path>`;
+  }).join('');
+  const spitze = punkt(stand.fortschritt, 40);
+  $('rad').innerHTML = `${stuecke}<circle r="46" fill="none" stroke="#2b2a27" stroke-width="2"/>
+    <line x1="0" y1="0" x2="${spitze.split(' ')[0]}" y2="${spitze.split(' ')[1]}" stroke="#d6362b" stroke-width="4" stroke-linecap="round"/>
+    <circle r="5" fill="#d6362b"/>`;
+}
+
 function wasFehlt() {
   const gd = raumBereitschaft(z, raeume).filter(b => b.typ.id === 'gottesdienst');
   if (!gd.length) return 'Für den Gottesdienst fehlt ein fertiger Gottesdienstraum.';
@@ -116,7 +164,10 @@ function figurBei(e) {
 }
 const personAuf = (x, y) => z.personen.some(p => p.x === x && p.y === y);
 
+leinwand.addEventListener('contextmenu', e => e.preventDefault());
+leinwand.addEventListener('mousedown', e => { if (e.button === 2) abbrechen(); });   // Rechtsklick während gedrückter linker Taste
 leinwand.addEventListener('pointerdown', e => {
+  if (e.button === 2) { abbrechen(); return; }        // Rechtsklick bricht Ziehen ab
   if (ablauf) return;
   if (!editorOffen) {
     const p = figurBei(e);
@@ -132,6 +183,9 @@ leinwand.addEventListener('pointerdown', e => {
   }
 });
 leinwand.addEventListener('pointermove', e => {
+  if (e.buttons & 2) { abbrechen(); return; }
+  mauszeiger(e);
+  if (editorOffen && !ziehen) { const f = feldAus(e); if (!schwebe || f.x !== schwebe.x || f.y !== schwebe.y) { schwebe = f; malen(); } }
   if (tragen) {
     const a = punktAus(e);
     if (Math.hypot(a.px - tragen.start.px, a.py - tragen.start.py) > 6) tragen.bewegt = true;
@@ -166,7 +220,27 @@ leinwand.addEventListener('pointerup', e => {
     if (nr >= 0) { auswahl = nr; maskeOeffnen(); } else maskeSchliessen();
   }
 });
-leinwand.addEventListener('pointercancel', () => { ziehen = null; tragen = null; malen(); });
+leinwand.addEventListener('pointercancel', abbrechen);
+leinwand.addEventListener('pointerleave', () => { if (schwebe) { schwebe = null; malen(); } });
+function abbrechen() { if (ziehen || tragen) { ziehen = null; tragen = null; malen(); } }
+
+// Mauszeiger zeigt, was man tun kann
+function mauszeiger(e) {
+  let c = 'default';
+  if (ablauf) c = 'default';
+  else if (tragen) c = 'grabbing';
+  else if (!editorOffen) c = figurBei(e) ? 'grab' : 'default';
+  else c = werkzeug === 'tuer' || werkzeug === 'raum' ? 'pointer' : 'crosshair';
+  if (leinwand.style.cursor !== c) leinwand.style.cursor = c;
+}
+
+// Escape: erst Ziehen abbrechen, dann Fenster schließen, dann Editor schließen
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || ablauf) return;
+  if (ziehen || tragen) return abbrechen();
+  if (!maske.hidden) return maskeSchliessen();
+  if (editorOffen) editorUmschalten(false);
+});
 
 // ---- Raum-Maske ----
 function maskeOeffnen() {
@@ -219,7 +293,7 @@ function wocheStarten() {
     const start = { x: g.tor.x + (i % g.tor.breite), y: gehweg ? gehweg.y : g.y + g.h + 1 };
     return { name: namen[i].vorname, vollerName: namen[i].voll, pfad: weg(z, start, ziel, blockiert) || [ziel], beginn: jetzt + i * ABSTAND_MS, x: start.x, y: start.y, sichtbar: false };
   });
-  ablauf = { beendet, ergebnis };
+  ablauf = { beendet, ergebnis, woche: ergebnis.woche };
   document.body.classList.add('laeuft');
   requestAnimationFrame(schritt);
 }
@@ -237,7 +311,6 @@ function schritt(t) {
   malen();
   if (fertig) setTimeout(rueckblickZeigen, 600); else requestAnimationFrame(schritt);
 }
-const euro = n => `${n.toLocaleString('de-DE')} €`;
 function rueckblickZeigen() {
   const { beendet, ergebnis: e } = ablauf;
   const saldo = e.finanzen.einnahmen - e.finanzen.ausgaben;

@@ -46,6 +46,12 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
     }
   }
 
+  // Kästchen unter der Maus (nur im Editor)
+  if (extra.schwebe) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+    ctx.strokeRect(ox + extra.schwebe.x * k + 1, oy + extra.schwebe.y * k + 1, k - 2, k - 2);
+  }
+
   // Auswahl
   if (extra.auswahl != null) {
     const r = liste[extra.auswahl];

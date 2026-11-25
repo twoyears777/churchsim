@@ -13,14 +13,6 @@
 <meta name="theme-color" content="#2b2a27">
 </head>
 <body class="modus-spiel">
-<header class="leiste hud">
-  <div class="anzeigen">
-    <div class="anzeige datum" id="sonntag"></div>
-    <div class="anzeige"><span class="punkt hauptamt"></span>Hauptamtliche <b id="anzHauptamt">0/0</b> verfügbar</div>
-    <div class="anzeige"><span class="punkt ehrenamt"></span>Ehrenamtliche <b id="anzEhrenamt">0/0</b> verfügbar</div>
-  </div>
-  <div class="werkzeuge"><button id="editorAuf">Bauen</button><button id="wocheBeenden" class="haupt">Woche beenden</button></div>
-</header>
 <header class="leiste editor">
   <div class="werkzeuge" role="toolbar" aria-label="Werkzeuge">
     <button data-werkzeug="wand" aria-pressed="true">Wand</button>
@@ -36,12 +28,46 @@
   </div>
 </header>
 <p id="hinweis" class="hinweis editor"></p>
-<p id="spielHinweis" class="hinweis hud"></p>
-<main id="flaeche" class="flaeche">
-  <canvas id="karte"></canvas>
-  <div id="maske" class="maske" hidden><div class="inhalt"></div></div>
-  <div id="rueckblick" class="rueckblick" hidden><div class="inhalt"></div></div>
-</main>
+
+<div class="spielflaeche">
+  <aside class="seitenleiste hud" aria-label="Management">
+    <details open>
+      <summary>Mitarbeiter</summary>
+      <div class="gruppe">
+        <div class="kopf"><span class="punkt hauptamt"></span>Hauptamtliche <b id="anzHauptamt">0/0</b> verfügbar</div>
+        <ul id="listeHauptamt" class="personen"></ul>
+      </div>
+      <div class="gruppe">
+        <div class="kopf"><span class="punkt ehrenamt"></span>Ehrenamtliche <b id="anzEhrenamt">0/0</b> verfügbar</div>
+        <ul id="listeEhrenamt" class="personen"></ul>
+      </div>
+    </details>
+    <details open>
+      <summary>Finanzen</summary>
+      <table class="finanzen">
+        <tr><td>Voraussichtliche Einnahmen</td><td class="zahl" id="progEinnahmen">0 €</td></tr>
+        <tr><td>Voraussichtliche Ausgaben</td><td class="zahl" id="progAusgaben">0 €</td></tr>
+      </table>
+    </details>
+  </aside>
+
+  <main id="flaeche" class="flaeche">
+    <canvas id="karte"></canvas>
+
+    <div class="datum hud">
+      <div class="datumText"><b id="sonntag"></b><small id="zeit"></small></div>
+      <svg id="rad" viewBox="-50 -50 100 100" width="64" height="64" role="img" aria-label="Kirchenjahr"></svg>
+    </div>
+    <div class="unten-mitte hud"><button id="editorAuf">Bauen</button></div>
+    <div class="unten-rechts hud">
+      <p id="spielHinweis" class="spielHinweis"></p>
+      <button id="wocheBeenden" class="haupt">Woche beenden</button>
+    </div>
+
+    <div id="maske" class="maske" hidden><div class="inhalt"></div></div>
+    <div id="rueckblick" class="rueckblick" hidden><div class="inhalt"></div></div>
+  </main>
+</div>
 <script type="module" src="src/oberflaeche/editor.js"></script>
 </body>
 </html>

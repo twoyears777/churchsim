@@ -21,3 +21,15 @@ export const NAMEN = {
   drittletzter: 'Drittletzter Sonntag des Kirchenjahres', vorletzter: 'Vorletzter Sonntag des Kirchenjahres',
   ewigkeit: 'Ewigkeitssonntag'
 };
+
+// Zeiten des Kirchenjahres für das Kirchenjahr-Rad. Beginn jeweils relativ zu einem Stichtag.
+// Farben: Platzhalter nach liturgischen Farben – Design legt Lukas fest.
+export const ZEITEN = [
+  { id: 'advent', name: 'Adventszeit', farbe: '#7b5ea7' },          // ab 1. Advent
+  { id: 'weihnachten', name: 'Weihnachtszeit', farbe: '#efe9d8' },  // ab 25.12.
+  { id: 'epiphanias', name: 'Epiphaniaszeit', farbe: '#7fa860' },   // ab 6.1.
+  { id: 'vorpassion', name: 'Vorpassionszeit', farbe: '#a9c48f' },  // ab Septuagesimä
+  { id: 'passion', name: 'Passionszeit', farbe: '#5b3f86' },        // ab Aschermittwoch
+  { id: 'ostern', name: 'Osterzeit', farbe: '#f7f3e8' },            // ab Ostersonntag
+  { id: 'trinitatis', name: 'Trinitatiszeit', farbe: '#5f8f45' }    // ab Trinitatis
+];

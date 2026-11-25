@@ -16,8 +16,8 @@ button[aria-pressed="true"] { background: #f3efe6; color: #2b2a27; border-color:
 button:disabled { opacity: .45; cursor: default; }
 button:focus-visible { outline: 2px solid #8fb4ea; outline-offset: 2px; }
 .hinweis { margin: 0; padding: 0 14px 8px; font-size: 14px; color: #c9c4b8; }
-.flaeche { position: relative; flex: 1; min-height: 0; touch-action: none; }
-#karte { display: block; }
+.flaeche { position: relative; flex: 1; min-height: 0; min-width: 0; overflow: hidden; touch-action: none; }
+#karte { display: block; position: absolute; left: 0; top: 0; }
 .maske { position: absolute; right: 12px; bottom: 12px; width: min(340px, calc(100% - 24px)); }
 .inhalt { background: #f3efe6; color: #2b2a27; border-radius: 12px; padding: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
 .inhalt h2 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
@@ -33,12 +33,7 @@ button:focus-visible { outline: 2px solid #8fb4ea; outline-offset: 2px; }
 /* Modi: normale Spielansicht (HUD) und Editor */
 .modus-spiel .editor, .modus-editor .hud { display: none; }
 button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
-.anzeigen { display: flex; flex-wrap: wrap; gap: 8px; }
-.anzeige { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 8px; background: #3a3935; font-size: 15px; }
-.anzeige b { font-variant-numeric: tabular-nums; }
-.punkt { width: 12px; height: 12px; border-radius: 50%; }
 .punkt.hauptamt { background: #2d69be; } .punkt.ehrenamt { background: #d08a1e; }
-.anzeige.datum { font-weight: 600; }
 .hinweis:empty { display: none; }
 .laeuft button { pointer-events: none; opacity: .6; }
 .laeuft .rueckblick button { pointer-events: auto; opacity: 1; }
@@ -55,3 +50,32 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .inhalt .unter { margin: -6px 0 6px; color: #6b665b; font-size: 14px; }
 .inhalt h3 { margin: 14px 0 4px; font-size: 15px; font-weight: 600; }
 .inhalt .leer { margin: 0 0 12px; color: #6b665b; font-style: italic; }
+
+/* Layout Spielansicht: Seitenleiste links, Karte rechts, Bedienelemente über der Karte (Platzhalter-Design) */
+.spielflaeche { flex: 1; min-height: 0; display: flex; }
+.seitenleiste { width: 270px; flex: none; overflow-y: auto; padding: 10px 10px 10px 12px; }
+.modus-editor .seitenleiste { display: none; }
+.seitenleiste details { background: #3a3935; border-radius: 10px; padding: 4px 12px 10px; margin-bottom: 10px; }
+.seitenleiste summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+.gruppe { margin-top: 6px; }
+.kopf { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.kopf b { font-variant-numeric: tabular-nums; }
+.personen { list-style: none; margin: 4px 0 6px; padding: 0; }
+.personen li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+.personen li:hover { background: #45443f; }
+.personen li small { color: #b9b4a8; }
+.personen li.leer { cursor: default; color: #9d988c; font-style: italic; }
+.personen li.leer:hover { background: none; }
+.finanzen { width: 100%; border-collapse: collapse; font-size: 14px; }
+.finanzen td { padding: 4px 0; }
+.finanzen .zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.datum { position: absolute; top: 10px; right: 12px; display: flex; align-items: center; gap: 10px;
+  background: rgba(43,42,39,.9); border-radius: 12px; padding: 6px 8px 6px 14px; }
+.datumText { display: flex; flex-direction: column; text-align: right; }
+.datumText small { color: #c9c4b8; font-size: 13px; }
+.unten-mitte { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); }
+.unten-rechts { position: absolute; bottom: 12px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.spielHinweis { margin: 0; max-width: 300px; padding: 6px 10px; border-radius: 8px; background: rgba(43,42,39,.9); font-size: 13px; color: #e6e1d4; text-align: right; }
+.spielHinweis:empty { display: none; }
+.modus-editor .datum, .modus-editor .unten-mitte, .modus-editor .unten-rechts { display: none; }
+.modus-spiel .maske { bottom: 72px; }

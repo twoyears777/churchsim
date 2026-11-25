@@ -1,5 +1,5 @@
 // Rechnet zu jeder Runde (Woche) den Sonntag und seinen Namen im Kirchenjahr aus.
-import { START, UM_OSTERN, NAMEN } from '../inhalte/kirchenjahr.js';
+import { START, UM_OSTERN, NAMEN, ZEITEN } from '../inhalte/kirchenjahr.js';
 
 const TAG = 86400000;
 const datum = (j, m, t) => Date.UTC(j, m - 1, t);
@@ -43,4 +43,19 @@ export function sonntagName(t) {
 export function sonntagDerWoche(woche) {
   const t = datum(START.jahr, START.monat, START.tag) + woche * 7 * TAG, d = new Date(t);
   return { name: sonntagName(t), datum: `${d.getUTCDate()}.${d.getUTCMonth() + 1}.` };
+}
+
+// Für das Kirchenjahr-Rad: Abschnitte des laufenden Kirchenjahres (Anteile 0–1) und wie weit es fortgeschritten ist.
+export function kirchenjahrStand(woche) {
+  const t = datum(START.jahr, START.monat, START.tag) + woche * 7 * TAG, j = new Date(t).getUTCFullYear();
+  const beginn = t >= ersterAdvent(j) ? ersterAdvent(j) : ersterAdvent(j - 1);
+  const ende = ersterAdvent(new Date(beginn).getUTCFullYear() + 1), jn = new Date(ende).getUTCFullYear(), o = ostern(jn);
+  const starts = {
+    advent: beginn, weihnachten: datum(jn - 1, 12, 25), epiphanias: datum(jn, 1, 6), vorpassion: o - 63 * TAG,
+    passion: o - 46 * TAG, ostern: o, trinitatis: o + 56 * TAG
+  };
+  const laenge = ende - beginn, anteil = v => (v - beginn) / laenge;
+  const zeiten = ZEITEN.map((z, i) => ({ ...z, von: anteil(starts[z.id]), bis: i + 1 < ZEITEN.length ? anteil(starts[ZEITEN[i + 1].id]) : 1 }));
+  const fortschritt = anteil(t);
+  return { fortschritt, zeiten, aktuell: zeiten.find(z => fortschritt >= z.von && fortschritt < z.bis) || zeiten[0] };
 }

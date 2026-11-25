@@ -105,3 +105,18 @@ import { VERSION } from '../src/version.js';
 import { readFileSync } from 'node:fs';
 assert.equal(JSON.parse(readFileSync(new URL('../version.json', import.meta.url))).version, VERSION);
 console.log('Versions-Test bestanden.');
+
+// Kirchenjahr-Rad
+import { kirchenjahrStand } from '../src/kern/kalender.js';
+{
+  const a = kirchenjahrStand(0);
+  assert.equal(a.fortschritt, 0); assert.equal(a.aktuell.id, 'advent');
+  assert.equal(kirchenjahrStand(4).aktuell.id, 'weihnachten');     // 27.12.
+  assert.equal(kirchenjahrStand(17).aktuell.id, 'ostern');         // Ostersonntag 2027
+  assert.equal(kirchenjahrStand(15).aktuell.id, 'passion');        // Judika
+  assert.equal(kirchenjahrStand(51).aktuell.id, 'trinitatis');     // Ewigkeitssonntag
+  assert.equal(kirchenjahrStand(52).fortschritt, 0);               // neues Kirchenjahr
+  for (const z of a.zeiten) assert.ok(z.von < z.bis);
+  assert.equal(a.zeiten.at(-1).bis, 1);
+}
+console.log('Kirchenjahr-Tests bestanden.');
