@@ -99,3 +99,9 @@ import { sonntagDerWoche } from '../src/kern/kalender.js';
   assert.equal(new Set(kurz.map(x => x.voll)).size, 10);       // in kleiner Woche keine Doppelten
 }
 console.log('Runden-Tests bestanden.');
+
+// Versionsnummer in version.js und version.json müssen übereinstimmen (sonst lädt die App endlos neu)
+import { VERSION } from '../src/version.js';
+import { readFileSync } from 'node:fs';
+assert.equal(JSON.parse(readFileSync(new URL('../version.json', import.meta.url))).version, VERSION);
+console.log('Versions-Test bestanden.');

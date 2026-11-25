@@ -10,6 +10,7 @@ import { weg } from '../kern/wege.js';
 import { wandBauen, wandKonflikte } from '../kern/bauen.js';
 import { namenZiehen } from '../kern/besucher.js';
 import { zeichne } from '../ansicht/zeichnen.js';
+import { aktualisierungStarten } from './aktualisieren.js';
 
 const SPEICHER = 'churchsim-editor';
 const VERSION = 2;
@@ -294,3 +295,4 @@ $('editorZu').addEventListener('click', () => editorUmschalten(false));
 
 new ResizeObserver(groesseAnpassen).observe(flaeche);
 $('hinweis').textContent = HINWEISE[werkzeug];
+aktualisierungStarten(() => !!ablauf || !!ziehen || !!tragen);
