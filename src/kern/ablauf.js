@@ -148,6 +148,24 @@ export function naechsterTermin(z, raeume = raeumeVon(z)) {
   return null;
 }
 
+// Anzeige oben: läuft gerade eine Veranstaltung (oder ein Fest)? Sonst die nächste mit Name und Minuten bis zum Beginn.
+// Zählt nur Termine mit eingestellter Art, die nicht von einem Fest verdrängt werden. Kirchkaffee-Schichten zählen nicht.
+export function naechstesEvent(z, raeume = raeumeVon(z)) {
+  const name = t => t.fest ? ((festAusSchluessel(t.fest) || {}).fest || {}).name : (VERANSTALTUNGEN.find(v => v.id === t.art) || {}).name;
+  const laeuft = (z.laeufe || []).find(L => L.phase === 'gottesdienst' && !L.ausgefallen);
+  if (laeuft) return { laeuft: true, name: name(laeuft) || null };
+  const w = zeitpunkt(z.minuten).woche, laufend = new Set((z.laeufe || []).map(L => L.id)), erledigt = new Set(z.termineErledigt || []);
+  for (const woche of [w, w + 1, w + 2]) {
+    if (woche <= z.letzterLauf) continue;
+    for (const t of termineDerWoche(z, raeume, woche)) {
+      if (!t.art || z.minuten >= t.beginn || laufend.has(t.id) || erledigt.has(t.id) || verdraengtVon(z, raeume, t)) continue;
+      const n = name(t);
+      if (n) return { laeuft: false, name: n, minuten: t.beginn - z.minuten };
+    }
+  }
+  return null;
+}
+
 // Sitzplätze der bereiten Gottesdiensträume, beste Plätze zuerst (höchste Stuhlstufe, dann meiste Kollekte).
 // wert: Kollekte der Person auf diesem Platz (1 € × Stuhl × Raum); haltung: + Haltung für sie.
 export function sitzplaetze(liste) {

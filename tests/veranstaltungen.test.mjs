@@ -5,13 +5,14 @@ import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { ZWEITER_BESUCH } from '../src/inhalte/veranstaltungen.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten, spielAnlegen } from '../src/kern/spiel.js';
-import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, programmVon, gottesdienstRaeume, termineDerWoche, prognose } from '../src/kern/ablauf.js';
+import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, programmVon, gottesdienstRaeume, termineDerWoche, prognose, naechstesEvent } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelAbreissen } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
 import { besuchChance, kommChance, lobpreisVorliebe } from '../src/kern/besucher.js';
 import { TAG_MIN, WOCHE_MIN } from '../src/kern/zeit.js';
 import { besucherPositionen } from '../src/kern/bewegung.js';
 import { kaffeeZahlen } from '../src/kern/kirchkaffee.js';
+import { TEXTE } from '../src/inhalte/texte.js';
 
 const aus = z => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
 const raumBei = z => { const a = aus(z); return a.liste[a.gruppe[G.x + 5 + (G.y + 5) * z.w]]; };
@@ -259,3 +260,26 @@ console.log('Heimweg- und Kollekte-Zahlen-Tests bestanden.');
   assert.equal(JSON.stringify(programmVon(z, raumBei(z))), vorher);
 }
 console.log('Anbau-Test bestanden.');
+
+// Anzeige oben: nächstes Event mit Name und Zeit, laufendes Event, kein Event
+{
+  const z = gemeinde(); ausstatten(z);
+  veranstaltungEinstellen(z, raumBei(z), 'gottesdienst', 0);
+  veranstaltungEinstellen(z, raumBei(z), 'lobpreis', 1);
+  assert.equal(terminEinstellen(z, raumBei(z), 1, 2, 'abend'), 'ok');          // Lobpreis am Mittwochabend
+  const t = termineDerWoche(z, aus(z), 0).find(t => t.art === 'lobpreis');
+  let ne = naechstesEvent(z, aus(z));
+  assert.equal(ne.laeuft, false); assert.equal(ne.name, 'Lobpreisgottesdienst'); assert.equal(ne.minuten, t.beginn - z.minuten);
+  z.minuten = t.beginn + 1; z.termineErledigt.push(t.id);                      // Lobpreis vorbei → als Nächstes der Gottesdienst
+  assert.equal(naechstesEvent(z, aus(z)).name, 'Gottesdienst');
+  z.laeufe.push({ id: 'x', phase: 'gottesdienst', art: 'gottesdienst' });
+  assert.deepEqual(naechstesEvent(z, aus(z)), { laeuft: true, name: 'Gottesdienst' });
+  // Ohne Gottesdienstraum gibt es kein Event (der Standardtermin hat keine Art)
+  assert.equal(naechstesEvent(neuesSpiel(() => 0.5)), null);
+  assert.equal(TEXTE.naechstesEvent('Gottesdienst', 3 * 1440 + 5), 'Nächstes Event „Gottesdienst“ in 3 Tagen');
+  assert.equal(TEXTE.naechstesEvent('Gottesdienst', 1440), 'Nächstes Event „Gottesdienst“ in 1 Tag');
+  assert.equal(TEXTE.naechstesEvent('Gottesdienst', 23 * 60 + 59), 'Nächstes Event „Gottesdienst“ in 23 Stunden');
+  assert.equal(TEXTE.naechstesEvent('Gottesdienst', 60), 'Nächstes Event „Gottesdienst“ in 1 Stunde');
+  assert.equal(TEXTE.naechstesEvent('Gottesdienst', 59), 'Nächstes Event „Gottesdienst“ in unter 1 Stunde');
+}
+console.log('Nächstes-Event-Test bestanden.');

@@ -6,6 +6,14 @@ export const TEXTE = {
   tageKurz: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
   zeitAnzeige: (datum, tag, uhr) => `${datum} - ${tag} ${uhr}`,
   countdown: tage => tage === null ? 'Heute ist Sonntag' : tage === 0 ? 'Morgen ist Sonntag' : `Nächster Sonntag in ${tage} ${tage === 1 ? 'Tag' : 'Tagen'}`,
+  // Zeile unter dem Sonntags-Countdown: ab 24 Std. in Tagen, darunter in Stunden (jeweils abgerundet), unter 1 Std. „in unter 1 Stunde“
+  naechstesEvent: (name, minuten) => {
+    const tage = Math.floor(minuten / 1440), std = Math.floor(minuten / 60);
+    const wann = tage >= 1 ? `in ${tage} ${tage === 1 ? 'Tag' : 'Tagen'}` : std >= 1 ? `in ${std} ${std === 1 ? 'Stunde' : 'Stunden'}` : 'in unter 1 Stunde';
+    return `Nächstes Event „${name}“ ${wann}`;
+  },
+  eventLaeuft: 'Läuft gerade',
+  keinEvent: 'Kein Event geplant',
   tempo: { 0: 'Pause', 1: 'x1', 2: 'x2', 5: 'x5', 10: 'x10', 25: 'x25' },
   kontostand: 'Kontostand',
   bekanntheit: 'Bekanntheit',

@@ -64,6 +64,8 @@ export function anzeigenAktualisieren() {
   const uhr = `${String(l.stunde).padStart(2, '0')}:${String(l.minute).padStart(2, '0')}`;
   $('uhr').textContent = TEXTE.zeitAnzeige(l.datum, TEXTE.tage[l.tag], uhr);
   $('countdown').textContent = TEXTE.countdown(l.tageBisSonntag);
+  const ne = l.naechstesEvent;
+  $('naechstesEvent').textContent = !ne ? TEXTE.keinEvent : ne.laeuft ? TEXTE.eventLaeuft : TEXTE.naechstesEvent(ne.name, ne.minuten);
   $('sonntag').textContent = `${l.sonntag.name} · ${l.sonntag.datum} · ${l.kirchenjahr.aktuell.name}`;
   radZeichnen(l.kirchenjahr);
   document.querySelectorAll('[data-tempo]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.tempo) === l.tempo)));

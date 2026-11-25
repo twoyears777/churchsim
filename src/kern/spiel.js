@@ -20,7 +20,7 @@ import { besucherAnlegen } from './besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten, TAG_MIN } from './zeit.js';
 import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, programmVon,
   veranstaltungEinstellen, terminEinstellen, prognose, finanzPrognose, terminDieseWoche, ablaufAnlegen, laufVon,
-  naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon } from './ablauf.js';
+  naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon, naechstesEvent } from './ablauf.js';
 import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
   schichtHinzufuegen, schichtEntfernen, offenBei } from './kirchkaffee.js';
 import { PLAETZE, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
@@ -394,6 +394,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const personen = z.personen.map(p => { const d = daten(p), r = eingesetztIn(z, raeume, p); return d && { id: p.id, art: d.art, name: d.name, einsatz: r ? r.typ.name : null }; }).filter(Boolean);
       return {
         woche: zp.woche + 1, tag: zp.tag, datum: tagAnzeige(Math.floor(z.minuten / TAG_MIN)).datum, stunde: zp.stunde, minute: zp.minute, tageBisSonntag: tageBisSonntag(z.minuten),
+        naechstesEvent: naechstesEvent(z, raeume),   // läuft gerade eins / das nächste mit Minuten bis Beginn / null
         sonntag: sonntagDerWoche(zp.woche), kirchenjahr: kirchenjahrStand(zp.woche),
         tempo: z.tempo, konto: z.konto, bekanntheit: z.bekanntheit,
         finanzen: finanzPrognose(z, raeume),
