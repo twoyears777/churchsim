@@ -68,7 +68,7 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
   }
   // Vornamen klein neben den Besuchern
   ctx.font = `500 11px system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  for (const b of extra.besucher || []) if (b.sichtbar && b.name) {
+  for (const b of extra.besucher || []) if (b.sichtbar && b.name && !b.sitzt) { // beim Hinsetzen verschwindet der Name
     const cx = ox + (b.x + 0.5) * k + Math.max(5, k * 0.32) + 2, cy = oy + (b.y + 0.5) * k;
     ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.strokeText(b.name, cx, cy);
     ctx.fillStyle = FARBEN.text; ctx.fillText(b.name, cx, cy);

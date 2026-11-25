@@ -157,8 +157,7 @@ leinwand.addEventListener('pointerup', e => {
   }
   if (werkzeug === 'stuhl') {
     if (!stuhlStart || stuhlStart.x !== f.x || stuhlStart.y !== f.y) return;   // nur Tippen, kein Ziehen
-    if (moebelBei(z, f.x, f.y)) aendern(() => moebelEntfernen(z, f.x, f.y, f.x, f.y));
-    else aendern(() => moebelSetzen(z, 'stuhl', f.x, f.y, f.x, f.y, personAuf));
+    if (!moebelBei(z, f.x, f.y)) aendern(() => moebelSetzen(z, 'stuhl', f.x, f.y, f.x, f.y, personAuf)); // entfernen nur per Abriss
   } else if (werkzeug === 'tuer') {
     if (z.zellen[idx(z, f.x, f.y)]) aendern(() => tuerUmschalten(z, f.x, f.y));
   } else if (werkzeug === 'raum') {
@@ -229,7 +228,7 @@ function schritt(t) {
     const strecke = (t - b.beginn) / 1000 * LAUFTEMPO, n = b.pfad.length - 1;
     if (strecke < 0) { fertig = false; continue; }
     b.sichtbar = true;
-    if (strecke >= n) { b.x = b.pfad[n].x; b.y = b.pfad[n].y; continue; }
+    if (strecke >= n) { b.x = b.pfad[n].x; b.y = b.pfad[n].y; b.sitzt = true; continue; }
     fertig = false;
     const i = Math.floor(strecke), a = b.pfad[i], c = b.pfad[i + 1], f = strecke - i;
     b.x = a.x + (c.x - a.x) * f; b.y = a.y + (c.y - a.y) * f;
