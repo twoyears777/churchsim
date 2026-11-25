@@ -40,6 +40,26 @@ export function buchen(z, seite, kategorie, betrag, info = {}) {
   if (B.buchungen.length > KASSENBUCH_MAX) B.buchungen.shift();
 }
 
+// Rückgängig beim Bauen (25.11.): die Buchungen dieses Schritts werden zurückgenommen.
+// Noch dieselbe Woche: die Buchungen verschwinden ganz aus Wochenbuch und Kassenbuch (als wäre nichts passiert).
+// Woche schon gewechselt: das Geld wird in der richtigen Kategorie gegengebucht (Bau-/Möbel-Ausgabe ↔ Rückerstattung).
+export function stornieren(z, liste, woche) {
+  const B = buchVon(z);
+  for (const b of liste) {
+    if (woche === z.buchWoche) {
+      z.konto = cent(z.konto + (b.seite === 'einnahmen' ? -b.betrag : b.betrag));
+      const rest = cent((B[b.seite][b.kategorie] || 0) - b.betrag);
+      if (rest) B[b.seite][b.kategorie] = rest; else delete B[b.seite][b.kategorie];
+      const i = B.buchungen.indexOf(b);
+      if (i >= 0) B.buchungen.splice(i, 1);
+    } else if (b.seite === 'ausgaben') buchen(z, 'einnahmen', 'rueckerstattung', b.betrag, { was: 'rueckgaengig' });
+    else {
+      const bau = b.was === 'fenster' || 'stuecke' in b;   // Wände/Fenster (spiel.js) – sonst Möbel
+      buchen(z, 'ausgaben', b.kategorie === 'rueckerstattung' ? (bau ? 'bau' : 'moebel') : b.kategorie, b.betrag, { was: 'rueckgaengig' });
+    }
+  }
+}
+
 export function kollekte(besucher) { return besucher * KOLLEKTE_PRO_BESUCHER; }
 
 // Wochenwechsel (Montag 0:00): die abgelaufene Woche kommt mit ihren Summen in den Verlauf, das Wochenbuch beginnt leer.

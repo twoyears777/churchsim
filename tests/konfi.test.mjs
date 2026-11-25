@@ -140,9 +140,14 @@ console.log('Konfirmandenunterricht-Ablauf-Tests bestanden.');
   // ... ohne Konfirmanden nicht – stattdessen die Meldung
   const leer = gemeinde();
   leer.minuten = z.minuten; leer.feste.gefragt = [...z.feste.gefragt].filter(x => x !== k);
+  // Kirchenjahr-Fenster vor der Prüfung: 0 Konfirmanden, aber noch kein „fällt aus“ (es kann noch jemand 7-mal kommen); planen geht nicht
+  const vorher = spielStarten(JSON.stringify({ version: 3, zustand: leer }), () => 0.5).kirchenjahrInfo().feste.find(f => f.id === 'konfirmation');
+  assert.equal(vorher.konfirmanden, 0); assert.equal(vorher.faelltAus, false); assert.equal(vorher.planbar, false);
   festSchritt(leer).tun(leer);
   assert.equal(leer.feste.anfrage, null); assert.ok(leer.feste.gefragt.includes(k));
   assert.equal(konfiMeldung(leer).code, 'keineKonfirmanden');
+  // nach der Prüfung: fällt aus
+  assert.equal(spielStarten(JSON.stringify({ version: 3, zustand: leer }), () => 0.5).kirchenjahrInfo().feste.find(f => f.id === 'konfirmation').faelltAus, true);
   // Konfirmation im Gottesdienstraum planen (über die Schalterwand) und ablaufen lassen
   wandRechteck(z, G.x + 15, G.y + 2, G.x + 31, G.y + 8); tuerUmschalten(z, G.x + 15, G.y + 5);
   typZuweisen(z, raumBei(z, G.x + 20, G.y + 5), 'gottesdienst');

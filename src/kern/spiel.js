@@ -16,7 +16,7 @@ import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as k
   alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand, musikLevel, instrumenteImRaum, istHindernis } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
-import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht } from './finanzen.js';
+import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht, stornieren } from './finanzen.js';
 import { EINNAHMEN, AUSGABEN, VERLAUF_WOCHEN } from '../inhalte/finanzen.js';
 import { besucherAnlegen } from './besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten, TAG_MIN } from './zeit.js';
@@ -186,9 +186,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
   const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende'];
   function aendern(fn) {
     const vorher = JSON.stringify(BAU.map(k => z[k])), kontoVor = z.konto;
+    const alteBuchungen = new Set(z.wochenbuch ? z.wochenbuch.buchungen : []);
     const ergebnis = fn();
     moebelPruefen(z); personenPruefen(z);
-    verlauf.push({ bau: vorher, geld: z.konto - kontoVor });
+    // Gemerkt werden auch die Buchungen dieses Schritts, damit „Rückgängig“ sie wieder herausnimmt (finanzen.js → stornieren)
+    const buchungen = (z.wochenbuch ? z.wochenbuch.buchungen : []).filter(b => !alteBuchungen.has(b));
+    verlauf.push({ bau: vorher, geld: z.konto - kontoVor, buchungen, woche: z.buchWoche });
     if (verlauf.length > 60) verlauf.shift();
     raeume = raeumeAuswerten(z);
     return ergebnis;
@@ -365,8 +368,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       Object.assign(z, { zellen, raumTyp, veranstaltung, moebel, kaffeeZeiten: kaffeeZeiten || {} });
       if (gratisWaende) z.gratisWaende = gratisWaende; else delete z.gratisWaende;
       for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt) { p.x = alt.x; p.y = alt.y; } }
-      if (e.geld < 0) buchen(z, 'einnahmen', 'rueckerstattung', -e.geld, { was: 'rueckgaengig' });
-      if (e.geld > 0) buchen(z, 'ausgaben', 'moebel', e.geld, { was: 'rueckgaengig' });
+      stornieren(z, e.buchungen, e.woche);   // Buchungen des Schritts zurücknehmen (dieselbe Woche: ganz weg, sonst Gegenbuchung)
       personenPruefen(z); raeume = raeumeAuswerten(z);
       return true;
     },
@@ -511,10 +513,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         feste: kommendeFeste(heute, 8).map(f => {
           const k = festSchluessel(f.id, f.tagNr), plan = plaene[k], a = tagAnzeige(f.tagNr);
           const nr = plan ? raeume.gruppe[plan.raum] : undefined, lp = plan && z.personen.find(p => p.id === plan.leitung);
-          // Konfirmation: Zahl der Konfirmanden; ohne Konfirmanden fällt sie aus (faelltAus)
+          // Konfirmation: Zahl der Konfirmanden. Ob sie ausfällt, steht erst nach der Prüfung beim Fest-Menü fest (7 Tage vorher) –
+          // vorher kann noch jemand seine 7 Teilnahmen schaffen (faelltAus erst dann; geplant werden kann sie nur mit Konfirmanden).
           const fest = FESTE.find(x => x.id === f.id), konfi = fest.braucht === 'konfirmanden';
+          const geprueft = !!(z.feste && z.feste.gefragt.includes(k)), aktiv = festAktiv(z, fest);
           return { ...f, schluessel: k, tageBis: f.tagNr - heute, wochentag: a.wochentag, datum: a.datum,
-            konfirmanden: konfi ? konfirmandenZahl(z) : null, faelltAus: !festAktiv(z, fest),
+            konfirmanden: konfi ? konfirmandenZahl(z) : null, faelltAus: !aktiv && geprueft, planbar: aktiv,
             menueAb: f.gross ? Math.max(0, f.tagNr - heute - FEST_MENUE.tageVorher) : null,
             plan: plan ? { art: plan.art, slot: plan.slot, raumNr: nr === undefined || nr < 0 ? null : nr,
               raumName: nr >= 0 && raeume.liste[nr] && raeume.liste[nr].typ ? raeume.liste[nr].typ.name : null,

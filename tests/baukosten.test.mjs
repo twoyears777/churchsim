@@ -46,7 +46,15 @@ assert.equal(STARTGELD, 1000);
   assert.ok(s.rueckgaengig()); assert.equal(s.lage().konto, 1000); assert.equal(s.zelle(G.x + 2, G.y + 2), 'leer');
   // Kassenbuch: Kategorie „Bau“
   s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
-  assert.equal(s.finanzInfo().woche.ausgaben.bau, 3 * 120 + 10);   // dreimal Wände gebaut, einmal ein Fenster gesetzt
+  // Rückgängig nimmt die Buchungen ganz heraus: übrig bleiben zweimal Wände (120 €) + 1 Fenster (10 €), Abriss erstattet 130 €
+  assert.equal(s.finanzInfo().woche.ausgaben.bau, 2 * 120 + 10);
+  assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 130);
+  // Abriss rückgängig: keine „Möbel“-Ausgabe, die Rückerstattung verschwindet wieder
+  s.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 250);
+  assert.ok(s.rueckgaengig());
+  const w = s.finanzInfo().woche;
+  assert.equal(w.einnahmen.rueckerstattung, 130); assert.equal(w.ausgaben.moebel, undefined); assert.equal(s.lage().konto, 880);
+  assert.ok(!s.finanzInfo().buchungen.some(b => b.was === 'rueckgaengig'));
 }
 
 // Nicht genug Geld: Wand wird nicht gebaut, Fenster nicht gesetzt

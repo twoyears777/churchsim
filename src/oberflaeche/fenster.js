@@ -514,10 +514,10 @@ function kirchenjahrFenster() {
   const feste = k.feste.map(f => {
     const wort = faktorWorte(f.besucher, f.kollekte), p = f.plan;
     const art = p ? (ui.spiel.festMenueInfo(f.schluessel).arten.find(a => a.id === p.art) || {}).name : '';
-    // Konfirmation ohne Konfirmanden: fällt aus, kein Planen-Knopf
-    const knopf = f.gross && !f.faelltAus ? `<div class="zeile links"><button data-kj-planen="${f.schluessel}">${p ? K.aendern : K.planen}</button></div>` : '';
+    // Konfirmation ohne Konfirmanden: kein Planen-Knopf; „fällt aus“ erst nach der Prüfung 7 Tage vorher
+    const knopf = f.gross && f.planbar ? `<div class="zeile links"><button data-kj-planen="${f.schluessel}">${p ? K.aendern : K.planen}</button></div>` : '';
     const konfi = f.konfirmanden === null ? '' : `<small class="unter">${K.konfirmation}</small>${f.faelltAus ? `<span class="fehlt">${K.keineKonfirmanden}</span>` : ''}`;
-    return `<div class="kachel"><b>${esc(f.konfirmanden ? TEXTE.festMenue.konfirmanden(f.name, f.konfirmanden) : f.name)}</b>
+    return `<div class="kachel"><b>${esc(f.konfirmanden !== null ? TEXTE.festMenue.konfirmanden(f.name, f.konfirmanden) : f.name)}</b>
       <span class="klein">${TEXTE.tage[f.wochentag]}, ${f.datum} · ${K.inTagen(f.tageBis)}</span>
       ${wort ? `<span>${wort}</span>` : ''}${f.feiertag ? `<span class="feiertag">${K.feiertag}</span>` : ''}${konfi}
       ${p ? `<span class="ok">${K.geplant(esc(art || ''), esc(p.raumName || '–'), esc(p.leitung || '–'))}</span>` : ''}${knopf}</div>`;
