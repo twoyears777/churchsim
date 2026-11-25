@@ -8,7 +8,7 @@ Die vollständigen Regeln stehen im claude.ai-Projekt „Church-Sim“ (projektr
 2. **Architektur erklären:** Jede technische Entscheidung kurz so erklären, dass sie auch ohne Programmierkenntnisse verständlich ist.
 3. **Inhalte entscheidet Lukas:** Keine inhaltlichen Entscheidungen ohne ihn, auch keine Kleinigkeiten. Vorher fragen. Texte und Design entscheidet immer Lukas.
 4. **Erst Spielprinzip, dann bauen.** Ausnahme, von Lukas freigegeben: Version 1 = Raum-Editor.
-5. **Veröffentlichen nur auf Ansage:** Änderungen sammeln sich lokal. Push auf main nur, wenn Lukas es sagt – dann direkt auf main, kein eigenmächtiger anderer Zweig. Vorher Liste der Änderungen zeigen und fragen: „Soll ich veröffentlichen?“
+5. **Veröffentlichen nur auf Ansage:** Fertige Änderungen sammeln sich auf dem Zweig `naechstes-update` und in der Liste `claude/naechstes-update.md` im claude.ai-Projekt (chatunabhängig). Neue Arbeit baut auf diesem Zweig auf. Auf main kommt alles gesammelt erst, wenn Lukas es sagt. Vorher Liste der Änderungen zeigen und fragen: „Soll ich veröffentlichen?“
 6. **Weniger Testbilder:** Browser-Screenshots nur bei größeren Schritten; automatische Tests immer.
 7. **PC hat Vorrang** (Ziel ist Steam); iPad als Web-App ist zweitrangig.
 
