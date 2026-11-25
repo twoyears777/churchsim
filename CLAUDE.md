@@ -22,6 +22,7 @@ Die vollständigen Regeln stehen im claude.ai-Projekt „Church-Sim“ (projektr
 Kein Build-Schritt: reine Browser-Module, läuft direkt über GitHub Pages.
 
 ## Beim Veröffentlichen
-- Versionsnummer in `version.json` **und** `src/version.js` gleich hochzählen (z. B. `2026-11-25.2`). Daran erkennt die App ein Update und lädt sich selbst neu.
+- Versionsnummer in `version.json` **und** `src/version.js` gleich hochzählen. Schema `0.1.x`: jede Veröffentlichung zählt die letzte Stelle hoch (0.1.1, 0.1.2, …). Daran erkennt die App ein Update und lädt sich selbst neu.
+- `CHANGELOG.md` um einen Abschnitt für die neue Version ergänzen (neueste oben, kurz und nach Bereichen gegliedert).
 - `sw.js` holt immer zuerst die neueste Version aus dem Netz; offline wird die zuletzt geladene genutzt.
 Texte und Farben in Version 1 sind Platzhalter, bis Lukas sie festlegt.
