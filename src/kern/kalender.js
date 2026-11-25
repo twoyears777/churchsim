@@ -1,5 +1,5 @@
 // Rechnet zu jeder Runde (Woche) den Sonntag und seinen Namen im Kirchenjahr aus.
-import { START, UM_OSTERN, NAMEN, ZEITEN } from '../inhalte/kirchenjahr.js';
+import { START, UM_OSTERN, NAMEN, ZEITEN, FESTE, FEIERTAGE, ZEIT_FAKTOREN } from '../inhalte/kirchenjahr.js';
 
 const TAG = 86400000;
 const datum = (j, m, t) => Date.UTC(j, m - 1, t);
@@ -58,4 +58,65 @@ export function kirchenjahrStand(woche) {
   const zeiten = ZEITEN.map((z, i) => ({ ...z, von: anteil(starts[z.id]), bis: i + 1 < ZEITEN.length ? anteil(starts[ZEITEN[i + 1].id]) : 1 }));
   const fortschritt = anteil(t);
   return { fortschritt, zeiten, aktuell: zeiten.find(z => fortschritt >= z.von && fortschritt < z.bis) || zeiten[0] };
+}
+
+// ---- Feste und Feiertage ----
+// Spieltag-Nummer: 0 = Montag der ersten Woche (die Woche, die mit dem 1. Advent endet), 1 = Dienstag …
+export function tagDatum(tagNr) { return datum(START.jahr, START.monat, START.tag) + (tagNr - 6) * TAG; }
+export function tagNrVon(t) { return Math.round((t - datum(START.jahr, START.monat, START.tag)) / TAG) + 6; }
+
+// Datum einer Regel (siehe FESTE/FEIERTAGE in der Inhaltsdatei) im Kalenderjahr j
+function regelDatum(w, j) {
+  if (w.ostern !== undefined) return ostern(j) + w.ostern * TAG;
+  if (w.vorAdvent !== undefined) return ersterAdvent(j) - w.vorAdvent * TAG;
+  if (w.ersterSonntagIm !== undefined) { const t = datum(j, w.ersterSonntagIm, 1), wt = new Date(t).getUTCDay(); return t + ((7 - wt) % 7) * TAG; }
+  return datum(j, w.monat, w.tag);
+}
+const festeCache = new Map();
+function festeImJahr(j) {
+  if (!festeCache.has(j)) festeCache.set(j, FESTE.map(f => ({ fest: f, t: regelDatum(f.wann, j) })));
+  return festeCache.get(j);
+}
+// Fest an diesem Spieltag (Eintrag aus FESTE) oder null
+export function festAmTag(tagNr) {
+  const t = tagDatum(tagNr), j = new Date(t).getUTCFullYear();
+  const e = festeImJahr(j).find(x => x.t === t);
+  return e ? e.fest : null;
+}
+// Gesetzlicher Feiertag (bundesweit + Baden-Württemberg)?
+export function feiertagAmTag(tagNr) {
+  const t = tagDatum(tagNr), j = new Date(t).getUTCFullYear();
+  return FEIERTAGE.some(w => regelDatum(w, j) === t);
+}
+// Zeit im Kirchenjahr an diesem Spieltag (id aus ZEITEN)
+export function zeitAmTag(tagNr) {
+  const t = tagDatum(tagNr), j = new Date(t).getUTCFullYear();
+  const beginn = t >= ersterAdvent(j) ? ersterAdvent(j) : ersterAdvent(j - 1), jn = new Date(beginn).getUTCFullYear() + 1, o = ostern(jn);
+  if (t >= o + 56 * TAG) return 'trinitatis';
+  if (t >= o) return 'ostern';
+  if (t >= o - 46 * TAG) return 'passion';
+  if (t >= o - 63 * TAG) return 'vorpassion';
+  if (t >= datum(jn, 1, 6)) return 'epiphanias';
+  if (t >= datum(jn - 1, 12, 25)) return 'weihnachten';
+  return 'advent';
+}
+// Faktoren für eine Veranstaltung an diesem Spieltag. Fest und Zeit gleichzeitig: jeweils der höhere Wert.
+// → { besucher, kollekte, fest: id | null, zeit: id }
+export function faktorAmTag(tagNr) {
+  const f = festAmTag(tagNr), zeit = zeitAmTag(tagNr), zf = ZEIT_FAKTOREN[zeit] || { besucher: 1, kollekte: 1 };
+  return { besucher: Math.max(f ? f.besucher : 1, zf.besucher), kollekte: Math.max(f ? f.kollekte : 1, zf.kollekte), fest: f ? f.id : null, zeit };
+}
+// Die nächsten n Feste ab diesem Spieltag (heute eingeschlossen): { id, name, tagNr, besucher, kollekte, gross, feiertag }
+export function kommendeFeste(tagNr, n = 8) {
+  const t0 = tagDatum(tagNr), j = new Date(t0).getUTCFullYear(), liste = [];
+  for (const jj of [j, j + 1, j + 2]) for (const e of festeImJahr(jj)) if (e.t >= t0) liste.push(e);
+  return liste.sort((a, b) => a.t - b.t).slice(0, n).map(e => {
+    const nr = tagNrVon(e.t);
+    return { id: e.fest.id, name: e.fest.name, tagNr: nr, besucher: e.fest.besucher, kollekte: e.fest.kollekte, gross: !!e.fest.gross, feiertag: feiertagAmTag(nr) };
+  });
+}
+// Datum eines Spieltags zum Anzeigen: Wochentag (0 = Montag) und „24.12.“
+export function tagAnzeige(tagNr) {
+  const d = new Date(tagDatum(tagNr));
+  return { wochentag: (d.getUTCDay() + 6) % 7, datum: `${d.getUTCDate()}.${d.getUTCMonth() + 1}.` };
 }

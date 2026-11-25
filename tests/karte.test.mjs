@@ -150,8 +150,8 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     versetzen(z, z.personen[0], G.x + 4, G.y + 5);
     assert.equal(gottesdienstBereit(z, aus()).length, 1);
     assert.deepEqual(prognose(z, aus()).plaetze, 3);
-    assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.4) < 1e-9);    // 4 × 60 %
-    assert.ok(Math.abs(prognose(z, aus()).geld - 4.8) < 1e-9);       // Sonntagvormittag: Kollekte × 2
+    assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.88) < 1e-9);   // 4 × 60 % × 1,2 (1. Advent: Adventszeit)
+    assert.ok(Math.abs(prognose(z, aus()).geld - 5.76) < 1e-9);      // Sonntagvormittag: Kollekte × 2
     zeitVorruecken(z, aus(), SONNTAG_10 - 180 - z.minuten, () => 0);  // Anreise
     assert.equal(z.laeufe[0].phase, 'anreise'); assert.equal(z.laeufe[0].gaeste.length, 4);
     assert.equal(z.laeufe[0].gaeste.filter(g => !g.sitz).length, 1);
@@ -174,10 +174,10 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     versetzen(z, z.personen[0], G.x + 4, G.y + 5);
     z.bekanntheit = 20; z.besucher.forEach(b => { b.besuche = 2; });
     zeitVorruecken(z, aus(), SONNTAG_10 + 181 - z.minuten, () => 0);
-    assert.equal(z.laeufe[0].gaeste.length, 6);                           // 4 bekannte + 2 neue
+    assert.equal(z.laeufe[0].gaeste.length, 7);                           // 4 bekannte + 3 neue (20 ÷ 10 × 1,2 Adventszeit = 2,4)
     assert.equal(z.laeufe[0].neueEhrenamtliche.length, 3);                 // die 3 mit Sitzplatz und 3. Besuch
     assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 3);
-    assert.equal(z.besucher.length, 3);
+    assert.equal(z.besucher.length, 4);   // 1 bekannter + 3 neue (3 wurden Ehrenamtliche)
   }
   // Wochenplan: Mittwochabend
   {

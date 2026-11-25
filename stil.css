@@ -68,6 +68,8 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .unten-rechts { position: absolute; bottom: 12px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .spielHinweis { margin: 0; max-width: 300px; padding: 6px 10px; border-radius: 8px; background: rgba(43,42,39,.9); font-size: 13px; color: #e6e1d4; text-align: right; }
 .spielHinweis:empty { display: none; }
+.datum { cursor: pointer; }
+.datum:hover { filter: brightness(1.06); }
 .modus-editor .datum, .modus-editor .unten-links, .modus-editor .unten-mitte, .modus-editor .unten-rechts { display: none; }
 .modus-spiel .maske { bottom: 72px; }
 .finanzen .konto td { font-weight: 600; padding-bottom: 8px; }
@@ -209,3 +211,9 @@ button.abriss-knopf[aria-pressed="true"] { background: #b3261e; color: #fff; bor
 .inhalt ul.kassenbuch { max-height: 240px; overflow-y: auto; font-size: 13px; }
 .inhalt ul.kassenbuch b.ok { color: #2e7d32; } .inhalt ul.kassenbuch b.fehlt { color: #b3261e; }
 .finanzen.hell.abstand { margin-bottom: 6px; }
+
+/* Kirchenjahr-Fenster: kleine Farbfelder im Text */
+p .farbe, .kirchenjahr-zeiten .farbe { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; }
+.kirchenjahr-zeiten li { margin-bottom: 6px; }
+.kachel .feiertag { color: #6b665b; font-size: 13px; }
+.kacheln + p.unter { margin-top: 6px; }

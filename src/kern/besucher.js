@@ -73,11 +73,13 @@ export function kaffeeVorliebe(b) {
   h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
   return Math.round((h % 1001) / 10) / 100;   // 0,00 … 1,00
 }
-// Chance für eine bestimmte Veranstaltung: × Lobpreis-Vorliebe beim Lobpreisgottesdienst, × 0,5 beim 2. Besuch derselben Woche
+// Chance für eine bestimmte Veranstaltung: × Lobpreis-Vorliebe beim Lobpreisgottesdienst, × 0,5 beim 2. Besuch derselben Woche,
+// × Besucher-Faktor des Kirchenjahres (o.faktor, z. B. Heiligabend ×3), höchstens 100 %
 export function besuchChance(b, o = {}) {
   let c = kommChance(b);
   if (o.art === 'lobpreis') c *= lobpreisVorliebe(b);
   if (o.woche !== undefined && b.besuchtWoche === o.woche) c *= ZWEITER_BESUCH;
+  if (o.faktor) c = Math.min(1, c * o.faktor);   // Feste und Zeiten im Kirchenjahr (höchstens 100 %)
   return c;
 }
 
@@ -89,7 +91,8 @@ export function neueBesucherZahl(bekanntheit, zufall = Math.random) {
 
 // Wer kommt diesmal? Bekannte Besucher nach ihrer Chance, dazu Neugierige aus dem Ort und die neuen Besucher
 // über die Bekanntheit – diese zuerst aus den bekannten Passanten, sonst ganz neue Leute (nur, solange im Einzugsgebiet Platz ist).
-// o: { art, woche, ausschluss (Kennungen, die gerade woanders sind), neuAnteil (Anteil der Wochen-Neuen für diesen Termin) }
+// o: { art, woche, ausschluss (Kennungen, die gerade woanders sind), neuAnteil (Anteil der Wochen-Neuen für diesen Termin),
+//      faktor (Besucher-Faktor des Kirchenjahres: auch die neuen Besucher × faktor) }
 export function werKommt(z, zufall = Math.random, o = {}) {
   const aus = o.ausschluss || new Set();
   const bekannte = z.besucher.filter(b => !aus.has(b.id) && zufall() < besuchChance(b, o));
@@ -98,7 +101,7 @@ export function werKommt(z, zufall = Math.random, o = {}) {
     if (zufall() < NEUGIER.kommChance) neue.push(ausDemOrt(z, p)); else p.neugierig = false;
   }
   let frei = null;
-  for (let i = neueBesucherZahl(z.bekanntheit * (o.neuAnteil ?? 1), zufall); i > 0; i--) {
+  for (let i = neueBesucherZahl(z.bekanntheit * (o.neuAnteil ?? 1) * (o.faktor || 1), zufall); i > 0; i--) {
     const rest = z.ort ? z.ort.leute : [];
     if (rest.length) { neue.push(ausDemOrt(z, rest[Math.floor(zufall() * rest.length)])); continue; }
     if (frei === null) frei = platzImGebiet(z);

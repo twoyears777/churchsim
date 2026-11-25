@@ -403,5 +403,55 @@ export const TEXTE = {
     bringt: n => `Bringt +${n} Einzugsgebiet`,
     naechste: name => `Nächste Stufe: ${name}`,
     hoechste: 'Höchste Stufe erreicht.'
-  }
+  },
+
+  // ---- Kirchenjahr-Fenster und Fest-Menü (Spielprinzip vom 25.11., claude/vorschlag-kirchenjahr-feste.md) ----
+  // Von Lukas freigegeben („Bau das“, 25.11.). Mit „ENTWURF“ markierte Texte kamen beim Bauen dazu und warten noch auf Lukas.
+  // Faktoren in Worten (Lukas: Worte statt Zahlen)
+  besucherWort: f => f >= 3 ? 'sehr viele Besucher' : f >= 2 ? 'viele Besucher' : f >= 1.5 ? 'mehr Besucher' : f > 1 ? 'etwas mehr Besucher' : '',
+  kollekteWort: f => f >= 2 ? 'sehr hohe Kollekte' : f > 1 ? 'höhere Kollekte' : '',
+  kirchenjahr: {
+    titel: 'Kirchenjahr',                                      // ENTWURF
+    jetzt: 'Jetzt',
+    kommend: 'Kommende Feste',
+    zeiten: 'Zeiten im Kirchenjahr',
+    naechsterSonntag: (name, datum) => `Nächster Sonntag: ${name} · ${datum}`,   // ENTWURF
+    heute: name => `Heute: ${name}`,                           // ENTWURF
+    inTagen: n => n === 0 ? 'heute' : n === 1 ? 'morgen' : n < 7 ? `in ${n} Tagen` : n < 14 ? 'in 1 Woche' : `in ${Math.floor(n / 7)} Wochen`,
+    feiertag: 'Feiertag: mehr Leute unterwegs',
+    geplant: (art, raum, leitung) => `Geplant: ${art}, ${raum}, ${leitung}`,
+    planen: 'Fest planen',
+    aendern: 'Plan ändern',                                    // ENTWURF
+    normal: 'normal viele Besucher',                           // ENTWURF (Zeiten ohne eigenen Faktor)
+    gesperrt: 'Gesperrt – braucht Konfirmandenunterricht',
+    farben: { advent: 'violett', weihnachten: 'weiß', epiphanias: 'grün', vorpassion: 'grün', passion: 'violett', ostern: 'weiß', trinitatis: 'grün' },
+    erklaerung: {
+      advent: 'Die Zeit der Vorbereitung auf Weihnachten. Mit dem 1. Advent beginnt das neue Kirchenjahr.',
+      weihnachten: 'Die Geburt Jesu wird gefeiert.',
+      epiphanias: 'Jesus zeigt sich der Welt. Sie beginnt am 6. Januar mit den Weisen aus dem Morgenland.',
+      vorpassion: 'Die Wochen vor der Passionszeit, ein Übergang zur Fastenzeit.',
+      passion: 'Die Fastenzeit von Aschermittwoch bis Ostern. Im Mittelpunkt steht der Leidensweg Jesu.',
+      ostern: 'Die Freude über die Auferstehung. Sie dauert 50 Tage bis Pfingsten.',
+      trinitatis: 'Die längste Zeit im Kirchenjahr, bis zum Ewigkeitssonntag. Sie ist dem Glauben im Alltag gewidmet.'
+    }
+  },
+  festMenue: {
+    titel: 'Ein besonderes Fest steht an',
+    zeile: (name, tag, datum, wann) => `${name} · ${tag}, ${datum} · ${wann}`,
+    erwartet: teile => `Erwartet: ${teile}`,
+    zeit: 'Zeit', raum: 'Raum', leitung: 'Leitung', art: 'Art', ehrenamtliche: 'Ehrenamtliche',
+    hinweis: 'Andere Termine in diesem Raum und mit dieser Leitung fallen zur gleichen Zeit aus.',
+    imRaum: 'Die Leitung muss zur Zeit des Festes im Raum stehen.',            // ENTWURF
+    keinRaum: 'Du hast noch keinen fertigen Gottesdienstraum.',                // ENTWURF
+    keineEA: 'Noch keine Ehrenamtlichen.',                                     // ENTWURF
+    eaSpaeter: 'Was Ehrenamtliche beim Fest bewirken, folgt später.',          // ENTWURF
+    faellt: (platz, raum) => `Fällt aus: Veranstaltung ${platz + 1}${raum ? ` (${raum})` : ''}`,   // ENTWURF
+    planen: 'Fest planen',
+    nicht: 'Diesmal nicht',
+    absagen: 'Fest absagen',                                   // ENTWURF (wenn schon geplant)
+    zurueck: 'Zurück'                                          // ENTWURF
+  },
+  faelltAusWegen: (platz, fest) => `Veranstaltung ${platz + 1} fällt aus wegen ${fest}.`,
+  festPrognose: (fest, wort) => `${fest}: ${wort}`,             // ENTWURF: Zeile in der Prognose (Fest oder Adventszeit)
+  hinweisKirchenjahr: 'Kirchenjahr anklicken für Feste und Zeiten'   // ENTWURF: Tooltip rechts oben
 };

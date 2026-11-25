@@ -32,6 +32,10 @@ export function anzeigenEinrichten() {
   // Finanzen in der Seitenleiste → Finanz-Fenster (Maus oder Enter/Leertaste)
   $('finanzenAuf').addEventListener('click', () => fensterOeffnen({ art: 'finanzen' }));
   $('finanzenAuf').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fensterOeffnen({ art: 'finanzen' }); } });
+  // Kirchenjahr rechts oben (Datum + Rad) anklicken → Fenster „Kirchenjahr“
+  $('kirchenjahrAuf').title = TEXTE.hinweisKirchenjahr;
+  $('kirchenjahrAuf').addEventListener('click', () => fensterOeffnen({ art: 'kirchenjahr' }));
+  $('kirchenjahrAuf').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fensterOeffnen({ art: 'kirchenjahr' }); } });
   for (const id of ['hilfeAuf', 'hilfeEditor']) {   // Hilfe: unten links und in der Werkzeugleiste beim Bauen
     $(id).textContent = HILFE.knopf;
     $(id).addEventListener('click', () => fensterOeffnen({ art: 'hilfe' }));
@@ -67,6 +71,8 @@ export function anzeigenAktualisieren() {
   $('meldung').textContent = l.meldung ? TEXTE.meldung[l.meldung.code](l.meldung.name) : '';
   // Offene Seelsorge-Anfrage: Dialog nach vorn holen (die Zeit steht, bis er beantwortet ist)
   if (l.seelsorge && (!ui.fenster || ui.fenster.art !== 'seelsorge')) ui.fenster = { art: 'seelsorge', angenommen: false };
+  // Fest-Menü steht an: Fenster nach vorn holen (die Zeit steht, bis es beantwortet ist)
+  else if (l.festAnfrage && (!ui.fenster || ui.fenster.art !== 'fest' || ui.fenster.schluessel !== l.festAnfrage)) ui.fenster = { art: 'fest', schluessel: l.festAnfrage };
   fensterAktualisieren();
 }
 
@@ -91,6 +97,7 @@ function personenListen(personen) {
 function hinweisText(s) {
   if (s.phase === 'kaffeeOffen') return TEXTE.laeuft.kaffeeOffen;
   if (s.phase === 'anreise' || s.phase === 'gottesdienst' || s.phase === 'kirchkaffee') return TEXTE.laeuft[s.phase] + (s.heim ? ' ' + TEXTE.heimgeschickt(s.heim) : '');
+  if (s.phase === 'ausgefallen' && s.grund === 'fest') return TEXTE.faelltAusWegen(s.platz, s.fest);
   if (s.phase === 'ausgefallen') return s.grund === 'gesperrt' ? TEXTE.fehltGesperrt(s.platz + 1) : s.grund === 'gitarre' ? TEXTE.ausgefallenGitarre : TEXTE.ausgefallen;
   if (s.phase === 'vorbei') return TEXTE.heimgeschickt(s.heim);
   if (s.fehlt === 'raum') return TEXTE.fehltRaum;

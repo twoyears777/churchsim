@@ -155,7 +155,9 @@ export const HILFE = {
       id: 'zeit',
       titel: 'Zeit und Kirchenjahr',
       inhalt: [
-        'Oben steuerst du die Zeit: Pause, x1, x2, x5, x10, x25. Rechts oben stehen Woche, Tag und Uhrzeit, wie lange es bis Sonntag ist und welcher Sonntag im Kirchenjahr ansteht. Das Rad zeigt die Zeit im Kirchenjahr. Das Spiel beginnt am 1. Advent.'
+        'Oben steuerst du die Zeit: Pause, x1, x2, x5, x10, x25. Rechts oben stehen Woche, Tag und Uhrzeit, wie lange es bis Sonntag ist und welcher Sonntag im Kirchenjahr ansteht. Das Rad zeigt die Zeit im Kirchenjahr. Das Spiel beginnt am 1. Advent.',
+        // ENTWURF (25.11., Kirchenjahr-Fenster) – Lukas formuliert selbst
+        'Klickst du auf das Kirchenjahr, siehst du die kommenden Feste und Zeiten. An großen Festen wie Heiligabend kommen viel mehr Besucher, die Kollekte ist höher. Vor großen Festen öffnet sich das Fest-Menü: Dort planst du ein besonderes Fest mit Raum und Leitung. An Feiertagen sind mehr Leute unterwegs.'
       ]
     }
   ]

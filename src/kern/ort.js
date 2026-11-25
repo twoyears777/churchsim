@@ -9,6 +9,8 @@ import { TAG_MIN } from './zeit.js';
 import { neuePerson, kaffeeVorliebe } from './besucher.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { passantKommt, offenesKirchkaffee } from './kirchkaffee.js';
+import { feiertagAmTag } from './kalender.js';
+import { FEIERTAG_PASSANTEN } from '../inhalte/kirchenjahr.js';
 
 const G = GRUNDSTUECK;
 const TOR_X = G.tor.x + G.tor.breite / 2 - 0.5;                        // Mitte des Tors
@@ -29,7 +31,8 @@ function tagPlanen(z, tag, zufall) {
   const o = z.ort, heute = new Set();
   let frei = platzImGebiet(z);
   o.tag = tag; o.gaenge = [];
-  const n = zwischen(ORT.passantenProTag, zufall), k = Math.min(z.besucher.length, zwischen(ORT.bekannteProTag, zufall));
+  // An gesetzlichen Feiertagen (bundesweit + Baden-Württemberg) sind doppelt so viele Leute unterwegs (Lukas, 25.11.)
+  const n = zwischen(ORT.passantenProTag, zufall) * (feiertagAmTag(tag) ? FEIERTAG_PASSANTEN : 1), k = Math.min(z.besucher.length, zwischen(ORT.bekannteProTag, zufall));
   const nehmen = liste => { const frei = liste.filter(p => !heute.has(p.id)); return frei.length ? frei[Math.floor(zufall() * frei.length)] : null; };
   for (let i = 0; i < n; i++) {
     let p = null;

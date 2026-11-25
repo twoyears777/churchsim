@@ -16,6 +16,7 @@ let letzterInhalt = '';
 export function fensterOeffnen(f) { ui.fenster = f; letzterInhalt = ''; ui.anzeigeErzwingen(); ui.malen(); }
 export function fensterSchliessen() {
   if (ui.fenster && ui.fenster.art === 'seelsorge' && ui.spiel.seelsorgeOffen()) return;   // Seelsorge erst beantworten
+  if (ui.fenster && ui.fenster.art === 'fest' && ui.spiel.lage().festAnfrage === ui.fenster.schluessel) return;   // Fest-Menü erst beantworten
   ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.malen();
 }
 export function fensterOffen() { return !maske().hidden; }
@@ -25,10 +26,11 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, hilfe: hilfeFenster, finanzen: finanzFenster }[f.art](f);
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
+    kirchenjahr: kirchenjahrFenster, fest: festFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('sehr-breit', f.art === 'finanzen');
-  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe');
+  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
 }
@@ -126,13 +128,14 @@ function raumFenster(f) {
   const vorschau = r.programm.filter(e => e.prognose && (e.art || e.platz === 0)).map(e => {
     const v = e.prognose;
     return `<h3>${T.platz(e.platz + 1)} · ${v.dieseWoche ? T.prognose : T.prognoseNaechste}</h3>
-      ${v.bereit ? '' : `<p class="warnung">${warnung(e) || T.prognoseFaelltAus}</p>`}
+      ${v.bereit ? '' : `<p class="warnung">${v.wegenFest ? TEXTE.faelltAusWegen(e.platz, esc(v.wegenFest)) : warnung(e) || T.prognoseFaelltAus}</p>`}
       <table class="finanzen hell">
         <tr><td>${T.prognoseBesucher}</td><td class="zahl">${T.ca(zahl1(v.erwartet))}</td></tr>
         <tr><td>${T.prognosePlaetze}</td><td class="zahl">${v.plaetze}</td></tr>
         <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(v.geld)))}</td></tr>
         <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(v.ehrenamt))}</td></tr>
         ${v.sonntagvormittag ? `<tr><td colspan="2">${T.prognoseSonntagvormittag}</td></tr>` : ''}
+        ${kirchenjahrZeile(v.kirchenjahr)}
         <tr><td>${T.prognosePlakat}</td><td class="zahl">${v.plakat ? T.plakatJa : T.plakatNein}</td></tr></table>`;
   }).join('');
   return `<h2>${r.typName}</h2>
@@ -141,6 +144,14 @@ function raumFenster(f) {
     ${vorschau}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
+
+// Prognose: Zeile für Fest oder Zeit im Kirchenjahr (z. B. „Heiligabend: sehr viele Besucher, sehr hohe Kollekte“)
+function kirchenjahrZeile(k) {
+  if (!k) return '';
+  const wort = faktorWorte(k.besucher, k.kollekte);
+  return wort ? `<tr><td colspan="2">${TEXTE.festPrognose(esc(k.festName || k.zeitName), wort)}</td></tr>` : '';
+}
+const faktorWorte = (b, k) => [TEXTE.besucherWort(b), TEXTE.kollekteWort(k)].filter(Boolean).join(', ');
 
 // Kaffeemaschine: Füllstand (aufgefüllt wird vom Ehrenamtlichen im Laden)
 function maschinenFenster(f) {
@@ -416,6 +427,65 @@ function hilfeFenster(f) {
     <div class="zeile"><button data-hilfe-zurueck>${H.zurueck}</button><button data-zu>Schließen</button></div>`;
 }
 
+// Kirchenjahr: jetzt (Zeit, Farbe, Erklärung, nächster Sonntag), kommende Feste in Worten, alle Zeiten. Alles vom Spiel.
+function kirchenjahrFenster() {
+  const K = TEXTE.kirchenjahr, k = ui.spiel.kirchenjahrInfo(), jetzt = k.zeiten.find(t => t.aktuell) || k.zeiten[0];
+  const farbe = t => `<span class="farbe" style="background:${t.farbe}"></span>`;
+  const feste = k.feste.map(f => {
+    const wort = faktorWorte(f.besucher, f.kollekte), p = f.plan;
+    const art = p ? (ui.spiel.festMenueInfo(f.schluessel).arten.find(a => a.id === p.art) || {}).name : '';
+    const knopf = f.gross ? `<div class="zeile links"><button data-kj-planen="${f.schluessel}">${p ? K.aendern : K.planen}</button></div>` : '';
+    return `<div class="kachel"><b>${esc(f.name)}</b>
+      <span class="klein">${TEXTE.tage[f.wochentag]}, ${f.datum} · ${K.inTagen(f.tageBis)}</span>
+      ${wort ? `<span>${wort}</span>` : ''}${f.feiertag ? `<span class="feiertag">${K.feiertag}</span>` : ''}
+      ${p ? `<span class="ok">${K.geplant(esc(art || ''), esc(p.raumName || '–'), esc(p.leitung || '–'))}</span>` : ''}${knopf}</div>`;
+  }).join('');
+  const gesperrt = k.gesperrt.map(f => `<button class="kachel" disabled><b>${esc(f.name)}</b><small class="unter">${K.gesperrt}</small></button>`).join('');
+  const zeiten = k.zeiten.map(t => `<li${t.aktuell ? ' class="staerker"' : ''}>${farbe(t)} <b>${esc(t.name)}</b> (${K.farben[t.id]}) · ${faktorWorte(t.besucher, t.kollekte) || K.normal}<br><small>${K.erklaerung[t.id]}</small></li>`).join('');
+  const heute = [k.heute.fest && K.heute(esc(k.heute.fest)), k.heute.feiertag && K.feiertag].filter(Boolean).join(' · ');
+  return `<h2>${K.titel}</h2>
+    <h3>${K.jetzt}</h3>
+    <p class="unter staerker">${farbe(jetzt)} ${esc(jetzt.name)} (${K.farben[jetzt.id]})${faktorWorte(jetzt.besucher, jetzt.kollekte) ? ' · ' + faktorWorte(jetzt.besucher, jetzt.kollekte) : ''}</p>
+    <p class="unter">${K.erklaerung[jetzt.id]}</p>
+    <p class="unter">${K.naechsterSonntag(esc(k.sonntag.name), k.sonntag.datum)}${heute ? ' · ' + heute : ''}</p>
+    <h3>${K.kommend}</h3><div class="kacheln">${feste}${gesperrt}</div>
+    <h3>${K.zeiten}</h3><ul class="quellen kirchenjahr-zeiten">${zeiten}</ul>
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Fest-Menü: Zeit, Raum, Leitung, Art, Ehrenamtliche wählen → „Fest planen“ oder „Diesmal nicht“.
+// Die Auswahl merkt sich das Fenster (f.auswahl), bis „Fest planen“ sie ans Spiel schickt.
+function festFenster(f) {
+  const M = TEXTE.festMenue, m = ui.spiel.festMenueInfo(f.schluessel);
+  if (!m) return null;
+  if (!f.auswahl) f.auswahl = m.auswahl;
+  const a = f.auswahl, R = TEXTE.raum;
+  const wahl = (feld, wert, aktiv, text, aus = false) => `<button class="kachel klein-kachel${aktiv ? ' aktiv' : ''}" data-fest-feld="${feld}" data-fest-wert="${esc(wert)}" ${aus ? 'disabled' : ''}><b>${text}</b></button>`;
+  const uhr = s => `${String(s.stunde).padStart(2, '0')}:00`;
+  const gleich = m.raeume.filter(r => m.raeume.filter(x => x.name === r.name).length > 1);
+  const raumName = r => gleich.includes(r) ? `${esc(r.name)} ${gleich.filter(x => x.name === r.name).indexOf(r) + 1}` : esc(r.name);
+  const wort = faktorWorte(m.besucher, m.kollekte);
+  const faellt = m.faellt.map(x => `<li>${M.faellt(x.platz, x.raumName ? esc(x.raumName) : '')}</li>`).join('');
+  const ea = m.ehrenamtliche.length
+    ? m.ehrenamtliche.map(p => wahl('ehrenamt', p.id, a.ehrenamt.includes(p.id), esc(p.name))).join('')
+    : `<p class="leer">${M.keineEA}</p>`;
+  const kannPlanen = a.raumNr !== null && a.leitung && a.art;
+  const unten = m.offen
+    ? `<button data-fest-nicht>${M.nicht}</button><button class="haupt" data-fest-planen ${kannPlanen ? '' : 'disabled'}>${M.planen}</button>`
+    : `${m.geplant ? `<button data-fest-nicht>${M.absagen}</button>` : ''}${f.vonKirchenjahr ? `<button data-fest-zurueck>${M.zurueck}</button>` : '<button data-zu>Schließen</button>'}<button class="haupt" data-fest-planen ${kannPlanen ? '' : 'disabled'}>${M.planen}</button>`;
+  return `<h2>${M.titel}</h2>
+    <p class="unter staerker">${M.zeile(esc(m.name), TEXTE.tage[m.wochentag], m.datum, TEXTE.kirchenjahr.inTagen(m.tageBis))}</p>
+    ${wort ? `<p class="unter">${M.erwartet(wort)}</p>` : ''}
+    <h3>${M.zeit}</h3><div class="kacheln">${m.slots.map(s => wahl('slot', s.id, a.slot === s.id, `${R.slots[s.id]} · ${uhr(s)}`)).join('')}</div>
+    <h3>${M.raum}</h3>${m.raeume.length ? `<div class="kacheln">${m.raeume.map(r => wahl('raumNr', r.nr, a.raumNr === r.nr, raumName(r))).join('')}</div>` : `<p class="warnung">${M.keinRaum}</p>`}
+    <h3>${M.leitung}</h3><div class="kacheln">${m.hauptamtliche.map(p => wahl('leitung', p.id, a.leitung === p.id, esc(p.name))).join('')}</div>
+    <p class="unter">${M.imRaum}</p>
+    <h3>${M.art}</h3><div class="kacheln">${m.arten.map(x => wahl('art', x.id, a.art === x.id, esc(x.name))).join('')}</div>
+    <h3>${M.ehrenamtliche}</h3><div class="kacheln">${ea}</div><p class="unter">${M.eaSpaeter}</p>
+    <p class="unter">${M.hinweis}</p>${faellt ? `<ul class="quellen">${faellt}</ul>` : ''}
+    <div class="zeile">${unten}</div>`;
+}
+
 // Seelsorge: Anfrage → annehmen (3 Ratschläge) oder ablehnen → Ergebnis
 function seelsorgeFenster(f) {
   const a = ui.spiel.lage().seelsorge;
@@ -466,6 +536,17 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-ablehnen')) spiel.seelsorgeAblehnen();
     else if (b.dataset.rat !== undefined) spiel.seelsorgeRat(Number(b.dataset.rat));
     else if (b.hasAttribute('data-seelsorge-zu')) { spiel.seelsorgeSchliessen(); ui.speichern(); return fensterSchliessen(); }
+    else if (b.dataset.kjPlanen) return fensterOeffnen({ art: 'fest', schluessel: b.dataset.kjPlanen, vonKirchenjahr: true });   // aus dem Kirchenjahr-Fenster
+    else if (b.dataset.festFeld) {   // Fest-Menü: Auswahl merken (noch nicht ans Spiel)
+      const feld = b.dataset.festFeld, w = b.dataset.festWert;
+      if (feld === 'ehrenamt') f.auswahl.ehrenamt = f.auswahl.ehrenamt.includes(w) ? f.auswahl.ehrenamt.filter(x => x !== w) : [...f.auswahl.ehrenamt, w];
+      else f.auswahl[feld] = feld === 'raumNr' ? Number(w) : w;
+    }
+    else if (b.hasAttribute('data-fest-planen')) {
+      if (spiel.festPlanen(f.schluessel, f.auswahl) === 'ok') { ui.speichern(); return f.vonKirchenjahr ? fensterOeffnen({ art: 'kirchenjahr' }) : fensterSchliessen(); }
+    }
+    else if (b.hasAttribute('data-fest-nicht')) { spiel.festAbsagen(f.schluessel); ui.speichern(); return f.vonKirchenjahr ? fensterOeffnen({ art: 'kirchenjahr' }) : fensterSchliessen(); }
+    else if (b.hasAttribute('data-fest-zurueck')) return fensterOeffnen({ art: 'kirchenjahr' });
     else if (b.dataset.platz !== undefined) f.platz = Number(b.dataset.platz);   // Menü „Veranstaltung n einstellen“
     else if (b.hasAttribute('data-zurueck')) { delete f.platz; delete f.waehlen; }
     else if (b.dataset.hilfe) f.thema = b.dataset.hilfe;               // Hilfe: Thema öffnen
