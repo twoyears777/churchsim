@@ -4,7 +4,7 @@ import { neuerZustand, wandRechteck, abriss, tuerUmschalten, erkenneRaeume, prue
 import { zeichne } from '../ansicht/zeichnen.js';
 
 const SPEICHER = 'churchsim-editor';
-const VERSION = 1;
+const VERSION = 2;
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
   tuer: 'Tippe auf eine Wand, um eine Tür zu setzen oder zu entfernen.',

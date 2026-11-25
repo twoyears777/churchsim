@@ -1,16 +1,26 @@
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
+import { WELT, GRUNDSTUECK } from '../inhalte/umgebung.js';
 
 // Spiellogik der Karte. Kennt keine Grafik und keine Bedienung.
 export const LEER = 0, WAND = 1, TUER = 2;
-export const BREITE = 48, HOEHE = 32;
 
 export function neuerZustand() {
-  return { version: 1, w: BREITE, h: HOEHE, zellen: new Array(BREITE * HOEHE).fill(LEER), raumTyp: {} };
+  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {} };
 }
 export function idx(z, x, y) { return y * z.w + x; }
 function imFeld(z, x, y) { return x >= 0 && y >= 0 && x < z.w && y < z.h; }
+// Nur auf dem eigenen Grundstück darf gebaut werden.
+export function aufGrundstueck(x, y) {
+  const g = GRUNDSTUECK;
+  return x >= g.x && y >= g.y && x < g.x + g.w && y < g.y + g.h;
+}
+function begrenzen(x0, y0, x1, y1) {
+  const g = GRUNDSTUECK, kx = v => Math.max(g.x, Math.min(g.x + g.w - 1, v)), ky = v => Math.max(g.y, Math.min(g.y + g.h - 1, v));
+  return [kx(x0), ky(y0), kx(x1), ky(y1)];
+}
 
 export function wandRechteck(z, x0, y0, x1, y1) {
+  [x0, y0, x1, y1] = begrenzen(x0, y0, x1, y1);
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
   for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
     if (x === ax || x === bx || y === ay || y === by) {
@@ -21,11 +31,13 @@ export function wandRechteck(z, x0, y0, x1, y1) {
   abgleichen(z);
 }
 export function abriss(z, x0, y0, x1, y1) {
+  [x0, y0, x1, y1] = begrenzen(x0, y0, x1, y1);
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
   for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) z.zellen[idx(z, x, y)] = LEER;
   abgleichen(z);
 }
 export function tuerUmschalten(z, x, y) {
+  if (!aufGrundstueck(x, y)) return false;
   const i = idx(z, x, y);
   if (z.zellen[i] === WAND) z.zellen[i] = TUER;
   else if (z.zellen[i] === TUER) z.zellen[i] = WAND;
