@@ -4,7 +4,7 @@ export const TEXTE = {
   // Zeitanzeige oben
   tage: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'],
   tageKurz: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
-  zeitAnzeige: (woche, tag, uhr) => `Woche ${woche} · ${tag} ${uhr}`,
+  zeitAnzeige: (datum, tag, uhr) => `${datum} - ${tag} ${uhr}`,
   countdown: tage => tage === null ? 'Heute ist Sonntag' : tage === 0 ? 'Morgen ist Sonntag' : `Nächster Sonntag in ${tage} ${tage === 1 ? 'Tag' : 'Tagen'}`,
   tempo: { 0: 'Pause', 1: 'x1', 2: 'x2', 5: 'x5', 10: 'x10', 25: 'x25' },
   kontostand: 'Kontostand',

@@ -62,7 +62,7 @@ export function anzeigenAktualisieren() {
   $('progEinnahmen').textContent = euro(l.finanzen.einnahmen);
   $('progAusgaben').textContent = euro(l.finanzen.ausgaben);
   const uhr = `${String(l.stunde).padStart(2, '0')}:${String(l.minute).padStart(2, '0')}`;
-  $('uhr').textContent = TEXTE.zeitAnzeige(l.woche, TEXTE.tage[l.tag], uhr);
+  $('uhr').textContent = TEXTE.zeitAnzeige(l.datum, TEXTE.tage[l.tag], uhr);
   $('countdown').textContent = TEXTE.countdown(l.tageBisSonntag);
   $('sonntag').textContent = `${l.sonntag.name} · ${l.sonntag.datum} · ${l.kirchenjahr.aktuell.name}`;
   radZeichnen(l.kirchenjahr);

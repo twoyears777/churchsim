@@ -393,7 +393,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const zp = zeitpunkt(z.minuten), lg = z.letzterGottesdienst;
       const personen = z.personen.map(p => { const d = daten(p), r = eingesetztIn(z, raeume, p); return d && { id: p.id, art: d.art, name: d.name, einsatz: r ? r.typ.name : null }; }).filter(Boolean);
       return {
-        woche: zp.woche + 1, tag: zp.tag, stunde: zp.stunde, minute: zp.minute, tageBisSonntag: tageBisSonntag(z.minuten),
+        woche: zp.woche + 1, tag: zp.tag, datum: tagAnzeige(Math.floor(z.minuten / TAG_MIN)).datum, stunde: zp.stunde, minute: zp.minute, tageBisSonntag: tageBisSonntag(z.minuten),
         sonntag: sonntagDerWoche(zp.woche), kirchenjahr: kirchenjahrStand(zp.woche),
         tempo: z.tempo, konto: z.konto, bekanntheit: z.bekanntheit,
         finanzen: finanzPrognose(z, raeume),
