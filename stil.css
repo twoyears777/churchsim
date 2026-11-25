@@ -244,3 +244,19 @@ p .farbe, .kirchenjahr-zeiten .farbe { display: inline-block; width: 14px; heigh
 .forschung-knoten.erforscht { border-color: #6c9a5b; }
 .forschung-knoten.laeuft { border-color: #2d69be; }
 .forschung-knoten.gesperrt { opacity: .6; }
+
+/* Bausteintabelle im Menü „Veranstaltung einstellen“ (25.11.) – Design wie in der Vorschau, von Lukas freigegeben */
+.maske.breit.mittel { width: min(640px, calc(100% - 24px)); }
+.eventtypen { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.inhalt .eventtypen button { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.inhalt .eventtypen button.aktiv { border: 2px solid #2d69be; font-weight: 600; }
+table.baustein { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+table.baustein th { text-align: left; font-weight: 600; color: #6b665b; font-size: 12px; padding: 4px 5px; border-bottom: 2px solid #cfc9bb; }
+table.baustein td { padding: 5px; border-bottom: 1px solid #e2dccd; vertical-align: top; }
+table.baustein tr.pflicht td { background: #e8e2d3; }
+table.baustein td.strich { color: #9a9385; }
+table.baustein td.mitte { text-align: center; }
+table.baustein tr.summe td { border-top: 2px solid #2b2a27; border-bottom: none; font-weight: 600; background: #e6edf7; padding-top: 7px; padding-bottom: 7px; }
+table.baustein tr.summe td.fehlt { color: #b3261e; }
+table.baustein .haken { color: #2e7d32; font-weight: 700; } table.baustein .nein { color: #9a9385; }
+ul.keine-info { margin: 0 0 6px; padding-left: 20px; font-size: 14px; }

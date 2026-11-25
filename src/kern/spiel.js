@@ -24,6 +24,7 @@ import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVerans
 import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
   schichtHinzufuegen, schichtEntfernen, offenBei } from './kirchkaffee.js';
 import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
+import { bausteineVon } from './bausteine.js';
 import { lobpreisVorliebe, kaffeeVorliebe } from './besucher.js';
 import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
@@ -608,7 +609,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         programm: programm.map(p => ({ platz: p.platz, art: p.art, tag: p.tag, slot: p.slot, frei: p.frei, fehlt: p.fehlt, bereit: p.bereit,
           nutzbar: p.frei || !!p.art,
           prognose: p.platz === 0 || p.art ? { ...prognose(z, raeume, nr, p.platz), dieseWoche: terminDieseWoche(z, raeume, r, p.platz) } : null })),
-        imRaum: (info ? info.imRaum : []).map(p => { const d = daten(p); return { name: d.name, art: d.art, musiker: musiker.has(p), musikLevel: d.art === 'ehrenamt' ? musikLevel(p) : null }; })
+        imRaum: (info ? info.imRaum : []).map(p => { const d = daten(p); return { name: d.name, art: d.art, musiker: musiker.has(p), musikLevel: d.art === 'ehrenamt' ? musikLevel(p) : null }; }),
+        // Bausteintabelle (25.11.): pro Eventtyp die Bausteine mit „im Raum“ und Regelwerten, dazu „Zusammen“
+        bausteine: bausteineVon(z, r, info, moeglicheVeranstaltungen(r.typ).map(x => x.id))
       };
     },
     // Menü der Kaffeemaschine (nachgefüllt wird vom Ehrenamtlichen im Laden)

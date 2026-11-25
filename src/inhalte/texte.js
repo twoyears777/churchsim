@@ -1,5 +1,8 @@
 // Inhaltsdatei: sichtbare Texte, die mit 0.1.2 neu dazugekommen sind.
 // ENTWÜRFE von Claude – Lukas formuliert sie selbst, seine Fassung wird hier übernommen.
+// Zahlen im deutschen Format: 1.05 → „1,05“; Geld: 1.07 → „1,07 €“ (stellen = Nachkommastellen, 0 bei glatten Beträgen)
+const zahl = n => n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+const geld = (n, stellen = 2) => n.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: 2 }) + ' €';
 export const TEXTE = {
   // Zeitanzeige oben
   tage: ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'],
@@ -126,6 +129,51 @@ export const TEXTE = {
         'Stühle egal – alle passen hinein']
     },
     keineSaal: { bringt: ['Nichts'], bedingungen: [] }
+  },
+  // ---- Bausteintabelle im Menü „Veranstaltung einstellen“ (25.11.; Texte von Lukas freigegeben: „passt so“) ----
+  // Jede Zeile: name, besucher, haltung, geld – null = Strich „–“. b = Baustein aus dem Spiel (Zahlen, Kennungen).
+  bausteine: {
+    spalten: { baustein: 'Baustein', imRaum: 'Im Raum', besucher: 'Besucher', haltung: 'Haltung', geld: 'Geld', ehrenamt: 'Ehrenamt' },
+    zusammen: 'Zusammen (so wie der Raum jetzt ist)',
+    faelltAus: 'Fällt aus – ein Pflicht-Baustein fehlt',   // ENTWURF von Claude (nicht in der Vorschau)
+    zeilen: {
+      hauptamt: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: 'normal', haltung: `+${b.gottesdienst} Gottesdienst, +${b.platz} Platz`, geld: `${geld(b.kollekte, 0)} je Besucher` }),
+      hauptamtLobpreis: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: '× Lobpreis-Vorliebe',
+        haltung: `0 bis +${b.haltungMax} je nach Lobpreis-Vorliebe, +${b.platz} Platz`, geld: `${geld(b.kollekte, 0)} je Besucher` }),
+      pflichtMoebel: b => ({ name: `${b.name} (Pflicht)` }),
+      moebel: b => ({ name: b.max > 1 ? `${b.name} (${b.anzahl} von ${b.max})` : b.name,
+        haltung: b.haltung ? (b.max > 1 ? `+${b.haltung} je Stück` : `+${b.haltung}`) : null,
+        geld: b.kollekte ? `Kollekte ×${zahl(b.kollekte)}${b.max > 1 ? ' je Stück' : ''}` : null }),
+      besserStuhl: b => ({ name: 'Bessere Stühle', haltung: '+ Stufe des Stuhls', geld: b.kollekte ? 'Kollekte × Stufe' : null }),
+      instrumentOhne: b => ({ name: `${b.name} ohne Ehrenamtlichen` }),
+      musiker: b => ({
+        name: (b.nr === 1 ? '1 Ehrenamtlicher' : `${b.nr}. Ehrenamtlicher`)
+          + (b.brauchtInstrument ? ` (braucht ${b.nr === 1 ? 'ein' : b.nr + '.'} Instrument)` : ' am Instrument')
+          + (b.level !== null ? ` (Level ${b.level})` : ''),
+        besucher: b.besucher ? `×${zahl(b.besucher.min)} bis ×${zahl(b.besucher.max)} je nach Lobpreis-Vorliebe` : null,
+        haltung: b.nr === 1 ? (b.imRaum ? `+${b.bonus} % je nach Lobpreis-Vorliebe` : `+${b.bonusMin} % oder mehr je nach Lobpreis-Vorliebe`)
+          : (b.imRaum ? `weitere +${b.bonus} %` : `weitere +${b.bonusMin} % oder mehr (je nach Level)`),
+        geld: b.nr === 1 ? (b.imRaum ? `Kollekte +${b.bonus} %` : `Kollekte +${b.bonusMin} % oder mehr`)
+          : (b.imRaum ? `weitere +${b.bonus} %` : `weitere +${b.bonusMin} % oder mehr`) }),
+      leitungSenioren: b => ({ name: 'Hauptamtlicher + Ehrenamtlicher (Pflicht)', besucher: 'normal',
+        haltung: `+${b.veranstaltung} Event, +${b.platz} Platz`, geld: `Spende ca. ${geld(b.spende)} je Besucher` }),
+      tischStuehle: b => ({ name: `Tisch, mind. ${b.stuehleMin} Stühle (Pflicht)` }),
+      weitererStuhl: b => ({ name: 'Jeder weitere Stuhl', besucher: `+${b.plaetze} Platz` }),
+      leitungChor: b => ({ name: `Ehrenamtlicher ab Musik-Level ${b.levelMin} (Pflicht)` + (b.level !== null ? ` (Level ${b.level})` : ''),
+        besucher: 'normal, Stühle egal', haltung: `+${b.platz} Platz, +${b.bonus !== null ? b.bonus : b.bonusMin} %`, geld: `Spende ca. ${geld(b.spende)} je Besucher` }),
+      chorLevel: b => ({ name: 'Jedes weitere Musik-Level', haltung: `+${b.proLevel} %` })
+    },
+    // Zeile „Zusammen“: s = Summe aus dem Spiel
+    summe: s => ({
+      besucher: s.besucher.art === 'musik' ? `×${zahl(s.besucher.min)} bis ×${zahl(s.besucher.max)} je nach Lobpreis-Vorliebe`
+        : s.besucher.art === 'vorliebe' ? '× Lobpreis-Vorliebe'
+        : s.besucher.art === 'plaetze' ? `normal, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}`
+        : s.besucher.art === 'egal' ? 'normal, Stühle egal' : 'normal',
+      haltung: s.haltung.vorliebeMax !== null
+        ? `+${s.haltung.fest}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` : '') + ' je nach Lobpreis-Vorliebe'
+        : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' ? ' je nach Lobpreis-Vorliebe' : '') : ''),
+      geld: s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher` : `${geld(s.geld.jeBesucher)} je Besucher`
+    })
   },
   bringt: 'Bringt',
   bedingungen: 'Bedingungen',

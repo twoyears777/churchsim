@@ -30,6 +30,7 @@ export function fensterAktualisieren() {
     kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('sehr-breit', f.art === 'finanzen');
+  m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
   m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
@@ -89,25 +90,17 @@ function raumFenster(f) {
 
   if (p) {
     // ---- Menü: Art und Zeit einer Veranstaltung ----
-    const bedingung = t => typeof t === 'string' ? `<li>${t}</li>` : `<li class="${r.bedingungen[t.bedingung] ? 'ok' : 'fehlt'}">${t.text}</li>`;
-    const extra = id => id !== 'gottesdienst' || !au ? [] : [
-      ...au.teile.filter(t => t.haltung || t.kollekte).map(t => `${t.name}${t.max > 1 ? ' ' + A.anzahl(t.anzahl, t.max) : ''}: ${
-        [t.haltung && A.haltung(t.haltung), t.kollekte && A.kollekte(faktor(t.kollekte))].filter(Boolean).join(' · ')}`),
-      ...(au.musik ? [A.lobpreisteam(Math.round(au.musikBonus * 100), au.musiker)]
-        : au.instrument ? [`<span class="ausgegraut">${A.keinLobpreisteam}</span>`] : [])];
-    const kachel = (id, name, k) => `<button class="kachel${(p.art || '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}">
-        <b>${name}</b>
-        <span class="klein">${TEXTE.bringt}</span><ul>${[...k.bringt, ...extra(id)].map(t => `<li>${t}</li>`).join('')}</ul>
-        <span class="klein">${TEXTE.bedingungen}</span><ul>${k.bedingungen.map(bedingung).join('')}</ul></button>`;
-    const kacheln = r.moeglich.map(v => kachel(v.id, v.name, TEXTE.veranstaltungKacheln[v.id])).join('')
-      + kachel('', KEINE_VERANSTALTUNG, TEXTE.veranstaltungKacheln[saal ? 'keineSaal' : 'keine']);
+    // Eventtyp als Knöpfe, darunter die Bausteintabelle (Spielprinzip vom 25.11.): bei jedem Event gleich aufgebaut
+    const knoepfe = [...r.moeglich, { id: '', name: KEINE_VERANSTALTUNG }].map(v =>
+      `<button class="${(p.art || '') === v.id ? 'aktiv' : ''}" data-veranstaltung="${v.id}">${esc(v.name)}</button>`).join('');
+    const tabelle = p.art && r.bausteine[p.art] ? bausteinTabelle(r.bausteine[p.art]) : keineInfo(TEXTE.veranstaltungKacheln[saal ? 'keineSaal' : 'keine']);
     // Zeiten, zu denen im Raum schon eine andere Veranstaltung ist, sind gesperrt
     const belegt = (tag, slot) => r.programm.some(e => e.platz !== p.platz && e.art && e.tag === tag && e.slot === slot);
     const kopf = TEXTE.tageKurz.map(t => `<th>${t}</th>`).join('');
     const reihen = r.slots.map(s => `<tr><th class="slot">${T.slots[s.id]}<small>${uhr(s.id)}</small></th>${
       TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${p.tag === tag && p.slot === s.id ? ' aktiv' : ''}" data-plan="${tag}:${s.id}" ${belegt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${T.slots[s.id]}"></button></td>`).join('')}</tr>`).join('');
     return `<h2>${T.platzEinstellen(p.platz + 1)}</h2><p class="unter">${r.typName}</p>
-      <h3>${T.art}</h3><div class="kacheln">${kacheln}</div>
+      <h3>${T.art}</h3><div class="eventtypen">${knoepfe}</div>${tabelle}
       <h3>${T.zeit}</h3><p class="unter">${saal ? T.wochenplanInfoSaal : T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
       <div class="zeile"><button data-zurueck>${T.zurueck}</button><button data-zu>Schließen</button></div>`;
   }
@@ -145,6 +138,28 @@ function raumFenster(f) {
     <h3>${T.mitarbeiter}</h3>${mitarbeiter}
     ${vorschau}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Bausteintabelle: eine Zeile pro Baustein (Pflicht grau hinterlegt), unten „Zusammen“. Spalte Ehrenamt vorerst immer leer.
+function bausteinTabelle({ zeilen, summe }) {
+  const B = TEXTE.bausteine, S = B.spalten;
+  const zelle = t => t ? `<td>${t}</td>` : '<td class="strich">–</td>';
+  const reihen = zeilen.map(b => {
+    const t = B.zeilen[b.id](b);
+    return `<tr class="${b.pflicht ? 'pflicht' : ''}"><td>${t.name}</td><td class="mitte">${b.imRaum ? '<span class="haken">✓</span>' : '<span class="nein">–</span>'}</td>
+      ${zelle(t.besucher)}${zelle(t.haltung)}${zelle(t.geld)}${zelle(null)}</tr>`;
+  }).join('');
+  const s = B.summe(summe);
+  const zusammen = summe.bereit
+    ? `<tr class="summe"><td>${B.zusammen}</td><td></td>${zelle(s.besucher)}${zelle(s.haltung)}${zelle(s.geld)}${zelle(null)}</tr>`
+    : `<tr class="summe"><td>${B.zusammen}</td><td></td><td colspan="4" class="fehlt">${B.faelltAus}</td></tr>`;
+  return `<table class="baustein"><colgroup><col style="width:27%"><col style="width:8%"><col style="width:18%"><col style="width:19%"><col style="width:16%"><col style="width:12%"></colgroup>
+    <tr><th>${S.baustein}</th><th>${S.imRaum}</th><th>${S.besucher}</th><th>${S.haltung}</th><th>${S.geld}</th><th>${S.ehrenamt}</th></tr>${reihen}${zusammen}</table>`;
+}
+// „Keine“ gewählt: was das bedeutet (z. B. Stammgäste werden unzufrieden)
+function keineInfo(k) {
+  const liste = [...k.bringt, ...k.bedingungen.map(b => typeof b === 'string' ? b : b.text)];
+  return `<ul class="keine-info">${liste.map(t => `<li>${t}</li>`).join('')}</ul>`;
 }
 
 // Prognose: Zeile für Fest oder Zeit im Kirchenjahr (z. B. „Heiligabend: sehr viele Besucher, sehr hohe Kollekte“)
