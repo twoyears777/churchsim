@@ -7,7 +7,8 @@ import { moebelAnlegen, moebelPruefen, moebelBei, moebelKaufen, moebelAbreissen 
 import { finanzenAnlegen, kannBezahlen, summe } from '../kern/finanzen.js';
 import { EINNAHMEN, AUSGABEN } from '../inhalte/finanzen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
-import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose } from '../kern/runde.js';
+import { raumBereitschaft, kannWocheBeenden, wocheBeenden, finanzPrognose, moeglicheVeranstaltungen, veranstaltungVon, veranstaltungEinstellen } from '../kern/runde.js';
+import { KEINE_VERANSTALTUNG } from '../inhalte/veranstaltungen.js';
 import { sonntagDerWoche, kirchenjahrStand } from '../kern/kalender.js';
 import { weg } from '../kern/wege.js';
 import { wandBauen, wandKonflikte } from '../kern/bauen.js';
@@ -31,7 +32,7 @@ let z = laden() || neuerZustand();
 personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); if (typeof z.woche !== 'number') z.woche = 0;
 let raeume = auswerten();
 let werkzeug = 'wand', ziehen = null, auswahl = null, editorOffen = false, tragen = null;
-let besucher = [], ablauf = null, stuhlStart = null, schwebe = null;
+let besucher = [], ablauf = null, stuhlStart = null, schwebe = null, klickStart = null;
 const verlauf = [];
 
 const $ = id => document.getElementById(id);
@@ -42,7 +43,11 @@ let ansicht = { k: 16, ox: 0, oy: 0 };
 
 function auswerten() {
   const { raeume: liste, gruppe } = erkenneRaeume(z);
-  for (const r of liste) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); }
+  for (const r of liste) {
+    r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ);
+    const v = veranstaltungVon(z, r);
+    r.veranstaltungText = moeglicheVeranstaltungen(r.typ).length ? (v ? v.name : 'Keine Veranstaltung') : null;
+  }
   return { liste, gruppe };
 }
 function speichern() {
@@ -149,9 +154,11 @@ function radZeichnen(stand) {
 function wasFehlt() {
   const gd = raumBereitschaft(z, raeume).filter(b => b.typ.id === 'gottesdienst');
   if (!gd.length) return 'Für den Gottesdienst fehlt ein fertiger Gottesdienstraum.';
-  const b = gd[0], typ = b.typ, teile = [];
+  const mit = gd.filter(b => b.veranstaltung && b.veranstaltung.id === 'gottesdienst');
+  if (!mit.length) return 'Für den Gottesdienst fehlt: Im Gottesdienstraum ist noch kein Gottesdienst eingestellt (Raum anklicken).';
+  const b = mit[0], v = b.veranstaltung, teile = [];
   if (b.fehlt.includes('leitung')) teile.push('der Pastor im Gottesdienstraum');
-  if (b.fehlt.includes('stuehle')) teile.push(`mindestens ${typ.minStuehle} Stühle (bisher ${b.stuehle.length})`);
+  if (b.fehlt.includes('stuehle')) teile.push(`mindestens ${v.minStuehle} Stühle (bisher ${b.stuehle.length})`);
   return `Für den Gottesdienst fehlt: ${teile.join(' und ')}.`;
 }
 
@@ -181,6 +188,7 @@ leinwand.addEventListener('pointerdown', e => {
   if (!editorOffen) {
     const p = figurBei(e);
     if (p) { leinwand.setPointerCapture(e.pointerId); const a = punktAus(e); tragen = { person: p, ...a, start: a, bewegt: false }; malen(); }
+    else klickStart = feldAus(e);
     return;
   }
   const f = feldAus(e);
@@ -211,7 +219,12 @@ leinwand.addEventListener('pointerup', e => {
     if (p.x !== f.x || p.y !== f.y) aendern(() => versetzen(z, p, f.x, f.y)); else malen();
     return;
   }
-  if (!editorOffen) return;
+  if (!editorOffen) {
+    // Spielansicht: Klick auf einen Raum mit Veranstaltungen öffnet das Raum-Fenster
+    const f = feldAus(e), s = klickStart; klickStart = null;
+    if (s && s.x === f.x && s.y === f.y) { const r = raumMitVeranstaltung(f); if (r) raumFensterOeffnen(r); }
+    return;
+  }
   const f = feldAus(e);
   if (ziehen) {
     const v = ziehen; ziehen = null;
@@ -241,7 +254,7 @@ function mauszeiger(e) {
   let c = 'default';
   if (ablauf) c = 'default';
   else if (tragen) c = 'grabbing';
-  else if (!editorOffen) c = figurBei(e) ? 'grab' : 'default';
+  else if (!editorOffen) c = figurBei(e) ? 'grab' : raumMitVeranstaltung(feldAus(e)) ? 'pointer' : 'default';
   else c = werkzeug === 'tuer' || werkzeug === 'raum' ? 'pointer' : 'crosshair';
   if (leinwand.style.cursor !== c) leinwand.style.cursor = c;
 }
@@ -287,11 +300,30 @@ function karteOeffnen(p) {
     <div class="zeile"><button data-zu>Schließen</button></div>`;
   auswahl = null; maske.hidden = false; malen();
 }
+// ---- Raum-Fenster in der Spielansicht: Veranstaltung einstellen ----
+function raumMitVeranstaltung(f) {
+  const nr = raeume.gruppe[idx(z, f.x, f.y)], r = nr >= 0 ? raeume.liste[nr] : null;
+  return r && moeglicheVeranstaltungen(r.typ).length ? r : null;
+}
+function raumFensterOeffnen(r) {
+  const aktuell = veranstaltungVon(z, r);
+  const knopf = (id, name) => `<button class="typ${(aktuell ? aktuell.id : '') === id ? ' aktiv' : ''}" data-veranstaltung="${id}"><span><b>${name}</b></span></button>`;
+  maske.querySelector('.inhalt').innerHTML = `<h2>${r.typ.name}</h2>
+    <h3>Veranstaltung</h3>
+    <div class="typen">${moeglicheVeranstaltungen(r.typ).map(v => knopf(v.id, v.name)).join('')}${knopf('', KEINE_VERANSTALTUNG)}</div>
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+  auswahl = r.nr; maske.hidden = false; malen();
+}
 function maskeSchliessen() { maske.hidden = true; auswahl = null; malen(); }
 maske.addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.hasAttribute('data-zu')) return maskeSchliessen();
+  if (b.dataset.veranstaltung !== undefined) {
+    const r = raeume.liste[auswahl];
+    aendern(() => veranstaltungEinstellen(z, r, b.dataset.veranstaltung || null));
+    return maskeSchliessen();
+  }
   if (b.dataset.typ !== undefined) {
     const r = raeume.liste[auswahl];
     aendern(() => typZuweisen(z, r, b.dataset.typ || null));

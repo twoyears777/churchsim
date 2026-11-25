@@ -8,7 +8,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', besucher: '#5b8a72', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', besucher: '#5b8a72', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878',
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e'
@@ -94,6 +94,11 @@ export function zeichne(ctx, z, raeume, ansicht, extra = {}) {
       ctx.fillStyle = FARBEN.fehler;
       const t = r.probleme.map(p => p === 'tuer' ? 'Tür fehlt' : `zu klein (mind. ${r.typ.minGroesse[0]} × ${r.typ.minGroesse[1]})`).join(' · ');
       ctx.fillText(t, cx, cy + schrift * 0.7);
+    } else if (r.veranstaltungText) {
+      // eingestellte Veranstaltung klein unter dem Raumnamen
+      ctx.font = `400 ${schrift * 0.8}px system-ui, sans-serif`;
+      ctx.fillStyle = FARBEN.veranstaltung;
+      ctx.fillText(r.veranstaltungText, cx, cy + schrift * 0.95);
     }
   }
 

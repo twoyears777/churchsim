@@ -54,7 +54,7 @@ console.log('Mitarbeiter-Tests bestanden.');
 
 // Möbel, Runden, Wege
 import { moebelSetzen, moebelPruefen } from '../src/kern/moebel.js';
-import { kannWocheBeenden, wocheBeenden } from '../src/kern/runde.js';
+import { kannWocheBeenden, wocheBeenden, veranstaltungEinstellen, veranstaltungVon } from '../src/kern/runde.js';
 import { weg } from '../src/kern/wege.js';
 import { wandKonflikte, wandBauen } from '../src/kern/bauen.js';
 import { namenZiehen } from '../src/kern/besucher.js';
@@ -74,6 +74,8 @@ import { sonntagDerWoche } from '../src/kern/kalender.js';
   moebelSetzen(z6, 'stuhl', 0, 0, 2, 2);                            // außerhalb: nichts
   moebelSetzen(z6, 'stuhl', G.x + 30, G.y + 20, G.x + 30, G.y + 20); // draußen auf der Wiese: erlaubt, zählt aber nicht
   assert.equal(z6.moebel.length, 4);
+  assert.equal(kannWocheBeenden(z6, aus()), false);                 // noch keine Veranstaltung eingestellt
+  veranstaltungEinstellen(z6, aus().liste[0], 'gottesdienst');
   assert.equal(kannWocheBeenden(z6, aus()), true);
   const rb = wocheBeenden(z6, aus());
   assert.equal(rb.angebote[0].besucher, 3); assert.equal(z6.woche, 1);
@@ -131,6 +133,7 @@ import { finanzPrognose } from '../src/kern/runde.js';
   wandRechteck(z7, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z7, G.x + 2, G.y + 5);
   typZuweisen(z7, erkenneRaeume(z7).raeume[0], 'gottesdienst');
   versetzen(z7, z7.personen[0], G.x + 4, G.y + 5);
+  veranstaltungEinstellen(z7, aus().liste[0], 'gottesdienst');
   for (let i = 0; i < 10; i++) assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6 + i, G.y + 4), 'ok');
   assert.equal(z7.konto, 0);
   assert.equal(moebelKaufen(z7, 'stuhl', G.x + 6, G.y + 6), 'geld');            // kein Geld mehr
@@ -143,5 +146,17 @@ import { finanzPrognose } from '../src/kern/runde.js';
   assert.equal(z7.konto, 14); assert.equal(rb.kontostand, 14);
   assert.deepEqual(z7.letzteWoche, { besucher: 9 });
   assert.deepEqual(z7.wochenbuch, { einnahmen: {}, ausgaben: {} });              // neue Woche, leeres Buch
+}
+// Veranstaltung bleibt nach Umbau erhalten, wird bei Funktionswechsel zurückgesetzt
+{
+  const z8 = neuerZustand(); personenAnlegen(z8);
+  const aus = () => { const { raeume, gruppe } = erkenneRaeume(z8); for (const r of raeume) { r.typ = raumTypVon(z8, r); r.probleme = pruefeRaum(z8, r, r.typ); } return { liste: raeume, gruppe }; };
+  wandRechteck(z8, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z8, G.x + 2, G.y + 5);
+  typZuweisen(z8, aus().liste[0], 'gottesdienst');
+  veranstaltungEinstellen(z8, aus().liste[0], 'gottesdienst');
+  tuerUmschalten(z8, G.x + 2, G.y + 6);                                         // zweite Tür: Raum wird neu erkannt
+  assert.equal(veranstaltungVon(z8, aus().liste[0]).id, 'gottesdienst');
+  typZuweisen(z8, aus().liste[0], null);
+  assert.equal(veranstaltungVon(z8, aus().liste[0]), null);
 }
 console.log('Finanz-Tests bestanden.');

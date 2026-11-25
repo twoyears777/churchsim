@@ -6,7 +6,7 @@ import { STARTGELD } from '../inhalte/finanzen.js';
 export const LEER = 0, WAND = 1, TUER = 2;
 
 export function neuerZustand() {
-  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {}, moebel: [], personen: [], woche: 0, konto: STARTGELD, wochenbuch: { einnahmen: {}, ausgaben: {} } };
+  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {}, veranstaltung: {}, moebel: [], personen: [], woche: 0, konto: STARTGELD, wochenbuch: { einnahmen: {}, ausgaben: {} } };
 }
 export function idx(z, x, y) { return y * z.w + x; }
 function imFeld(z, x, y) { return x >= 0 && y >= 0 && x < z.w && y < z.h; }
@@ -106,18 +106,25 @@ export function pruefeRaum(z, raum, typ) {
 }
 
 // Nach jeder Baumaßnahme: Raumfunktionen den neu erkannten Räumen zuordnen.
+// Gilt für Raumfunktion und eingestellte Veranstaltung gleichermaßen.
 function abgleichen(z) {
-  const { raeume } = erkenneRaeume(z), neu = {};
-  for (const r of raeume) {
-    const zaehler = {};
-    for (const c of r.zellen) { const t = z.raumTyp[c]; if (t) zaehler[t] = (zaehler[t] || 0) + 1; }
-    const typ = Object.keys(zaehler).sort((p, q) => zaehler[q] - zaehler[p])[0];
-    if (typ) for (const c of r.zellen) neu[c] = typ;
+  const { raeume } = erkenneRaeume(z);
+  for (const feld of ['raumTyp', 'veranstaltung']) {
+    if (!z[feld]) z[feld] = {};
+    const neu = {};
+    for (const r of raeume) {
+      const zaehler = {};
+      for (const c of r.zellen) { const t = z[feld][c]; if (t) zaehler[t] = (zaehler[t] || 0) + 1; }
+      const wert = Object.keys(zaehler).sort((p, q) => zaehler[q] - zaehler[p])[0];
+      if (wert) for (const c of r.zellen) neu[c] = wert;
+    }
+    z[feld] = neu;
   }
-  z.raumTyp = neu;
 }
 export function raumTypVon(z, raum) { return RAUMTYPEN.find(t => t.id === z.raumTyp[raum.zellen[0]]) || null; }
 export function typZuweisen(z, raum, typId) {
+  const alt = z.raumTyp[raum.zellen[0]];
   for (const c of raum.zellen) { if (typId) z.raumTyp[c] = typId; else delete z.raumTyp[c]; }
+  if (alt !== typId && z.veranstaltung) for (const c of raum.zellen) delete z.veranstaltung[c];   // neue Funktion: Veranstaltung zurücksetzen
 }
 
