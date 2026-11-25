@@ -1,2 +1,2 @@
 // Versionsnummer des Spiels. Bei jeder Veröffentlichung hochzählen – zusammen mit version.json.
-export const VERSION = '0.1.3';
+export const VERSION = '0.1.4';

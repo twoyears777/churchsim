@@ -3,6 +3,22 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.4
+
+**Neu**
+- Plakat an der Pforte: Klick aufs Tor (5 €) – Passanten werden bis zum nächsten Gottesdienst öfter neugierig
+- Stühle verbessern: 4 Stufen, einzeln oder alle Stühle im Raum
+- Neue Möbel: Kanzel, Altar, Blumen, Grünpflanze, Gitarre
+- Musiker: Ehrenamtliche im Gottesdienstraum machen mit Gitarre Musik – mehr Kollekte
+- Versionsnummer unten links; ein Klick zeigt, was neu ist
+
+**Seelsorge**
+- Wer ein Gespräch möchte, kommt sichtbar zum Pastor gelaufen und geht danach wieder
+- Am Anfang kommen häufiger Anfragen
+
+**Test-Werkzeuge**
+- „+ Geld“ unten rechts: Betrag direkt aufs Konto
+
 ## 0.1.3
 
 **Neu**
