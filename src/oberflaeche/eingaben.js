@@ -173,6 +173,9 @@ export function eingabenEinrichten() {
   }));
   $('zurueck').addEventListener('click', () => { if (ui.spiel.rueckgaengig()) { ui.fenster = null; fensterSchliessen(); fertig(); } });
   sicherKnopf($('zuruecksetzen'), TEXTE.zuruecksetzen, TEXTE.zuruecksetzenSicher, zuruecksetzen);
+  $('testGeld').textContent = TEXTE.testGeld;
+  $('testGeldBetrag').setAttribute('aria-label', TEXTE.testGeldFeld);
+  $('testGeld').addEventListener('click', () => { if (ui.spiel.testGeld($('testGeldBetrag').value) === 'ok') fertig(); });
   sicherKnopf($('neu'), 'Neu', 'Wirklich leeren?', zuruecksetzen);
   $('editorAuf').addEventListener('click', () => editorUmschalten(true));
   $('editorZu').addEventListener('click', () => editorUmschalten(false));

@@ -13,6 +13,9 @@ export const TEXTE = {
   // Zurücksetzen (Test-Werkzeug)
   zuruecksetzen: 'Spiel auf Start zurücksetzen',
   zuruecksetzenSicher: 'Wirklich zurücksetzen?',
+  // Geld geben (Test-Werkzeug) – ENTWURF, Lukas formuliert selbst
+  testGeld: '+ Geld',
+  testGeldFeld: 'Betrag in €',
 
   // Hinweis unten rechts, während etwas läuft
   laeuft: {

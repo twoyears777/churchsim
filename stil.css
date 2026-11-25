@@ -87,6 +87,8 @@ button[aria-pressed="true"] .preis { background: rgba(0,0,0,.1); }
 .tempo button { min-height: 36px; padding: 0 10px; }
 .modus-editor .oben { display: none; }
 .klein-knopf { min-height: 32px; font-size: 13px; padding: 0 10px; opacity: .85; }
+.testgeld { display: flex; gap: 4px; }
+.testgeld input { width: 90px; min-height: 32px; font-size: 13px; padding: 0 6px; border-radius: 8px; border: 1px solid #555; background: #2b2a27; color: inherit; opacity: .85; }
 .maske.breit { width: min(520px, calc(100% - 24px)); max-height: calc(100% - 84px); overflow: auto; border-radius: 12px; }
 .kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
 .kachel { display: block; text-align: left; padding: 10px 12px; height: auto; border-radius: 10px; background: #fff; border: 1px solid #cfc9bb; }

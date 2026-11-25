@@ -177,6 +177,13 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     seelsorgeAblehnen() { return seelsorgeAblehnen(z); },
     seelsorgeRat(nr) { return seelsorgeRaten(z, nr, zufall); },
     seelsorgeSchliessen() { return seelsorgeZu(z); },
+    // Test-Werkzeug: beliebig viel Geld aufs Konto (ganze Euro, > 0). Zählt nicht in Finanzen/Prognose. → 'ok' | 'betrag'
+    testGeld(betrag) {
+      const b = Math.floor(Number(betrag));
+      if (!Number.isFinite(b) || b <= 0 || b > 1e9) return 'betrag';
+      z.konto += b;
+      return 'ok';
+    },
     speicherText() { return JSON.stringify({ version: SPEICHER_VERSION, zustand: z }); },
 
     // ---------- Abfragen ----------

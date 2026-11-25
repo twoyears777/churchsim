@@ -190,3 +190,13 @@ console.log('Spielanfang-Test bestanden.');
   assert.equal(kopie.menschen().length, liste.length);
 }
 console.log('Menschen-Schnittstellen-Tests bestanden.');
+
+// Test-Werkzeug „Geld geben“: nur gültige Beträge, zählt nicht in die Finanzen der Woche
+{
+  const { spielStarten: starten } = await import('../src/kern/spiel.js');
+  const sp = starten();
+  const vor = sp.lage().konto;
+  assert.equal(sp.testGeld(5000), 'ok'); assert.equal(sp.lage().konto, vor + 5000);
+  assert.equal(sp.testGeld(0), 'betrag'); assert.equal(sp.testGeld(-10), 'betrag'); assert.equal(sp.testGeld('abc'), 'betrag');
+  assert.equal(sp.lage().konto, vor + 5000);
+}
