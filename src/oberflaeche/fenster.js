@@ -96,13 +96,14 @@ function raumFenster(f) {
       `<button class="${(p.art || '') === v.id ? 'aktiv' : ''}" data-veranstaltung="${v.id}">${esc(v.name)}</button>`).join('');
     const tabelle = p.art && r.bausteine[p.art] ? bausteinTabelle(r.bausteine[p.art]) : keineInfo(TEXTE.veranstaltungKacheln[saal ? 'keineSaal' : 'keine']);
     // Zeiten, zu denen im Raum schon eine andere Veranstaltung ist, sind gesperrt
-    const belegt = (tag, slot) => r.programm.some(e => e.platz !== p.platz && e.art && e.tag === tag && e.slot === slot);
+    const erlaubt = ((r.moeglich.find(v => v.id === p.art) || {}).slots) || null;   // Spielenachmittag: nur nachmittags oder abends
+    const belegt = (tag, slot) => (erlaubt && !erlaubt.includes(slot)) || r.programm.some(e => e.platz !== p.platz && e.art && e.tag === tag && e.slot === slot);
     const kopf = TEXTE.tageKurz.map(t => `<th>${t}</th>`).join('');
     const reihen = r.slots.map(s => `<tr><th class="slot">${T.slots[s.id]}<small>${uhr(s.id)}</small></th>${
       TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${p.tag === tag && p.slot === s.id ? ' aktiv' : ''}" data-plan="${tag}:${s.id}" ${belegt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${T.slots[s.id]}"></button></td>`).join('')}</tr>`).join('');
     return `<h2>${T.platzEinstellen(p.platz + 1)}</h2><p class="unter">${r.typName}</p>
       <h3>${T.art}</h3><div class="eventtypen">${knoepfe}</div>${tabelle}
-      <h3>${T.zeit}</h3><p class="unter">${saal ? T.wochenplanInfoSaal : T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
+      <h3>${T.zeit}</h3><p class="unter">${p.art === 'spiele' ? T.wochenplanInfoSpiele : saal ? T.wochenplanInfoSaal : T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
       <div class="zeile"><button data-zurueck>${T.zurueck}</button><button data-zu>Schließen</button></div>`;
   }
 
@@ -279,12 +280,18 @@ function besucherKarte(f) {
   const kopf = `<h2>${esc(b.voll)}</h2>
     <p class="unter">${b.jugend ? `${T.jugendlich} · ` : ''}${b.status === 'passant' ? T.passant : b.status === 'neugierig' ? T.neugierig : b.besuche ? T.besuche(b.besuche) : T.neu}</p>
     ${b.konfi ? `<p class="unter">${T.konfi(b.konfi.anzahl, b.konfi.von)}</p>` : ''}
-    <h3>${T.zufriedenheit}</h3>
+    <h3>${T.zufriedenheit} · ${T.level(b.level, b.levelMax)}</h3>
     <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>
+    <p class="unter">${T.levelInfo}</p>
     <p class="unter">${T.lobpreis(Math.round(b.lobpreis * 100))}</p>
     <p class="unter">${T.kaffeeWert(Math.round(b.kaffee * 100))}</p>`;
   if (!n) return `${kopf}<div class="zeile"><button data-zu>Schließen</button></div>`;   // Passant: keine Bedürfnisse
-  return `${kopf}
+  // Bedürfnisse am Ende der Woche (25.11.): entwickeln sich mit dem Level
+  const wb = b.wochenBeduerfnisse || [];
+  const woche = `<h3>${T.wochenBeduerfnisse}</h3>
+    ${wb.length ? `<table class="finanzen hell">${wb.map(x => `<tr><td>${T.wochenBeduerfnis[x.id]}</td><td class="zahl ${x.erfuellt ? 'ok' : ''}">${x.erfuellt ? T.erfuelltWoche : T.offenWoche}</td></tr>`).join('')}</table>
+      <p class="unter">${T.wochenInfo}</p>` : `<p class="unter">${T.keineWochenBeduerfnisse}</p>`}`;
+  return `${kopf}${woche}
     <h3>${T.beduerfnisse}</h3>
     <table class="finanzen hell">
       <tr><td>${T.sitzplatz}</td>${status(n.sitzplatz)}</tr>
@@ -298,7 +305,8 @@ function besucherKarte(f) {
 const STATUS_REIHE = ['passant', 'neugierig', 'besucher', 'stammgast', 'ehrenamtlich'];
 function menschenFenster(f) {
   const T = TEXTE.menschen, liste = ui.spiel.menschen(), sort = f.sort || { spalte: 'status', ab: true };
-  const wert = (m, sp) => sp === 'name' ? m.voll : sp === 'status' ? STATUS_REIHE.indexOf(m.status) : sp === 'kaffee' ? (m.kaffee === null ? -1 : m.kaffee) : m[sp] ?? -1;
+  const wert = (m, sp) => sp === 'name' ? m.voll : sp === 'status' ? STATUS_REIHE.indexOf(m.status) : sp === 'kaffee' ? (m.kaffee === null ? -1 : m.kaffee)
+    : sp === 'haltung' ? (m.haltung === null ? -1 : ((m.level || 1) - 1) * 100 + m.haltung) : m[sp] ?? -1;   // Haltung: erst Level, dann Haltung
   liste.sort((a, b) => {
     const x = wert(a, sort.spalte), y = wert(b, sort.spalte);
     const v = typeof x === 'string' ? x.localeCompare(y, 'de') : x - y;
@@ -308,7 +316,7 @@ function menschenFenster(f) {
     `<th><button class="sortieren${sort.spalte === id ? ' aktiv' : ''}" data-sort="${id}">${name}${sort.spalte === id ? (sort.ab ? ' ▼' : ' ▲') : ''}</button></th>`).join('');
   const zeilen = liste.map(m => `<tr data-mensch="${m.id}" data-mart="${m.art}">
       <td>${esc(m.voll)}</td>
-      <td>${m.haltung === null ? T.unbekannt : `<div class="balken mini"><span style="width:${m.haltung}%"></span></div>`}</td>
+      <td>${m.haltung === null ? T.unbekannt : `${m.level ? `<small>${T.level(m.level)}</small> ` : ''}<div class="balken mini"><span style="width:${m.haltung}%"></span></div>`}</td>
       <td class="zahl">${m.besuche ?? T.unbekannt}</td>
       <td>${m.zuletzt === null ? T.unbekannt : T.woche(m.zuletzt)}</td>
       <td>${m.kaffee === null ? T.unbekannt : T.prozent(Math.round(m.kaffee * 100))}</td>
@@ -357,7 +365,7 @@ function finanzFenster() {
   const DS = T.dauerspenderSpalten, ds = f.dauerspender;
   const dauerspender = `<p class="unter">${T.dauerspenderInfo(f.dauerspendeRegeln)}</p>` + (ds.length
     ? `<table class="finanzen hell verlauf"><tr><th>${DS.name}</th><th>${DS.betrag}</th><th>${DS.naechster}</th><th>${DS.seit}</th><th>${DS.haltung}</th></tr>
-        ${ds.map(d => `<tr><td>${esc(d.name || '–')}</td><td class="zahl">${plus(d.betrag)}</td><td class="zahl">${plus(d.naechster)}</td><td class="zahl">${d.seit}</td><td class="zahl">${d.haltung ?? '–'}</td></tr>`).join('')}
+        ${ds.map(d => `<tr><td>${esc(d.name || '–')}</td><td class="zahl">${plus(d.betrag)}</td><td class="zahl">${plus(d.naechster)}</td><td class="zahl">${d.seit}</td><td class="zahl">${d.haltung === null ? '–' : T.dauerspenderHaltung(d.level, d.haltung)}</td></tr>`).join('')}
         <tr class="summe"><td>${T.dauerspenderSumme}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.betrag, 0))}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.naechster, 0))}</td><td></td><td></td></tr></table>`
     : `<p class="leer">${T.dauerspenderLeer}</p>`);
   const zusatz = b => b.spenderName ? esc(b.spenderName) : b.anlass ? T.anlass[b.anlass] : b.moebelName ? b.moebelName + (b.was === 'verbessern' ? ' ' + T.was.verbessern : '')

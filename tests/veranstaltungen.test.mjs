@@ -27,7 +27,7 @@ function gemeinde() {
   moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 3);
   versetzen(z, z.personen[0], G.x + 4, G.y + 5);
   z.besucher = Array.from({ length: 10 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X',
-    zufriedenheit: 100, kaffeeWert: 0, besuche: 0, lobpreis: i < 5 ? 1 : 0 }));
+    level: 5, zufriedenheit: 100, kaffeeWert: 0, besuche: 0, lobpreis: i < 5 ? 1 : 0 }));
   z.bekanntheit = 0; z.ortRuhig = true; z.konto = 1000;
   return z;
 }
@@ -85,6 +85,8 @@ console.log('Platz-Tests bestanden.');
   zeitVorruecken(z, aus(z), SO + 19 * 60 + 190 - z.minuten, () => 0.4);
   assert.equal(z.letzterGottesdienst.besucher, 5);
   assert.equal(z.letzterGottesdienst.platz, 1);
+  // Bedürfnis Lobpreis (25.11.): wer beim Lobpreisgottesdienst war, hat es diese Woche erfüllt
+  assert.equal(z.besucher.filter(b => b.erfuellt && b.erfuellt.ids.includes('lobpreis')).length, 5);
   assert.equal(z.heiligkeit, 15);   // Lobpreisgottesdienst zählt genauso
   // Am Abend kommt Kollekte dazu (ohne Sonntagvormittag-Bonus)
   assert.ok(z.wochenbuch.einnahmen.kollekte > kollekteVormittag);
@@ -161,7 +163,7 @@ console.log('Prognose-Tests bestanden.');
 
 // Lobpreis-Vorliebe beim normalen Gottesdienst (Spielprinzip 25.11.): mit Musik × (0,5 + v), ohne × (1,5 − v), höchstens 100 %
 {
-  const b = v => ({ id: 'x', voll: 'X Y', zufriedenheit: 60, lobpreis: v });
+  const b = v => ({ id: 'x', voll: 'X Y', level: 2, zufriedenheit: 100, lobpreis: v });   // Chance 60 % (Level 2, Haltung 100)
   const nah = (a, c) => Math.abs(a - c) < 1e-9;
   assert.ok(nah(besuchChance(b(0.9), { art: 'gottesdienst', musik: true }), 0.84));    // Beispiel aus dem Spielprinzip
   assert.ok(nah(besuchChance(b(0.9), { art: 'gottesdienst', musik: false }), 0.36));
@@ -169,7 +171,7 @@ console.log('Prognose-Tests bestanden.');
   assert.ok(nah(besuchChance(b(0), { art: 'gottesdienst', musik: false }), 0.9));
   assert.ok(nah(besuchChance(b(0.5), { art: 'gottesdienst', musik: true }), 0.6));     // 50 %: keine Änderung
   assert.ok(nah(besuchChance(b(0.5), { art: 'gottesdienst', musik: false }), 0.6));
-  assert.equal(besuchChance({ ...b(1), zufriedenheit: 90 }, { art: 'gottesdienst', musik: true }), 1);   // höchstens 100 %
+  assert.equal(besuchChance({ ...b(1), level: 4, zufriedenheit: 90 }, { art: 'gottesdienst', musik: true }), 1);   // höchstens 100 %
   assert.ok(nah(besuchChance(b(0.9), { art: 'gottesdienst' }), 0.6));                  // ohne Angabe: keine Wirkung
   // Lobpreisgottesdienst: wie bisher nur × Vorliebe, kein zusätzlicher Musik-Faktor
   assert.ok(nah(besuchChance(b(0.5), { art: 'lobpreis', musik: true }), 0.3));
@@ -179,7 +181,7 @@ console.log('Prognose-Tests bestanden.');
   const z = gemeinde(), r = raumBei(z);
   ausstatten(z);
   veranstaltungEinstellen(z, r, 'gottesdienst');
-  z.besucher.forEach(x => { x.zufriedenheit = 60; });
+  z.besucher.forEach(x => { x.level = 2; x.zufriedenheit = 100; });   // Chance 60 %
   const nr = raumBei(z).nr;
   // ohne Musiker: Fans 60 % × 0,5 = 30 %, × 1,2 Advent = 36 %; die anderen 60 % × 1,5 = 90 %, × 1,2 → höchstens 100 %
   // → 5 × 0,36 + 5 × 1 = 6,8

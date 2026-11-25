@@ -25,7 +25,15 @@ export const VERANSTALTUNGEN = [
   // konfiTeilnahme: zählt für die Konfirmation (KONFI in besucher.js).
   { id: 'konfi', name: 'Konfirmandenunterricht', raumtypen: ['gemeindesaal'], leitung: 'hauptamt', braucht: [],
     stuehleMin: 1, haltung: 5, haltungJeEhrenamt: 2, ehrenamtMax: 3, sitzplatzHaltung: false, nurJugend: true,
-    bekanntheit: false, neueBesucher: false, konfiTeilnahme: true, kollekte: false, kirchkaffee: false, spende: false }
+    bekanntheit: false, neueBesucher: false, konfiTeilnahme: true, kollekte: false, kirchkaffee: false, spende: false },
+  // Spielenachmittag (Lukas, 25.11.: claude/spielprinzip-beduerfnisse-wochenende.md): erfüllt das Bedürfnis Spaß.
+  // leitungOder: ein Hauptamtlicher ODER ein Ehrenamtlicher reicht. amTisch: nur Stühle direkt an einem Tisch sind Plätze
+  // (bis zu 4 je Tisch), mindestens stuehleMin davon. slots: nur nachmittags oder abends. dauer: 2 Stunden.
+  // haltung: +7 je Teilnehmer, kein Extra-Plus für den Sitzplatz (bessere Stühle wirken wie bei den anderen Veranstaltungen im Saal).
+  // spendeImmer: jeder Teilnehmer gibt beim Gehen zufällig min … max € (ganze Euro, auch 0). Basisversion kostet nichts.
+  { id: 'spiele', name: 'Spielenachmittag', raumtypen: ['gemeindesaal'], leitung: ['hauptamt', 'ehrenamt'], leitungOder: true, braucht: ['tisch'],
+    amTisch: true, stuehleMin: 2, slots: ['nachmittag', 'abend'], dauer: 120, haltung: 7, sitzplatzHaltung: false, spass: true,
+    kollekte: false, kirchkaffee: false, spende: true, spendeImmer: { min: 0, max: 3 } }
 ];
 // Spontane Spende im Gemeindesaal (Lukas, 25.11.): jeder anwesende Besucher mit dieser Chance zufällig min … max € (ganze Euro)
 export const SPONTANE_SPENDE = { chance: 0.1, min: 1, max: 3 };

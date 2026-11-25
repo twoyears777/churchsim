@@ -143,7 +143,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     assert.ok(z.besucher.every(b => b.zufriedenheit === 55));
     assert.equal(z.letzterGottesdienst.ausgefallen, true); assert.equal(z.bekanntheit, 0);
     zeitVorruecken(z, aus(), 7 * TAG_MIN, () => 0);                   // nächste Woche wieder
-    assert.ok(z.besucher.every(b => b.zufriedenheit === 50));
+    assert.ok(z.besucher.every(b => b.zufriedenheit === 45));         // −5 Bedürfnis nicht erfüllt (Sonntag 24 Uhr), −5 Ausfall
   }
   // Mit Pastor: 4 kommen, 3 Stühle → 1 muss heim
   {
@@ -151,8 +151,8 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     versetzen(z, z.personen[0], G.x + 4, G.y + 5);
     assert.equal(gottesdienstBereit(z, aus()).length, 1);
     assert.deepEqual(prognose(z, aus()).plaetze, 3);
-    assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.88) < 1e-9);   // 4 × 60 % × 1,2 (1. Advent: Adventszeit)
-    assert.ok(Math.abs(prognose(z, aus()).geld - 5.76) < 1e-9);      // Sonntagvormittag: Kollekte × 2
+    assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.592) < 1e-9);   // 4 × 54 % × 1,2 (Level 2, Haltung 60; 1. Advent: Adventszeit)
+    assert.ok(Math.abs(prognose(z, aus()).geld - 5.184) < 1e-9);      // Sonntagvormittag: Kollekte × 2
     zeitVorruecken(z, aus(), SONNTAG_10 - 180 - z.minuten, () => 0);  // Anreise
     assert.equal(z.laeufe[0].phase, 'anreise'); assert.equal(z.laeufe[0].gaeste.length, 4);
     assert.equal(z.laeufe[0].gaeste.filter(g => !g.sitz).length, 1);
@@ -254,7 +254,7 @@ console.log('Weg-Tests bestanden.');
 // Schalterwand (kern/spiel.js): Befehle und Abfragen, wie die Oberfläche sie benutzt
 import { spielStarten } from '../src/kern/spiel.js';
 {
-  const spiel = spielStarten(null, () => 0.5);   // 0.5: alle kommen (60 %)
+  const spiel = spielStarten(null, () => 0.45);   // 0.45: mindestens einer kommt (Chance 54 % × Musik-Faktor)
   assert.equal(spiel.lage().konto, STARTGELD); assert.equal(spiel.lage().tag, 0); assert.equal(spiel.lage().stunde, 8);
   assert.deepEqual(spiel.lage().status, { fehlt: 'raum' });
   // Bauen über Befehle

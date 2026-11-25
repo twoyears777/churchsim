@@ -50,12 +50,12 @@ console.log('Konfirmation-Kalender-Tests bestanden.');
 }
 // Kommchance: normale Kommchance × Faktor; Erwachsene nie beim Konfirmandenunterricht
 {
-  const j = { id: 'j', voll: 'J', zufriedenheit: 100, jugend: true }, e = { id: 'e', voll: 'E', zufriedenheit: 100, jugend: false };
+  const j = { id: 'j', voll: 'J', level: 5, zufriedenheit: 100, jugend: true }, e = { id: 'e', voll: 'E', level: 5, zufriedenheit: 100, jugend: false };   // Chance 100 %
   assert.equal(besuchChance(j, { art: 'gottesdienst' }), 0.5);
   assert.equal(besuchChance(j, { art: 'senioren' }), 0);
   assert.ok(Math.abs(besuchChance(j, { art: 'chorprobe' }) - 0.2) < 1e-9);
   assert.ok(Math.abs(besuchChance(j, { art: 'konfi' }) - 0.6) < 1e-9);
-  assert.ok(Math.abs(besuchChance({ ...j, zufriedenheit: 50 }, { art: 'konfi' }) - 0.3) < 1e-9);   // Faktor auf die Haltung
+  assert.ok(Math.abs(besuchChance({ ...j, zufriedenheit: 50 }, { art: 'konfi' }) - 0.585) < 1e-9);   // Faktor auf die Kommchance (97,5 % × 0,6)
   assert.equal(besuchChance(e, { art: 'konfi' }), 0);
   assert.equal(besuchChance(e, { art: 'gottesdienst' }), 1);
   // Konfirmation: Konfirmanden kommen sicher
@@ -69,7 +69,7 @@ function gemeinde() {
   wandRechteck(z, G.x + 2, G.y + 2, G.x + 13, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
   typZuweisen(z, raumBei(z), 'gemeindesaal');
   z.personen = z.personen.filter(p => p.id === 'pastor');
-  const mensch = (i, jugend) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', zufriedenheit: 50, kaffeeWert: 0,
+  const mensch = (i, jugend) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', level: 5, zufriedenheit: 50, kaffeeWert: 0,
     besuche: 0, lobpreis: 0.5, jugend });
   z.besucher = [mensch(0, true), mensch(1, true), mensch(2, false)];
   z.bekanntheit = 10; z.ortRuhig = true; z.konto = 1000;
@@ -101,7 +101,7 @@ console.log('Konfirmandenunterricht-Voraussetzungen-Tests bestanden.');
   stuhlVerbessern(z, moebelBei(z, G.x + 6, G.y + 5));                      // Polsterstuhl: + 2 Haltung
   versetzen(z, ea(z, 1), G.x + 4, G.y + 7); versetzen(z, ea(z, 2), G.x + 5, G.y + 7);
   const v = prognose(z, aus(z), saal(z).raum.nr, 0);
-  assert.ok(Math.abs(v.erwartet - 0.6) < 1e-9);               // 2 Jugendliche × 50 % × 0,6; Erwachsener 0; keine neuen Besucher
+  assert.ok(Math.abs(v.erwartet - 1.17) < 1e-9);              // 2 Jugendliche × 97,5 % (Level 5, Haltung 50) × 0,6; Erwachsener 0; keine neuen
   assert.equal(v.geld, 0);
   zeitVorruecken(z, aus(z), MI + 15 * 60 + 61 - z.minuten, () => 0);
   const L = z.laeufe.find(x => x.art === 'konfi');
@@ -121,7 +121,7 @@ console.log('Konfirmandenunterricht-Ablauf-Tests bestanden.');
   versetzen(z, z.personen[0], G.x + 4, G.y + 4);
   moebelSetzen(z, 'stuhl', G.x + 6, G.y + 5, G.x + 7, G.y + 5);
   z.besucher[0].zufriedenheit = 100;                            // T0 kommt: 100 % × 0,6 = 60 % → bei Zufall 0,5 immer
-  z.besucher[1].zufriedenheit = 0;                              // T1 kommt nie: 10 % × 0,6 = 6 %
+  z.besucher[1].zufriedenheit = 0; z.besucher[1].level = 1;    // T1 kommt nie: 30 % × 0,6 = 18 %
   zeitVorruecken(z, aus(z), 6 * 7 * TAG_MIN + MI + 15 * 60 + 61 - z.minuten, () => 0.5);   // 7 Mittwoche
   const [a, b] = z.besucher;
   assert.equal(konfiStand(z, a).anzahl, 7); assert.equal(a.konfirmand, true);
@@ -176,7 +176,7 @@ console.log('Konfirmation-Tests bestanden.');
 // ---- Dauerspender: nur Erwachsene ----
 {
   const z = neuesSpiel(() => 0.5);
-  z.besucher = [{ id: 'j', voll: 'J', zufriedenheit: 90, jugend: true, besuche: 0 }, { id: 'e', voll: 'E', zufriedenheit: 90, jugend: false, besuche: 0 }];
+  z.besucher = [{ id: 'j', voll: 'J', level: 3, zufriedenheit: 90, jugend: true, besuche: 0 }, { id: 'e', voll: 'E', level: 3, zufriedenheit: 90, jugend: false, besuche: 0 }];
   z.ort.leute = [];
   dauerspenderSchritt(z, () => 0).tun(z);
   assert.deepEqual(Object.keys(z.dauerspende.spender), ['e']);

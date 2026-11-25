@@ -46,7 +46,7 @@ function gemeinde({ stationen = 1, stuehle = 3 } = {}) {
 }
 const bis = (z, aus, minute, zufall = () => 0) => { while (z.minuten < minute) zeitVorruecken(z, aus(), Math.min(1, minute - z.minuten), zufall); };
 const besucherMitKaffee = (z, n, wert = 1) => {
-  z.besucher = Array.from({ length: n }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', zufriedenheit: 100, kaffeeWert: wert, besuche: 0, lobpreis: 0.5 }));   // (Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; eigene Tests in veranstaltungen.test.mjs)
+  z.besucher = Array.from({ length: n }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', level: 5, zufriedenheit: 100, kaffeeWert: wert, besuche: 0, lobpreis: 0.5 }));   // (Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; eigene Tests in veranstaltungen.test.mjs)
 };
 
 // Kaffee-Wert: fest, 0–1, ersetzt das Ja/Nein
@@ -141,6 +141,7 @@ console.log('Einkaufs-Tests bestanden.');
   assert.equal(z.kaffee.zahlen.filter(e => e.betrag === 1).length, 3);   // „+1 €“ über jedem Kunden
   assert.ok(z.kaffee.kunden.every(k => k.phase === 'steht' || (k.phase === 'heim' && z.minuten >= SO + 600 + 180)));   // bleiben stehen (bis das Kirchkaffee zu ist)
   assert.deepEqual(L.gaeste.map(g => g.kaffee.ergebnis), ['ja', 'ja', 'ja']);
+  assert.ok(z.besucher.every(b => b.erfuellt && b.erfuellt.ids.includes('kaffee')));   // Bedürfnis Kaffee diese Woche erfüllt (25.11.)
   bis(z, aus, SO + 600 + 181);
   // +5 Sitzplatz, +5 Gottesdienst (bei Haltung 100 begrenzt) – hier nur: Kaffee hat nichts abgezogen
   assert.deepEqual(z.besucher.map(b => b.zufriedenheit), vorher);

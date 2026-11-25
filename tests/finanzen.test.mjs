@@ -87,7 +87,7 @@ console.log('Wochenwechsel-Tests bestanden.');
   assert.equal(moebelKaufen(z, 'theke', G.x + 22, G.y + 3), 'ok');
   const ea = personHinzufuegen(z, { name: 'Helfer', kuerzel: 'H', art: 'ehrenamt' });
   versetzen(z, ea, G.x + 25, G.y + 4);
-  z.besucher = Array.from({ length: 3 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', zufriedenheit: 100, kaffeeWert: 1, besuche: 0 }));
+  z.besucher = Array.from({ length: 3 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', level: 5, zufriedenheit: 100, kaffeeWert: 1, besuche: 0 }));
   assert.equal(schichtHinzufuegen(z, raumBei(G.x + 20, G.y + 5), 0, 'nachmittag'), 'ok');   // Montag 15–19 Uhr
   const bis = minute => { while (z.minuten < minute) zeitVorruecken(z, aus(), Math.min(5, minute - z.minuten), () => 0); };
 

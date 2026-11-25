@@ -16,7 +16,7 @@ import { LEER, idx } from './karte.js';
 import { moebelImRaum, moebelBei, hindernisBei, fassung, stuhlStufe } from './moebel.js';
 import { eingesetztIn, daten } from './personen.js';
 import { buchen, kannBezahlen } from './finanzen.js';
-import { zufriedenheitAendern } from './besucher.js';
+import { zufriedenheitAendern, beduerfnisErfuellt } from './besucher.js';
 import { weg, glaetten } from './wege.js';
 import { punktAufWeg, strasse } from './bewegung.js';
 import { umherPosition } from './umherlaufen.js';
@@ -304,7 +304,7 @@ function uebergeben(z, stationen, s, k, t, zufall) {
   buchen(z, 'einnahmen', 'kirchkaffee', PREIS_TASSE, { tassen: 1, anlass: k.lauf ? 'gottesdienst' : 'oeffnungszeit' });
   zahlZeigen(z, posBei(k.bew, t), PREIS_TASSE);
   const m = menschVon(z, k.id);
-  if (m) zufriedenheitAendern(m, AENDERUNG.kaffeeJa);
+  if (m) { zufriedenheitAendern(m, AENDERUNG.kaffeeJa); beduerfnisErfuellt(z, m, 'kaffee'); }   // Bedürfnis Kaffee (25.11.)
   ergebnisEintragen(z, k, 'ja');
   const L = k.lauf && (z.laeufe || []).find(l => l.id === k.lauf);
   const bis = k.lauf ? (L && L.phase === 'kirchkaffee' ? L.beginn + DAUER.gottesdienst + DAUER.kirchkaffee : t) : t + STEHEN_PASSANT;

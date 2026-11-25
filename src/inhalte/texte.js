@@ -63,7 +63,9 @@ export const TEXTE = {
     musikLevel: 'Kein Ehrenamtlicher mit Musik ab Level 1 im Raum.',
     tisch: 'Es fehlt ein Tisch im Raum.',
     stuehle: 'Es fehlen Stühle (mindestens 2).',
-    klavier: 'Es fehlt ein Klavier im Raum.'
+    klavier: 'Es fehlt ein Klavier im Raum.',
+    mitarbeiter: 'Es fehlt ein Haupt- oder Ehrenamtlicher im Raum.',           // ENTWURF 25.11. (Spielenachmittag)
+    stuehleTisch: 'Es fehlen Stühle am Tisch (mindestens 2 direkt daneben).'   // ENTWURF 25.11. (Spielenachmittag)
   },
   // Eigene Fehlt-Texte einzelner Veranstaltungen (gehen vor fehltSaal). Konfirmandenunterricht: von Lukas freigegeben (25.11.)
   fehltArt: {
@@ -96,6 +98,7 @@ export const TEXTE = {
     wochenplan: 'Wochenplan',
     wochenplanInfo: 'Wann findet der Gottesdienst statt? Er dauert 1 Stunde, danach 2 Stunden Kirchkaffee.',   // 25.11.: Kirchkaffee jetzt 2 Stunden (von Claude angepasst)
     wochenplanInfoSaal: 'Wann findet die Veranstaltung statt? Sie dauert 1 Stunde.',   // ENTWURF von Claude (Gemeindesaal)
+    wochenplanInfoSpiele: 'Wann findet der Spielenachmittag statt? Nur nachmittags oder abends möglich, er dauert 2 Stunden.',   // ENTWURF 25.11.
     keinMitarbeiterSaal: 'Kein Mitarbeiter im Raum.',                                   // ENTWURF von Claude (Gemeindesaal)
     plaetzeEgal: 'egal',                                                                // ENTWURF: Prognose Chorprobe (Stühle egal)
     slots: { vormittag: 'Vormittags', nachmittag: 'Nachmittags', abend: 'Abends' },
@@ -177,13 +180,18 @@ export const TEXTE = {
       // Konfirmandenunterricht (von Lukas freigegeben, 25.11.)
       hauptamtKonfi: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: `nur Jugendliche, ${b.jugendProzent} %`, haltung: `+${b.veranstaltung}` }),
       stuehlePflicht: b => ({ name: 'Stühle (Pflicht)', besucher: `${b.plaetze} Platz je Stuhl` }),
-      ehrenamtKonfi: b => ({ name: `Ehrenamtliche (${b.anzahl} von ${b.max})`, ehrenamt: `+${b.jeEhrenamt} Haltung je Ehrenamtlichem` })
+      ehrenamtKonfi: b => ({ name: `Ehrenamtliche (${b.anzahl} von ${b.max})`, ehrenamt: `+${b.jeEhrenamt} Haltung je Ehrenamtlichem` }),
+      // Spielenachmittag (ENTWÜRFE von Claude, 25.11. – Lukas formuliert selbst)
+      leitungSpiele: b => ({ name: 'Haupt- oder Ehrenamtlicher (Pflicht)', besucher: `normal, Jugendliche ${b.jugendProzent} %`,
+        haltung: `+${b.veranstaltung}, erfüllt Spaß`, geld: `Spende ${geld(b.spendeMin, 0)} bis ${geld(b.spendeMax, 0)} je Besucher` }),
+      tischStuehleSpiele: b => ({ name: `Tisch, mind. ${b.stuehleMin} Stühle direkt daneben (Pflicht)` }),
+      stuhlAmTisch: b => ({ name: `Jeder weitere Stuhl am Tisch (bis ${b.jeTisch} je Tisch)`, besucher: `+${b.plaetze} Platz` })
     },
     // Zeile „Zusammen“: s = Summe aus dem Spiel
     summe: s => ({
       besucher: s.besucher.art === 'musik' ? `×${zahl(s.besucher.min)} bis ×${zahl(s.besucher.max)} je nach Lobpreis-Vorliebe`
         : s.besucher.art === 'vorliebe' ? '× Lobpreis-Vorliebe'
-        : s.besucher.art === 'plaetze' ? `${s.art === 'konfi' ? 'nur Jugendliche' : 'normal'}, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}`
+        : s.besucher.art === 'plaetze' ? `${s.art === 'konfi' ? 'nur Jugendliche' : 'normal'}, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}${s.art === 'spiele' ? ' am Tisch' : ''}`
         : s.besucher.art === 'egal' ? 'normal, Stühle egal' : 'normal',
       haltung: (s.haltung.vorliebeMax !== null
         ? `+${s.haltung.fest}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` : '') + ' je nach Lobpreis-Vorliebe'
@@ -234,7 +242,16 @@ export const TEXTE = {
     kaffeeWert: prozent => `Mag Kaffee: ${prozent} %`,  // Lukas, 25.11.
     // Konfirmandenunterricht (von Lukas freigegeben, 25.11.)
     jugendlich: 'Jugendlich',
-    konfi: (n, von) => `Konfirmandenunterricht: ${n} von ${von}`
+    konfi: (n, von) => `Konfirmandenunterricht: ${n} von ${von}`,
+    // Haltungslevel und Bedürfnisse am Ende der Woche (ENTWÜRFE von Claude, 25.11. – Lukas formuliert selbst)
+    level: (n, max) => `Level ${n} von ${max}`,
+    levelInfo: 'Bei 100 steigt die Haltung ein Level auf und beginnt wieder bei 0. Bei 0 geht es ein Level zurück.',
+    wochenBeduerfnisse: 'Bedürfnisse diese Woche',
+    wochenInfo: 'Wird Sonntag um 24 Uhr geprüft: jedes nicht erfüllte Bedürfnis kostet 5 Haltung.',
+    keineWochenBeduerfnisse: 'Noch keine – Bedürfnisse entwickeln sich mit höherem Level.',
+    wochenBeduerfnis: { lobpreis: 'Lobpreis', kaffee: 'Kaffee', spass: 'Spaß' },
+    erfuelltWoche: 'erfüllt',
+    offenWoche: 'noch offen'
   },
 
   // ---- Fenster des Kirchkaffees: Öffnungszeiten (Lukas, 25.11.) ----
@@ -303,10 +320,11 @@ export const TEXTE = {
     anlass: { gottesdienst: 'nach dem Gottesdienst', oeffnungszeit: 'Öffnungszeit', einkauf: 'Einkauf im Laden' },
     // Dauerspender (ENTWURF von Claude, 25.11. – Lukas formuliert selbst)
     dauerspender: 'Dauerspender',
-    dauerspenderInfo: r => `Wer montags eine Haltung ab ${r.abHaltung} hat, wird mit ${r.chance} % Chance Dauerspender. Die Spenden kommen montags um ${r.stunde}:00 Uhr: zuerst ${r.start} €, jede Woche ${r.steigerung} € mehr, höchstens ${r.max} €. Sinkt die Haltung unter ${r.abHaltung}, endet die Dauerspende am nächsten Montag.`,
+    dauerspenderInfo: r => `Wer montags mindestens Haltungslevel ${r.abLevel} hat, wird mit ${r.chance} % Chance Dauerspender. Die Spenden kommen montags um ${r.stunde}:00 Uhr: zuerst ${r.start} €, jede Woche ${r.steigerung} € mehr, höchstens ${r.max} €. Fällt jemand unter Level ${r.abLevel}, endet die Dauerspende am nächsten Montag.`,   // ENTWURF 25.11. (Haltungslevel)
     dauerspenderLeer: 'Noch keine Dauerspender.',
     dauerspenderSumme: 'Summe pro Woche',
     dauerspenderSpalten: { name: 'Name', betrag: 'Spende diese Woche', naechster: 'Nächsten Montag', seit: 'Seit Woche', haltung: 'Haltung' },
+    dauerspenderHaltung: (level, haltung) => `Level ${level} · ${haltung}`,   // ENTWURF 25.11. (Haltungslevel)
     was: { abriss: 'Abriss', verbessern: 'verbessert', rueckgaengig: 'Rückgängig gemacht', bus: 'Bushaltestelle', werbekampagne: 'Werbekampagne' }
   },
 
@@ -325,6 +343,7 @@ export const TEXTE = {
     spalten: { name: 'Name', haltung: 'Haltung', besuche: 'Besuche', zuletzt: 'Zuletzt da', kaffee: 'Kaffee', status: 'Status' },
     unbekannt: '–', prozent: n => `${n} %`,
     woche: n => `Woche ${n}`,
+    level: n => `L${n}`,   // ENTWURF 25.11.: Haltungslevel vor dem Balken
     leer: 'Noch niemand bekannt.',
     status: { passant: 'Passant', neugierig: 'Neugierig', besucher: 'Besucher', stammgast: 'Stammgast', ehrenamtlich: 'Ehrenamtlich' }
   },

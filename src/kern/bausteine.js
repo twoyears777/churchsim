@@ -12,6 +12,7 @@ import { daten } from './personen.js';
 import { fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
 import { multiplikatorFaktor } from './forschung.js';
+import { amTisch } from './kirchkaffee.js';
 
 const MAX_MUSIKER = MOEBEL.filter(m => m.wirkung && m.wirkung.musik).length;   // so viele Instrumente gibt es
 const prozent = b => Math.round(b * 100);
@@ -116,8 +117,30 @@ function konfi(z, raum, info, v) {
 }
 
 // Seniorennachmittag und Kirchenchorprobe
+// Spielenachmittag (Lukas, 25.11.): Haupt- ODER Ehrenamtlicher, Tisch mit mindestens 2 Stühlen direkt daneben, +7 Haltung,
+// Spende 0 bis 3 € je Besucher. Plätze = Stühle am Tisch.
+function spielenachmittag(z, raum, info, v) {
+  const imRaum = info ? info.imRaum : [];
+  const leitung = imRaum.some(p => daten(p).art === 'hauptamt') || (info ? (info.ehrenamtliche || []).length > 0 : false);
+  const stuehle = moebelImRaum(z, raum, 'stuhl'), amTischListe = stuehle.filter(s => amTisch(z, s));
+  const hatTisch = moebelImRaum(z, raum, 'tisch').length > 0;
+  const S = v.spendeImmer, spende = (S.min + S.max) / 2;
+  const zeilen = [
+    { id: 'leitungSpiele', pflicht: true, imRaum: leitung, veranstaltung: v.haltung, jugendProzent: prozent(JUGEND.faktor[v.id] ?? 1),
+      spendeMin: S.min, spendeMax: S.max },
+    { id: 'tischStuehleSpiele', pflicht: true, imRaum: hatTisch && amTischListe.length >= v.stuehleMin, stuehleMin: v.stuehleMin },
+    { id: 'stuhlAmTisch', imRaum: amTischListe.length > v.stuehleMin, plaetze: 1, jeTisch: 4 },
+    { id: 'besserStuhl', imRaum: amTischListe.some(s => stuhlStufe(s).stufe > 1), kollekte: false }
+  ];
+  const summe = { art: 'spiele', besucher: { art: 'plaetze', plaetze: amTischListe.length },
+    haltung: { fest: v.haltung, vorliebeMax: null, prozent: 0 }, geld: { jeBesucher: spende, spende: true },
+    bereit: zeilen.filter(x => x.pflicht).every(x => x.imRaum) };
+  return { zeilen, summe };
+}
+
 function gemeindesaal(z, raum, info, v) {
   if (v.haltungJeEhrenamt) return konfi(z, raum, info, v);
+  if (v.amTisch) return spielenachmittag(z, raum, info, v);
   const imRaum = info ? info.imRaum : [];
   const ea = imRaum.filter(p => daten(p).art === 'ehrenamt');
   const hauptamt = imRaum.some(p => daten(p).art === 'hauptamt');

@@ -23,7 +23,7 @@ function gemeinde() {
   typZuweisen(z, raumBei(z), 'gemeindesaal');
   z.personen = z.personen.filter(p => p.id === 'pastor');
   z.besucher = Array.from({ length: 4 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X',
-    zufriedenheit: 100, kaffeeWert: 1, besuche: 0, lobpreis: 0.5 }));
+    level: 5, zufriedenheit: 100, kaffeeWert: 1, besuche: 0, lobpreis: 0.5 }));
   z.bekanntheit = 0; z.ortRuhig = true; z.konto = 1000;
   return z;
 }

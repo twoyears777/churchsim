@@ -5,8 +5,9 @@ import { NEUGIER } from '../inhalte/ort.js';
 import { ZWEITER_BESUCH, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { istJugend, jugendFaktor, jugendZuteilen } from './konfi.js';
 import { platzImGebiet } from './einzugsgebiet.js';
-import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, MIN_CHANCE, BEKANNTHEIT,
-  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, LOBPREIS_MUSIK } from '../inhalte/besucher.js';
+import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, BEKANNTHEIT,
+  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, LOBPREIS_MUSIK, HALTUNGSLEVEL, KOMMCHANCE, BEDUERFNISSE } from '../inhalte/besucher.js';
+import { zeitpunkt } from './zeit.js';
 
 export function namenZiehen(anzahl, zufall = Math.random) {
   const toepfe = { a: [], w: [] }, ergebnis = [];
@@ -26,10 +27,20 @@ export function besucherAnlegen(z, zufall = Math.random) {
   if (typeof z.bekanntheit !== 'number') z.bekanntheit = 0;
   if (!Array.isArray(z.besucher)) {
     z.besucher = [];
-    for (let i = 0; i < START_STAMMGAESTE; i++) neuerBesucher(z, START_ZUFRIEDENHEIT, zufall).stamm = true;
+    for (let i = 0; i < START_STAMMGAESTE; i++) {
+      const b = neuerBesucher(z, START_ZUFRIEDENHEIT, zufall);
+      b.stamm = true; delete b.level;   // Level (2) und Bedürfnis bekommen sie gleich unten – wie Besucher aus alten Spielständen
+    }
   }
   // ältere Spielstände: die ersten vier sind die Start-Stammgäste
   for (const b of z.besucher) if (b.stamm === undefined) b.stamm = ['b1', 'b2', 'b3', 'b4'].includes(b.id);
+  // Haltungslevel (25.11.): Start-Stammgäste und alle Besucher aus alten Spielständen beginnen auf Level 2 (mit einem Bedürfnis)
+  // und behalten ihre Haltung; Passanten aus alten Spielständen auf Level 1. Neue Menschen bekommen Level 1 in neuePerson.
+  for (const b of z.besucher) if (b.level === undefined) {
+    b.level = 1; b.beduerfnisse = [];
+    while (b.level < HALTUNGSLEVEL.startBesucher) { b.level++; beduerfnisDazu(b); }
+  }
+  for (const p of z.ort ? z.ort.leute : []) if (p.level === undefined) { p.level = 1; p.beduerfnisse = []; }
 }
 
 // Neue Person: Name möglichst nicht doppelt. Wird noch nirgends eingetragen. (Kaffee-Wert: siehe kaffeeVorliebe)
@@ -40,7 +51,7 @@ export function neuePerson(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.r
   for (const n of namenZiehen(30, zufall)) if (!vergeben.has(n.voll)) { name = n; break; }
   if (!name) [name] = namenZiehen(1, zufall);
   // Jugendlich ja/nein wird gleich fest zugeteilt (20 %, aus Kennung und Name – kein Würfel, siehe konfi.js)
-  return jugendZuteilen({ id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, besuche: 0 });
+  return jugendZuteilen({ id: `b${(z.naechsterBesucher = (z.naechsterBesucher || 0) + 1)}`, ...name, zufriedenheit, besuche: 0, level: 1, beduerfnisse: [] });
 }
 export function neuerBesucher(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Math.random) {
   const b = neuePerson(z, zufriedenheit, zufall);
@@ -55,8 +66,35 @@ export function ausDemOrt(z, p) {
   return p;
 }
 
-// Chance, dass jemand zum Gottesdienst kommt
-export function kommChance(b) { return Math.max(MIN_CHANCE, b.zufriedenheit / 100); }
+// Chance, dass jemand zu einer Veranstaltung kommt (25.11.): Grundwahrscheinlichkeit + Level + Haltung im Level, höchstens 100 %
+export function kommChance(b) {
+  const K = KOMMCHANCE;
+  return Math.min(1, K.grund + K.jeLevel * (levelVon(b) - 1) + K.haltung * b.zufriedenheit / 100);
+}
+
+// ---- Haltungslevel und Bedürfnisse (Lukas, 25.11.: claude/spielprinzip-beduerfnisse-wochenende.md) ----
+export const levelVon = b => b.level || 1;
+// b.beduerfnisse: Liste in der Reihenfolge der Aufstiege – Eintrag 0 kam mit Level 2, Eintrag 1 mit Level 3 …
+// null = bei diesem Aufstieg war kein Bedürfnis mehr übrig. So geht beim Abstieg genau das zuletzt dazugekommene wieder.
+export const beduerfnisseVon = b => (b.beduerfnisse || []).filter(Boolean);
+// Ein zufälliges, noch nicht vorhandenes Bedürfnis dazu. „Zufällig“ wie die Lobpreis-Vorliebe: fest aus Kennung, Name und Level
+// gerechnet (kein Würfel), damit Tests und Spielstände immer gleich ausgehen.
+function beduerfnisDazu(b) {
+  const habe = new Set(beduerfnisseVon(b));
+  const moeglich = BEDUERFNISSE.liste.filter(id => !habe.has(id) && (id !== 'lobpreis' || lobpreisVorliebe(b) >= BEDUERFNISSE.lobpreisAb));
+  let h = 2166136261;
+  for (const c of `beduerfnis|${b.id}|${b.voll}|${b.level}`) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  if (!Array.isArray(b.beduerfnisse)) b.beduerfnisse = [];
+  b.beduerfnisse.push(moeglich.length ? moeglich[h % moeglich.length] : null);
+}
+// Bedürfnis in dieser Woche erfüllt (Lukas: Lobpreis = bei einer Veranstaltung mit Lobpreis, Kaffee = Kaffee bekommen,
+// Spaß = beim Spielenachmittag). Gemerkt wird es auch, wenn jemand das Bedürfnis (noch) nicht hat – zählt nur in derselben Woche.
+export function beduerfnisErfuellt(z, b, id, woche = zeitpunkt(z.minuten).woche) {
+  if (!b) return;
+  if (!b.erfuellt || b.erfuellt.woche !== woche) b.erfuellt = { woche, ids: [] };
+  if (!b.erfuellt.ids.includes(id)) b.erfuellt.ids.push(id);
+}
+export const erfuelltInWoche = (b, id, woche) => !!(b.erfuellt && b.erfuellt.woche === woche && b.erfuellt.ids.includes(id));
 
 // Lobpreis-Vorliebe 0–1: für jeden Menschen zufällig, aber fest (aus Kennung und Name abgeleitet).
 // So bekommt auch jeder aus alten Spielständen gleich seine eigene Vorliebe, ohne dass etwas gespeichert werden muss.
@@ -138,7 +176,16 @@ export function werKommt(z, zufall = Math.random, o = {}) {
   return [...bekannte, ...neue];
 }
 
-export function zufriedenheitAendern(b, wert) { b.zufriedenheit = Math.max(0, Math.min(100, b.zufriedenheit + wert)); }
+// Haltung ändern (intern „zufriedenheit“). Haltungslevel (25.11.): Erreicht sie 100, geht es ein Level hoch, die Haltung beginnt bei 0
+// und ein Bedürfnis kommt dazu (im höchsten Level bleibt sie bei 100). Fällt sie auf 0, geht es ein Level runter, die Haltung steht
+// bei 50 und das zuletzt dazugekommene Bedürfnis geht wieder (in Level 1 bleibt sie bei 0).
+export function zufriedenheitAendern(b, wert) {
+  const H = HALTUNGSLEVEL, level = levelVon(b);
+  let h = b.zufriedenheit + wert;
+  if (h >= H.aufstiegBei && level < H.max) { b.level = level + 1; h = 0; beduerfnisDazu(b); }
+  else if (h <= 0 && wert < 0 && level > 1) { b.level = level - 1; h = H.nachAbstieg; if (Array.isArray(b.beduerfnisse)) b.beduerfnisse.pop(); }
+  b.zufriedenheit = Math.max(0, Math.min(100, h));
+}
 // Bekanntheit ändern und merken, woher es kam (fürs Bekanntheit-Fenster). quelle: 'gottesdienst' | 'zufrieden' | 'seelsorge'.
 // Auf eine Nachkommastelle gerundet, damit sich keine Rechenkrümel ansammeln.
 export function bekanntheitAendern(z, wert, quelle = null, anzahl = null) {

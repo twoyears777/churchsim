@@ -3,7 +3,17 @@
 export const START_STAMMGAESTE = 4;       // so viele Stammgäste gibt es bei Spielbeginn
 export const START_ZUFRIEDENHEIT = 60;    // ... mit dieser Zufriedenheit
 export const NEU_ZUFRIEDENHEIT = 50;      // neue Besucher starten mit dieser Zufriedenheit
-export const MIN_CHANCE = 0.1;            // Chance zu kommen = Zufriedenheit in %, aber mindestens 10 %
+// Haltungslevel (Lukas, 25.11.: claude/spielprinzip-beduerfnisse-wochenende.md): Haltung 0–100 je Level.
+// Bei 100 ein Level höher und die Haltung beginnt wieder bei 0; bei 0 ein Level tiefer, die Haltung steht dann bei nachAbstieg.
+// startBesucher: so starten die Start-Stammgäste und alle Besucher aus alten Spielständen (neue Menschen: Level 1).
+export const HALTUNGSLEVEL = { max: 5, aufstiegBei: 100, nachAbstieg: 50, startBesucher: 2 };
+// Chance zu kommen (Lukas: Grundwahrscheinlichkeit + Level + Haltung). Zahlen: VORSCHLAG von Claude, Lukas justiert.
+// Chance = grund + jeLevel × (Level − 1) + haltung × Haltung/100, höchstens 100 %. Level 1, Haltung 50 → 37,5 %; Level 3, Haltung 50 → 67,5 %.
+export const KOMMCHANCE = { grund: 0.3, jeLevel: 0.15, haltung: 0.15 };
+// Bedürfnisse (Lukas, 25.11.): bei jedem Level-Aufstieg ein zufälliges dazu, beim Abstieg geht das zuletzt dazugekommene wieder.
+// Geprüft Sonntag 24:00: jedes nicht erfüllte Bedürfnis → nichtErfuellt Haltung; erfüllt → kein Plus.
+// Lobpreis entsteht nur bei einer Lobpreis-Vorliebe ab lobpreisAb.
+export const BEDUERFNISSE = { liste: ['lobpreis', 'kaffee', 'spass'], lobpreisAb: 0.5, nichtErfuellt: -5 };
 // Kaffee: Jeder Mensch hat einen festen Kaffee-Wert 0–100 % (wie die Lobpreis-Vorliebe). Er ersetzt seit 25.11. das Ja/Nein:
 // Nach dem Gottesdienst und beim Vorbeilaufen am offenen Kirchkaffee will er mit dieser Chance einen Kaffee.
 
@@ -35,7 +45,7 @@ export const BEKANNTHEIT = {
 // Jugendliche (Lukas, 25.11.): 20 % aller Menschen (Besucher und Passanten) sind Jugendliche.
 // Kommchance = normale (haltungsabhängige) Kommchance × Faktor der Veranstaltung. Nicht aufgeführt: × 1.
 // Später (Jugendgottesdienst): dort höher.
-export const JUGEND = { anteil: 0.2, faktor: { gottesdienst: 0.5, lobpreis: 0.5, senioren: 0, chorprobe: 0.2, konfi: 0.6 } };
+export const JUGEND = { anteil: 0.2, faktor: { gottesdienst: 0.5, lobpreis: 0.5, senioren: 0, chorprobe: 0.2, konfi: 0.6, spiele: 0.25 } };
 // Konfirmandenunterricht (Lukas, 25.11.): so viele Teilnahmen in einem Jahrgang (von Konfirmation zu Konfirmation) → Konfirmand
 export const KONFI = { teilnahmen: 7 };
 

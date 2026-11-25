@@ -18,7 +18,9 @@ import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen,
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht, stornieren } from './finanzen.js';
 import { EINNAHMEN, AUSGABEN, VERLAUF_WOCHEN } from '../inhalte/finanzen.js';
-import { besucherAnlegen } from './besucher.js';
+import { besucherAnlegen, levelVon } from './besucher.js';
+import { beduerfnisseAnlegen, wochenBeduerfnisse } from './beduerfnisse.js';
+import { HALTUNGSLEVEL } from '../inhalte/besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten, TAG_MIN } from './zeit.js';
 import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, programmVon,
   veranstaltungEinstellen, terminEinstellen, prognose, finanzPrognose, terminDieseWoche, ablaufAnlegen, laufVon,
@@ -61,7 +63,7 @@ export const SPEICHER_VERSION = 3;          // Spielstand-Format (3 = Echtzeit, 
 // ---- Spielstand anlegen ----
 export function spielAnlegen(z, zufall = Math.random) {
   personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); besucherAnlegen(z, zufall); zeitAnlegen(z);
-  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); forschungAnlegen(z);
+  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); beduerfnisseAnlegen(z); forschungAnlegen(z);
   jugendAnlegen(z);   // alte Spielstände: 20 % der Besucher und Passanten werden Jugendliche
   baukostenAnlegen(z);
   return z;
@@ -668,7 +670,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         frei: plaetzeVon(r.typ)[i].braucht.every(hat), fehlt: e.art ? 'raum' : 'keine', bereit: false }));
       return {
         nr, typName: r.typ.name, typId: r.typ.id,
-        moeglich: moeglicheVeranstaltungen(r.typ).map(x => ({ id: x.id, name: x.name })),
+        moeglich: moeglicheVeranstaltungen(r.typ).map(x => ({ id: x.id, name: x.name, slots: x.slots ? [...x.slots] : null })),
         bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre'), instrument: instrumenteImRaum(z, r) > 0,
           // Gemeindesaal: Ehrenamtlicher im Raum, Ehrenamtlicher mit Musik-Level ab 1, Tisch, mind. 2 Stühle, Klavier
           ehrenamt: eaImRaum.length > 0, musikLevel: eaImRaum.some(p => musikLevel(p) >= 1), tisch: hat('tisch'), klavier: hat('klavier'),
@@ -709,18 +711,19 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const b = mensch(z, id);
       if (!b) return null;
       const besucher = z.besucher.includes(b);
-      return { id: b.id, voll: b.voll, besuche: b.besuche, zufriedenheit: b.zufriedenheit, status: statusVon(z, b), lobpreis: lobpreisVorliebe(b),
+      return { id: b.id, voll: b.voll, besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: levelVon(b), levelMax: HALTUNGSLEVEL.max,
+        wochenBeduerfnisse: besucher ? wochenBeduerfnisse(z, b) : null, status: statusVon(z, b), lobpreis: lobpreisVorliebe(b),
         kaffee: kaffeeVorliebe(b), jugend: istJugend(b), konfi: istJugend(b) ? konfiStand(z, b) : null,
         beduerfnisse: besucher ? beduerfnisse(z, b) : null };
     },
     seelsorgeOffen() { return anfrageOffen(z); },
     // Fenster „Menschen im Ort“: alle, die die Gemeinde kennt
     menschen() {
-      const zeile = b => ({ id: b.id, art: 'besucher', voll: b.voll, haltung: b.zufriedenheit, besuche: b.besuche,
+      const zeile = b => ({ id: b.id, art: 'besucher', voll: b.voll, haltung: b.zufriedenheit, level: levelVon(b), besuche: b.besuche,
         zuletzt: typeof b.zuletzt === 'number' ? b.zuletzt + 1 : null, kaffee: b.besuche || b.stamm ? kaffeeVorliebe(b) : null, status: statusVon(z, b) });
       const ea = z.personen.map(p => ({ p, d: daten(p) })).filter(x => x.d && x.d.art === 'ehrenamt').map(({ p, d }) => {
         const h = d.herkunft || {};
-        return { id: p.id, art: 'person', voll: d.name, haltung: h.zufriedenheit ?? null, besuche: h.besuche ?? null,
+        return { id: p.id, art: 'person', voll: d.name, haltung: h.zufriedenheit ?? null, level: h.level ?? null, besuche: h.besuche ?? null,
           zuletzt: typeof h.zuletzt === 'number' ? h.zuletzt + 1 : null, kaffee: typeof h.kaffee === 'number' ? h.kaffee : null, status: 'ehrenamtlich' };
       });
       return [...z.besucher.map(zeile), ...ea, ...z.ort.leute.map(zeile)];

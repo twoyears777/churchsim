@@ -8,7 +8,7 @@ import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
 import { zeitVorruecken, veranstaltungEinstellen, seelsorgeGesperrt, prognose } from '../src/kern/ablauf.js';
 import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
-import { werKommt } from '../src/kern/besucher.js';
+import { werKommt, kommChance } from '../src/kern/besucher.js';
 import { EINZUGSGEBIET } from '../src/inhalte/einzugsgebiet.js';
 import { ortSchritt, passantenPositionen } from '../src/kern/ort.js';
 import { stufe, raten, ablehnen, schliessen, anfrageOffen, schub, seelsorgePositionen, anfrageInfo, einschaetzen, chanceVon } from '../src/kern/seelsorge.js';
@@ -166,7 +166,7 @@ console.log('Neugier-Tests bestanden.');
   const vorher = b.zufriedenheit;
   raten(z, 0, () => 0);
   const e = z.seelsorge.anfrage.ergebnis;
-  assert.equal(e.haltungVorher, vorher); assert.equal(e.haltungNachher, vorher + 10); assert.equal(e.kommChance, vorher + 10);
+  assert.equal(e.haltungVorher, vorher); assert.equal(e.haltungNachher, vorher + 10); assert.equal(e.kommChance, Math.round(kommChance(b) * 100));
   schliessen(z);
   // Passant: keine Chance zu kommen angezeigt
   ortSchritt(z, () => 0.5).tun();

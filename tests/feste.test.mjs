@@ -43,7 +43,7 @@ const HEILIGABEND = 31;   // Spieltag: 0 = Montag 23.11.2026 → 24.12.2026 (Don
 {
   const b = { id: 'x', zufriedenheit: 40 };
   assert.equal(besuchChance(b, { faktor: 3 }), 1);
-  assert.ok(Math.abs(besuchChance(b, { faktor: 1.2 }) - 0.48) < 1e-9);
+  assert.ok(Math.abs(besuchChance(b, { faktor: 1.2 }) - 0.432) < 1e-9);   // Level 1, Haltung 40: 30 % + 6 % = 36 % × 1,2
 }
 
 // Gottesdienstraum mit 10 Stühlen, Pastor; 10 Besucher mit Haltung 30 (Kommchance 30 %)
@@ -54,7 +54,7 @@ function gemeinde() {
   moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 3);
   versetzen(z, z.personen[0], G.x + 4, G.y + 5);
   z.besucher = Array.from({ length: 10 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X',
-    zufriedenheit: 30, kaffeeWert: 0, besuche: 0, lobpreis: 0.5 }));   // (Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; eigene Tests in veranstaltungen.test.mjs)
+    level: 1, zufriedenheit: 0, kaffeeWert: 0, besuche: 0, lobpreis: 0.5 }));   // Chance 30 % (Level 1, Haltung 0)   // (Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; eigene Tests in veranstaltungen.test.mjs)
   z.bekanntheit = 0; z.ortRuhig = true; z.konto = 1000;
   return z;
 }
@@ -136,7 +136,7 @@ function gemeinde() {
   assert.equal(weg.ausgefallen, true); assert.equal(weg.grund, 'fest'); assert.equal(weg.gaeste, null);
   assert.equal(z2.konto, 1000 + 20);
   assert.equal(finanzPrognose(z2, aus(z2)).einnahmen, Math.round(gebucht(z2)));   // nach dem Fest: nur noch Gebuchtes, nichts doppelt
-  assert.ok(z2.besucher.every(b => b.zufriedenheit === 30));   // kein Abzug wegen Ausfall (Fest noch nicht zu Ende)
+  assert.ok(z2.besucher.every(b => b.zufriedenheit === 0));    // kein Abzug wegen Ausfall (Fest noch nicht zu Ende)
   // Leitung nicht im Raum: das Fest fällt aus
   const z3 = JSON.parse(spiel.speicherText()).zustand;
   z3.minuten = 4 * 7 * TAG_MIN; z3.feste.gefragt.push('christfest1:32');
