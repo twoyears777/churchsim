@@ -1,6 +1,7 @@
 // Anzeigen: Leiste oben (Geld, Bekanntheit, Zeit-Knöpfe), Datum mit Kirchenjahr-Rad, Seitenleiste, Hinweis unten rechts.
 // Holt sich alles über spiel.lage() und macht daraus nur Text.
 import { TEXTE } from '../inhalte/texte.js';
+import { HILFE } from '../inhalte/hilfe.js';
 import { ui, $, euro } from './ui.js';
 import { VERSION } from '../version.js';
 import { fensterAktualisieren, fensterOeffnen } from './fenster.js';
@@ -28,6 +29,10 @@ export function anzeigenEinrichten() {
   $('menschenAuf').textContent = TEXTE.menschen.knopf;
   $('menschenAuf').addEventListener('click', () => fensterOeffnen({ art: 'menschen' }));
   $('bekanntheitAuf').addEventListener('click', () => fensterOeffnen({ art: 'bekanntheit' }));
+  for (const id of ['hilfeAuf', 'hilfeEditor']) {   // Hilfe: unten links und in der Werkzeugleiste beim Bauen
+    $(id).textContent = HILFE.knopf;
+    $(id).addEventListener('click', () => fensterOeffnen({ art: 'hilfe' }));
+  }
   $('versionAuf').textContent = TEXTE.changelog.version(VERSION);
   $('versionAuf').addEventListener('click', () => fensterOeffnen({ art: 'changelog' }));
 }

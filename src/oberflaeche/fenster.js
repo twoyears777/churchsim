@@ -5,6 +5,7 @@ import { KEINE_VERANSTALTUNG } from '../inhalte/veranstaltungen.js';
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro, zahl1, esc } from './ui.js';
 import { changelogHolen } from './changelog.js';
+import { HILFE } from '../inhalte/hilfe.js';
 import { VERSION } from '../version.js';
 
 const maske = () => $('maske');
@@ -24,9 +25,9 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster }[f.art](f);
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, hilfe: hilfeFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
-  m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit');
+  m.classList.toggle('breit', f.art === 'raum' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
 }
@@ -308,6 +309,21 @@ function changelogFenster() {
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 
+// Hilfe: Themenliste → ein Thema (Texte aus inhalte/hilfe.js). Solange sie offen ist, steht die Zeit (start.js).
+const fett = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+function hilfeFenster(f) {
+  const H = HILFE, thema = f.thema !== undefined ? H.themen.find(t => t.id === f.thema) : null;
+  if (!thema) {
+    const liste = H.themen.map(t => `<button class="hilfe-thema" data-hilfe="${t.id}">${esc(t.titel)}</button>`).join('');
+    return `<h2>${H.titel}</h2><p class="unter">${H.info}</p><div class="hilfe-themen">${liste}</div>
+      <div class="zeile"><button data-zu>Schließen</button></div>`;
+  }
+  const inhalt = thema.inhalt.map(b => typeof b === 'string' ? `<p class="hilfe-text">${fett(b)}</p>`
+    : `<ul class="hilfe-punkte">${b.punkte.map(pk => `<li>${fett(pk)}</li>`).join('')}</ul>`).join('');
+  return `<h2>${esc(thema.titel)}</h2>${inhalt}
+    <div class="zeile"><button data-hilfe-zurueck>${H.zurueck}</button><button data-zu>Schließen</button></div>`;
+}
+
 // Seelsorge: Anfrage → annehmen (3 Ratschläge) oder ablehnen → Ergebnis
 function seelsorgeFenster(f) {
   const a = ui.spiel.lage().seelsorge;
@@ -360,6 +376,8 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-seelsorge-zu')) { spiel.seelsorgeSchliessen(); ui.speichern(); return fensterSchliessen(); }
     else if (b.dataset.platz !== undefined) f.platz = Number(b.dataset.platz);   // Menü „Veranstaltung n einstellen“
     else if (b.hasAttribute('data-zurueck')) delete f.platz;
+    else if (b.dataset.hilfe) f.thema = b.dataset.hilfe;               // Hilfe: Thema öffnen
+    else if (b.hasAttribute('data-hilfe-zurueck')) delete f.thema;     // Hilfe: zurück zur Themenliste
     else if (b.dataset.veranstaltung !== undefined) spiel.veranstaltungSetzen(f.nr, f.platz ?? 0, b.dataset.veranstaltung);   // Fenster bleibt offen
     else if (b.dataset.plan) { const [tag, slot] = b.dataset.plan.split(':'); spiel.terminSetzen(f.nr, f.platz ?? 0, Number(tag), slot); }
     else if (b.hasAttribute('data-nachkaufen')) spiel.kaffeeNachkaufen(f.x, f.y);

@@ -48,7 +48,8 @@ let letzteZeit = performance.now(), letztesSpeichern = 0;
 function schleife(t) {
   const sekunden = (t - letzteZeit) / 1000;
   letzteZeit = t;
-  if (ui.spiel.tick(sekunden)) {
+  const hilfeOffen = !!ui.fenster && ui.fenster.art === 'hilfe';   // Hilfe offen: dem Spiel keine Zeit melden → Zeit steht
+  if (!hilfeOffen && ui.spiel.tick(sekunden)) {
     malen();
     if (t - letztesSpeichern > 2000) { letztesSpeichern = t; speichern(ui.spiel); }
   } else if (ui.spiel.seelsorgeOffen() && (!ui.fenster || ui.fenster.art !== 'seelsorge')) {

@@ -61,7 +61,7 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
   background: rgba(43,42,39,.9); border-radius: 12px; padding: 6px 8px 6px 14px; }
 .datumText { display: flex; flex-direction: column; text-align: right; }
 .datumText small { color: #c9c4b8; font-size: 13px; }
-.unten-links { position: absolute; bottom: 12px; left: 12px; }
+.unten-links { position: absolute; bottom: 12px; left: 12px; display: flex; gap: 6px; }
 .version-knopf { background: rgba(43,42,39,.9); color: #e6e1d4; border: none; }
 .inhalt ul.changelog { margin: 0 0 6px; padding-left: 20px; font-size: 14px; line-height: 1.45; }
 .unten-mitte { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); }
@@ -177,3 +177,10 @@ button.abriss-knopf[aria-pressed="true"] { background: #b3261e; color: #fff; bor
 .bau-karte .preis:empty { display: none; }
 .bau-karte.gesperrt .preis { font-size: 11px; white-space: nowrap; }
 .bau-karte { width: 108px; }
+
+/* Hilfe-Fenster */
+.inhalt .hilfe-themen { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 4px 0 10px; }
+.inhalt button.hilfe-thema { text-align: left; justify-content: flex-start; }
+.inhalt p.hilfe-text { margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
+.inhalt ul.hilfe-punkte { margin: 0 0 8px; padding-left: 20px; font-size: 14px; line-height: 1.5; }
+.inhalt ul.hilfe-punkte li { margin-bottom: 4px; }

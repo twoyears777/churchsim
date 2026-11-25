@@ -336,6 +336,20 @@ import { spielStarten } from '../src/kern/spiel.js';
 }
 console.log('Schnittstellen-Tests bestanden.');
 
+// Hilfe: jedes Thema hat eine eindeutige id, einen Titel und Inhalt; Zahlen aus den Spielwerten sind eingesetzt
+import { HILFE } from '../src/inhalte/hilfe.js';
+{
+  const ids = HILFE.themen.map(t => t.id);
+  assert.equal(new Set(ids).size, ids.length, 'Hilfe: doppelte Themen-id');
+  for (const t of HILFE.themen) {
+    assert.ok(t.titel && t.inhalt.length > 0, `Hilfe-Thema ${t.id} ist leer`);
+    for (const b of t.inhalt) assert.ok(typeof b === 'string' || (Array.isArray(b.punkte) && b.punkte.length), `Hilfe-Thema ${t.id}: unbekannter Eintrag`);
+  }
+  const raeume = HILFE.themen.find(t => t.id === 'raeume').inhalt[1].punkte[0];
+  assert.ok(raeume.includes(RAUMTYPEN[0].minGroesse.join(' × ')), 'Hilfe: Raumgröße kommt aus den Spielwerten');
+}
+console.log('Hilfe-Test bestanden.');
+
 // Trennung: Oberfläche und Ansicht reden nur über kern/spiel.js mit der Spiellogik
 import { readdirSync } from 'node:fs';
 {
@@ -345,8 +359,8 @@ import { readdirSync } from 'node:fs';
       const text = readFileSync(new URL(datei, pfad), 'utf8');
       for (const [, ziel] of text.matchAll(/from\s+'([^']+)'/g)) {
         if (ziel.includes('/kern/')) assert.equal(ziel, '../kern/spiel.js', `${ordner}/${datei} greift an der Schalterwand vorbei auf ${ziel} zu`);
-        // aus den Inhaltsdateien nur Texte, Farben und die Stadt – keine Spielzahlen
-        if (ziel.includes('/inhalte/')) assert.ok(['texte.js', 'umgebung.js', 'mitarbeiter.js', 'veranstaltungen.js'].some(n => ziel.endsWith('/' + n)), `${ordner}/${datei} liest Spielzahlen aus ${ziel}`);
+        // aus den Inhaltsdateien nur Texte, Farben und die Stadt – keine Spielzahlen (hilfe.js: Anleitungstexte, nur zum Lesen)
+        if (ziel.includes('/inhalte/')) assert.ok(['texte.js', 'umgebung.js', 'mitarbeiter.js', 'veranstaltungen.js', 'hilfe.js'].some(n => ziel.endsWith('/' + n)), `${ordner}/${datei} liest Spielzahlen aus ${ziel}`);
       }
     }
   }
