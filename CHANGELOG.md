@@ -3,6 +3,23 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.10
+
+**Bauen**
+- Wände kosten jetzt Geld: 5 € je neues Wandstück, Türen sind gratis, beim Abriss gibt es alles zurück. Startgeld 1.000 €
+- Alte Spielstände bekommen einmalig 950 € dazu, ihre schon gebauten Wände bleiben kostenlos
+- Neu: Fenster (10 €) – in jede Wand setzbar, jedes Fenster bringt +1 Haltung im Raum
+- Neu: das Foyer mit Begrüßungsdienst, Garderobe und Infotisch – wer hindurchläuft, bekommt Haltung
+- Fehler behoben: „Rückgängig“ zeigt in den Finanzen keine falschen Buchungen mehr
+
+**Jugendliche und Konfirmation**
+- Neu: Jugendliche (grün) – sie kommen seltener zum Gottesdienst und werden noch keine Dauerspender
+- Neu: Konfirmandenunterricht im Gemeindesaal – braucht einen Hauptamtlichen und Stühle, Ehrenamtliche bringen mehr Haltung
+- Neu: Konfirmation am 2. Sonntag im Mai für alle, die 7-mal im Unterricht waren – danach gehören sie zu den Erwachsenen
+
+**Bedienung**
+- Alle Hinweise beim Bauen sagen jetzt „Klicke“ statt „Tippe“
+
 ## 0.1.9
 
 **Gemeindesaal**
