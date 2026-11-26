@@ -28,9 +28,10 @@ import { hindernisBei, fassung } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 import { punktAufWeg } from './bewegung.js';
 import { TAG_MIN, zeitpunkt } from './zeit.js';
-import { termineDerWoche, naechsteKaffeeOeffnung, dauerVon } from './ablauf.js';
+import { termineDerWoche, naechsteKaffeeOeffnung, dauerVon, gottesdienstRaeume } from './ablauf.js';
 import { offenBei, kirchkaffeeZustand } from './kirchkaffee.js';
 import { istJugend } from './konfi.js';
+import { musikerVorlauf } from './musiker.js';
 
 const EPS = 1e-6;
 // Beitrag eines Ehrenamtlichen zur Chance pro Passant (0–1): Grund + je Level, ohne Rechenkrümel
@@ -71,14 +72,17 @@ function dienst(z, raeume, p, termine) {
     const n = s ? naechsteKaffeeOeffnung(z, raeume, r) : null;
     return { jetzt: false, ab: n === null ? Infinity : n };
   }
-  // Veranstaltungsraum: jede Veranstaltung in seinem Raum (vom Beginn bis zum Ende)
+  // Veranstaltungsraum: jede Veranstaltung in seinem Raum (vom Beginn bis zum Ende).
+  // Musiker (26.11.): schon ab dem Aufbruch zum Instrument im Dienst, damit sie rechtzeitig zurück sind (musiker.js).
   const key = Math.min(...r.zellen);
-  let ab = Infinity;
+  let ab = Infinity, liste = null;
+  const vorlauf = art => musikerVorlauf(z, raeume, p, r, art, liste || (liste = gottesdienstRaeume(z, raeume)));
   const pruefe = (beginn, art) => {
     const ende = beginn + dauerVon(art);
     if (t >= ende) return false;
-    if (t >= beginn - EPS) return true;
-    ab = Math.min(ab, beginn); return false;
+    const los = beginn - vorlauf(art);
+    if (t >= los - EPS) return true;
+    ab = Math.min(ab, los); return false;
   };
   for (const L of z.laeufe || []) if (L.raum === key && !L.ausgefallen && (L.phase === 'anreise' || L.phase === 'gottesdienst') && pruefe(L.beginn, L.art)) return { jetzt: true };
   for (const x of termine) if (x.raum === key && x.art && pruefe(x.beginn, x.art)) return { jetzt: true };

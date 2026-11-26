@@ -333,7 +333,7 @@ function laufSchritt(z, L) {
 }
 
 // Zu einem Termin: Raum-Infos und die eingestellte Veranstaltung (oder null, wenn es den Raum nicht mehr gibt)
-function terminInfo(z, raeume, L) {
+export function terminInfo(z, raeume, L) {
   const r = L.raum === null ? null : raumZu(raeume, L.raum);
   const g = r && gottesdienstRaeume(z, raeume).find(x => x.raum === r);
   if (L.raum === null && L.id.includes(':alt:')) {   // alter Spielstand: der erste Gottesdienstraum

@@ -46,6 +46,7 @@ import { besucherPositionen } from './bewegung.js';
 import { menschenStatistik } from './menschenStatistik.js';
 import { toiletteAktuell } from './toiletten.js';
 import { umherPosition } from './umherlaufen.js';
+import { musikerGaenge, musikerPosition } from './musiker.js';
 import { evangelisationAnlegen, evangelisationPosition, evangelisationInfo, freieEhrenamtliche } from './evangelisation.js';
 import { EVANGELISATION } from '../inhalte/evangelisation.js';
 import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance, neugierTeile } from './ort.js';
@@ -472,15 +473,16 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         plakat: !!z.plakat,
         evangelisation: { ...EVANGELISATION.feld },   // das Feld „Evangelisation!“ vor dem Laden
         bus: { stufe: z.bus || 0, ...BUSHALTESTELLE_ORT },
-        personen: z.personen.map(p => {
+        personen: (() => { const mg = musikerGaenge(z, raeume, wegSpeicher); return z.personen.map(p => {
           const d = daten(p); if (!d) return null;
           // Im Kirchkaffee beschäftigt → dort; Pastor im Seelsorge-Gespräch → an seinem Platz; sonst ein wenig umherlaufen
           const nr = typeof p.x === 'number' ? raeume.gruppe[idx(z, p.x, p.y)] : -1;
           // Unterwegs zur Evangelisation vor dem Laden → dort
-          const pos = kaffeeMitarbeiterPosition(z, p) || evangelisationPosition(z, p) || (p.id === 'pastor' && z.seelsorge && z.seelsorge.gang ? p
-            : umherPosition(z, nr >= 0 ? raeume.liste[nr] : null, p));
+          // Musiker auf dem Weg zum Instrument, dort beim Spielen oder auf dem Rückweg (26.11., musiker.js)
+          const pos = kaffeeMitarbeiterPosition(z, p) || evangelisationPosition(z, p) || musikerPosition(mg, p, z.minuten)
+            || (p.id === 'pastor' && z.seelsorge && z.seelsorge.gang ? p : umherPosition(z, nr >= 0 ? raeume.liste[nr] : null, p));
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
-        }).filter(Boolean),
+        }).filter(Boolean); })(),
         // Gottesdienst-Besucher, Passanten (ohne den, der gerade zum Pastor geht) und wer zur Seelsorge läuft
         // jugend: Jugendliche werden in einem anderen Farbton gezeichnet
         besucher: [...besucherPositionen(z, wegSpeicher), ...passantenPositionen(z).filter(b => b.id !== seelsorgeUnterwegs(z)), ...seelsorgePositionen(z),
