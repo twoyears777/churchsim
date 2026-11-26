@@ -2,7 +2,7 @@
 // Fängt Fehler wie in 0.1.14 („ansicht is not defined“), die die Logik-Tests nicht sehen.
 // Starten mit: node tests/zeichnen.test.mjs
 import assert from 'node:assert';
-import { spielStarten } from '../src/kern/spiel.js';
+import { spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeichne } from '../src/ansicht/zeichnen.js';
 
 // Schein-Zeichenfläche: jede Methode tut nichts, measureText liefert eine Breite, Farbverläufe geben sich selbst zurück

@@ -5,7 +5,7 @@ import { skillsVon, musikLevel, musikBonus, musikErfahrungDazu, musikStand } fro
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { NEUGIER, PLAKAT } from '../src/inhalte/ort.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
-import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose, gottesdienstRaeume } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, instrumenteImRaum, grenzeErreicht } from '../src/kern/moebel.js';
 import { MUSIK } from '../src/inhalte/moebel.js';

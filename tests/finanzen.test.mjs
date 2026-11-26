@@ -6,7 +6,7 @@ import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { PREIS_TASSE, EINKAUF } from '../src/inhalte/kirchkaffee.js';
 import { VERLAUF_WOCHEN } from '../src/inhalte/finanzen.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
-import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken, veranstaltungEinstellen } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelKaufen } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen } from '../src/kern/personen.js';

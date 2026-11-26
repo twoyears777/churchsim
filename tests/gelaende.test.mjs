@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { GELAENDE, SCHAUKASTEN } from '../src/inhalte/gelaende.js';
 import { NEUGIER, PLAKAT } from '../src/inhalte/ort.js';
-import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { gelaende, aushaenge } from '../src/kern/gelaende.js';
 import { neugierChance } from '../src/kern/ort.js';
 import { hindernisBei } from '../src/kern/moebel.js';

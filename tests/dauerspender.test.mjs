@@ -3,7 +3,8 @@
 // Starten mit: node tests/dauerspender.test.mjs
 import assert from 'node:assert';
 import { DAUERSPENDE } from '../src/inhalte/finanzen.js';
-import { neuesSpiel, spielStarten, SPEICHER_VERSION } from '../src/kern/spiel.js';
+import { SPEICHER_VERSION } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken } from '../src/kern/ablauf.js';
 import { erkenneRaeume, raumTypVon, pruefeRaum } from '../src/kern/karte.js';
 import { dauerspenderSchritt, dauerspenderListe } from '../src/kern/dauerspender.js';

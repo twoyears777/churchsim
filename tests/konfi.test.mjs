@@ -5,7 +5,8 @@ import assert from 'node:assert';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { JUGEND, KONFI } from '../src/inhalte/besucher.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
-import { neuesSpiel, spielAnlegen, spielStarten } from '../src/kern/spiel.js';
+import { spielAnlegen } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, gottesdienstRaeume, prognose, terminFaktoren } from '../src/kern/ablauf.js';
 import { moebelSetzen, stuhlVerbessern, moebelBei } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen } from '../src/kern/personen.js';

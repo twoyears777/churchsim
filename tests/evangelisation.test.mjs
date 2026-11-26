@@ -8,7 +8,7 @@ import { EVANGELISATION as E } from '../src/inhalte/evangelisation.js';
 import { MUSIK } from '../src/inhalte/moebel.js';
 import { ORT } from '../src/inhalte/ort.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
-import { neuesSpiel } from '../src/kern/spiel.js';
+import { neuesSpiel } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, termineDerWoche } from '../src/kern/ablauf.js';
 import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen } from '../src/kern/personen.js';

@@ -5,7 +5,7 @@ import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { ORT, NEUGIER } from '../src/inhalte/ort.js';
 import { SEELSORGE } from '../src/inhalte/seelsorge.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
-import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken, veranstaltungEinstellen, seelsorgeGesperrt, prognose } from '../src/kern/ablauf.js';
 import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';

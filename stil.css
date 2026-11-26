@@ -306,3 +306,11 @@ ul.keine-info { margin: 0 0 6px; padding-left: 20px; font-size: 14px; }
 .forschung-knoten.multiplikator { width: auto; max-width: 540px; margin: 0 auto 12px; }
 #anzEaFrei { font-size: 13px; color: #6b665b; margin: 2px 0 4px 18px; }
 table.menschen .zahl { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Zeitungsartikel vor dem ersten Gottesdienst (26.11.): Mitte des Bildschirms, Zeitungspapier, Serifenschrift */
+.maske.zeitung { position: fixed; left: 50%; top: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%); width: min(520px, calc(100% - 24px)); z-index: 40; }
+.maske.zeitung .inhalt { background: #f4efe1; border-radius: 4px; padding: 22px 26px; font-family: Georgia, 'Times New Roman', serif; }
+.zeitungsartikel { border-top: 3px double #2b2a27; border-bottom: 1px solid #2b2a27; padding: 14px 0 12px; margin-bottom: 14px; }
+.zeitungsartikel h2 { font-size: 30px; line-height: 1.15; font-weight: 700; margin: 0 0 12px; }
+.zeitungsartikel p { margin: 0; font-size: 17px; line-height: 1.5; font-style: italic; }
+.maske.zeitung .zeile { justify-content: flex-end; }

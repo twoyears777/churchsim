@@ -18,6 +18,7 @@ export function fensterOeffnen(f) { ui.fenster = f; letzterInhalt = ''; ui.anzei
 function schliessbar(f) {
   if (f.art === 'seelsorge' && ui.spiel.seelsorgeOffen()) return false;   // Seelsorge erst beantworten
   if (f.art === 'fest' && ui.spiel.lage().festAnfrage === f.schluessel) return false;   // Fest-Menü erst beantworten
+  if (f.art === 'zeitung') return false;   // Zeitung: nur über „Weiter“
   return true;
 }
 export function fensterSchliessen() {
@@ -32,10 +33,11 @@ export function fensterAktualisieren() {
   if (!f) { m.hidden = true; return; }
   let inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   // ✕ oben rechts in jedem Fenster, das man schließen darf (bleibt beim Scrollen sichtbar)
   if (schliessbar(f)) inhalt = `<button class="fenster-x" data-zu aria-label="Schließen" title="Schließen">✕</button>` + inhalt;
+  m.classList.toggle('zeitung', f.art === 'zeitung');
   m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen');
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
   m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender');
@@ -737,6 +739,13 @@ function kalenderFenster(f) {
     <table class="wochenplan kalender"><tr><th></th>${kopf}</tr>${reihen}</table>
     ${k.termine.length || k.kaffee.length ? '' : `<p class="unter">${T.leer}</p>`}`;
 }
+// Zeitungsartikel vor dem ersten Gottesdienst (Text von Lukas, 26.11.): Schlagzeile, Text, „Weiter“
+function zeitungFenster() {
+  if (!ui.spiel.lage().zeitung) return null;
+  const T = TEXTE.zeitung;
+  return `<div class="zeitungsartikel"><h2>${T.schlagzeile}</h2><p>${T.text}</p></div>
+    <div class="zeile"><button data-zeitung-weiter>${T.weiter}</button></div>`;
+}
 // Knöpfe in den Fenstern → Befehle ans Spiel
 export function fensterEinrichten() {
   maske().addEventListener('click', e => {
@@ -746,6 +755,7 @@ export function fensterEinrichten() {
     const b = e.target.closest('button'), f = ui.fenster, spiel = ui.spiel;
     if (!b || b.disabled || !f) return;
     if (b.hasAttribute('data-zu')) return fensterSchliessen();
+    if (b.hasAttribute('data-zeitung-weiter')) { spiel.zeitungWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
     if (b.dataset.gruppe) { const o = f.offen || []; f.offen = o.includes(b.dataset.gruppe) ? o.filter(x => x !== b.dataset.gruppe) : [...o, b.dataset.gruppe]; }
     else if (b.dataset.sort) { const s = f.sort || { spalte: 'name', ab: false }; f.sort = { spalte: b.dataset.sort, ab: s.spalte === b.dataset.sort ? !s.ab : true }; }
     else if (b.hasAttribute('data-annehmen')) f.angenommen = true;

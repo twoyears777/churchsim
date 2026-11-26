@@ -4,7 +4,7 @@
 import assert from 'node:assert';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen, idx, LEER } from '../src/kern/karte.js';
-import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { moebelSetzen, moebelBei } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 import { umherPosition } from '../src/kern/umherlaufen.js';

@@ -3,7 +3,8 @@ import assert from 'node:assert';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { STARTGELD } from '../src/inhalte/finanzen.js';
 import { BAUKOSTEN, STARTGELD_AUSGLEICH, FENSTER, FOYER } from '../src/inhalte/bau.js';
-import { spielStarten, neuesSpiel, raeumeAuswerten } from '../src/kern/spiel.js';
+import { raeumeAuswerten } from '../src/kern/spiel.js';
+import { spielStarten, neuesSpiel } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { wandRechteck, tuerUmschalten, fensterUmschalten, typZuweisen, erkenneRaeume, FENSTER as FENSTER_FELD, idx } from '../src/kern/karte.js';
 import { raumAusstattung, moebelSetzen } from '../src/kern/moebel.js';
 import { personHinzufuegen, versetzen } from '../src/kern/personen.js';

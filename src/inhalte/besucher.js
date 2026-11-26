@@ -51,3 +51,8 @@ export const KONFI = { teilnahmen: 7 };
 
 export const EHRENAMT_AB_BESUCHEN = 3;  // ab so vielen Gottesdienstbesuchen ...
 export const EHRENAMT_QUOTE = 0.05;     // ... wird man mit dieser Wahrscheinlichkeit pro Woche Ehrenamtlicher
+
+// Erster Gottesdienst (Lukas, 26.11.): Beim ersten normalen Gottesdienst, der wirklich stattfindet, kommen neueLeute zusätzlich
+// (fest, aus dem Ort bzw. ganz neue Menschen), und danach werden mindestens ehrenamt Anwesende Ehrenamtliche
+// (mit der Frau des Pastors sind es dann 2). Zeitungsartikel: zeitungTageVorher Tage vorher um zeitungStunde Uhr, die Zeit steht, bis man weiterklickt.
+export const ERSTER_GOTTESDIENST = { neueLeute: 10, ehrenamt: 1, zeitungTageVorher: 1, zeitungStunde: 8 };

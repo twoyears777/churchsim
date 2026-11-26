@@ -3,7 +3,7 @@
 import assert from 'node:assert';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { EINZUGSGEBIET, PARKPLATZ, BUSHALTESTELLE, WERBEKAMPAGNE } from '../src/inhalte/einzugsgebiet.js';
-import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { einzugsgebiet, erreicht, busAusbauen, werbekampagneKaufen } from '../src/kern/einzugsgebiet.js';
 import { werKommt } from '../src/kern/besucher.js';
 import { moebelKaufen, moebelBei, hindernisBei } from '../src/kern/moebel.js';

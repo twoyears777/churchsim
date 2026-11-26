@@ -4,7 +4,7 @@
 // Starten mit: node tests/forschung.test.mjs
 import assert from 'node:assert';
 import { FORSCHUNGEN, HEILIGKEIT, HALTUNG_MULTIPLIKATOR } from '../src/inhalte/forschung.js';
-import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
+import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { heiligkeitFuerGottesdienst, forschungStarten, forschungAbbrechen, forschungSchritt, forschungListe, istErforscht, dauerMinuten,
  } from '../src/kern/forschung.js';
 import { skillsVon, multiplikatorFaktor, mitMultiplikator, multiplikatorKaufen, multiplikatorInfo, multiplikatorErfahrung } from '../src/kern/skills.js';

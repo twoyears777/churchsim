@@ -40,6 +40,7 @@ import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe 
 import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo } from './skills.js';
 import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
 import { DAUERSPENDE } from '../inhalte/finanzen.js';
+import { zeitungOffen, zeitungSchliessen } from './erster.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
@@ -237,13 +238,15 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // ---------- Befehle ----------
     // Tick-System: echte Sekunden seit dem letzten Bild → Spielzeit rückt vor. Im Editor und bei Pause steht die Zeit.
     tick(sekunden) {
-      if (z.tempo <= 0 || bauModus || anfrageOffen(z) || festAnfrageOffen(z)) return false;   // offene Seelsorge-Anfrage / Fest-Menü: Zeit steht
+      if (z.tempo <= 0 || bauModus || anfrageOffen(z) || festAnfrageOffen(z) || zeitungOffen(z)) return false;   // offene Seelsorge-Anfrage / Fest-Menü / Zeitung: Zeit steht
       const vorher = z.personen.length;
       zeitVorruecken(z, raeume, spielMinuten(Math.min(0.25, sekunden), z.tempo), zufall);
       if (z.personen.length !== vorher) raeume = raeumeAuswerten(z);   // neue Ehrenamtliche
       if (!z.laeufe.length) wegSpeicher.clear();
       return true;
     },
+    // Zeitungsartikel vor dem ersten Gottesdienst weggeklickt: die Zeit läuft weiter
+    zeitungWeiter() { return zeitungSchliessen(z); },
     tempoSetzen(t) { if (TEMPI.includes(t)) z.tempo = t; },
     bauModus(an) { bauModus = !!an; },
     zuruecksetzen() { z = neuesSpiel(zufall); raeume = raeumeAuswerten(z); verlauf.length = 0; wegSpeicher.clear(); },
@@ -509,7 +512,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         status: spielStatus(z, raeume),
         beschaeftigt: z.laeufe.some(L => L.phase !== 'ende') || anfrageOffen(z) || z.kaffee.kunden.length > 0,
         seelsorge: seelsorgeLage(z),   // offene Seelsorge-Anfrage mit Status der Person (sonst null)
-        festAnfrage: z.feste ? z.feste.anfrage : null,   // Fest-Menü steht an (Schlüssel des Fests; Zeit steht, bis beantwortet)
+        festAnfrage: z.feste ? z.feste.anfrage : null,
+        zeitung: zeitungOffen(z),   // Zeitungsartikel vor dem ersten Gottesdienst ist offen (Zeit steht, bis weitergeklickt)   // Fest-Menü steht an (Schlüssel des Fests; Zeit steht, bis beantwortet)
         meldung: neuesteMeldung(z)   // z. B. jemand ist neugierig am Tor stehen geblieben, zu wenig Geld für den Kaffee-Einkauf
       };
     },

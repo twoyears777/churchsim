@@ -40,6 +40,8 @@ import { foyers, foyerBonus } from './foyer.js';
 import { strasse } from './bewegung.js';
 import { evangelisationSchritt } from './evangelisation.js';
 import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen } from './toiletten.js';
+import { ERSTER_GOTTESDIENST } from '../inhalte/besucher.js';
+import { ersterAnlegen, ersterOffen, zeitungOffen, zeitungSchritt, zusatzLeute, ehrenamtSicher } from './erster.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: am Sonntag doppelt, egal ob vormittags, nachmittags oder abends (Lukas, 26.11.)
@@ -217,6 +219,18 @@ export function naechsterTermin(z, raeume = raeumeVon(z)) {
   }
   return null;
 }
+// Der nächste normale Gottesdienst (Art „Gottesdienst“, kein Sonderevent, nicht von einem Fest verdrängt) – für den ersten Gottesdienst
+export function naechsterGottesdienst(z, raeume = raeumeVon(z)) {
+  const w = zeitpunkt(z.minuten).woche, laufend = new Set((z.laeufe || []).map(L => L.id)), erledigt = new Set(z.termineErledigt || []);
+  for (const woche of [w, w + 1]) {
+    if (woche <= z.letzterLauf) continue;
+    for (const t of termineDerWoche(z, raeume, woche))
+      if (t.art === 'gottesdienst' && !t.fest && z.minuten < t.beginn && !laufend.has(t.id) && !erledigt.has(t.id) && !verdraengtVon(z, raeume, t)) return t;
+  }
+  return null;
+}
+// Ist dieser Termin der erste Gottesdienst? (nur einer gleichzeitig, falls zwei Räume zur selben Zeit einen haben)
+const istErster = (z, L) => L.art === 'gottesdienst' && !L.fest && ersterOffen(z) && !z.laeufe.some(x => x !== L && x.erster && !x.ausgefallen && x.phase !== 'ende');
 
 // Anzeige oben: läuft gerade eine Veranstaltung (oder ein Fest)? Sonst die nächste mit Name und Minuten bis zum Beginn.
 // Zählt nur Termine mit eingestellter Art, die nicht von einem Fest verdrängt werden. Kirchkaffee-Schichten zählen nicht.
@@ -257,20 +271,20 @@ function platzWirkung(z, raeume, sitz, liste) {
 // Prüft, welcher Schritt als Nächstes ansteht (Veranstaltungen, Passanten im Ort, Seelsorge-Anfrage),
 // und führt alle Schritte bis zur Zielzeit aus. Kommt eine Seelsorge-Anfrage, bleibt die Zeit genau dort stehen.
 export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
-  ablaufAnlegen(z); kaffeeAnlegen(z);
-  if (anfrageOffen(z)) return;
+  ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z);
+  if (anfrageOffen(z) || zeitungOffen(z)) return;
   const ziel = z.minuten + minuten, gesperrt = zz => seelsorgeGesperrt(zz, raeume);
   kaffeeAktualisieren(z, raeume, zufall);
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume))])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
     s.tun(z, raeume, zufall);
     kaffeeAktualisieren(z, raeume, zufall);   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
-    if (anfrageOffen(z)) { wochenbuchPruefen(z); return; }
+    if (anfrageOffen(z) || zeitungOffen(z)) { wochenbuchPruefen(z); return; }   // Seelsorge-Anfrage / Zeitung: Zeit steht genau hier
   }
   z.minuten = ziel;
   kaffeeAktualisieren(z, raeume, zufall);
@@ -399,6 +413,8 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
   // Konfirmandenunterricht: keine neuen Besucher über die Bekanntheit. Konfirmation: Konfirmanden kommen sicher.
   const kommen = werKommt(z, zufall, { art: L.art, woche: L.woche, ausschluss: woanders, neuAnteil: 1 / anzahl, faktor: terminFaktoren(L, z).besucher,
     musik: info.g.typ.id === 'gottesdienst' ? info.g.ausstattung.musik : undefined, keineNeuen: !zaehltFuerNeue(L.art), konfirmation: istKonfirmation(L) });
+  // Erster Gottesdienst (26.11.): zusätzlich fest ERSTER_GOTTESDIENST.neueLeute Menschen
+  if (istErster(z, L)) { L.erster = true; kommen.push(...zusatzLeute(z, zufall)); }
   for (let i = kommen.length - 1; i > 0; i--) { const j = Math.floor(zufall() * (i + 1)); [kommen[i], kommen[j]] = [kommen[j], kommen[i]]; }
   const tuer = raumTuer(z, info.g.raum);
   L.ankunft = z.minuten;
@@ -549,7 +565,10 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
   const sehr = v.bekanntheit === false ? 0 : anwesend.filter(b => b.zufriedenheit >= BEKANNTHEIT.sehrZufrieden).length;
   bekanntheitAendern(z, sehr * BEKANNTHEIT.proSehrZufriedenem, 'zufrieden', sehr);
   if (istKonfirmation(L)) konfirmieren(z);   // Ende des Konfirmations-Gottesdienstes: alle Konfirmanden werden erwachsen
-  const neueEA = ehrenamtWerden(z, anwesend, zufall).map(b =>
+  const werden = ehrenamtWerden(z, anwesend, zufall);
+  // Erster Gottesdienst (26.11.): mindestens ERSTER_GOTTESDIENST.ehrenamt neue Ehrenamtliche, danach ist er erledigt
+  if (L.erster) { werden.push(...ehrenamtSicher(z, anwesend, werden, zufall)); z.erster.erledigt = true; }
+  const neueEA = werden.map(b =>
     personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
       herkunft: { jugend: istJugend(b), besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: b.level || 1, kaffee: kaffeeVorliebe(b), zuletzt: b.zuletzt } }));
   Object.assign(L, { phase: 'ende', ende: z.minuten, neueEhrenamtliche: neueEA.map(p => p.daten.name) });
@@ -591,7 +610,9 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
   const chance = b => besuchChance(b, { art, woche, faktor: kj.besucher, musik: g && g.typ.id === 'gottesdienst' ? g.ausstattung.musik : undefined });
   const nf = p => p.eingeladen ? Math.min(1, artFaktor(p, art)) : artFaktor(p, art);   // Eingeladene: höchstens 75 %
   const neugierErwartet = neugierige.reduce((s, p) => s + nf(p), 0) * NEUGIER.kommChance;   // Jugendliche/Erwachsene
-  const erwartet = z.besucher.reduce((s, b) => s + chance(b), 0) + neu + neugierErwartet;
+  // Erster Gottesdienst (26.11.): die zusätzlichen Leute kommen sicher
+  const ersterG = ersterOffen(z) && termin && !termin.fest && art === 'gottesdienst' && (naechsterGottesdienst(z, raeume) || {}).id === termin.id;
+  const erwartet = z.besucher.reduce((s, b) => s + chance(b), 0) + neu + neugierErwartet + (ersterG ? ERSTER_GOTTESDIENST.neueLeute : 0);
   const anteil = unbegrenzt ? 1 : erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
   // Fällt der Termin wegen eines geplanten Sonderevents aus?
   const wegenFest = g && platz !== 'fest' && verdraengtVon(z, raeume, { woche, plan, raum: raumSchluessel(g.raum), platz });

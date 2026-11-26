@@ -6,7 +6,7 @@ import { TOILETTE } from '../src/inhalte/toiletten.js';
 import { RAUMTYPEN } from '../src/inhalte/raumtypen.js';
 import { MOEBEL } from '../src/inhalte/moebel.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
-import { neuesSpiel } from '../src/kern/spiel.js';
+import { neuesSpiel } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken, veranstaltungEinstellen } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelKaufen } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen } from '../src/kern/personen.js';

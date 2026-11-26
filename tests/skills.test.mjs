@@ -1,6 +1,6 @@
 // Skill-Fach der Mitarbeiter (26.11.): alle Skills an der Person, alte Spielstände werden beim Laden umgezogen
 import assert from 'node:assert';
-import { spielStarten } from '../src/kern/spiel.js';
+import { spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 const s = spielStarten(null, () => 0.5);
 const d = JSON.parse(s.speicherText());
 const pa = d.zustand.personen.find(p => p.id === 'pastor');

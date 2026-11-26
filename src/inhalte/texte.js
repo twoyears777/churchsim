@@ -24,6 +24,13 @@ export const TEXTE = {
   kontostand: 'Kontostand',
   bekanntheit: 'Bekanntheit',
 
+  // Zeitungsartikel am Tag vor dem ersten Gottesdienst (Text von Lukas, 26.11.2026; Knopf „Weiter“ von Lukas gewählt)
+  zeitung: {
+    schlagzeile: 'Eine neue Gemeinde macht auf!',
+    text: 'Ist es eine Sekte oder eine Brutstätte geistlichen Lebens bei uns im Ort?',
+    weiter: 'Weiter'
+  },
+
   // Intro beim Öffnen der App (Text von Lukas, 26.11.2026)
   intro: 'twoyears 2026',
 

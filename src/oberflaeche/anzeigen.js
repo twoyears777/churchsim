@@ -83,6 +83,8 @@ export function anzeigenAktualisieren() {
   if (l.seelsorge && (!ui.fenster || ui.fenster.art !== 'seelsorge')) ui.fenster = { art: 'seelsorge', angenommen: false };
   // Fest-Menü steht an: Fenster nach vorn holen (die Zeit steht, bis es beantwortet ist)
   else if (l.festAnfrage && (!ui.fenster || ui.fenster.art !== 'fest' || ui.fenster.schluessel !== l.festAnfrage)) ui.fenster = { art: 'fest', schluessel: l.festAnfrage };
+  // Zeitungsartikel vor dem ersten Gottesdienst: nach vorn holen (die Zeit steht, bis man weiterklickt)
+  else if (l.zeitung && (!ui.fenster || ui.fenster.art !== 'zeitung')) ui.fenster = { art: 'zeitung' };
   fensterAktualisieren();
 }
 

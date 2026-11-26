@@ -116,7 +116,8 @@ import { zeitpunkt, tageBisSonntag, slotBeginn, startMinuten, spielMinuten, TAG_
 console.log('Zeit-Tests bestanden.');
 
 // Gottesdienst und Kirchkaffee in Echtzeit
-import { neuesSpiel, ausRundenSpielstand } from '../src/kern/spiel.js';
+import { ausRundenSpielstand } from '../src/kern/spiel.js';
+import { neuesSpiel } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose, kirchkaffeeOffen, gottesdienstBereit } from '../src/kern/ablauf.js';
 import { personHinzufuegen } from '../src/kern/personen.js';
 {
@@ -252,7 +253,7 @@ import { glaetten } from '../src/kern/wege.js';
 console.log('Weg-Tests bestanden.');
 
 // Schalterwand (kern/spiel.js): Befehle und Abfragen, wie die Oberfläche sie benutzt
-import { spielStarten } from '../src/kern/spiel.js';
+import { spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
 {
   const spiel = spielStarten(null, () => 0.45);   // 0.45: mindestens einer kommt (Chance 54 % × Musik-Faktor)
   assert.equal(spiel.lage().konto, STARTGELD); assert.equal(spiel.lage().tag, 0); assert.equal(spiel.lage().stunde, 8);
