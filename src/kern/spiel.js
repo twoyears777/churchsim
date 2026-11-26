@@ -61,6 +61,7 @@ import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
 import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
+import { istAutomat, lagerVon, automatInfo } from './automaten.js';
 import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
 const forschungName = id => (FORSCHUNGEN.find(f => f.id === id) || {}).name || null;
@@ -181,7 +182,10 @@ function statusVon(z, b) {
 function neuesteMeldung(z) {
   const o = ortMeldung(z), oz = z.ort && z.ort.meldung ? z.ort.meldung.zeit : -Infinity;
   const liste = [o && { ...o, zeit: oz }, kaffeeMeldung(z), konfiMeldung(z)].filter(Boolean).sort((a, b) => b.zeit - a.zeit);
-  return liste.length ? { code: liste[0].code, name: liste[0].name } : null;
+  if (!liste.length) return null;
+  const m = { code: liste[0].code, name: liste[0].name };
+  if (liste[0].ware) m.ware = liste[0].ware;   // Automat, der nicht aufgefüllt werden konnte (26.11.)
+  return m;
 }
 
 // Offene Seelsorge-Anfrage, dazu der Status der fragenden Person (Passant, Stammgast …)
@@ -468,7 +472,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
             typ: r.typ ? { id: r.typ.id, name: r.typ.name, farbe: r.typ.farbe, minGroesse: [...r.typ.minGroesse] } : null,
             veranstaltungsraum: moeglich, veranstaltung: namen.length ? namen.join(' · ') : null, kirchkaffee: kk.get(r) || null };
         }),
-        moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung, anteil: m.art === 'kaffeemaschine' ? (m.fuellung || 0) / fassung(m.art) : null,
+        moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung, anteil: m.art === 'kaffeemaschine' ? (m.fuellung || 0) / fassung(m.art) : istAutomat(m.art) ? (m.fuellung || 0) / lagerVon(m) : null,
+          automat: istAutomat(m.art),   // Automaten (26.11.): Füllstand-Streifen wie bei der Kaffeemaschine
           stufe: m.art === 'stuhl' ? stuhlStufe(m).stufe : null, dreh: !!m.dreh, felder: felder(m),
           // Straße/Parkplatz: führt es bis zum Tor? (sonst zählt der Parkplatz nicht)
           angeschlossen: m.art === 'strasse' || m.art === 'parkplatz' ? park.angeschlossen.has(`${m.x},${m.y}`) : null,
@@ -771,6 +776,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const r = raeume.liste[raumNr(x, y)];
       return { fuellung: m.fuellung || 0, fassung: fassung(m.art), imKirchkaffee: !!(r && r.typ && r.typ.id === 'kirchkaffee'), einkaufPreis: EINKAUF.preisTasse };
     },
+    // Menü eines Automaten (26.11.): Füllstand, Lager, Preise; aufgefüllt wird vom Kirchkaffee-Ehrenamtlichen
+    automatInfo(x, y) {
+      const m = moebelAuf(z, x, y);
+      if (!m || !istAutomat(m.art)) return null;
+      return automatInfo(z, raeume, m, raeume.liste[raumNr(x, y)]);
+    },
     // Fenster des Kirchkaffees: Zustand, nächste Öffnung, eigene Öffnungszeiten (Schichten)
     kaffeeRaumInfo(nr) {
       const r = raeume.liste[nr];
@@ -818,7 +829,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'kalenderInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
+  for (const name of ['lage', 'kalenderInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'automatInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

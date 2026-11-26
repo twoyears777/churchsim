@@ -78,7 +78,7 @@ export function anzeigenAktualisieren() {
   radZeichnen(l.kirchenjahr);
   document.querySelectorAll('[data-tempo]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.tempo) === l.tempo)));
   $('spielHinweis').textContent = hinweisText(l.status);
-  $('meldung').textContent = l.meldung ? TEXTE.meldung[l.meldung.code](l.meldung.name) : '';
+  $('meldung').textContent = l.meldung ? TEXTE.meldung[l.meldung.code](l.meldung.name, l.meldung.ware) : '';
   // Offene Seelsorge-Anfrage: Dialog nach vorn holen (die Zeit steht, bis er beantwortet ist)
   if (l.seelsorge && (!ui.fenster || ui.fenster.art !== 'seelsorge')) ui.fenster = { art: 'seelsorge', angenommen: false };
   // Fest-Menü steht an: Fenster nach vorn holen (die Zeit steht, bis es beantwortet ist)

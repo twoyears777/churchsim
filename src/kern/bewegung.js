@@ -61,8 +61,8 @@ function laufPositionen(z, speicher, L) {
       return { id: g.id, name: g.name, x: ort.x, y: ort.y, sitzt: false };
     }
     if (g.kaffee && typeof g.kaffee.ab === 'number' && t >= g.kaffee.ab) return null;   // steht jetzt im Kirchkaffee an
-    if (gang && gang.art === 'sitz') return wc(gang);
-    const heimGang = (g.gaenge || []).find(x => x.art === 'heim');
+    if (gang && (gang.art === 'sitz' || gang.art === 'automat')) return wc(gang);   // Toilette oder Automat (26.11.), danach zurück an den Platz
+    const heimGang = (g.gaenge || []).find(x => x.art === 'heim' || x.art === 'automatHeim');   // über Toilette oder Automat (26.11.) nach Hause
     if (heimGang && t >= heimGang.hinAb) return t < heimGang.zurueckBis ? wc(heimGang) : null;   // über die Toilette nach Hause
     // Heimweg: wer keinen Kaffee will, gleich nach dem Gottesdienst; sonst (und bei Ausfall) am Ende.
     // Alte Spielstände ohne gottesdienstEnde: Ende = Beginn + Dauer des Gottesdienstes.

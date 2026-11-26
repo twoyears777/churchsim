@@ -42,6 +42,7 @@ import { evangelisationSchritt } from './evangelisation.js';
 import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen } from './toiletten.js';
 import { ERSTER_GOTTESDIENST } from '../inhalte/besucher.js';
 import { ersterAnlegen, ersterOffen, zeitungOffen, zeitungSchritt, zusatzLeute, ehrenamtSicher } from './erster.js';
+import { automatenBeimAnreisen, automatenBeimHeimgehen, automatenSchritt } from './automaten.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: am Sonntag doppelt, egal ob vormittags, nachmittags oder abends (Lukas, 26.11.)
@@ -278,7 +279,7 @@ export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume))])
+    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
@@ -422,6 +423,8 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
   L.gaeste = kommen.map((b, i) => ({ id: b.id, name: b.vorname, voll: b.voll, sitz: platz(i), tuer, kaffee: null }));
   // Bedürfnis Toilette (26.11.): Startwerte und geplante Toilettengänge (toiletten.js)
   gaengeBeimAnreisen(z, raeume, L, strasse, L.beginn, L.beginn + dauerVon(L.art));
+  // Automaten (26.11.): Wer etwas kauft, geht vor Beginn einmal hin und zurück an seinen Platz (automaten.js)
+  automatenBeimAnreisen(z, raeume, L, strasse, L.beginn);
 }
 // Freie Kästchen im Raum (ohne Möbel)
 function freieFelder(z, raum) {
@@ -499,6 +502,7 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   if (!gottesdienstKunden(z, raeume, L, wollen)) for (const { g } of wollen) g.kaffee.ergebnis = 'keinPlatz';
   L.gottesdienstEnde = z.minuten;   // wer keinen Kaffee will, geht ab jetzt nach Hause (bewegung.js)
   gaengeBeimHeimgehen(z, raeume, L, strasse);   // ab 80 % vorher noch zur Toilette
+  automatenBeimHeimgehen(z, raeume, L, strasse);   // wer vorher keine Zeit hatte: über den Automaten nach Hause (26.11.)
   L.phase = 'kirchkaffee';
 }
 
@@ -527,6 +531,7 @@ function saalEnde(z, raeume, L, v, zufall) {
   if (v.bekanntheit !== false) bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');   // Konfirmandenunterricht: nur Haltung
   L.gottesdienstEnde = z.minuten;
   gaengeBeimHeimgehen(z, raeume, L, strasse);   // ab 80 % vorher noch zur Toilette
+  automatenBeimHeimgehen(z, raeume, L, strasse);   // wer vorher keine Zeit hatte: über den Automaten nach Hause (26.11.)
   abschliessen(z, raeume, zufall, L);
 }
 

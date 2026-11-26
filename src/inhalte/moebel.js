@@ -1,12 +1,15 @@
 // Inhaltsdatei: Möbel, die man im Editor aufstellen kann. Jedes Möbel belegt 1 Kästchen.
 // kosten: Kaufpreis in €, wird sofort vom Konto abgezogen; beim Abriss volle Rückerstattung.
 // Namen sind Platzhalter – Lukas legt sie fest.
+import { AUTOMATEN } from './automaten.js';
 // kategorie: unter welchem Reiter der Bauleiste es steht (Namen der Reiter in texte.js → bauleiste).
 export const MOEBEL = [
   { id: 'stuhl', name: 'Stuhl', kosten: 5, kategorie: 'gottesdienst', auchIn: ['kirchkaffee', 'gemeindesaal'] },   // auchIn: steht zusätzlich unter diesem Reiter
   { id: 'kaffeemaschine', name: 'Kaffeemaschine', kosten: 50, fassung: 30, startFuellung: 0, kategorie: 'kirchkaffee' },  // für das Kirchkaffee
   { id: 'theke', name: 'Theke', kosten: 20, kategorie: 'kirchkaffee' },  // für das Kirchkaffee; mehrere Thekenteile nebeneinander = eine Theke
   { id: 'tisch', name: 'Tisch', kosten: 15, kategorie: 'kirchkaffee', auchIn: ['gemeindesaal'] },  // Kirchkaffee: Stühle direkt daneben bringen mehr Trinkgeld (SITZEN.tisch)
+  // Automaten (26.11.): kommen aus inhalte/automaten.js – dort stehen Preis, Lager und Stufen
+  ...AUTOMATEN.map(a => ({ id: a.id, name: a.name, kosten: a.kosten, kategorie: a.kategorie, automat: true })),
 
   // Ausstattung des Gottesdienstraums (Spielprinzip vom 25.11.). Wirkt nur im Gottesdienstraum.
   // max: höchstens so viele pro Raum (mehr kann man nicht aufstellen).

@@ -11,7 +11,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', automat: '#2f5d8a', automatGlas: '#cfe3f2', automatFlasche: ['#d9483b', '#3f9b4f', '#f0b429'], besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878', glas: '#a9d3ea', glasHell: '#dff0f9', garderobe: '#6b4f36', jacke1: '#8a3b3b', jacke2: '#3b5f8a', infotisch: '#7c6a54', infoBlatt: '#f4f0e4', wcWand: '#9fb3bd', wcSchuessel: '#f7f9fa', wcDeckel: '#c9d6dc', becken: '#e9eef0', hahn: '#8c979c',   // Fenster, Garderobe, Infotisch: PLATZHALTER
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
@@ -128,6 +128,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     else if (m.art === 'gitarre') gitarre(ctx, px, py, k);
     else if (INSTRUMENT_BILD[m.art]) INSTRUMENT_BILD[m.art](ctx, px, py, k);
     else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.anteil || 0);
+    else if (m.automat) (AUTOMAT_BILD[m.art] || getraenkeautomat)(ctx, px, py, k, m.anteil || 0);
   }
   // Kaffeemaschine lädt: kleiner Balken über der Maschine
   for (const l of z.laden || []) {
@@ -509,6 +510,23 @@ function kaffeemaschine(ctx, px, py, k, anteil) {
   ctx.fillRect(px + k * 0.3, py + k * 0.6, k * 0.4 * (anteil > 0 ? Math.min(1, anteil) : 1), k * 0.14);
 }
 
+// Getränkeautomat (26.11., Platzhalter-Grafik): Kasten mit Glasfront und Flaschen; unten Füllstand-Streifen (blau = voll, rot = leer)
+function getraenkeautomat(ctx, px, py, k, anteil) {
+  const r = k * 0.1;
+  ctx.fillStyle = FARBEN.automat; ctx.fillRect(px + r, py + r * 0.5, k - 2 * r, k - r);
+  ctx.fillStyle = FARBEN.automatGlas; ctx.fillRect(px + k * 0.2, py + k * 0.14, k * 0.42, k * 0.5);
+  const sichtbar = Math.ceil(Math.max(0, Math.min(1, anteil)) * 6);   // je voller, desto mehr Flaschen hinter dem Glas
+  for (let i = 0; i < sichtbar; i++) {
+    ctx.fillStyle = FARBEN.automatFlasche[i % 3];
+    ctx.fillRect(px + k * (0.24 + (i % 3) * 0.13), py + k * (0.2 + Math.floor(i / 3) * 0.22), k * 0.08, k * 0.16);
+  }
+  ctx.fillStyle = '#d9d9d9'; ctx.fillRect(px + k * 0.68, py + k * 0.2, k * 0.12, k * 0.2);   // Tastenfeld
+  ctx.fillStyle = anteil > 0 ? FARBEN.automatGlas : '#b3261e';
+  ctx.fillRect(px + k * 0.2, py + k * 0.72, k * 0.6 * (anteil > 0 ? Math.min(1, anteil) : 1), k * 0.1);
+}
+// Weitere Automaten bekommen hier ihr eigenes Bild (sonst wird der Getränkeautomat gezeichnet)
+const AUTOMAT_BILD = { getraenkeautomat };
+
 // ---- Außen: Straße, Parkplatz, Bushaltestelle (Platzhalter-Grafik) ----
 function strasse(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.strasse; ctx.fillRect(px, py, k, k);
@@ -607,6 +625,7 @@ export function symbolZeichnen(ctx, id, g) {
   const k = g * 0.72, p = (g - k) / 2;
   const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, garderobe, infotisch, wc, waschbecken, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
     kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
+  if (AUTOMAT_BILD[id]) return AUTOMAT_BILD[id](ctx, p, p, k, 0.8);
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
   if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();
   if (id === 'weg') return weg(ctx, p, p, k);

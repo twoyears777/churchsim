@@ -4,6 +4,7 @@ import { FENSTER } from '../inhalte/bau.js';
 import { MOEBEL, STUHL_STUFEN, MUSIK } from '../inhalte/moebel.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 import { musikBonus } from './skills.js';
+import { AUTOMATEN } from '../inhalte/automaten.js';
 
 export function moebelAnlegen(z) { if (!Array.isArray(z.moebel)) z.moebel = []; }
 const typVon = art => MOEBEL.find(t => t.id === art) || {};
@@ -46,6 +47,7 @@ export function moebelKaufen(z, art, x, y, istBesetzt = () => false, dreh = fals
   const m = { art, x, y };
   if (typ.groesse && dreh) m.dreh = true;
   if (typeof typ.fassung === 'number') m.fuellung = typ.startFuellung || 0;   // Kaffeemaschine: Füllstand in Tassen
+  if (typ.automat) m.fuellung = 0;                                           // Automat: kommt leer, der Ehrenamtliche füllt ihn auf
   z.moebel.push(m);
   if (preis) buchen(z, 'ausgaben', 'moebel', preis, { moebel: art });
   return 'ok';
@@ -53,6 +55,8 @@ export function moebelKaufen(z, art, x, y, istBesetzt = () => false, dreh = fals
 // Was ein Möbel gekostet hat: Kaufpreis, bei Stühlen plus alle Verbesserungen
 export function moebelWert(m) {
   const kauf = (MOEBEL.find(x => x.id === m.art) || {}).kosten || 0;
+  const automat = AUTOMATEN.find(a => a.id === m.art);   // Automaten: später verbesserbar wie Stühle
+  if (automat) return kauf + automat.stufen.filter(s => s.stufe <= (m.stufe || 1)).reduce((a, s) => a + s.upgrade, 0);
   if (m.art !== 'stuhl') return kauf;
   return kauf + STUHL_STUFEN.filter(s => s.stufe <= (m.stufe || 1)).reduce((a, s) => a + s.upgrade, 0);
 }

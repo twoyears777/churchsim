@@ -9,6 +9,8 @@
 //   • Danach setzt er sich mit SITZEN.chance auf einen freien Stuhl (sonst Stehplatz) und gibt beim Gehen Trinkgeld.
 //     Wer sitzt, bleibt ab Ankunft am Stuhl mindestens SITZEN.mindestens Minuten (auch nach Schluss).
 //   • Hat das Kirchkaffee zu und ist die Maschine nicht voll, geht der Ehrenamtliche in den Laden und kauft nach.
+//     Danach füllt er genauso die Automaten in seinem Raum auf (automaten.js, Lukas 26.11.).
+//   • Kunden zu den Öffnungszeiten gehen evtl. einmal zum Automaten, während sie stehen oder sitzen (automaten.js).
 //
 // Jede Figur hat eine „Bewegung“ { pfad, laenge, t0 }: Ab Zeit t0 läuft sie den Pfad entlang. Die Spiellogik wartet
 // immer, bis sie wirklich angekommen ist – so stimmen Geld und Haltung mit dem überein, was man sieht.
@@ -26,6 +28,8 @@ import { LAUFTEMPO, SLOTS, DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
 import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN } from '../inhalte/kirchkaffee.js';
 import { GRUNDSTUECK, GEHWEGE, LADEN } from '../inhalte/umgebung.js';
+import { AUTOMAT } from '../inhalte/automaten.js';
+import { kaufzeitenImKirchkaffee, gangJetztZumAutomaten, automatZumAuffuellen, auffuellen, auffuellPlatz } from './automaten.js';
 
 const EPS = 1e-6;
 const NACHBARN = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -332,6 +336,7 @@ function uebergeben(z, stationen, s, k, t, zufall) {
     k.phase = 'sitzt'; k.stuhl = { x: stuhl.x, y: stuhl.y }; k.trinkgeld = trinkgeldFuer(z, stuhl);
     k.bew = gehen(z, posBei(k.bew, t), stuhl, t);
     k.stehBis = Math.max(bis, ankunft(k.bew) + SITZEN.mindestens);
+    automatEinplanen(z, k);
     return;
   }
   if (bis <= t + EPS) return heimSchicken(z, k, t);
@@ -339,6 +344,13 @@ function uebergeben(z, stationen, s, k, t, zufall) {
   if (!platz) return heimSchicken(z, k, t);
   k.phase = 'steht'; k.stehBis = bis;
   k.bew = gehen(z, posBei(k.bew, t), platz, t);
+  automatEinplanen(z, k);
+}
+// Automaten (26.11.): Kunden zu den Öffnungszeiten (k.besuch) gehen evtl. einmal zum Automaten, während sie am Platz sind.
+// Gottesdienst-Gäste haben schon beim Anreisen „gewürfelt“ (automaten.js) – einmal pro Besuch.
+function automatEinplanen(z, k) {
+  if (!k.besuch || !raeumeJetzt) return;
+  k.automatPlan = kaufzeitenImKirchkaffee(z, raeumeJetzt, k.besuch, k.id, ankunft(k.bew), k.stehBis, k.automatArten || null);
 }
 
 // Gottesdienst-Gäste mit Kaffeewunsch stellen sich an. gaeste: [{ g (Gast im Ablauf), i (Nummer), sitz }]
@@ -355,6 +367,7 @@ export function gottesdienstKunden(z, raeume, L, gaeste) {
       g.kaffee.ab = ab;
       const k = z.kaffee.kunden[z.kaffee.kunden.length - 1], wc0 = wertMitnehmen(g, ab);
       if (wc0) { k.wc0 = wc0; k.gaenge = []; k.gang = null; }   // Toilettenwert läuft im Kirchkaffee weiter
+      if (g.automatOffen && g.automatOffen.length) { k.besuch = L.id; k.automatArten = g.automatOffen; g.automatOffen = []; }   // Automat: hier nachholen
     }
     else g.kaffee.ergebnis = 'keinPlatz';
   });
@@ -366,7 +379,9 @@ export function passantKommt(z, raeume, wer) {
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen).filter(s => offenBei(z, s.raum));
   if (!stationen.length || z.kaffee.kunden.some(k => k.id === wer.id)) return false;
   const tor = TOR();
-  return kundeAnlegen(z, stationen, wer, tor, z.minuten, null, tor);
+  if (!kundeAnlegen(z, stationen, wer, tor, z.minuten, null, tor)) return false;
+  z.kaffee.kunden[z.kaffee.kunden.length - 1].besuch = `kk:${z.minuten}`;   // für den Automaten: Kennung dieses Besuchs
+  return true;
 }
 export function offenesKirchkaffee(z, raeume) {
   return kirchkaffeeZustand(z, raeume).some(k => k.stationen.length && offenBei(z, k.raum));
@@ -383,7 +398,8 @@ function abbrechen(z, id) {
     const k = K.kunden.find(x => x.id === a.kunde);
     if (k && k.phase === 'bestellt') k.phase = 'schlange';
   }
-  if (a.art === 'einkauf' && a.phase === 'zurueck' && maschine && maschine.art === 'kaffeemaschine')   // schon bezahlt: Kaffee kommt trotzdem an
+  if (a.art === 'einkauf' && a.phase === 'zurueck' && a.automat) auffuellen(z, a.automat, a.menge);   // schon bezahlt: Ware kommt trotzdem an
+  else if (a.art === 'einkauf' && a.phase === 'zurueck' && maschine && maschine.art === 'kaffeemaschine')   // schon bezahlt: Kaffee kommt trotzdem an
     maschine.fuellung = Math.min(fassung('kaffeemaschine'), (maschine.fuellung || 0) + a.menge);
 }
 
@@ -409,12 +425,17 @@ function stationSchritt(z, stationen, s, t, zufall) {
   }
   if (a && a.art === 'einkauf') {
     if (a.phase === 'hin' && da) {
-      if (kannBezahlen(z, a.preis)) { buchen(z, 'ausgaben', 'kaffee', a.preis, { tassen: a.menge, anlass: 'einkauf' }); zahlZeigen(z, hier, -a.preis); delete K.gemeldet[id]; }
-      else { a.menge = 0; keinGeld(z, p, t); }
-      a.phase = 'zurueck'; geh(s.standMaschine); return true;
+      if (kannBezahlen(z, a.preis)) {
+        if (a.automat) buchen(z, 'ausgaben', a.ware, a.preis, { automat: a.ware, stueck: a.menge, was: 'einkauf' });
+        else buchen(z, 'ausgaben', 'kaffee', a.preis, { tassen: a.menge, anlass: 'einkauf' });
+        zahlZeigen(z, hier, -a.preis); delete K.gemeldet[id];
+      }
+      else { a.menge = 0; keinGeld(z, p, t, a.automat ? a.ware : null); }
+      a.phase = 'zurueck'; geh(a.automat ? a.platz : s.standMaschine); return true;
     }
     if (a.phase === 'zurueck' && da) {
-      maschine.fuellung = Math.min(fassung('kaffeemaschine'), (maschine.fuellung || 0) + a.menge);
+      if (a.automat) auffuellen(z, a.automat, a.menge);
+      else maschine.fuellung = Math.min(fassung('kaffeemaschine'), (maschine.fuellung || 0) + a.menge);
       m.aufgabe = null; return true;
     }
     return false;
@@ -446,14 +467,28 @@ function stationSchritt(z, stationen, s, t, zufall) {
     m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, maschine: { x: maschine.x, y: maschine.y } };
     geh(LADEN.eingang); return true;
   }
+  // Automaten im Raum auffüllen (26.11.): wie beim Kaffee – nur was fehlt, höchstens AUTOMAT.tragen auf einmal
+  const reserviert = new Set(Object.values(K.ma).filter(x => x !== m && x.aufgabe && x.aufgabe.automat).map(x => idx(z, x.aufgabe.automat.x, x.aufgabe.automat.y)));
+  const au = !(K.gesperrt[id] > t) && automatZumAuffuellen(z, s.raum, reserviert);
+  if (au) {
+    const menge = Math.min(AUTOMAT.tragen, au.fehlt), preis = Math.round(menge * au.typ.einkauf * 100) / 100;
+    if (!kannBezahlen(z, preis)) { keinGeld(z, p, t, au.typ.id); return true; }
+    m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, ware: au.typ.id, automat: { x: au.m.x, y: au.m.y }, platz: auffuellPlatz(z, s.raum, au.m) };
+    geh(LADEN.eingang); return true;
+  }
   if (!istBei(m.bew, m.heim, t)) { m.aufgabe = { art: 'gehen' }; geh(m.heim); return true; }
   return false;
 }
 // Zu wenig Geld für den Einkauf: Meldung (nur einmal, bis es wieder klappt), später nochmal versuchen
-function keinGeld(z, p, t) {
+// ware: Automat (z. B. 'getraenkeautomat') oder null beim Kaffee
+function keinGeld(z, p, t, ware = null) {
   const K = z.kaffee;
   K.gesperrt[p.id] = t + EINKAUF.wiederholen;
-  if (!K.gemeldet[p.id]) { K.gemeldet[p.id] = true; K.meldung = { code: 'keinGeldKaffee', name: (daten(p) || {}).name || '', zeit: t }; }
+  if (!K.gemeldet[p.id]) {
+    K.gemeldet[p.id] = true;
+    K.meldung = { code: ware ? 'keinGeldAutomat' : 'keinGeldKaffee', name: (daten(p) || {}).name || '', zeit: t };
+    if (ware) K.meldung.ware = ware;
+  }
 }
 
 function kundeSchritt(z, k, t) {
@@ -472,6 +507,13 @@ function kundeSchritt(z, k, t) {
     const platz = k.bew.pfad[k.bew.pfad.length - 1];
     const gang = wcGang(z, k, 'kaffee', platz, platz, t);
     if (gang) { k.stehBis = Math.max(k.stehBis, gang.zurueckBis); return true; }
+    // Automat (26.11.): zur geplanten Zeit hin und zurück an denselben Platz
+    if (k.automatPlan && k.automatPlan.length && t >= k.automatPlan[0].ab - EPS && raeumeJetzt) {
+      const { art } = k.automatPlan.shift();
+      const g = gangJetztZumAutomaten(z, raeumeJetzt, art, platz, t);
+      if (g) { k.gang = g; (k.gaenge = k.gaenge || []).push(g); k.stehBis = Math.max(k.stehBis, g.zurueckBis); }
+      return true;
+    }
   }
   if ((k.phase === 'steht' || k.phase === 'sitzt') && t >= k.stehBis - EPS) { heimSchicken(z, k, t); return true; }
   if (k.phase === 'heim' && angekommen(k.bew, t)) { K.kunden = K.kunden.filter(x => x !== k); return true; }
@@ -520,6 +562,7 @@ export function kaffeeSchritt(z, raeume) {
     zeiten.push(ankunft(k.bew), k.ab);
     if (k.stehBis !== null) zeiten.push(k.stehBis);
     if (k.gang) zeiten.push(k.gang.zurueckBis);
+    if (k.automatPlan && k.automatPlan.length) zeiten.push(Math.max(k.automatPlan[0].ab, ankunft(k.bew)));
     else if (wc && k.wc0 && (k.phase === 'steht' || k.phase === 'sitzt')) zeiten.push(wannZurToilette(k, Math.max(t, ankunft(k.bew))));
   }
   for (const r of raeume.liste) if (r.typ && r.typ.id === 'kirchkaffee') for (const f of schichtFenster(z, r, t)) zeiten.push(f.von, f.bis);

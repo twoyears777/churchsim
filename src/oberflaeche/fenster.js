@@ -31,7 +31,7 @@ export function fensterOffen() { return !maske().hidden; }
 export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
-  let inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
+  let inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
     kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
@@ -221,6 +221,18 @@ function maschinenFenster(f) {
     <p class="unter">${T.fuellstand(m.fuellung, m.fassung)}</p>
     ${m.fuellung === 0 ? `<p class="warnung">${T.leer}</p>` : ''}
     ${m.imKirchkaffee ? `<p class="unter">${T.auffuellen}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}`;
+}
+
+// Automat (26.11.): Füllstand (aufgefüllt wird vom Kirchkaffee-Ehrenamtlichen im Laden). Texte je Automat in TEXTE.automat.
+function automatFenster(f) {
+  const a = ui.spiel.automatInfo(f.x, f.y);
+  if (!a) return null;
+  const T = TEXTE.automat, eigen = T[a.art] || {};
+  return `<h2>${esc(a.name)}</h2>
+    <div class="balken"><span style="width:${Math.round(a.fuellung / a.lager * 100)}%"></span></div>
+    <p class="unter">${(eigen.fuellstand || T.fuellstand)(a.fuellung, a.lager)}</p>
+    ${a.fuellung === 0 ? `<p class="warnung">${T.leer}</p>` : ''}
+    ${a.imRaum ? `<p class="unter">${(eigen.erklaerung || (() => ''))(a.preis, a.einkauf)}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}`;
 }
 
 // Kirchkaffee: Zustand und eigene Öffnungszeiten (höchstens 3 Schichten pro Woche).

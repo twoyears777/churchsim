@@ -230,6 +230,16 @@ export const TEXTE = {
     leer: 'Leer – es wird kein Kaffee verkauft.',
     nichtImKaffee: 'Steht nicht im Kirchkaffee – hier wird kein Kaffee verkauft.'
   },
+  // Automaten (26.11.) – alle Texte ENTWURF von Claude, Lukas formuliert sie selbst. Eigene Texte je Automat unter seiner id.
+  automat: {
+    fuellstand: (n, max) => `Füllstand: ${n} von ${max}`,
+    leer: 'Leer',
+    nichtImKaffee: 'Steht nicht im Kirchkaffee – hier wird nichts verkauft.',
+    getraenkeautomat: {
+      fuellstand: (n, max) => `Getränke: ${n} / ${max}`,
+      erklaerung: (preis, einkauf) => `Besucher kaufen hier Getränke für ${geld(preis, preis % 1 ? 2 : 0)}. Der Ehrenamtliche füllt den Automaten auf, wenn das Kirchkaffee zu hat (${geld(einkauf, einkauf % 1 ? 2 : 0)} pro Getränk).`
+    }
+  },
   // Kirchkaffee-Raum: Zustand unter dem Raumnamen
   kirchkaffee: {
     offen: 'Geöffnet',
@@ -380,6 +390,9 @@ export const TEXTE = {
   meldung: {
     neugierig: name => `${name} ist am Tor stehen geblieben und schaut neugierig herein.`,
     keinGeldKaffee: name => `Nicht genug Geld – ${name} konnte keinen Kaffee einkaufen.`,   // Lukas, 25.11.
+    // Automaten (26.11., ENTWURF von Claude): ware = id des Automaten
+    keinGeldAutomat: (name, ware) => ware === 'getraenkeautomat' ? `Nicht genug Geld – ${name} konnte keine Getränke einkaufen.`
+      : `Nicht genug Geld – ${name} konnte den Automaten nicht auffüllen.`,
     // Konfirmandenunterricht (von Lukas freigegeben, 25.11.; Einzahl bei „konfirmiert“ von Claude ergänzt)
     konfirmand: name => `${name} war 7-mal im Konfirmandenunterricht und wird bei der nächsten Konfirmation konfirmiert.`,
     konfirmiert: n => n === 1 ? '1 Jugendlicher wurde konfirmiert und gehört jetzt zu den Erwachsenen.'
@@ -486,6 +499,7 @@ export const TEXTE = {
     keinWerkzeug: 'Wähle unten aus, was du bauen möchtest.',   // nach Rechtsklick: nichts gewählt (Entwurf von Claude, von Lukas freigegeben 25.11.)
     stuhl: 'Klicke, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
     kaffeemaschine: 'Klicke, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
+    getraenkeautomat: 'Klicke, um einen Getränkeautomaten aufzustellen (fürs Kirchkaffee).',   // ENTWURF von Claude (26.11.)
     theke: 'Klicke, um ein Thekenteil aufzustellen (fürs Kirchkaffee).',
     tisch: 'Stühle direkt daneben bringen mehr Trinkgeld (×1,2).',   // Lukas, 25.11.
     // ---- Ausstattung des Gottesdienstraums (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----

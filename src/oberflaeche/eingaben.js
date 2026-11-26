@@ -40,6 +40,7 @@ const figurBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.ka
   Math.max(22, ui.ansicht.k * 1.1));
 const besucherBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
 const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
+const automatBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && ui.spiel.automatInfo(m.x, m.y) ? m : null; };   // Automaten (26.11.)
 const stuhlBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'stuhl' ? m : null; };
 const schaukastenBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'schaukasten' ? m : null; };
 
@@ -69,7 +70,7 @@ function rechtsklick() {
 function mauszeiger(e) {
   let c = 'default';
   if (ui.tragen) c = 'grabbing';
-  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || schaukastenBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
+  else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || automatBei(f) || stuhlBei(f) || schaukastenBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
       || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) || ui.spiel.evangelisationBei(f.x, f.y) ? 'pointer' : 'default'; }
   else if (!ui.werkzeug) { const f = feldAus(e); c = ui.spiel.raumNrBei(f.x, f.y) >= 0 ? 'pointer' : 'default'; }   // nichts gewählt: Raum anklickbar (Raumfunktion)
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
@@ -125,6 +126,8 @@ function loslassen(e) {
     if (s.besucher) return fensterOeffnen({ art: 'besucher', id: s.besucher.id });
     const m = maschineBei(f);
     if (m) return fensterOeffnen({ art: 'maschine', x: m.x, y: m.y });
+    const au = automatBei(f);                                        // Automat → Füllstand
+    if (au) return fensterOeffnen({ art: 'automat', x: au.x, y: au.y });
     const st = stuhlBei(f);                                          // Stuhl → Verbessern-Menü (statt Raum-Fenster)
     if (st) return fensterOeffnen({ art: 'stuhl', x: st.x, y: st.y });
     const sk = schaukastenBei(f);                                    // Schaukasten → Aushang wählen

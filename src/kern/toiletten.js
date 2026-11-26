@@ -34,6 +34,7 @@ export function toiletteWert(g, t) {
   if (!g || !g.wc0 || t < g.wc0.t) return null;
   let basis = g.wc0;
   for (const s of g.gaenge || []) {
+    if (s.ware) continue;   // Gang zum Automaten (automaten.js): kein Toilettengang
     if (t >= s.drinBis) basis = { t: s.drinBis, w: 0 };
     else if (t >= s.drinAb) return 0;
   }
@@ -47,7 +48,7 @@ function zeitBis(g, ab, schwelle) {
 }
 
 // Weglänge in Kästchen (wie die Figuren laufen) und das Kästchen direkt vor dem Ziel
-function wegInfo(z, von, nach, wiese) {
+export function wegInfo(z, von, nach, wiese) {
   const blockiert = (x, y) => hindernisBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
   const roh = weg(z, von, nach, blockiert, wiese);
   if (!roh) return null;
@@ -57,32 +58,41 @@ function wegInfo(z, von, nach, wiese) {
   return { laenge, vorZiel: roh.length >= 2 ? roh[roh.length - 2] : roh[0] };
 }
 
-// Frühester Zeitpunkt ab t, zu dem die Kabine frei ist (für die Dauer eines Gangs)
-function freiAb(z, k, t) {
-  const liste = z.wc.belegt.filter(b => b.x === k.x && b.y === k.y).sort((a, b) => a.von - b.von);
-  for (const b of liste) if (t + TOILETTE.dauer > b.von + EPS && t < b.bis - EPS) t = b.bis;
+// Frühester Zeitpunkt ab t, zu dem das Ziel frei ist (für die Dauer eines Gangs). belegt: Liste der Belegungen dieses Zielorts.
+function freiAb(belegt, k, t, dauer) {
+  const liste = belegt.filter(b => b.x === k.x && b.y === k.y).sort((a, b) => a.von - b.von);
+  for (const b of liste) if (t + dauer > b.von + EPS && t < b.bis - EPS) t = b.bis;
   return t;
 }
 
-// Einen Gang planen: die Kabine, in die man am frühesten hinein kann (bei Gleichstand die nähere). → Gang oder null
-function gangPlanen(z, liste, art, von, nach, hinAb, wiese) {
+// Einen Gang planen: das Ziel, an das man am frühesten herankommt (bei Gleichstand das nähere). → Gang oder null
+// Allgemein für alle Gänge „hin – kurz dort – zurück“: Toilette (Standard) und Automaten (automaten.js, eigene belegt/dauer).
+// merken = false: Belegung noch nicht eintragen (dann belegungMerken aufrufen, wenn der Gang wirklich genommen wird).
+function gangPlanen(z, liste, art, von, nach, hinAb, wiese, belegt = z.wc.belegt, dauer = TOILETTE.dauer, merken = true) {
   let best = null;
   for (const k of liste) {
     const hin = wegInfo(z, von, k, wiese);
     if (!hin) continue;
     const lWarte = Math.hypot(hin.vorZiel.x - k.x, hin.vorZiel.y - k.y), lHin = Math.max(0, hin.laenge - lWarte);
-    const anWarte = hinAb + lHin / LAUFTEMPO, drinAb = freiAb(z, k, anWarte + lWarte / LAUFTEMPO);
+    const anWarte = hinAb + lHin / LAUFTEMPO, drinAb = freiAb(belegt, k, anWarte + lWarte / LAUFTEMPO, dauer);
     if (!best || drinAb < best.drinAb - EPS || (Math.abs(drinAb - best.drinAb) < EPS && lHin < best.lHin))
       best = { k, warte: { x: hin.vorZiel.x, y: hin.vorZiel.y }, lHin, anWarte, drinAb };
   }
   if (!best) return null;
   const zurueck = wegInfo(z, best.k, nach, wiese);
   if (!zurueck) return null;
-  const drinBis = best.drinAb + TOILETTE.dauer;
+  const drinBis = best.drinAb + dauer;
   const gang = { art, von: { ...von }, kabine: { ...best.k }, warte: best.warte, nach: { ...nach }, hinAb, anWarte: best.anWarte,
     drinAb: best.drinAb, drinBis, zurueckBis: drinBis + zurueck.laenge / LAUFTEMPO, lHin: best.lHin, lZurueck: zurueck.laenge };
-  z.wc.belegt.push({ x: best.k.x, y: best.k.y, von: best.drinAb, bis: drinBis });
+  if (merken) belegungMerken(belegt, gang);
   return gang;
+}
+export function belegungMerken(belegt, gang) { belegt.push({ x: gang.kabine.x, y: gang.kabine.y, von: gang.drinAb, bis: gang.drinBis }); }
+// Allgemeiner Gang zu einem von mehreren Zielen (z. B. Platz vor einem Automaten). ziele: [{ x, y, … }] – weitere Felder
+// (etwa die Lage des Automaten) landen im Gang unter „kabine“. → Gang oder null
+export function gangZu(z, ziele, art, von, nach, hinAb, { belegt, dauer, merken = true }) {
+  if (!ziele.length) return null;
+  return gangPlanen(z, ziele, art, { x: Math.round(von.x), y: Math.round(von.y) }, nach, hinAb, wiesenKarte(z), belegt, dauer, merken);
 }
 const gangDazu = (L, g, gang) => { if (!gang) return; (g.gaenge = g.gaenge || []).push(gang); L.wcBis = Math.max(L.wcBis || 0, gang.zurueckBis); };
 // Alte Belegungen vergessen
