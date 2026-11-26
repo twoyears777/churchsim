@@ -80,6 +80,11 @@ function personenKarte(f) {
     skills = `<p class="unter staerker">${TEXTE.ausstattung.musikLevel(p.musik.level)}</p>
       <div class="balken"><span style="width:${Math.round(p.musik.fortschritt * 100)}%"></span></div>`;
   }
+  if (p.evangelisation) {
+    // Evangelisation-Level (26.11. abends) mit Fortschrittsbalken – Learning by Doing vor dem Laden
+    skills += `<p class="unter staerker">${TEXTE.evangelisation.karte(p.evangelisation.level)}</p>
+      <div class="balken"><span style="width:${Math.round(p.evangelisation.fortschritt * 100)}%"></span></div>`;
+  }
   if (p.seelsorge) {
     const s = p.seelsorge, T = TEXTE.seelsorge.karte;
     skills = `<p class="unter staerker">${T.titel(s.stufe, s.maxStufe)}</p>
@@ -298,15 +303,31 @@ function torFenster() {
   return `<h2>${T.titel}</h2><h3>${T.plakat}</h3><p>${T.info}</p>${inhalt}`;
 }
 
-// Feld „Evangelisation!“ vor dem Laden (26.11.): wer gerade vor Ort ist und die Chance pro Passant
+// Feld „Evangelisation!“ vor dem Laden (26.11., abends ausführlicher): wer vor Ort ist mit Evangelisation-Level und Beitrag,
+// die Chance pro Passant, wer frei/unterwegs ist und was es heute und diese Woche gebracht hat
 function evangelisationFenster() {
   const e = ui.spiel.evangelisationInfo(), T = TEXTE.evangelisation;
+  const zeile = p => {
+    const ev = p.evangelisation;
+    return `<tr><td><span class="staerker">${esc(p.name)}</span><br><span class="unter">${p.laedtEin ? T.wohin[p.wohin] : T.keinJugo(esc(p.name))}</span></td>
+      <td>${T.level(ev.level, ev.maxLevel)}<div class="balken mini"><span style="width:${Math.round(ev.fortschritt * 100)}%"></span></div>
+        <span class="unter">${ev.stundenBisNaechstes === null ? T.hoechstes : T.naechstes(ev.stundenBisNaechstes)}</span></td>
+      <td class="zahl">${T.beitrag(p.beitrag)}</td></tr>`;
+  };
   const leute = e.leute.length
-    ? `<ul class="personen nurLesen">${e.leute.map(p => `<li>${p.name}${p.laedtEin ? '' : `<br><span class="unter">${T.keinJugo(p.name)}</span>`}</li>`).join('')}</ul>`
-    : `<p class="unter">${T.niemand}</p>`;
+    ? `<table class="finanzen hell"><tr><td class="unter">${T.spalten.name}</td><td class="unter">${T.spalten.level}</td><td class="zahl unter">${T.spalten.beitrag}</td></tr>
+        ${e.leute.map(zeile).join('')}</table>`
+    : `<p class="unter">${T.niemand}${e.zeiten.jetzt ? '' : ' ' + T.zeiten(e.zeiten.von, e.zeiten.bis)}</p>`;
+  const jugend = e.leute.some(p => p.jugend && p.laedtEin) ? `<p class="unter">${T.chanceJugend(e.chanceJugend)}</p>` : '';
+  const S = e.statistik, stat = k => `<tr><td>${T.statZeilen[k]}</td><td class="zahl">${S.heute[k]}</td><td class="zahl">${S.dieseWoche[k]}</td></tr>`;
   return `<h2>${T.titel}</h2><p>${T.info}</p>
     <p class="unter staerker">${T.vorOrt(e.leute.length, e.max)}</p>${leute}
-    <p class="unter">${T.chance(e.chance)}</p>`;
+    <p class="staerker">${T.chance(e.chance)} ${e.gedeckelt ? `<span class="unter">${T.obergrenze(e.maxChance)}</span>` : ''}</p>${jugend}
+    <p class="unter">${T.rechnung}</p>
+    <p class="unter">${T.frei(e.frei)}${e.unterwegs ? ' · ' + T.unterwegs(e.unterwegs) : ''}</p>
+    <h3>${T.statistik}</h3>
+    <table class="finanzen hell"><tr><td></td><td class="zahl unter">${T.statSpalten.heute}</td><td class="zahl unter">${T.statSpalten.woche}</td></tr>
+      ${['vorbei', 'angesprochen', 'gekommen'].map(stat).join('')}</table>`;
 }
 
 // Besucher-Kärtchen: Bedürfnisse und Zufriedenheit

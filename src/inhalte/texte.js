@@ -550,12 +550,29 @@ export const TEXTE = {
   evangelisation: {
     feld: 'Evangelisation!',
     titel: 'Evangelisation',
-    info: 'Ehrenamtliche, die gerade frei haben, gehen von selbst hierher und sprechen Passanten an. Je höher ihr Musik-Level, desto eher kommen die Leute zum nächsten Gottesdienst.',
+    // ENTWURF (26.11. abends): „Musik-Level“ → „Evangelisation-Level“, weil seit dem neuen Skill dieser zählt – wartet auf Lukas
+    info: 'Ehrenamtliche, die gerade frei haben, gehen von selbst hierher und sprechen Passanten an. Je höher ihr Evangelisation-Level, desto eher kommen die Leute zum nächsten Gottesdienst.',
     vorOrt: (x, max) => `Vor Ort: ${x} von ${max}`,
     chance: x => `Chance pro Passant: ${x} %`,
     niemand: 'Gerade ist niemand vor Ort.',
     keinJugo: name => `Kein Jugendgottesdienst geplant – ${name} lädt gerade niemanden ein.`,
-    frei: x => `Gerade frei: ${x}`
+    frei: x => `Gerade frei: ${x}`,
+    // ENTWURF von Claude (26.11. abends, ausführlicheres Menü und Skill „Evangelisation“) – alle folgenden Texte warten auf Lukas
+    spalten: { name: 'Vor Ort', level: 'Evangelisation', beitrag: 'Beitrag' },
+    level: (x, max) => `Level ${x} von ${max}`,
+    naechstes: h => `noch ${h} Std. bis zum nächsten Level`,
+    hoechstes: 'höchstes Level',
+    wohin: { gottesdienst: 'lädt zum Gottesdienst ein', jugend: 'lädt Jugendliche zum Jugendgottesdienst ein' },
+    beitrag: x => `+${x} %`,
+    chanceJugend: x => `Für jugendliche Passanten: ${x} %`,
+    obergrenze: x => `(höchstens ${x} %)`,
+    rechnung: 'Jeder Ehrenamtliche vor Ort bringt 5 % + 5 % je Evangelisation-Level, zusammen höchstens 80 %. Für jede Stunde vor Ort gibt es Erfahrung.',
+    unterwegs: x => `Auf dem Weg hierher: ${x}`,
+    zeiten: (von, bis) => `Evangelisiert wird von ${von} bis ${bis} Uhr.`,
+    statistik: 'Was es bringt',
+    statSpalten: { heute: 'Heute', woche: 'Diese Woche' },
+    statZeilen: { vorbei: 'Vorbeigelaufen, während jemand da war', angesprochen: 'Angesprochen', gekommen: 'Eingeladene gekommen' },
+    karte: x => `Evangelisation: Level ${x}`
   },
   tor: {
     titel: 'Pforte',

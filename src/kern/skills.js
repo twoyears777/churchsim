@@ -8,6 +8,7 @@ import { START_MITARBEITER } from '../inhalte/mitarbeiter.js';
 import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { MUSIK } from '../inhalte/moebel.js';
 import { HALTUNG_MULTIPLIKATOR } from '../inhalte/forschung.js';
+import { EVANGELISATION } from '../inhalte/evangelisation.js';
 
 // Daten einer Person (wie daten() in personen.js – hier ohne Import, damit keine Kreis-Abhängigkeit entsteht)
 const datenVon = p => (p && (START_MITARBEITER.find(m => m.id === p.id) || p.daten)) || null;
@@ -130,4 +131,23 @@ export function multiplikatorInfo(z, p) {
   return { stufe: st, maxStufe: MS.length, faktor: st ? MS[st - 1].faktor : 1, geleitet,
     naechste: n ? { stufe: st + 1, faktor: n.faktor, preis: n.preis, ab: n.gottesdienste, fehlen: Math.max(0, n.gottesdienste - geleitet),
       freigeschaltet: geleitet >= n.gottesdienste, leistbar: geleitet >= n.gottesdienste && heiligkeit >= n.preis } : null };
+}
+
+// ── Evangelisation-Level (Ehrenamtliche, 26.11. abends): Level 0 … maxLevel, Learning by Doing (Erfahrung pro Stunde vor Ort) ──
+const ES = EVANGELISATION.skill;
+const evangelisationErfahrung = p => (hatSkill(p, 'evangelisation') && skillsVon(p).evangelisation) || 0;
+export function evangelisationLevel(person) {
+  return Math.min(ES.maxLevel, Math.floor(evangelisationErfahrung(person) / ES.erfahrungProLevel + 1e-9));
+}
+// Zeit vor Ort (in Spielminuten) als Erfahrung gutschreiben; beim höchsten Level bleibt es stehen
+export function evangelisationErfahrungDazu(person, minuten) {
+  if (!hatSkill(person, 'evangelisation') || !(minuten > 0)) return;
+  const max = ES.maxLevel * ES.erfahrungProLevel;
+  skillsVon(person).evangelisation = Math.min(max, evangelisationErfahrung(person) + minuten / 60 * ES.erfahrungProStunde);
+}
+// Stand fürs Anzeigen: Level, Fortschritt bis zum nächsten Level (0 … 1), Stunden bis dahin
+export function evangelisationStand(person) {
+  const level = evangelisationLevel(person), e = evangelisationErfahrung(person), max = level >= ES.maxLevel;
+  const fortschritt = max ? 1 : (e - level * ES.erfahrungProLevel) / ES.erfahrungProLevel;
+  return { level, maxLevel: ES.maxLevel, fortschritt, stundenBisNaechstes: max ? null : Math.ceil(((level + 1) * ES.erfahrungProLevel - e) / ES.erfahrungProStunde - 1e-9) };
 }

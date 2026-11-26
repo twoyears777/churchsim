@@ -19,7 +19,8 @@ import { evangelisationAktualisieren, evangelisationPosition, vorOrt, ansprechen
 import { TAG_MIN } from '../src/kern/zeit.js';
 
 const aus = z => () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
-const level = (p, l) => { skillsVon(p).musik = l * MUSIK.erfahrungProLevel; return p; };
+// Evangelisation-Level setzen (seit 26.11. abends zählt dieser Skill, nicht mehr das Musik-Level)
+const level = (p, l) => { skillsVon(p).evangelisation = l * E.skill.erfahrungProLevel; return p; };
 const bis = (z, minute) => { const a = aus(z); while (z.minuten < minute) zeitVorruecken(z, a(), Math.min(5, minute - z.minuten), () => 0.99); };
 // Spiel ohne Passanten, nur mit eigenen Ehrenamtlichen (die Frau des Pastors wird weggenommen)
 function spiel(n = 0) {
@@ -43,7 +44,8 @@ const amFeld = (z, p) => { const q = evangelisationPosition(z, p); return !!q &&
   assert.equal(evangelisationPosition(z, eas[0]), null);           // bleibt an seinem Platz
   assert.equal(eas[1].x, G.x + 3);                                  // sein Platz für die Spielregeln bleibt gleich
   const info = evangelisationInfo(z, aus(z)());
-  assert.equal(info.leute.length, 2); assert.equal(info.max, E.plaetze); assert.equal(info.chance, 50);   // Level 3 + 2 = 50 %
+  assert.equal(info.leute.length, 2); assert.equal(info.max, E.plaetze); assert.equal(info.chance, 35);   // (5 + 3 × 5) + (5 + 2 × 5) = 35 %
+  assert.deepEqual(info.leute.map(p => p.beitrag).sort(), [15, 20]);
   // Um 20 Uhr ist Schluss: sie gehen zurück und sind danach wieder an ihrem Platz
   bis(z, TAG_MIN + 20 * 60 + 1);
   assert.equal(vorOrt(z).length, 0);
@@ -103,20 +105,28 @@ const amFeld = (z, p) => { const q = evangelisationPosition(z, p); return !!q &&
   z.ort.leute = [{ id: 'q1', vorname: 'Quirin', nachname: 'X', voll: 'Quirin X', zufriedenheit: 40, jugend: false },
     { id: 'q2', vorname: 'Rita', nachname: 'X', voll: 'Rita X', zufriedenheit: 40, jugend: false }];
   const [a, b] = z.ort.leute;
-  assert.equal(ansprechen(z, r, a, () => 0.29), 'gottesdienst');      // Level 3 → 30 %
+  assert.equal(ansprechen(z, r, a, () => 0.19), 'gottesdienst');      // Level 3 → 5 % + 15 % = 20 %
   assert.equal(a.neugierig, true); assert.equal(a.eingeladen, 'gottesdienst');
-  assert.equal(ansprechen(z, r, b, () => 0.3), null);                  // 0,3 ≥ 30 % → nicht
+  assert.equal(ansprechen(z, r, b, () => 0.2), null);                  // 0,2 ≥ 20 % → nicht
   assert.equal(ansprechen(z, r, z.besucher[0], () => 0), null);        // Besucher werden nicht angesprochen
   // Kommt nur zum Gottesdienst, nicht zu anderen Veranstaltungen
   werKommt(z, () => 0.5, { art: 'senioren', keineNeuen: true });
   assert.equal(a.neugierig, true, 'bleibt neugierig für den Gottesdienst');
   assert.ok(werKommt(z, () => 0.5, { art: 'gottesdienst', keineNeuen: true }).includes(a));
-  // Höchstens 80 %
+  // Level 10 → 5 % + 50 % = 55 %
   level(eas[0], 10);
   const c = { id: 'q3', vorname: 'Sepp', nachname: 'X', voll: 'Sepp X', zufriedenheit: 40, jugend: false };
   z.ort.leute.push(c);
-  assert.equal(ansprechen(z, r, c, () => 0.8), null);
-  assert.equal(ansprechen(z, r, c, () => 0.79), 'gottesdienst');
+  assert.equal(ansprechen(z, r, c, () => 0.55), null);
+  assert.equal(ansprechen(z, r, c, () => 0.549), 'gottesdienst');
+  // Zähler: 4-mal vorbeigelaufen (Sepp zweimal, der Besucher zählt nicht), 2 angesprochen; ein Eingeladener ist gekommen
+  const st = evangelisationInfo(z, r).statistik;
+  assert.deepEqual(st.heute, { vorbei: 4, angesprochen: 2, gekommen: 1 });
+  assert.deepEqual(st.dieseWoche, st.heute);
+  z.minuten += TAG_MIN;                                                 // neuer Tag: „heute“ beginnt bei 0, die Woche zählt weiter
+  const st2 = evangelisationInfo(z, r).statistik;
+  assert.deepEqual(st2.heute, { vorbei: 0, angesprochen: 0, gekommen: 0 });
+  assert.deepEqual(st2.dieseWoche, st.dieseWoche);
 }
 
 // Jugendliche Ehrenamtliche: nur Jugendliche, nur zum Jugendgottesdienst, nur wenn einer geplant ist
@@ -139,7 +149,7 @@ const amFeld = (z, p) => { const q = evangelisationPosition(z, p); return !!q &&
   typZuweisen(z, raum(), 'gottesdienst'); veranstaltungEinstellen(z, raum(), 'jugend');
   const r2 = aus(z)();
   assert.equal(ansprechen(z, r2, alt, () => 0), null, 'Erwachsene spricht sie nicht an');
-  assert.equal(ansprechen(z, r2, jung, () => 0.49), 'jugend');
+  assert.equal(ansprechen(z, r2, jung, () => 0.29), 'jugend');   // Level 5 → 5 % + 25 % = 30 %
   assert.equal(jung.eingeladen, 'jugend');
   werKommt(z, () => 0.5, { art: 'gottesdienst', keineNeuen: true });
   assert.ok(z.ort.leute.includes(jung), 'kommt nicht zum normalen Gottesdienst');
@@ -179,6 +189,32 @@ const amFeld = (z, p) => { const q = evangelisationPosition(z, p); return !!q &&
   z.minuten = g.tor;
   const pos = passantenPositionen(z).find(x => x.id === g.id);
   assert.equal(pos.x, E.feld.x - 1); assert.ok(Math.abs(pos.y - E.feld.y) < 1e-6);
+}
+
+// Skill „Evangelisation“ (26.11. abends): Level 0 bringt schon 5 %, Erfahrung 1 pro Stunde vor Ort, 50 pro Level, höchstens 80 % zusammen
+{
+  const { z, eas } = spiel(2);
+  z.minuten = TAG_MIN + 9 * 60;
+  bis(z, TAG_MIN + 14 * 60);
+  const r = aus(z)(), info = evangelisationInfo(z, r);
+  assert.equal(info.leute.length, 2);
+  assert.equal(info.chance, 10, 'zwei Anfänger: 5 % + 5 %');
+  const vorher = eas.map(p => skillsVon(p).evangelisation);
+  bis(z, TAG_MIN + 18 * 60);                                         // 4 Stunden später
+  eas.forEach((p, i) => assert.ok(Math.abs(skillsVon(p).evangelisation - vorher[i] - 4) < 0.01, 'eine Erfahrung pro Stunde vor Ort'));
+  bis(z, TAG_MIN + 22 * 60);                                         // um 20 Uhr Schluss: danach keine Erfahrung mehr
+  const abends = eas.map(p => skillsVon(p).evangelisation);
+  bis(z, TAG_MIN + 23 * 60);
+  eas.forEach((p, i) => assert.equal(skillsVon(p).evangelisation, abends[i]));
+  assert.equal(skillsVon(eas[0]).musik, 0, 'keine Musik-Erfahrung');
+  // Höchstens 80 %: zwei mit Level 10 hätten 110 %
+  const { z: z2, eas: e2 } = spiel(2);
+  e2.forEach(p => level(p, 10));
+  z2.minuten = TAG_MIN + 9 * 60;
+  bis(z2, TAG_MIN + 14 * 60);
+  const i2 = evangelisationInfo(z2, aus(z2)());
+  assert.equal(i2.chance, 80); assert.equal(i2.gedeckelt, true);
+  assert.equal(i2.leute[0].evangelisation.level, 10); assert.equal(i2.leute[0].evangelisation.stundenBisNaechstes, null);
 }
 
 console.log('Evangelisation-Tests bestanden.');

@@ -14,5 +14,5 @@ assert.equal(s2.personInfo('ea9').musik.level, 2);
 const d2 = JSON.parse(s2.speicherText());
 assert.equal(d2.zustand.seelsorge.punkte, undefined);
 assert.equal(d2.zustand.personen.find(p => p.id === 'ea9').musikErfahrung, undefined);
-assert.deepEqual(d2.zustand.personen.find(p => p.id === 'ea9').skills, { musik: 250 });
+assert.deepEqual(d2.zustand.personen.find(p => p.id === 'ea9').skills, { musik: 250, evangelisation: 0 });
 console.log('Skills: alle Tests bestanden');

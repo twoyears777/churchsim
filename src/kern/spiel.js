@@ -37,7 +37,7 @@ import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
 import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
-import { skillsAnlegen, musikStand, musikLevel, stufeInfo, multiplikatorKaufen, multiplikatorInfo } from './skills.js';
+import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo } from './skills.js';
 import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
 import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
@@ -808,11 +808,11 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (!d) return null;
       const r = eingesetztIn(z, raeume, p);
       return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: id === 'pastor' ? stufeInfo(z) : null,
-        musik: d.art === 'ehrenamt' ? musikStand(p) : null, multiplikator: multiplikatorInfo(z, p), heiligkeit: Math.floor(z.heiligkeit || 0) };
+        musik: d.art === 'ehrenamt' ? musikStand(p) : null, evangelisation: d.art === 'ehrenamt' ? evangelisationStand(p) : null, multiplikator: multiplikatorInfo(z, p), heiligkeit: Math.floor(z.heiligkeit || 0) };
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'kalenderInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
+  for (const name of ['lage', 'kalenderInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

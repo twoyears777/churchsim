@@ -5,22 +5,25 @@
 //   • Ehrenamtliche, die gerade frei haben, gehen von selbst zum Feld „Evangelisation!“ vor dem Laden (zwischen 8 und 20 Uhr).
 //     Frei = in keinem Raum eingesetzt, oder eingesetzt, aber gerade ohne Dienst (keine Veranstaltung in ihrem Raum,
 //     Kirchkaffee zu, Maschine voll, niemand in der Schlange).
-//   • Höchstens EVANGELISATION.plaetze gleichzeitig; sind mehr frei, gehen die mit dem höchsten Musik-Level
+//   • Höchstens EVANGELISATION.plaetze gleichzeitig; sind mehr frei, gehen die mit dem höchsten Evangelisation-Level
 //     (bei Gleichstand der, der schon länger frei hat).
 //   • Sie brechen so rechtzeitig auf, dass sie zu ihrer nächsten Aufgabe zur gleichen Zeit zurück sind wie sonst
 //     (Beginn der Veranstaltung in ihrem Raum bzw. nächste Öffnung des Kirchkaffees).
-//   • Läuft ein Passant am Feld vorbei, spricht ihn jeder Ehrenamtliche vor Ort mit 10 % je Musik-Level an (zusammen höchstens 80 %).
+//   • Läuft ein Passant am Feld vorbei, spricht ihn jeder Ehrenamtliche vor Ort mit 5 % + 5 % je Evangelisation-Level an
+//     (zusammen höchstens 80 %). Seit 26.11. abends zählt dafür der eigene Skill „Evangelisation“, nicht mehr das Musik-Level.
 //     Wer angesprochen wird, wird neugierig und kommt mit 75 % zum nächsten Gottesdienst – nur dorthin (p.eingeladen).
 //   • Jugendliche Ehrenamtliche sprechen nur Jugendliche an und laden nur zum Jugendgottesdienst ein – und nur,
 //     wenn einer geplant ist. Sonst stehen sie dort, laden aber niemanden ein.
-//   • Bei der Evangelisation gibt es keine Musik-Erfahrung.
+//   • Bei der Evangelisation gibt es keine Musik-Erfahrung, aber Evangelisation-Erfahrung: 1 pro Spielstunde vor Ort
+//     (Learning by Doing, Skill im Skill-Fach der Person, Regeln in skills.js).
 //
 // Der Platz eines Ehrenamtlichen (p.x, p.y) bleibt dabei gleich: Für alle Spielregeln steht er weiter in seinem Raum.
 // Der Gang zum Laden ist eine eigene „Bewegung“ { pfad, laenge, t0 } wie beim Kaffee-Einkauf.
 import { EVANGELISATION as E } from '../inhalte/evangelisation.js';
 import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { daten, eingesetztIn } from './personen.js';
-import { musikLevel } from './skills.js';
+import { evangelisationLevel, evangelisationErfahrungDazu, evangelisationStand } from './skills.js';
+import { zaehlen, statistik } from './evangelisationStatistik.js';
 import { hindernisBei, fassung } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 import { punktAufWeg } from './bewegung.js';
@@ -30,6 +33,8 @@ import { offenBei, kirchkaffeeZustand } from './kirchkaffee.js';
 import { istJugend } from './konfi.js';
 
 const EPS = 1e-6;
+// Beitrag eines Ehrenamtlichen zur Chance pro Passant (0–1): Grund + je Level, ohne Rechenkrümel
+export const beitrag = p => Math.round((E.grundChance + evangelisationLevel(p) * E.chanceProLevel) * 1000) / 1000;
 
 export function evangelisationAnlegen(z) {
   if (!z.evangelisation) z.evangelisation = { ma: {}, freiSeit: {} };
@@ -93,6 +98,12 @@ export function jugendgottesdienstGeplant(z, raeume, termine = termineJetzt(z, r
   return termine.some(x => E.einladung.jugend.includes(x.art) && x.beginn > z.minuten);
 }
 
+// Zeit vor Ort seit der letzten Gutschrift als Evangelisation-Erfahrung gutschreiben (bis höchstens „bis“)
+function gutschreiben(m, p, bisT) {
+  const von = Math.max(m.gezaehlt ?? 0, ankunft(m.bew)), ende = Math.min(bisT, m.bis);
+  if (ende > von) { evangelisationErfahrungDazu(p, ende - von); m.gezaehlt = ende; }
+}
+
 // ---- Alles bis jetzt Fällige ausführen ----
 export function evangelisationAktualisieren(z, raeume) {
   evangelisationAnlegen(z);
@@ -104,6 +115,7 @@ export function evangelisationAktualisieren(z, raeume) {
   // Laufende Gänge
   for (const id of Object.keys(A.ma)) {
     const m = A.ma[id], p = eas.find(x => x.id === id), info = infos.get(id);
+    if (p && m.phase !== 'zurueck') gutschreiben(m, p, t);   // Erfahrung für die Zeit vor Ort
     if (!p || p.x !== m.heim.x || p.y !== m.heim.y || info.jetzt) { delete A.ma[id]; continue; }   // versetzt oder plötzlich im Dienst: gleich wieder an seinem Platz
     if (m.phase === 'zurueck') { if (t >= ankunft(m.bew) - EPS) delete A.ma[id]; continue; }
     // Rechtzeitig zurück: spätestens so aufbrechen, dass er zum Beginn seiner Aufgabe wieder da ist; um 20 Uhr ist Schluss
@@ -116,7 +128,7 @@ export function evangelisationAktualisieren(z, raeume) {
   const belegt = Object.values(A.ma).filter(m => m.phase !== 'zurueck');
   if (belegt.length >= E.plaetze) return;
   const kandidaten = eas.filter(p => !A.ma[p.id] && !infos.get(p.id).jetzt)
-    .sort((a, b) => musikLevel(b) - musikLevel(a) || (A.freiSeit[a.id] ?? t) - (A.freiSeit[b.id] ?? t));
+    .sort((a, b) => evangelisationLevel(b) - evangelisationLevel(a) || (A.freiSeit[a.id] ?? t) - (A.freiSeit[b.id] ?? t));
   for (const p of kandidaten) {
     if (belegt.length >= E.plaetze) break;
     const frei = E.standplaetze.find(s => !belegt.some(m => m.platz.x === s.x && m.platz.y === s.y));
@@ -157,7 +169,7 @@ export function vorOrt(z) {
 function chancenFuer(z, raeume, wer, leute, jugoGeplant) {
   let gd = 0, jg = 0;
   for (const p of leute) {
-    const c = Math.round(musikLevel(p) * E.chanceProLevel * 1000) / 1000;   // ohne Rechenkrümel (3 × 0,1 = 0,3)
+    const c = beitrag(p);
     if (istJugendEA(p)) { if (jugoGeplant && istJugend(wer)) jg += c; }
     else gd += c;
   }
@@ -170,9 +182,11 @@ export function ansprechen(z, raeume, wer, zufall = Math.random) {
   if (!leute.length) return null;
   const c = chancenFuer(z, raeume, wer, leute, leute.some(istJugendEA) && jugendgottesdienstGeplant(z, raeume));
   const summe = c.gottesdienst + c.jugend, gesamt = Math.min(E.maxChance, summe), r = zufall();
+  zaehlen(z, 'vorbei');                                    // Zähler fürs Menü: vorbeigelaufen, während jemand vor Ort war
   if (!summe || r >= gesamt) return null;
   const ziel = r < gesamt * c.jugend / summe ? 'jugend' : 'gottesdienst';
   wer.neugierig = true; wer.eingeladen = ziel;
+  zaehlen(z, 'angesprochen');
   return ziel;
 }
 export { einladungPasst, eingeladenChance } from './besucher.js';
@@ -190,15 +204,25 @@ export function freieEhrenamtliche(z, raeume) {
   const termine = termineJetzt(z, raeume);
   return ehrenamtliche(z).filter(p => !dienst(z, raeume, p, termine).jetzt).length;
 }
-// Menü des Felds: wer vor Ort ist (mit Musik-Level, jugendlich, ob er gerade jemanden einladen kann) und die Chance pro Passant
+// Menü des Felds (26.11. abends ausführlicher): wer vor Ort ist – je Person Evangelisation-Level mit Fortschritt,
+// Beitrag zur Chance und wohin sie einlädt –, die Chance pro Passant, wie viele gerade frei haben und die Zähler heute/diese Woche.
 export function evangelisationInfo(z, raeume) {
-  const leute = vorOrt(z), jugo = jugendgottesdienstGeplant(z, raeume);
-  const gd = leute.filter(p => !istJugendEA(p)).reduce((s, p) => s + musikLevel(p) * E.chanceProLevel, 0);
-  const jg = jugo ? leute.filter(istJugendEA).reduce((s, p) => s + musikLevel(p) * E.chanceProLevel, 0) : 0;
+  const leute = vorOrt(z), jugo = jugendgottesdienstGeplant(z, raeume), t = z.minuten, f = fenster(t);
+  const gd = leute.filter(p => !istJugendEA(p)).reduce((s, p) => s + beitrag(p), 0);
+  const jg = jugo ? leute.filter(istJugendEA).reduce((s, p) => s + beitrag(p), 0) : 0;
+  const prozent = x => Math.round(Math.min(E.maxChance, x) * 100);
   return {
-    max: E.plaetze, jugendgottesdienst: jugo,
-    leute: leute.map(p => ({ id: p.id, name: daten(p).name, musikLevel: musikLevel(p), jugend: istJugendEA(p), laedtEin: !istJugendEA(p) || jugo })),
-    // Chance pro Passant in Prozent: Erwachsene (alle Passanten) und für jugendliche Passanten (mit den jugendlichen Ehrenamtlichen)
-    chance: Math.round(Math.min(E.maxChance, gd) * 100), chanceJugend: Math.round(Math.min(E.maxChance, gd + jg) * 100)
+    max: E.plaetze, jugendgottesdienst: jugo, maxChance: Math.round(E.maxChance * 100),
+    zeiten: { von: E.von, bis: E.bis, jetzt: t >= f.von && t < f.bis },
+    unterwegs: Object.values(z.evangelisation ? z.evangelisation.ma : {}).filter(m => m.phase === 'hin' && t < ankunft(m.bew) - EPS).length,
+    frei: freieEhrenamtliche(z, raeume),
+    leute: leute.map(p => {
+      const jugend = istJugendEA(p), laedtEin = !jugend || jugo;
+      return { id: p.id, name: daten(p).name, jugend, laedtEin, wohin: jugend ? 'jugend' : 'gottesdienst',
+        evangelisation: evangelisationStand(p), beitrag: laedtEin ? Math.round(beitrag(p) * 100) : 0 };
+    }),
+    // Chance pro Passant in Prozent: für alle Passanten (erwachsene EA) und für jugendliche Passanten (dazu die jugendlichen EA)
+    chance: prozent(gd), chanceJugend: prozent(gd + jg), gedeckelt: gd + jg > E.maxChance + EPS,
+    statistik: statistik(z)
   };
 }

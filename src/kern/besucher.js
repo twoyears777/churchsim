@@ -3,6 +3,7 @@
 import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte/namen.js';
 import { NEUGIER } from '../inhalte/ort.js';
 import { EVANGELISATION } from '../inhalte/evangelisation.js';
+import { zaehlen } from './evangelisationStatistik.js';
 import { ZWEITER_BESUCH, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { istJugend, jugendFaktor, jugendZuteilen } from './konfi.js';
 import { platzImGebiet } from './einzugsgebiet.js';
@@ -172,7 +173,7 @@ export function werKommt(z, zufall = Math.random, o = {}) {
     // Bei der Evangelisation eingeladen (26.11.): kommt nur zu der Veranstaltung, zu der er eingeladen wurde – mit 75 %
     if (p.eingeladen) {
       if (!einladungPasst(p, o.art)) continue;
-      if (zufall() < eingeladenChance(f)) neue.push(ausDemOrt(z, p)); else { p.neugierig = false; delete p.eingeladen; }
+      if (zufall() < eingeladenChance(f)) { neue.push(ausDemOrt(z, p)); zaehlen(z, 'gekommen'); } else { p.neugierig = false; delete p.eingeladen; }
       continue;
     }
     if (zufall() < NEUGIER.kommChance * f) neue.push(ausDemOrt(z, p)); else p.neugierig = false;

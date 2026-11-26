@@ -5,5 +5,6 @@
 export const SKILLS = {
   seelsorge: { fuer: { id: 'pastor' }, start: 0 },                              // Erfahrungspunkte → Stufe 1–20 (Zahlen: seelsorge.js)
   musik: { fuer: { art: 'ehrenamt' }, start: 0 },                               // Erfahrung → Musik-Level (Zahlen: MUSIK in moebel.js)
-  multiplikator: { fuer: { art: 'hauptamt' }, start: { stufe: 0, geleitet: 0 } } // Haltungs-Multiplikator (Zahlen: forschung.js)
+  multiplikator: { fuer: { art: 'hauptamt' }, start: { stufe: 0, geleitet: 0 } }, // Haltungs-Multiplikator (Zahlen: forschung.js)
+  evangelisation: { fuer: { art: 'ehrenamt' }, start: 0 }                       // Erfahrung → Evangelisation-Level (Zahlen: EVANGELISATION.skill in evangelisation.js)
 };

@@ -6,8 +6,13 @@ export const EVANGELISATION = {
   plaetze: 2,                                        // so viele Ehrenamtliche gleichzeitig (später mehr über Verbesserungen)
   von: 8, bis: 20,                                   // nur zwischen diesen Uhrzeiten
   reichweite: 3,                                     // Passanten, die so nah (Kästchen) am Feld vorbeilaufen, werden angesprochen
-  chanceProLevel: 0.10,                              // Chance pro Passant: 10 % je Musik-Level ...
-  maxChance: 0.80,                                   // ... mehrere Ehrenamtliche zusammen, höchstens 80 %
+  // Chance pro Passant je Ehrenamtlichem vor Ort: 5 % Grund + 5 % je Evangelisation-Level (Lukas, 26.11. abends; vorher 10 % je Musik-Level)
+  grundChance: 0.05,
+  chanceProLevel: 0.05,
+  maxChance: 0.80,                                   // mehrere Ehrenamtliche zusammen, höchstens 80 %
+  // Skill „Evangelisation“ (Lukas, 26.11. abends): Learning by Doing wie bei Musik – 1 Erfahrung pro Spielstunde vor Ort,
+  // 50 Erfahrung pro Level (so langsam wie Musik: 50 Auftritte pro Level), höchstens Level 10. Später zusätzlich über Schulungen.
+  skill: { erfahrungProStunde: 1, erfahrungProLevel: 50, maxLevel: 10 },
   ladenPassanten: 1.5,                               // am Laden laufen täglich 1,5-mal so viele vorbei wie unten am Tor (zusätzlich)
   // Wohin laden sie ein? Erwachsene Ehrenamtliche zum Gottesdienst (auch Lobpreisgottesdienst),
   // jugendliche Ehrenamtliche nur Jugendliche, nur zum Jugendgottesdienst.

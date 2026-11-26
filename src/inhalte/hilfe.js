@@ -134,7 +134,7 @@ export const HILFE = {
         `**Gelände:** Wege und Außendeko (Busch, Hecke, Baum, Blumenbeet, Bank, Laterne, Schaukasten) unter Bauen → Außen machen das Gelände schöner. Jedes Stück bringt Punkte, höchstens ${GELAENDE.max}. Passanten werden um Gelände ÷ 10 Prozentpunkte öfter neugierig.`,
         `**Schaukasten:** Klick in der Spielansicht auf einen Schaukasten und wähle eine regelmäßige Veranstaltung. Solange sie eingestellt ist, werden Passanten um ${Math.round(SCHAUKASTEN.neugier * 100)} Prozentpunkte öfter neugierig.`,
         // Von Lukas freigegeben (26.11.)
-        '**Evangelisation:** Vor dem Laden sprechen Ehrenamtliche Passanten an. Wer gerade frei hat, geht von selbst hin und ist rechtzeitig zurück bei seiner Aufgabe. Wer angesprochen wird, wird neugierig. Jugendliche Ehrenamtliche laden Jugendliche zum Jugendgottesdienst ein.'
+        '**Evangelisation:** Vor dem Laden sprechen Ehrenamtliche Passanten an. Wer gerade frei hat, geht von selbst hin und ist rechtzeitig zurück bei seiner Aufgabe. Wer angesprochen wird, wird neugierig. Jugendliche Ehrenamtliche laden Jugendliche zum Jugendgottesdienst ein. Je länger jemand dort steht, desto besser wird er darin (Evangelisation-Level).'   // letzter Satz: ENTWURF 26.11. abends
       ]
     },
     {
