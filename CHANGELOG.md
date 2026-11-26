@@ -3,6 +3,11 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.15
+
+**Fehlerbehebung**
+- Die Karte wurde nach dem letzten Update nicht mehr richtig angezeigt – behoben
+
 ## 0.1.14
 
 **Veranstaltungen**

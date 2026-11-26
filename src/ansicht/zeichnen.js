@@ -266,7 +266,8 @@ function dach(ctx, px, py, pw, ph, farbe) {
   ctx.stroke();
 }
 
-function umgebungZeichnen(ctx, z, { k, ox, oy }) {
+function umgebungZeichnen(ctx, z, ansicht) {
+  const { k, ox, oy } = ansicht;
   const P = (x, y, w, h) => [ox + x * k, oy + y * k, w * k, h * k];
   ctx.fillStyle = FARBEN.gruenstreifen; ctx.fillRect(...P(0, 0, z.w, z.h));
   flecken(ctx, ox, oy, z.w, z.h, k, 7);
