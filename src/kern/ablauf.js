@@ -30,7 +30,7 @@ import { seelsorgeSchritt, anfrageOffen } from './seelsorge.js';
 import { kirchkaffeeZustand, kirchkaffeeOffen, gottesdienstKunden, kaffeeAktualisieren, kaffeeSchritt, naechsteSchicht, kaffeeAnlegen, zahlZeigen, amTisch } from './kirchkaffee.js';
 import { fassung } from './moebel.js';
 import { dauerspenderSchritt } from './dauerspender.js';
-import { forschungSchritt, heiligkeitFuerGottesdienst, mitMultiplikator } from './forschung.js';
+import { forschungSchritt, heiligkeitFuerGottesdienst, mitMultiplikator, multiplikatorErfahrung } from './forschung.js';
 import { faktorAmTag } from './kalender.js';
 import { FESTE, ZEITEN } from '../inhalte/kirchenjahr.js';
 import { festSchritt, festPlaeneDerWoche, festeAufraeumen, festAusSchluessel } from './feste.js';
@@ -438,6 +438,9 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   // Lobpreisteam: Jeder, der ein Instrument gespielt hat, bekommt etwas Musik-Erfahrung.
   const info = terminInfo(z, raeume, L);
   if (info && info.g.ausstattung.musik) for (const p of info.g.spieler) musikErfahrungDazu(p);
+  // Haltungs-Multiplikator (Skill des Hauptamtlichen, 26.11.): wer leitet, merken – wirkt beim Abschluss; +1 geleiteter Gottesdienst
+  L.leitung = info && info.p && info.p.leitung ? info.p.leitung.id : null;
+  if (info && info.p) multiplikatorErfahrung(info.p.leitung, L.art);
   // Bedürfnis Lobpreis (25.11.): erfüllt beim Lobpreisgottesdienst und bei jedem Gottesdienst, bei dem ein Lobpreisteam spielt
   L.lobpreis = L.art === 'lobpreis' || !!(info && info.g.ausstattung.musik);
   const betrag = Math.round(summeKollekte * faktor);
@@ -494,6 +497,7 @@ function haltungFuer(art, b, L = {}) {
 function abschliessen(z, raeume, zufall = Math.random, L) {
   const anwesend = [], v = VERANSTALTUNGEN.find(x => x.id === L.art) || {};
   const sitzplatz = v.sitzplatzHaltung === false ? 0 : AENDERUNG.sitzplatz;   // Konfirmandenunterricht: Sitzplatz ist nur Bedingung
+  const leitung = L.leitung ? z.personen.find(p => p.id === L.leitung) || null : null;   // für den Haltungs-Multiplikator
   const foyerListe = foyers(z, raeume);   // Foyer (25.11.): wer auf dem Weg hindurchgelaufen ist, bekommt Haltung
   L.gaeste.forEach((g, i) => { if (g.sitz) g.foyer = foyerBonus(z, raeume, strasse(i), g.sitz, foyerListe); });
   for (const g of L.gaeste) {
@@ -504,8 +508,8 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
     // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
     const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
-    // Haltungs-Multiplikator (Gottesdienst, Lobpreisgottesdienst): vervielfacht die Summe nach allen Boni, nur Pluswerte
-    zufriedenheitAendern(b, mitMultiplikator(z, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0)));
+    // Haltungs-Multiplikator der Leitung (Gottesdienst, Lobpreisgottesdienst): vervielfacht die Summe nach allen Boni, nur Pluswerte
+    zufriedenheitAendern(b, mitMultiplikator(leitung, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0)));
     if (v.konfiTeilnahme) konfiTeilnahme(z, b);   // zählt für die Konfirmation
     if (L.lobpreis) beduerfnisErfuellt(z, b, 'lobpreis', L.woche);   // Bedürfnisse am Ende der Woche (25.11.)
     if (v.spass) beduerfnisErfuellt(z, b, 'spass', L.woche);

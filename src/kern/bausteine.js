@@ -80,8 +80,8 @@ function gottesdienstraum(z, raum, info, v) {
       besucher: nr === 1 && musikWirktAufBesucher ? { min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : null });
   }
 
-  // Haltungs-Multiplikator (gekauft mit Heiligkeit): erst ab Stufe 1 eine Zeile
-  const mult = multiplikatorFaktor(z, v.id);
+  // Haltungs-Multiplikator der Leitung (Skill des Hauptamtlichen): erst ab Stufe 1 eine Zeile
+  const mult = multiplikatorFaktor(info ? info.leitung : null, v.id);
   if (mult > 1) zeilen.push({ id: 'multiplikator', imRaum: true, faktor: mult });
 
   // Zusammen: so wie der Raum jetzt ist

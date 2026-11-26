@@ -693,6 +693,16 @@ export const TEXTE = {
   // ---- Forschungsbaum und Heiligkeit (ALLES ENTWÜRFE von Claude, 25.11. – Lukas formuliert sie selbst) ----
   heiligkeit: 'Heiligkeit',
   heiligkeitHinweis: n => `Jeder Gottesdienstbesucher bringt ${n} Heiligkeit (gutgeschrieben am Ende des Gottesdienstes). Wird beim Forschen verbraucht.`,
+  // Haltungs-Multiplikator auf der Charakter-Karte des Hauptamtlichen (26.11.; Texte von Lukas freigegeben: „passt“)
+  multiplikatorKarte: {
+    titel: (n, max, faktor) => `Haltungs-Multiplikator · Stufe ${n} von ${max} · ×${zahl(faktor)}`,
+    erklaerung: 'Vervielfacht die Haltung, die Besucher am Ende eines Gottesdienstes oder Lobpreisgottesdienstes bekommen, den er leitet – nach allen anderen Boni. Minuswerte bleiben, wie sie sind.',
+    geleitet: (n, ab) => `${n} ${n === 1 ? 'Gottesdienst' : 'Gottesdienste'} geleitet` + (ab ? ` · nächste Stufe ab ${ab}` : ''),
+    kaufen: (stufe, preis) => `Stufe ${stufe} kaufen (${preis} Heiligkeit)`,
+    fehlen: n => `Noch ${n} ${n === 1 ? 'Gottesdienst' : 'Gottesdienste'} bis zur nächsten Stufe`,
+    zuWenig: 'Zu wenig Heiligkeit',
+    fertig: 'Höchste Stufe erreicht'
+  },
   forschung: {
     knopf: 'Forschung',
     titel: 'Forschung',
@@ -708,16 +718,6 @@ export const TEXTE = {
     abbrechenFrage: 'Wirklich abbrechen? Geld und Heiligkeit sind dann weg.',
     abbrechenJa: 'Ja, abbrechen',
     abbrechenNein: 'Weiterforschen',
-    // Von Lukas freigegeben (25.11. abends): Haltungs-Multiplikator im Forschungs-Fenster
-    multiplikator: {
-      titel: 'Haltungs-Multiplikator',
-      erklaerung: 'Vervielfacht die Haltung, die Besucher am Ende eines Gottesdienstes oder Lobpreisgottesdienstes bekommen – nach allen anderen Boni. Minuswerte bleiben, wie sie sind.',
-      stufe: (n, max, faktor) => `Stufe ${n} von ${max} · jetzt ×${zahl(faktor)}`,
-      naechste: (faktor, preis) => `Nächste Stufe: ×${zahl(faktor)} für ${preis} Heiligkeit`,
-      kaufen: 'Kaufen',
-      zuWenig: 'Zu wenig Heiligkeit',
-      fertig: 'Höchste Stufe erreicht'
-    },
     zustand: { gesperrt: 'Erst die vorherige Forschung abschließen', besetzt: 'Es läuft schon eine andere Forschung', geld: 'Zu wenig Geld', heiligkeit: 'Zu wenig Heiligkeit' },
     schliessen: 'Schließen'
   }

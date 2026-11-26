@@ -13,18 +13,20 @@ export const FORSCHUNGEN = [
   { id: 'schulungen1', name: 'Schulungen 1', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'schulungen' }
 ];
 
-// Haltungs-Multiplikator (Lukas, 25.11. abends): vervielfacht die Haltung, die ein Besucher am Ende eines Gottesdienstes
-// bekommt – auf die Summe nach allen Boni (Platz, Gottesdienst, Möbel, Fenster, Musik, Foyer). Startet auf Stufe 0 (×1).
-// Wird sofort mit Heiligkeit gekauft, eine Stufe nach der anderen. Minuswerte werden nicht vervielfacht.
-//   stufen:          Faktor und Preis (Heiligkeit) für Stufe 1, 2, 3, …
+// Haltungs-Multiplikator (Lukas, 25.11. abends; seit 26.11. ein Skill des Hauptamtlichen): vervielfacht die Haltung, die ein
+// Besucher am Ende eines Gottesdienstes bekommt – auf die Summe nach allen Boni (Platz, Gottesdienst, Möbel, Fenster, Musik,
+// Foyer). Wirkt nur bei Gottesdiensten, die dieser Hauptamtliche leitet. Startet auf Stufe 0 (×1). Minuswerte werden nicht vervielfacht.
+// Jeder geleitete Gottesdienst/Lobpreisgottesdienst (auch Feste) gibt +1 Erfahrung. Ist genug Erfahrung da, wird die nächste
+// Stufe auf seiner Charakter-Karte mit Heiligkeit gekauft – sofort, eine nach der anderen.
+//   stufen:          Faktor, Preis (Heiligkeit) und nötige geleitete Gottesdienste für Stufe 1, 2, 3, …
 //   veranstaltungen: wo er wirkt (wie bei der Heiligkeit: Gottesdienst und Lobpreisgottesdienst, Feste laufen als einer davon)
 export const HALTUNG_MULTIPLIKATOR = {
   stufen: [
-    { faktor: 1.3, preis: 100 },
-    { faktor: 1.6, preis: 250 },
-    { faktor: 2.0, preis: 500 },
-    { faktor: 2.5, preis: 1000 },
-    { faktor: 3.0, preis: 2000 }
+    { faktor: 1.3, preis: 100, gottesdienste: 4 },
+    { faktor: 1.6, preis: 250, gottesdienste: 10 },
+    { faktor: 2.0, preis: 500, gottesdienste: 20 },
+    { faktor: 2.5, preis: 1000, gottesdienste: 35 },
+    { faktor: 3.0, preis: 2000, gottesdienste: 55 }
   ],
   veranstaltungen: ['gottesdienst', 'lobpreis']
 };

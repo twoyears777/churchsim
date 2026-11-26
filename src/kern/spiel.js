@@ -391,8 +391,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     forschungStarten(id) { return forschungStarten(z, id); },
     // Laufende Forschung abbrechen (Geld und Heiligkeit sind weg) → 'ok' | 'keine'
     forschungAbbrechen() { return forschungAbbrechen(z); },
-    // Haltungs-Multiplikator: nächste Stufe sofort mit Heiligkeit kaufen → 'ok' | 'max' | 'heiligkeit'
-    multiplikatorKaufen() { return multiplikatorKaufen(z); },
+    // Haltungs-Multiplikator (Skill des Hauptamtlichen): nächste Stufe sofort mit Heiligkeit kaufen
+    // → 'ok' | 'person' | 'max' | 'erfahrung' | 'heiligkeit'
+    multiplikatorKaufen(personId = 'pastor') { return multiplikatorKaufen(z, personId); },
     // Seelsorge-Fenster → 'ok' | 'keine' | 'geld'
     seelsorgeAblehnen() { return seelsorgeAblehnen(z); },
     seelsorgeRat(nr) { return seelsorgeRaten(z, nr, zufall); },
@@ -470,7 +471,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       };
     },
     // Forschungs-Fenster: Heiligkeit, Kontostand und alle Forschungen mit Zustand, Kosten, Dauer (echte Sekunden bei x1) und Fortschritt
-    forschungInfo() { return { heiligkeit: z.heiligkeit, konto: z.konto, forschungen: forschungListe(z), multiplikator: multiplikatorInfo(z) }; },
+    forschungInfo() { return { heiligkeit: z.heiligkeit, konto: z.konto, forschungen: forschungListe(z) }; },
     // Finanz-Fenster: diese Woche (nach Kategorien, Kirchkaffee im Detail), Kassenbuch der Woche, Verlauf früherer Wochen.
     // Wochen und Zeiten wie überall in der Anzeige: Woche ab 1, Tag 0 = Montag. Namen von Möbeln/Veranstaltungen kommen aus den Inhaltsdateien.
     finanzInfo() {
@@ -734,7 +735,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (!d) return null;
       const r = eingesetztIn(z, raeume, p);
       return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: id === 'pastor' ? stufeInfo(z) : null,
-        musik: d.art === 'ehrenamt' ? musikStand(p) : null };
+        musik: d.art === 'ehrenamt' ? musikStand(p) : null, multiplikator: multiplikatorInfo(z, p), heiligkeit: Math.floor(z.heiligkeit || 0) };
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.

@@ -110,7 +110,7 @@ console.log('Zwei-Veranstaltungen-Tests bestanden.');
 {
   const lauf = stufe => {
     const z = gemeinde(), r = raumBei(z);
-    ausstatten(z); z.multiplikator = stufe;
+    ausstatten(z); z.personen.find(p => p.id === 'pastor').multiplikator = stufe;
     veranstaltungEinstellen(z, r, 'lobpreis');
     z.besucher.forEach(b => { b.zufriedenheit = 30; b.lobpreis = 1; });
     z.besucher[9].lobpreis = 0.5;
@@ -120,6 +120,11 @@ console.log('Zwei-Veranstaltungen-Tests bestanden.');
   const ohne = lauf(0), mit = lauf(3);
   assert.ok(ohne[0] > 0);
   assert.deepEqual(mit, ohne.map(x => Math.round(x * 2)));
+  // Skill des Hauptamtlichen (26.11.): der geleitete Gottesdienst zählt als Erfahrung
+  const z = gemeinde(), r = raumBei(z);
+  ausstatten(z); veranstaltungEinstellen(z, r, 'gottesdienst');
+  zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
+  assert.equal(z.personen.find(p => p.id === 'pastor').geleitet, 1);
 }
 console.log('Multiplikator-Gottesdienst-Tests bestanden.');
 console.log('Lobpreis-Haltungs-Tests bestanden.');

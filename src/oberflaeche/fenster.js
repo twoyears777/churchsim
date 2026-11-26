@@ -70,10 +70,24 @@ function personenKarte(f) {
       ${s.freigeschaltet && T.kann[s.freigeschaltet] ? `<p class="unter">${T.jetzt(T.kann[s.freigeschaltet])}</p>` : ''}
       ${s.naechsteFreischaltung && T.kann[s.naechsteFreischaltung] ? `<p class="unter">${T.ab(s.naechsteFreischaltung, T.kann[s.naechsteFreischaltung])}</p>` : ''}`;
   }
+  if (p.multiplikator) skills = (p.seelsorge || p.musik ? skills : '') + multiplikatorSkill(p.multiplikator, p.id);
   return `<h2>${esc(p.name)}</h2>
     <p class="unter">${ART_TEXT[p.art]} · ${p.einsatz ? 'Im Einsatz: ' + p.einsatz : 'Verfügbar'}</p>
     <h3>Skills</h3>${skills}
     <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Haltungs-Multiplikator des Hauptamtlichen (26.11.): Stufe, geleitete Gottesdienste, Kauf der nächsten Stufe mit Heiligkeit
+function multiplikatorSkill(m, id) {
+  const T = TEXTE.multiplikatorKarte, n = m.naechste;
+  const unten = !n ? `<p class="ok">${T.fertig}</p>`
+    : !n.freigeschaltet ? `<p class="fehlt">${T.fehlen(n.fehlen)}</p>`
+    : `${n.leistbar ? '' : `<p class="fehlt">${T.zuWenig}</p>`}
+      <div class="zeile"><button class="haupt" data-multiplikator="${esc(id)}" ${n.leistbar ? '' : 'disabled'}>${T.kaufen(n.stufe, n.preis)}</button></div>`;
+  return `<p class="unter staerker">${T.titel(m.stufe, m.maxStufe, m.faktor)}</p>
+    <p class="unter">${T.erklaerung}</p>
+    <p class="unter">${T.geleitet(m.geleitet, n ? n.ab : null)}</p>
+    ${unten}`;
 }
 
 // Raum-Fenster in der Spielansicht (Gottesdienstraum): Veranstaltung 1, 2, Mitarbeiter, Prognosen.
@@ -640,22 +654,8 @@ function forschungFenster(f) {
   return `<h2>${T.titel}</h2>
     <p class="unter">${T.vorrat(Math.floor(info.heiligkeit), euro(info.konto))}</p>
     <div class="forschung-baum">${knoten}</div>
-    ${multiplikatorAbschnitt(info.multiplikator)}
     <div class="zeile"><button data-zu>${T.schliessen}</button></div>`;
 }
-// Haltungs-Multiplikator: eigener Abschnitt unter dem Baum, sofort mit Heiligkeit kaufen
-function multiplikatorAbschnitt(m) {
-  const T = TEXTE.forschung.multiplikator, n = m.naechste;
-  return `<div class="forschung-knoten multiplikator">
-    <b>${T.titel}</b>
-    <p class="unter">${T.erklaerung}</p>
-    <p class="unter staerker">${T.stufe(m.stufe, m.maxStufe, m.faktor)}</p>
-    ${n ? `<p class="unter">${T.naechste(n.faktor, n.preis)}</p>${n.leistbar ? '' : `<p class="fehlt">${T.zuWenig}</p>`}
-      <div class="zeile"><button class="haupt" data-multiplikator ${n.leistbar ? '' : 'disabled'}>${T.kaufen}</button></div>`
-      : `<p class="ok">${T.fertig}</p>`}
-  </div>`;
-}
-
 // Knöpfe in den Fenstern → Befehle ans Spiel
 export function fensterEinrichten() {
   maske().addEventListener('click', e => {
@@ -697,7 +697,7 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);
     else if (b.dataset.forschung) { spiel.forschungStarten(b.dataset.forschung); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-forschung-abbrechen')) f.abbrechenFragen = true;
-    else if (b.hasAttribute('data-multiplikator')) spiel.multiplikatorKaufen();
+    else if (b.dataset.multiplikator) spiel.multiplikatorKaufen(b.dataset.multiplikator);
     else if (b.hasAttribute('data-forschung-abbrechen-nein')) delete f.abbrechenFragen;
     else if (b.hasAttribute('data-forschung-abbrechen-ja')) { spiel.forschungAbbrechen(); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-bus-ausbauen')) spiel.busAusbauen();

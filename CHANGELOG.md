@@ -3,6 +3,13 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.12
+
+**Pastor**
+- Der Haltungs-Multiplikator ist jetzt ein Skill von Pastor Harder und wirkt nur bei Gottesdiensten, die er leitet
+- Jeder geleitete Gottesdienst bringt Erfahrung – ist genug da, kaufst du die nächste Stufe auf seiner Karte mit Heiligkeit
+- Schon gekaufte Stufen bleiben erhalten
+
 ## 0.1.11
 
 **Besucher**

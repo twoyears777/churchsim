@@ -7,13 +7,19 @@
 import { FORSCHUNGEN, HEILIGKEIT, HALTUNG_MULTIPLIKATOR } from '../inhalte/forschung.js';
 import { spielMinuten } from './zeit.js';
 import { kannBezahlen, buchen } from './finanzen.js';
+import { daten } from './personen.js';
 
 export function forschungAnlegen(z) {
   if (typeof z.heiligkeit !== 'number') z.heiligkeit = 0;
   if (!z.forschung) z.forschung = { laeuft: null, fertig: [] };
   if (!Array.isArray(z.forschung.fertig)) z.forschung.fertig = [];
   if (z.forschung.laeuft === undefined) z.forschung.laeuft = null;
-  if (typeof z.multiplikator !== 'number') z.multiplikator = 0;   // Stufe des Haltungs-Multiplikators (0 = noch nicht gekauft)
+  // 0.1.11 hatte den Multiplikator für die ganze Gemeinde: gekaufte Stufen gehen auf Pastor Harder über (26.11.)
+  if (typeof z.multiplikator === 'number') {
+    const pastor = (z.personen || []).find(p => p.id === 'pastor');
+    if (pastor) pastor.multiplikator = Math.max(pastor.multiplikator || 0, z.multiplikator);
+    if (pastor || !z.multiplikator) delete z.multiplikator;
+  }
 }
 
 // Gottesdienst zu Ende: Heiligkeit für die anwesenden Besucher
@@ -84,31 +90,42 @@ export function forschungListe(z) {
   });
 }
 
-// ── Haltungs-Multiplikator (Lukas, 25.11. abends) ──
-// Gespeichert wird nur die Stufe: z.multiplikator (0, 1, 2, …)
+// ── Haltungs-Multiplikator (Lukas, 25.11. abends; seit 26.11. ein Skill des Hauptamtlichen) ──
+// Gespeichert an der Person: person.multiplikator (Stufe 0, 1, 2, …), person.geleitet (geleitete Gottesdienste = Erfahrung)
 const MS = HALTUNG_MULTIPLIKATOR.stufen;
-export function multiplikatorFaktor(z, art) {
-  const st = (z && z.multiplikator) || 0;
+const istHauptamt = p => { const d = p && daten(p); return !!(d && d.art === 'hauptamt'); };
+// Faktor dieser Leitung bei dieser Veranstaltung (1, wenn keine Leitung, kein Hauptamtlicher oder nicht Gottesdienst/Lobpreis)
+export function multiplikatorFaktor(leitung, art) {
+  const st = (istHauptamt(leitung) && leitung.multiplikator) || 0;
   return st > 0 && HALTUNG_MULTIPLIKATOR.veranstaltungen.includes(art) ? MS[st - 1].faktor : 1;
 }
 // Haltung nach dem Multiplikator: nur Pluswerte werden vervielfacht, gerundet auf ganze Punkte
-export function mitMultiplikator(z, art, haltung) {
-  return haltung > 0 ? Math.round(haltung * multiplikatorFaktor(z, art)) : haltung;
+export function mitMultiplikator(leitung, art, haltung) {
+  return haltung > 0 ? Math.round(haltung * multiplikatorFaktor(leitung, art)) : haltung;
 }
-// Nächste Stufe kaufen → 'ok' | 'max' (alle Stufen gekauft) | 'heiligkeit'
-export function multiplikatorKaufen(z) {
+// Ein Gottesdienst/Lobpreisgottesdienst ist zu Ende: die Leitung bekommt +1 Erfahrung
+export function multiplikatorErfahrung(leitung, art) {
+  if (istHauptamt(leitung) && HALTUNG_MULTIPLIKATOR.veranstaltungen.includes(art)) leitung.geleitet = (leitung.geleitet || 0) + 1;
+}
+// Nächste Stufe kaufen → 'ok' | 'person' (kein Hauptamtlicher) | 'max' | 'erfahrung' (zu wenig geleitet) | 'heiligkeit'
+export function multiplikatorKaufen(z, personId) {
   forschungAnlegen(z);
-  const n = MS[z.multiplikator];
+  const p = (z.personen || []).find(x => x.id === personId);
+  if (!istHauptamt(p)) return 'person';
+  const n = MS[p.multiplikator || 0];
   if (!n) return 'max';
+  if ((p.geleitet || 0) < n.gottesdienste) return 'erfahrung';
   if (z.heiligkeit < n.preis) return 'heiligkeit';
   z.heiligkeit -= n.preis;
-  z.multiplikator++;
+  p.multiplikator = (p.multiplikator || 0) + 1;
   return 'ok';
 }
-// Für das Forschungs-Fenster: jetzige Stufe/Faktor, nächste Stufe mit Preis (null, wenn alles gekauft) und Zustand
-export function multiplikatorInfo(z) {
+// Für die Charakter-Karte: Stufe/Faktor, geleitete Gottesdienste, nächste Stufe (null, wenn alles gekauft)
+export function multiplikatorInfo(z, p) {
   forschungAnlegen(z);
-  const st = z.multiplikator, n = MS[st];
-  return { stufe: st, maxStufe: MS.length, faktor: st ? MS[st - 1].faktor : 1,
-    naechste: n ? { stufe: st + 1, faktor: n.faktor, preis: n.preis, leistbar: z.heiligkeit >= n.preis } : null };
+  if (!istHauptamt(p)) return null;
+  const st = p.multiplikator || 0, n = MS[st], geleitet = p.geleitet || 0;
+  return { stufe: st, maxStufe: MS.length, faktor: st ? MS[st - 1].faktor : 1, geleitet,
+    naechste: n ? { stufe: st + 1, faktor: n.faktor, preis: n.preis, ab: n.gottesdienste, fehlen: Math.max(0, n.gottesdienste - geleitet),
+      freigeschaltet: geleitet >= n.gottesdienste, leistbar: geleitet >= n.gottesdienste && z.heiligkeit >= n.preis } : null };
 }
