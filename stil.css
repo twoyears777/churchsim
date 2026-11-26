@@ -56,6 +56,8 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .personen li small { color: #b9b4a8; }
 .personen li.leer { cursor: default; color: #9d988c; font-style: italic; }
 .personen li.leer:hover { background: none; }
+.personen.nurLesen li { cursor: default; display: block; }   /* reine Anzeige (z. B. Evangelisation): kein Hover-Balken */
+.personen.nurLesen li:hover { background: none; }
 .finanzen { width: 100%; border-collapse: collapse; font-size: 14px; }
 .finanzen td { padding: 4px 0; }
 .finanzen .zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

@@ -302,7 +302,7 @@ function torFenster() {
 function evangelisationFenster() {
   const e = ui.spiel.evangelisationInfo(), T = TEXTE.evangelisation;
   const leute = e.leute.length
-    ? `<ul class="personen">${e.leute.map(p => `<li>${p.name}${p.laedtEin ? '' : `<br><span class="unter">${T.keinJugo(p.name)}</span>`}</li>`).join('')}</ul>`
+    ? `<ul class="personen nurLesen">${e.leute.map(p => `<li>${p.name}${p.laedtEin ? '' : `<br><span class="unter">${T.keinJugo(p.name)}</span>`}</li>`).join('')}</ul>`
     : `<p class="unter">${T.niemand}</p>`;
   return `<h2>${T.titel}</h2><p>${T.info}</p>
     <p class="unter staerker">${T.vorOrt(e.leute.length, e.max)}</p>${leute}

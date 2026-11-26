@@ -139,7 +139,8 @@ export function evangelisationSchritt(z) {
   }
   // Regelmäßig schauen, ob jemand frei hat (nur tagsüber); nachts erst wieder morgens
   if (t < f.von) zeiten.push(f.von);
-  else if (t < f.bis) zeiten.push(Math.min(f.bis, (Math.floor(t / E.pruefen + EPS) + 1) * E.pruefen));   // feste Uhrzeiten (:00, :30) else zeiten.push(f.morgen);
+  else if (t < f.bis) zeiten.push(Math.min(f.bis, (Math.floor(t / E.pruefen + EPS) + 1) * E.pruefen));   // feste Uhrzeiten (:00, :30)
+  else zeiten.push(f.morgen);
   const naechste = Math.min(...zeiten.filter(x => x > t + EPS));
   return Number.isFinite(naechste) ? { zeit: naechste, tun: (zz, rr) => evangelisationAktualisieren(zz, rr) } : null;
 }

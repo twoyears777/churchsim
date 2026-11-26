@@ -33,9 +33,12 @@ function naechste(e, liste, radius) {
   }
   return beste;
 }
-const figurBei = e => naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id, x: p.x, y: p.y })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
+// Auf dem Feld „Evangelisation!“ selbst gewinnt immer das Feld – sonst schnappt sich ein Ehrenamtlicher, der direkt daneben steht,
+// oder ein vorbeilaufender Passant den Klick und das Menü lässt sich nicht öffnen (Fehler, Lukas 26.11.).
+const aufEvangelisationsFeld = e => { const f = feldAus(e); return ui.spiel.evangelisationBei(f.x, f.y); };
+const figurBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id, x: p.x, y: p.y })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
   Math.max(22, ui.ansicht.k * 1.1));
-const besucherBei = e => naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
+const besucherBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
 const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
 const stuhlBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'stuhl' ? m : null; };
 const schaukastenBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'schaukasten' ? m : null; };
