@@ -2,8 +2,8 @@
 // Zahlen von Lukas freigegeben (25.11.), nach dem Testen leicht anpassbar.
 export const SEELSORGE = {
   // 20 Stufen (Lukas, 25.11. abends): neue Freischaltungen nur alle 5 Stufen, dazwischen bringt jede Stufe mehr Erfolgschance.
-  // Erfahrungspunkte je Stufe: in jedem 5er-Block 1 Punkt teurer (Stufe 2–5: je 2, 6–10: je 3, 11–15: je 4, 16–20: je 5)
-  stufeAb: [0, 2, 4, 6, 8, 11, 14, 17, 20, 23, 27, 31, 35, 39, 43, 48, 53, 58, 63, 68],
+  // Erfahrungspunkte je Stufe (Lukas, 26.11.: langsamer): Stufe n kostet n Punkte (Stufe 2: 2, Stufe 3: 3 … Stufe 20: 20) → Stufe 20 bei 209
+  stufeAb: [0, 2, 5, 9, 14, 20, 27, 35, 44, 54, 65, 77, 90, 104, 119, 135, 152, 170, 189, 209],
   // so oft im Schnitt fragt jemand pro Woche, je nach Stufe: 1 bis Stufe 9, ab 10: 1,5, ab 15: 2, auf Stufe 20: 3
   anfragenProWoche: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5, 1.5, 1.5, 1.5, 1.5, 2, 2, 2, 2, 2, 3],
   anfangsSchub: { anfragen: 10, faktor: 2 }, // die ersten 10 Anfragen: anfangs doppelt so oft, mit jeder Anfrage weniger, ab der 11. normal

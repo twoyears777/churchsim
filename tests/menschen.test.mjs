@@ -93,7 +93,7 @@ console.log('Neugier-Tests bestanden.');
 
 // Seelsorge: Stufen, Ablehnen, Rat, Kosten, Spende, Passant wird neugierig
 {
-  assert.deepEqual([0, 1, 2, 3, 7, 8, 11, 23, 43, 67, 68, 99].map(stufe), [1, 1, 2, 2, 4, 5, 6, 10, 15, 19, 20, 20]);
+  assert.deepEqual([0, 1, 2, 4, 9, 14, 20, 54, 119, 208, 209, 300].map(stufe), [1, 1, 2, 2, 4, 5, 6, 10, 15, 19, 20, 20]);
   const z = neuesSpiel(() => 0.5), b = z.besucher[0];
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
   assert.equal(schliessen(z), 'keine');                              // erst antworten
@@ -118,7 +118,7 @@ console.log('Neugier-Tests bestanden.');
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
   raten(z, 0, () => 0.714); assert.equal(z.seelsorge.anfrage.ergebnis.gut, true); schliessen(z);
   // Aufstieg auf Stufe 5: Freischaltung „bester Rat“
-  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 7;
+  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 13;
   z.seelsorge.anfrage = { id: b.id, situation: 'nachbar', phase: 'frage', ergebnis: null };
   raten(z, 0, () => 0.99); e0 = z.seelsorge.anfrage.ergebnis;
   assert.equal(e0.neueStufe, 5); assert.equal(e0.freischaltung, 5); schliessen(z);
@@ -152,16 +152,16 @@ console.log('Neugier-Tests bestanden.');
   assert.equal(a.haltung, b.zufriedenheit); assert.equal(a.besuche, b.besuche || 0);
   assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[false, null, null], [false, null, null], [false, null, null]]);
   // Stufe 4: noch nichts zu sehen
-  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 6; a = frage();
+  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 13; a = frage();
   assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[false, null, null], [false, null, null], [false, null, null]]);
   // Stufe 5–9: nur der passendste Rat ist markiert
-  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 8; a = frage();
+  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 14; a = frage();
   assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[true, null, null], [false, null, null], [false, null, null]]);
   // Stufe 10: Einschätzung für jeden Rat (Nachbar: 70 %, 50 %, 30 % + 13,5), keine Markierung, keine Prozent
-  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 23; a = frage();
+  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 54; a = frage();
   assert.deepEqual(a.raete.map(r => [r.beste, r.einschaetzung, r.prozent]), [[false, 'gut', null], [false, 'unsicher', null], [false, 'unsicher', null]]);
   // Stufe 15: dazu die genaue Chance (Bonus +21)
-  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 43; a = frage();
+  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 119; a = frage();
   assert.deepEqual(a.raete.map(r => r.prozent), [91, 71, 51]);
   assert.deepEqual(a.raete.map(r => r.einschaetzung), ['gut', 'gut', 'unsicher']);
   // Ergebnis: Haltung vorher → nachher und Chance zu kommen (nur bei Besuchern)
@@ -202,7 +202,7 @@ console.log('Seelsorge-Tests bestanden.');
 {
   // Stufe 20 (immer guter Rat) etwa 3 pro Woche
   const zufall = saat(5), { z, aus } = gemeinde(zufall);
-  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 68;
+  skillsVon(z.personen.find(p => p.id === 'pastor')).seelsorge = 209;
   const n = laufen(z, aus, 30 * WOCHE_MIN, zufall);
   assert.ok(n / 30 > 2.3 && n / 30 < 3.8, `Anfragen pro Woche: ${n / 30}`);   // 3 + Anfangsschub; Zufall streut (12 Läufe: 2,4–3,7)
 }

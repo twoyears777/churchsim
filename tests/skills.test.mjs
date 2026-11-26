@@ -6,7 +6,7 @@ const d = JSON.parse(s.speicherText());
 const pa = d.zustand.personen.find(p => p.id === 'pastor');
 assert.equal(pa.skills.seelsorge, 0); assert.deepEqual(pa.skills.multiplikator, { stufe: 0, geleitet: 0 });
 assert.equal(d.zustand.seelsorge.punkte, undefined);
-delete pa.skills; d.zustand.seelsorge.punkte = 23;
+delete pa.skills; d.zustand.seelsorge.punkte = 54;
 d.zustand.personen.push({ id: 'ea9', x: 1, y: 1, daten: { name: 'Erna', kuerzel: 'E', art: 'ehrenamt' }, musikErfahrung: 250 });
 const s2 = spielStarten(JSON.stringify(d), () => 0.5);
 assert.equal(s2.personInfo('pastor').seelsorge.stufe, 10);
