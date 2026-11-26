@@ -24,7 +24,7 @@ import { punktAufWeg, strasse, strecke } from './bewegung.js';
 import { gibtToiletten, wertMitnehmen, mussZurToilette, wannZurToilette, gangJetzt, gangOrt } from './toiletten.js';
 import { umherPosition } from './umherlaufen.js';
 import { slotBeginn, zeitpunkt } from './zeit.js';
-import { LAUFTEMPO, SLOTS, DAUER } from '../inhalte/zeit.js';
+import { LAUFTEMPO, SLOTS, DAUER, MELDUNG_DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
 import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN } from '../inhalte/kirchkaffee.js';
 import { GRUNDSTUECK, GEHWEGE, LADEN } from '../inhalte/umgebung.js';
@@ -271,6 +271,8 @@ function stehplatz(z, stationen, s) {
 }
 // ---- Sitzplätze ----
 // Grenzt ein Tisch direkt an diesen Stuhl (links, rechts, oben, unten)?
+// An einem Tisch ist ein Stuhl, wenn er direkt daneben steht (oben, unten, links, rechts) – also höchstens so viele je Tisch
+export const STUEHLE_JE_TISCH = NACHBARN.length;
 export function amTisch(z, m) { return NACHBARN.some(([dx, dy]) => { const n = moebelBei(z, m.x + dx, m.y + dy); return !!n && n.art === 'tisch'; }); }
 // Trinkgeld, das ein Kunde auf diesem Stuhl beim Gehen gibt (auf Cent gerundet)
 export function trinkgeldFuer(z, m) {
@@ -600,9 +602,8 @@ export function kaffeeLaden(z) {
     .map(m => ({ x: m.aufgabe.maschine.x, y: m.aufgabe.maschine.y, anteil: Math.max(0, Math.min(1, 1 - (m.aufgabe.bis - z.minuten) / LADEN_MINUTEN)) }));
 }
 export function kaffeeZahlen(z) { return z.kaffee ? z.kaffee.zahlen.map(e => ({ nr: e.nr, x: e.x, y: e.y, betrag: e.betrag, art: e.art || null })) : []; }
-export const MELDUNG_KAFFEE = 120;
 export function kaffeeMeldung(z) {
   const m = z.kaffee && z.kaffee.meldung;
-  return m && z.minuten - m.zeit < MELDUNG_KAFFEE ? m : null;
+  return m && z.minuten - m.zeit < MELDUNG_DAUER ? m : null;
 }
 export function imKirchkaffee(z, id) { return !!(z.kaffee && z.kaffee.kunden.some(k => k.id === id)); }

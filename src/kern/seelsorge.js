@@ -11,7 +11,7 @@ import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 import { strasse, punktAufWeg } from './bewegung.js';
-import { seelsorgeStufe, seelsorgePunkteDazu } from './skills.js';
+import { seelsorgeStufe, seelsorgePunkteDazu, seelsorgerVon } from './skills.js';
 
 export function seelsorgeAnlegen(z) {
   if (!z.seelsorge) z.seelsorge = { anfrage: null, tag: -1, pruefungen: [], letzte: null };
@@ -28,7 +28,7 @@ export function schub(anzahl) {
 
 // Weg vom Tor bis neben den Pastor (null, wenn er nicht erreichbar ist)
 function wegZumPastor(z, zufall) {
-  const pastor = z.personen.find(p => p.id === 'pastor');
+  const pastor = seelsorgerVon(z);
   if (!pastor) return null;
   const blockiert = (x, y) => hindernisBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
   const start = strasse(Math.floor(zufall() * 4));

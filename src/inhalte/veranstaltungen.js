@@ -44,7 +44,6 @@ export const VERANSTALTUNGEN = [
 ];
 // Spontane Spende im Gemeindesaal (Lukas, 25.11.): jeder anwesende Besucher mit dieser Chance zufällig min … max € (ganze Euro)
 export const SPONTANE_SPENDE = { chance: 0.1, min: 1, max: 3 };
-export const KEINE_VERANSTALTUNG = 'Keine';
 
 // Plätze für Veranstaltungen pro Raum (Lukas, 25.11.): am Anfang 1; Kanzel und Altar im Raum schalten den 2. frei.
 // Gilt für den Gottesdienstraum; andere Raumtypen können eigene Plätze haben (raumtypen.js → plaetze).

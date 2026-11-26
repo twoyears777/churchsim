@@ -1,4 +1,5 @@
-// Inhaltsdatei: sichtbare Texte, die mit 0.1.2 neu dazugekommen sind.
+// Inhaltsdatei: alle sichtbaren Texte des Spiels an einem Ort (Ausnahmen: Hilfe in hilfe.js, Namen in den Steckbriefen wie moebel.js).
+// Feste Beschriftungen in index.html holen sich ihren Text über data-text="…" von hier.
 // ENTWÜRFE von Claude – Lukas formuliert sie selbst, seine Fassung wird hier übernommen.
 // Zahlen im deutschen Format: 1.05 → „1,05“; Geld: 1.07 → „1,07 €“ (stellen = Nachkommastellen, 0 bei glatten Beträgen)
 import { BAUKOSTEN, FENSTER } from './bau.js';
@@ -496,6 +497,10 @@ export const TEXTE = {
 
   // Editor
   hinweise: {
+    // Wand, Tür, Abriss: standen bis 26.11. direkt in eingaben.js – Wortlaut unverändert
+    wand: 'Zieh ein Rechteck, um Wände zu bauen.',
+    tuer: 'Klicke auf eine Wand, um eine Tür zu setzen oder zu entfernen.',   // TODO Lukas: Preis dazuschreiben? (Vorschlag vorgelegt 26.11.)
+    abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
     keinWerkzeug: 'Wähle unten aus, was du bauen möchtest.',   // nach Rechtsklick: nichts gewählt (Entwurf von Claude, von Lukas freigegeben 25.11.)
     stuhl: 'Klicke, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
     kaffeemaschine: 'Klicke, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
@@ -564,7 +569,8 @@ export const TEXTE = {
     alleInfo: 'Jeder Stuhl im Raum steigt eine Stufe.',
     hoechste: 'Höchste Stufe erreicht.',
     alleHoechste: 'Alle Stühle in diesem Raum sind auf der höchsten Stufe.',
-    keinGeld: 'Nicht genug Geld.'
+    keinGeld: 'Nicht genug Geld.',
+    nichtGenugGeld: preis => `Nicht genug Geld für einen Stuhl (${preis}).`   // stand bis 26.11. in eingaben.js
   },
   // Menü der Pforte (in der Spielansicht aufs Tor tippen)
   // Evangelisation vor dem Laden (Texte von Lukas freigegeben, 26.11.)
@@ -644,6 +650,7 @@ export const TEXTE = {
     innen: 'Straße und Parkplätze gehören nach draußen, nicht in einen Raum.',
     bekanntheit: n => `Parkplätze kannst du ab Bekanntheit ${n} bauen.`,
     strasseGeld: 'Das Geld hat nicht für die ganze Straße gereicht.',
+    strasse: 'Straße',   // Name in „Nicht genug Geld für Straße“ (stand bis 26.11. in eingaben.js)
     // ---- ENTWÜRFE von Claude (Wege und Außendeko, 25.11.) ----
     innenDeko: 'Außendeko gehört nach draußen, nicht in einen Raum.',
     bekanntheitTeil: (name, n) => `${name}: erst ab Bekanntheit ${n}.`,
@@ -814,5 +821,49 @@ export const TEXTE = {
     grund: { fest: 'wegen eines Fests', raum: 'Raum nicht fertig', keine: 'nichts eingestellt', leitung: 'kein Hauptamtlicher', gitarre: 'Gitarre fehlt',
       gesperrt: 'Platz gesperrt', musiker: 'zu wenige Musiker', ehrenamt: 'kein Ehrenamtlicher', mitarbeiter: 'kein Mitarbeiter', musikLevel: 'Musik-Level zu niedrig',
       tisch: 'Tisch fehlt', klavier: 'Klavier fehlt', stuehle: 'zu wenige Stühle', stuehleTisch: 'zu wenige Stühle am Tisch' }
-  }
+  },
+
+  // ---- Texte, die bis 26.11. direkt im Code standen (index.html, fenster.js, anzeigen.js, zeichnen.js) – Wortlaut unverändert ----
+  // Feste Beschriftungen der Seite (in index.html über data-text="seite.…" eingesetzt)
+  seite: {
+    mitarbeiter: 'Mitarbeiter',
+    hauptamtliche: 'Hauptamtliche',
+    ehrenamtliche: 'Ehrenamtliche',
+    verfuegbar: 'verfügbar',
+    finanzen: 'Finanzen',
+    einnahmenVoraus: 'Voraussichtliche Einnahmen',
+    ausgabenVoraus: 'Voraussichtliche Ausgaben',
+    besucher: 'Besucher',
+    bauen: 'Bauen',
+    rueckgaengig: 'Rückgängig',
+    neu: 'Neu',
+    neuSicher: 'Wirklich leeren?',
+    fertig: 'Fertig',
+    keineHauptamtlichen: 'Noch keine Hauptamtlichen',
+    keineEhrenamtlichen: 'Noch keine Ehrenamtlichen'
+  },
+  // Fenster „Raumfunktion“ im Editor
+  raumFunktion: {
+    titel: 'Raumfunktion',
+    keineTuer: 'Dieser Raum hat noch keine Tür.',
+    entfernen: 'Funktion entfernen',
+    mind: groesse => `mind. ${groesse}`,
+    zuKlein: groesse => `zu klein, mind. ${groesse}`
+  },
+  // Beschriftung der Räume auf der Karte
+  raumAufKarte: {
+    ohneFunktion: 'Ohne Funktion',
+    keineVeranstaltung: 'Keine Veranstaltung',
+    probleme: { tuer: 'Tür fehlt', verbindung: 'Verbindungstür zum Gottesdienstraum fehlt' },
+    zuKlein: (b, h) => `zu klein (mind. ${b} × ${h})`
+  },
+  // Charakter-Karte eines Mitarbeiters
+  personKarte: {
+    art: { hauptamt: 'Hauptamtlich', ehrenamt: 'Ehrenamtlich' },
+    imEinsatz: wo => 'Im Einsatz: ' + wo,
+    verfuegbar: 'Verfügbar',
+    skills: 'Skills',
+    skillsSpaeter: 'Skills folgen später'
+  },
+  keineVeranstaltung: 'Keine'   // Auswahl im Raum-Fenster und Kalender (stand bis 26.11. als KEINE_VERANSTALTUNG in veranstaltungen.js)
 };

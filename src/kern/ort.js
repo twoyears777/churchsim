@@ -4,7 +4,7 @@
 // Kennt keine Grafik: liefert nur Positionen und Zustände.
 import { ORT, NEUGIER, PLAKAT } from '../inhalte/ort.js';
 import { GRUNDSTUECK, GEHWEGE, WELT } from '../inhalte/umgebung.js';
-import { LAUFTEMPO } from '../inhalte/zeit.js';
+import { LAUFTEMPO, MELDUNG_DAUER } from '../inhalte/zeit.js';
 import { TAG_MIN } from './zeit.js';
 import { neuePerson, kaffeeVorliebe } from './besucher.js';
 import { platzImGebiet } from './einzugsgebiet.js';
@@ -23,7 +23,6 @@ const gehwegY = () => (GEHWEGE.find(w => w.w > w.h && w.y >= G.y + G.h) || { y: 
 const FELD = EVANGELISATION.feld;
 const ladenGehwegX = () => { const w = GEHWEGE.filter(w => w.h > w.w && w.x < FELD.x).sort((a, b) => b.x - a.x)[0]; return w ? w.x : FELD.x - 1; };
 const zwischen = ([a, b], zufall) => a + Math.floor(zufall() * (b - a + 1));
-export const MELDUNG_DAUER = 120;                                     // so lange (Spielminuten) bleibt eine Meldung stehen
 
 export function ortAnlegen(z) {
   if (!z.ort) z.ort = { leute: [], tag: -1, gaenge: [], meldung: null };

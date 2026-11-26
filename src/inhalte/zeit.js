@@ -16,3 +16,8 @@ export const DAUER = { gottesdienst: 60, kirchkaffee: 120 };  // Spielminuten; K
 export const ANREISE_VORLAUF = 180;   // so viele Minuten vor Beginn machen sich die Besucher auf den Weg
 export const LAUFTEMPO = 0.25;        // Kästchen pro Spielminute (25.11.: halbiert, damit man Figuren besser anklicken kann)
 export const ABSTAND = 2;             // Spielminuten zwischen zwei Besuchern
+export const HEIMWEG = 120;           // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause (stand bis 26.11. in kern/ablauf.js)
+
+// Meldungen unten rechts (Ort, Kirchkaffee, Konfi): so lange (Spielminuten) bleiben sie stehen.
+// Stand bis 26.11. dreimal einzeln im Code (ort.js, kirchkaffee.js, konfi.js) – jetzt nur noch hier.
+export const MELDUNG_DAUER = 120;

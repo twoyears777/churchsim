@@ -6,11 +6,8 @@ import { bauleisteEinrichten, werkzeugWaehlen, imUntermenue, hauptmenueZeigen } 
 import { hauptmenueEinrichten, menueOeffnen, menueEscape } from './hauptmenue.js';
 
 const HINWEISE = {
-  wand: 'Zieh ein Rechteck, um Wände zu bauen.',
-  tuer: 'Klicke auf eine Wand, um eine Tür zu setzen oder zu entfernen.',   // TODO Lukas: Preis dazuschreiben? (Vorschlag vorgelegt 26.11.)
   ...TEXTE.hinweise,
-  ...TEXTE.hinweiseAussen,
-  abriss: 'Zieh über den Bereich, der abgerissen werden soll.'
+  ...TEXTE.hinweiseAussen
 };
 const hinweisFuer = id => HINWEISE[id || 'keinWerkzeug'];   // ohne gewähltes Werkzeug: eigener Hinweis
 const leinwand = $('karte');
@@ -152,7 +149,7 @@ function loslassen(e) {
     }
     else if (v.art === 'strasse') {
       const r = spiel.strasseBauen(v.x0, v.y0, v.x1, v.y1);
-      if (r.ergebnis === 'geld') kurzerHinweis(r.gebaut ? TEXTE.aussenMeldung.strasseGeld : TEXTE.nichtGenugGeld('Straße', euro(spiel.moebelArten().find(m => m.id === 'strasse').kosten)));
+      if (r.ergebnis === 'geld') kurzerHinweis(r.gebaut ? TEXTE.aussenMeldung.strasseGeld : TEXTE.nichtGenugGeld(TEXTE.aussenMeldung.strasse, euro(spiel.moebelArten().find(m => m.id === 'strasse').kosten)));
       else if (r.ergebnis === 'platz' && spiel.raumNrBei(v.x0, v.y0) >= 0) kurzerHinweis(TEXTE.aussenMeldung.innen);
     }
     else if (v.art === 'weg') {
@@ -170,7 +167,7 @@ function loslassen(e) {
     const ergebnis = spiel.moebelKaufen(ui.werkzeug, f.x, f.y, ui.dreh);      // entfernen nur per Abriss
     const typ = spiel.moebelArten().find(m => m.id === ui.werkzeug);
     if (ergebnis === 'geld') {
-      kurzerHinweis(typ.id === 'stuhl' ? `Nicht genug Geld für einen Stuhl (${euro(typ.kosten)}).` : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten)));
+      kurzerHinweis(typ.id === 'stuhl' ? TEXTE.stuhl.nichtGenugGeld(euro(typ.kosten)) : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten)));
     } else if (ergebnis === 'grenze') kurzerHinweis(TEXTE.grenze[ui.werkzeug]);
     else if (ergebnis === 'innen') kurzerHinweis(typ.gelaende ? TEXTE.aussenMeldung.innenDeko : TEXTE.aussenMeldung.innen);
     else if (ergebnis === 'bekanntheit') kurzerHinweis(typ.id === 'parkplatz' ? TEXTE.aussenMeldung.bekanntheit(typ.abBekanntheit) : TEXTE.aussenMeldung.bekanntheitTeil(typ.name, typ.abBekanntheit));
@@ -255,7 +252,7 @@ export function eingabenEinrichten() {
   $('testGeld').textContent = TEXTE.testGeld;
   $('testGeldBetrag').setAttribute('aria-label', TEXTE.testGeldFeld);
   $('testGeld').addEventListener('click', () => { if (ui.spiel.testGeld($('testGeldBetrag').value) === 'ok') fertig(); });
-  sicherKnopf($('neu'), 'Neu', 'Wirklich leeren?', zuruecksetzen);
+  sicherKnopf($('neu'), TEXTE.seite.neu, TEXTE.seite.neuSicher, zuruecksetzen);
   $('editorAuf').addEventListener('click', () => editorUmschalten(true));
   $('editorZu').addEventListener('click', () => editorUmschalten(false));
   $('hinweis').textContent = hinweisFuer(ui.werkzeug);

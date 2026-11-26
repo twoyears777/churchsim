@@ -7,7 +7,7 @@ import { VERSION } from '../version.js';
 import { fensterAktualisieren, fensterOeffnen } from './fenster.js';
 
 const LISTE = { hauptamt: 'listeHauptamt', ehrenamt: 'listeEhrenamt' };
-const LEERTEXT = { hauptamt: 'Noch keine Hauptamtlichen', ehrenamt: 'Noch keine Ehrenamtlichen' };
+const LEERTEXT = { hauptamt: TEXTE.seite.keineHauptamtlichen, ehrenamt: TEXTE.seite.keineEhrenamtlichen };
 let letzteListe = '', letzteZeit = 0, letztesRad = '';
 
 export function anzeigenEinrichten() {
@@ -21,6 +21,11 @@ export function anzeigenEinrichten() {
     b.addEventListener('click', () => { ui.spiel.tempoSetzen(Number(b.dataset.tempo)); ui.speichern(); ui.anzeigeErzwingen(); ui.malen(); });
   });
   for (const m of ui.spiel.moebelArten()) { const el = $('preis-' + m.id); if (el) el.textContent = euro(m.kosten); }
+  // Feste Beschriftungen aus index.html: data-text="seite.mitarbeiter" → TEXTE.seite.mitarbeiter
+  document.querySelectorAll('[data-text]').forEach(el => {
+    const text = el.dataset.text.split('.').reduce((o, k) => o && o[k], TEXTE);
+    if (typeof text === 'string') el.textContent = text;
+  });
   $('textBekanntheit').textContent = TEXTE.bekanntheit;
   $('textKonto').textContent = TEXTE.kontostand;
   $('textLetzter').textContent = TEXTE.besucherLetzter;

@@ -26,6 +26,8 @@ Die vollständigen Regeln stehen im claude.ai-Projekt „Church-Sim“ (projektr
 - Die Oberfläche rechnet keine Spielregeln und verändert den Spielstand nie direkt – sie gibt Befehle
   (Antwort: Code wie 'ok'/'geld'/'platz') und stellt Abfragen (Antwort: Kopien mit Zahlen und Zustands-Codes).
 - Texte macht die Oberfläche aus den Codes; der Kern liefert keine Texte.
+- Sichtbare Texte stehen nie direkt im Code, sondern in `src/inhalte/texte.js` (Hilfe: `hilfe.js`). Feste Beschriftungen in `index.html` bekommen `data-text="gruppe.name"` und werden beim Start aus `TEXTE` gefüllt (`anzeigen.js`).
+- Spielwerte (Zahlen, an denen man drehen kann) stehen in `src/inhalte/`, nicht im Kern. Wer Seelsorge macht, wird über den Skill gesucht (`seelsorgerVon` in `src/kern/skills.js`), nicht über die Kennung `'pastor'`.
 - Der Trennungs-Test in `tests/karte.test.mjs` schlägt Alarm, wenn eine Datei an der Schalterwand vorbeigreift.
 
 Kein Build-Schritt: reine Browser-Module, läuft direkt über GitHub Pages.

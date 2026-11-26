@@ -16,27 +16,27 @@
 <div class="spielflaeche">
   <aside class="seitenleiste hud" aria-label="Management">
     <details open>
-      <summary>Mitarbeiter</summary>
+      <summary><span data-text="seite.mitarbeiter"></span></summary>
       <div class="gruppe">
-        <div class="kopf"><span class="punkt hauptamt"></span>Hauptamtliche <b id="anzHauptamt">0/0</b> verfügbar</div>
+        <div class="kopf"><span class="punkt hauptamt"></span><span data-text="seite.hauptamtliche"></span> <b id="anzHauptamt">0/0</b> <span data-text="seite.verfuegbar"></span></div>
         <ul id="listeHauptamt" class="personen"></ul>
       </div>
       <div class="gruppe">
-        <div class="kopf"><span class="punkt ehrenamt"></span>Ehrenamtliche <b id="anzEhrenamt">0/0</b> verfügbar</div>
+        <div class="kopf"><span class="punkt ehrenamt"></span><span data-text="seite.ehrenamtliche"></span> <b id="anzEhrenamt">0/0</b> <span data-text="seite.verfuegbar"></span></div>
         <div class="unter" id="anzEaFrei"></div>
         <ul id="listeEhrenamt" class="personen"></ul>
       </div>
     </details>
     <details open>
-      <summary>Finanzen <span class="zugeklappt" id="kontoKurz">0 €</span></summary>
+      <summary><span data-text="seite.finanzen"></span> <span class="zugeklappt" id="kontoKurz">0 €</span></summary>
       <table class="finanzen anklickbar" id="finanzenAuf" role="button" tabindex="0">
-        <tr class="konto"><td>Kontostand</td><td class="zahl" id="kontostand">0 €</td></tr>
-        <tr><td>Voraussichtliche Einnahmen</td><td class="zahl" id="progEinnahmen">0 €</td></tr>
-        <tr><td>Voraussichtliche Ausgaben</td><td class="zahl" id="progAusgaben">0 €</td></tr>
+        <tr class="konto"><td data-text="kontostand"></td><td class="zahl" id="kontostand">0 €</td></tr>
+        <tr><td data-text="seite.einnahmenVoraus"></td><td class="zahl" id="progEinnahmen">0 €</td></tr>
+        <tr><td data-text="seite.ausgabenVoraus"></td><td class="zahl" id="progAusgaben">0 €</td></tr>
       </table>
     </details>
     <details open>
-      <summary>Besucher <span class="zugeklappt" id="besucherKurz">0</span></summary>
+      <summary><span data-text="seite.besucher"></span> <span class="zugeklappt" id="besucherKurz">0</span></summary>
       <table class="finanzen">
         <tr><td id="textLetzter"></td><td class="zahl" id="besucherLetzter">–</td></tr>
         <tr><td id="textHeim"></td><td class="zahl" id="besucherHeim">–</td></tr>
@@ -64,7 +64,7 @@
       <svg id="rad" viewBox="-50 -50 100 100" width="64" height="64" role="img" aria-label="Kirchenjahr"></svg>
     </div>
     <div class="unten-links hud"><button id="hilfeAuf" class="klein-knopf version-knopf"></button><button id="hauptmenueAuf" class="klein-knopf version-knopf"></button><button id="versionAuf" class="klein-knopf version-knopf"></button></div>
-    <div class="unten-mitte hud"><button id="editorAuf">Bauen</button></div>
+    <div class="unten-mitte hud"><button id="editorAuf" data-text="seite.bauen"></button></div>
     <div class="unten-rechts hud">
       <p id="meldung" class="spielHinweis meldung"></p>
       <p id="spielHinweis" class="spielHinweis"></p>
@@ -81,11 +81,11 @@
     <div class="bau-karten" id="bauKarten" role="toolbar" aria-label="Werkzeuge"></div>
     <div class="bau-rechts">
       <button data-werkzeug="abriss" class="abriss-knopf" aria-pressed="false"><canvas class="symbol" data-symbol="abriss" width="56" height="56"></canvas><span id="textAbriss"></span></button>
-      <span class="kontoEditor">Kontostand <b id="kontoEditor">0 €</b></span>
+      <span class="kontoEditor"><span data-text="kontostand"></span> <b id="kontoEditor">0 €</b></span>
       <button id="hilfeEditor"></button>
-      <button id="zurueck">Rückgängig</button>
-      <button id="neu">Neu</button>
-      <button id="editorZu" class="haupt">Fertig</button>
+      <button id="zurueck" data-text="seite.rueckgaengig"></button>
+      <button id="neu"></button>
+      <button id="editorZu" class="haupt" data-text="seite.fertig"></button>
     </div>
   </div>
 </footer>

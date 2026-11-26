@@ -13,8 +13,8 @@
 import { JUGEND, KONFI } from '../inhalte/besucher.js';
 import { kommendeFeste } from './kalender.js';
 import { TAG_MIN } from './zeit.js';
+import { MELDUNG_DAUER } from '../inhalte/zeit.js';
 
-const MELDUNG_DAUER = 120;   // so lange (Spielminuten) steht eine Meldung unten – wie bei den anderen Meldungen (ort.js)
 
 // Fester „Würfel“ aus Kennung und Name: 0 … 1
 function wurf(b) {

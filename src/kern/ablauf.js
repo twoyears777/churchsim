@@ -11,13 +11,13 @@
 //   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche.
 //                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
 import { VERANSTALTUNGEN, SONNTAG, PLAETZE, ZWEITER_PLATZ_STANDARD, DRITTER_PLATZ_STANDARD, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
-import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN } from '../inhalte/zeit.js';
+import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN, HEIMWEG } from '../inhalte/zeit.js';
 import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
 import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum, hindernisBei } from './moebel.js';
-import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung } from './skills.js';
+import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { einladungPasst, werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, beduerfnisErfuellt } from './besucher.js';
@@ -57,10 +57,12 @@ const istKonfirmation = L => !!(L.fest && (festAusSchluessel(L.fest) || {}).fest
 // Dauer einer Veranstaltung in Spielminuten (Spielenachmittag: 2 Stunden, sonst 1 Stunde)
 export const dauerVon = art => { const v = VERANSTALTUNGEN.find(x => x.id === art); return (v && v.dauer) || DAUER.gottesdienst; };
 // Spielenachmittag (Lukas, 25.11.): nur Stühle direkt an einem Tisch sind Plätze (bis zu 4 je Tisch, an jeder Seite einer)
+// Die Kaffee-Vorliebe ist gleichmäßig zwischen 0 und 100 % verteilt (kaffeeVorliebe in besucher.js) – neue Besucher
+// zählen in der Prognose deshalb mit dem Durchschnitt. Keine Stellschraube, sondern folgt aus der Verteilung.
+const VORLIEBE_SCHNITT = 0.5;
 export const stuehleAmTisch = (z, stuehle) => stuehle.filter(s => amTisch(z, s));
 // Darf die Veranstaltung zu diesem Slot stattfinden? (Spielenachmittag: nur nachmittags oder abends)
 export const slotErlaubt = (art, slot) => { const v = VERANSTALTUNGEN.find(x => x.id === art); return !v || !v.slots || v.slots.includes(slot); };
-export const HEIMWEG = 120;  // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause
 
 // ---- Veranstaltungen in Räumen ----
 // Jeder Raum hat eine Liste: Platz 0 = „Veranstaltung 1“, Platz 1 = „Veranstaltung 2“ – je { art, tag, slot }.
@@ -304,7 +306,7 @@ export function ablaufAnlegen(z) {
 // des Kirchkaffees. Gesperrt nur während einer Veranstaltung, die der Pastor leitet, und in den 3 Stunden davor.
 function leitetPastor(z, raeume, termin) {
   const info = terminInfo(z, raeume, termin);
-  return !!(info && info.p.leitung && info.p.leitung.id === 'pastor');
+  return !!(info && info.p.leitung && hatSkill(info.p.leitung, 'seelsorge'));
 }
 export function seelsorgeGesperrt(z, raeume = raeumeVon(z)) {
   if ((z.laeufe || []).some(L => (L.phase === 'anreise' || L.phase === 'gottesdienst') && !L.ausgefallen && leitetPastor(z, raeume, L))) return true;
@@ -640,7 +642,7 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
   kollekteSumme *= faktor * kj.kollekte * ((v && v.kollekteFaktor) || 1);   // Jugendgottesdienst: × 0,5
   // Kaffee: erwartete Gäste × Kaffee-Wert (neue im Schnitt 50 %); höchstens so viele Tassen, wie in die Maschinen passen
   // (die Ehrenamtlichen füllen sie auf, wenn das Kirchkaffee zu hat)
-  const kaffeeWunsch = (z.besucher.reduce((s, b) => s + chance(b) * kaffeeVorliebe(b), 0) + neu * 0.5
+  const kaffeeWunsch = (z.besucher.reduce((s, b) => s + chance(b) * kaffeeVorliebe(b), 0) + neu * VORLIEBE_SCHNITT
     + neugierige.reduce((s, p) => s + kaffeeVorliebe(p) * nf(p), 0) * NEUGIER.kommChance) * anteil;
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
   const tassen = Math.min(kaffeeWunsch, stationen.length * fassung('kaffeemaschine'));

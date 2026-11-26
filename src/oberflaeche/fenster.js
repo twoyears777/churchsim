@@ -1,7 +1,6 @@
 // Fenster: Raumfunktion (Editor), Raum-Fenster (Gottesdienstraum), Kaffeemaschine, Besucher-Kärtchen, Mitarbeiter-Karte,
 // Menschen im Ort (Liste) und Seelsorge (Dialog, solange er offen ist, steht die Zeit).
 // Inhalte kommen als Zahlen und Zustände vom Spiel; hier wird nur HTML daraus. Knöpfe schicken Befehle ans Spiel.
-import { KEINE_VERANSTALTUNG } from '../inhalte/veranstaltungen.js';
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro, zahl1, esc } from './ui.js';
 import { changelogHolen } from './changelog.js';
@@ -9,7 +8,6 @@ import { HILFE } from '../inhalte/hilfe.js';
 import { VERSION } from '../version.js';
 
 const maske = () => $('maske');
-const ART_TEXT = { hauptamt: 'Hauptamtlich', ehrenamt: 'Ehrenamtlich' };
 const faktor = f => f.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 let letzterInhalt = '';
 
@@ -64,19 +62,19 @@ function raumTypFenster(f) {
   const zeilen = w.typen.map(t => {
     const groesse = `${t.minGroesse[0]} × ${t.minGroesse[1]}`;
     return `<button class="typ${t.aktiv ? ' aktiv' : ''}" data-typ="${t.id}" ${t.zuKlein ? 'disabled' : ''}>
-      <span class="farbe" style="background:${t.farbe}"></span><span><b>${t.name}</b><small>${t.zuKlein ? `zu klein, mind. ${groesse}` : `mind. ${groesse}`}</small></span></button>`;
+      <span class="farbe" style="background:${t.farbe}"></span><span><b>${t.name}</b><small>${t.zuKlein ? TEXTE.raumFunktion.zuKlein(groesse) : TEXTE.raumFunktion.mind(groesse)}</small></span></button>`;
   }).join('');
-  return `<h2>Raumfunktion</h2>
-    ${w.tueren === 0 ? '<p class="warnung">Dieser Raum hat noch keine Tür.</p>' : ''}
+  return `<h2>${TEXTE.raumFunktion.titel}</h2>
+    ${w.tueren === 0 ? `<p class="warnung">${TEXTE.raumFunktion.keineTuer}</p>` : ''}
     <div class="typen">${zeilen}</div>
-    <div class="zeile">${w.hatTyp ? '<button data-typ="">Funktion entfernen</button>' : ''}</div>`;
+    <div class="zeile">${w.hatTyp ? `<button data-typ="">${TEXTE.raumFunktion.entfernen}</button>` : ''}</div>`;
 }
 
 // Charakter-Karte eines Mitarbeiters
 function personenKarte(f) {
   const p = ui.spiel.personInfo(f.id);
   if (!p) return null;
-  let skills = '<p class="leer">Skills folgen später</p>';
+  let skills = `<p class="leer">${TEXTE.personKarte.skillsSpaeter}</p>`;
   if (p.musik) {
     // Musik-Level des Ehrenamtlichen mit Fortschrittsbalken bis zum nächsten Level
     skills = `<p class="unter staerker">${TEXTE.ausstattung.musikLevel(p.musik.level)}</p>
@@ -98,8 +96,8 @@ function personenKarte(f) {
   }
   if (p.multiplikator) skills = (p.seelsorge || p.musik ? skills : '') + multiplikatorSkill(p.multiplikator, p.id);
   return `<h2>${esc(p.name)}</h2>
-    <p class="unter">${ART_TEXT[p.art]} · ${p.einsatz ? 'Im Einsatz: ' + p.einsatz : 'Verfügbar'}</p>
-    <h3>Skills</h3>${skills}`;
+    <p class="unter">${TEXTE.personKarte.art[p.art]} · ${p.einsatz ? TEXTE.personKarte.imEinsatz(p.einsatz) : TEXTE.personKarte.verfuegbar}</p>
+    <h3>${TEXTE.personKarte.skills}</h3>${skills}`;
 }
 
 // Haltungs-Multiplikator des Hauptamtlichen (26.11.): Stufe, geleitete Gottesdienste, Kauf der nächsten Stufe mit Heiligkeit
@@ -125,13 +123,13 @@ function raumFenster(f) {
   if (p && !p.nutzbar) { delete f.platz; return raumFenster(f); }
   const uhr = slot => `${String(r.slots.find(s => s.id === slot).stunde).padStart(2, '0')}:00`;
   const terminText = e => T.termin(TEXTE.tage[e.tag], T.slots[e.slot], uhr(e.slot));
-  const artName = id => id ? (r.moeglich.find(v => v.id === id) || {}).name : KEINE_VERANSTALTUNG;
+  const artName = id => id ? (r.moeglich.find(v => v.id === id) || {}).name : TEXTE.keineVeranstaltung;
   const saal = r.typId === 'gemeindesaal';
 
   if (p) {
     // ---- Menü: Art und Zeit einer Veranstaltung ----
     // Eventtyp als Knöpfe, darunter die Bausteintabelle (Spielprinzip vom 25.11.): bei jedem Event gleich aufgebaut
-    const knoepfe = [...r.moeglich, { id: '', name: KEINE_VERANSTALTUNG }].map(v =>
+    const knoepfe = [...r.moeglich, { id: '', name: TEXTE.keineVeranstaltung }].map(v =>
       `<button class="${(p.art || '') === v.id ? 'aktiv' : ''}" data-veranstaltung="${v.id}">${esc(v.name)}</button>`).join('');
     const tabelle = p.art && r.bausteine[p.art] ? bausteinTabelle(r.bausteine[p.art]) : keineInfo(TEXTE.veranstaltungKacheln[saal ? 'keineSaal' : 'keine']);
     // Zeiten, zu denen im Raum schon eine andere Veranstaltung ist, sind gesperrt
@@ -735,7 +733,7 @@ function kalenderFenster(f) {
   const kopf = k.tage.map(t => `<th class="${t.heute ? 'heute' : ''}">${TEXTE.tageKurz[t.tag]}<small>${t.datum}</small>${
     t.fest ? `<small class="fest">${esc(t.fest)}</small>` : ''}</th>`).join('');
   const eintrag = e => {
-    const name = e.festName ? T.fest(esc(e.festName), esc(e.artName || '')) : esc(e.artName || KEINE_VERANSTALTUNG);
+    const name = e.festName ? T.fest(esc(e.festName), esc(e.artName || '')) : esc(e.artName || TEXTE.keineVeranstaltung);
     const grund = e.zustand === 'faelltAus' || e.zustand === 'ausgefallen' ? `<small class="fehlt">${T.zustand[e.zustand]}${T.grund[e.fehlt] ? ` – ${T.grund[e.fehlt]}` : ''}</small>`
       : T.zustand[e.zustand] ? `<small>${T.zustand[e.zustand]}</small>` : '';
     return `<div class="termin ${e.zustand}"><b>${name}</b><small>${raum(e)}</small>${grund}</div>`;

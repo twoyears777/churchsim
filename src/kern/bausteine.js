@@ -12,7 +12,7 @@ import { daten } from './personen.js';
 import { fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
 import { musikLevel, musikBonus, multiplikatorFaktor } from './skills.js';
-import { amTisch } from './kirchkaffee.js';
+import { amTisch, STUEHLE_JE_TISCH } from './kirchkaffee.js';
 
 const MAX_MUSIKER = MOEBEL.filter(m => m.wirkung && m.wirkung.musik).length;   // so viele Instrumente gibt es
 const prozent = b => Math.round(b * 100);
@@ -71,7 +71,7 @@ function gottesdienstraum(z, raum, info, v) {
 
   // Instrument ohne Spieler (nur beim normalen Gottesdienst; beim Lobpreisgottesdienst ist die Gitarre Pflicht)
   if (!lobpreis && !jugend) {
-    const erstes = MOEBEL.find(m => m.wirkung && m.wirkung.musik && hat(m.id)) || MOEBEL.find(m => m.id === 'gitarre');
+    const erstes = MOEBEL.find(m => m.wirkung && m.wirkung.musik && hat(m.id)) || MOEBEL.find(m => m.wirkung && m.wirkung.musik);   // sonst das erste Instrument der Möbelliste
     zeilen.push({ id: 'instrumentOhne', name: erstes.name, imRaum: instrumente > 0 });
   }
 
@@ -134,7 +134,7 @@ function spielenachmittag(z, raum, info, v) {
     { id: 'leitungSpiele', pflicht: true, imRaum: leitung, veranstaltung: v.haltung, jugendProzent: prozent(JUGEND.faktor[v.id] ?? 1),
       spendeMin: S.min, spendeMax: S.max },
     { id: 'tischStuehleSpiele', pflicht: true, imRaum: hatTisch && amTischListe.length >= v.stuehleMin, stuehleMin: v.stuehleMin },
-    { id: 'stuhlAmTisch', imRaum: amTischListe.length > v.stuehleMin, plaetze: 1, jeTisch: 4 },
+    { id: 'stuhlAmTisch', imRaum: amTischListe.length > v.stuehleMin, plaetze: 1, jeTisch: STUEHLE_JE_TISCH },
     { id: 'besserStuhl', imRaum: amTischListe.some(s => stuhlStufe(s).stufe > 1), kollekte: false }
   ];
   const summe = { art: 'spiele', besucher: { art: 'plaetze', plaetze: amTischListe.length },

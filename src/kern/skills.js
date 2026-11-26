@@ -34,7 +34,7 @@ export function skillsVon(p) {
 //   0.1.11:     Multiplikator der ganzen Gemeinde (z.multiplikator) → Pastor Harder
 export function skillsAnlegen(z) {
   if (!Array.isArray(z.personen)) return;
-  const pastor = z.personen.find(p => p.id === 'pastor');
+  const pastor = seelsorgerVon(z);   // alte Spielstände: die Seelsorge-Punkte gehören dem, der Seelsorge macht
   for (const p of z.personen) {
     const s = skillsVon(p);
     if (typeof p.musikErfahrung === 'number') { if (hatSkill(p, 'musik')) s.musik = p.musikErfahrung; delete p.musikErfahrung; }
@@ -53,8 +53,11 @@ export function skillsAnlegen(z) {
   }
 }
 
-// ── Seelsorge (Pastor Harder): Erfahrungspunkte → Stufe 1–20 ──
-const pastorVon = z => (z.personen || []).find(p => p.id === 'pastor') || null;
+// ── Seelsorge: Erfahrungspunkte → Stufe 1–20 ──
+// Wer Seelsorge macht, steht in src/inhalte/skills.js (bisher nur Pastor Harder). Gesucht wird über den Skill,
+// nicht über die feste Kennung 'pastor' – so muss später nur die Inhaltsdatei geändert werden.
+export const seelsorgerVon = z => (z.personen || []).find(p => hatSkill(p, 'seelsorge')) || null;
+const pastorVon = seelsorgerVon;
 export function seelsorgePunkte(z) { const p = pastorVon(z); return p ? skillsVon(p).seelsorge || 0 : 0; }
 export function seelsorgePunkteDazu(z, n) { const p = pastorVon(z); if (p) skillsVon(p).seelsorge = seelsorgePunkte(z) + n; }
 // Stufe aus den Erfahrungspunkten

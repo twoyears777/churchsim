@@ -40,7 +40,7 @@ const uhrText = n => n.minute ? `${n.stunde}:${String(n.minute).padStart(2, '0')
 function raumUntertitel(r) {
   const kk = r.kirchkaffee;
   if (kk) return kk.code === 'zu' && kk.naechste ? TEXTE.kirchkaffee.zuBis(TEXTE.tageKurz[kk.naechste.tag], uhrText(kk.naechste)) : TEXTE.kirchkaffee[kk.code];
-  if (r.veranstaltungsraum) return r.veranstaltung || 'Keine Veranstaltung';
+  if (r.veranstaltungsraum) return r.veranstaltung || TEXTE.raumAufKarte.keineVeranstaltung;
   return null;
 }
 
@@ -160,16 +160,15 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     const b = r.box, cx = ox + (b.minX + b.maxX + 1) / 2 * k, cy = oy + b.minY * k + Math.max(schrift * 1.2, k * 1.1); // oben im Raum, damit Figuren frei bleiben
     ctx.font = `500 ${schrift}px system-ui, sans-serif`;
     ctx.fillStyle = FARBEN.text;
-    const name = r.typ ? r.typ.name : 'Ohne Funktion', ny = cy - (r.probleme.length ? schrift * 0.7 : 0);
+    const name = r.typ ? r.typ.name : TEXTE.raumAufKarte.ohneFunktion, ny = cy - (r.probleme.length ? schrift * 0.7 : 0);
     ctx.fillText(name, cx, ny);
     const untertitel = raumUntertitel(r);
     if (r.veranstaltungsraum && !r.veranstaltung) warnsymbol(ctx, cx + ctx.measureText(name).width / 2 + schrift * 0.75, ny, schrift * 0.9);
     if (r.probleme.length) {
       ctx.font = `400 ${schrift * 0.85}px system-ui, sans-serif`;
       ctx.fillStyle = FARBEN.fehler;
-      const t = r.probleme.map(p => p === 'tuer' ? 'Tür fehlt'
-        : p === 'verbindung' ? 'Verbindungstür zum Gottesdienstraum fehlt'
-        : `zu klein (mind. ${r.typ.minGroesse[0]} × ${r.typ.minGroesse[1]})`).join(' · ');
+      const P = TEXTE.raumAufKarte;
+      const t = r.probleme.map(p => P.probleme[p] || P.zuKlein(r.typ.minGroesse[0], r.typ.minGroesse[1])).join(' · ');
       ctx.fillText(t, cx, cy + schrift * 0.7);
     } else if (untertitel) {
       // eingestellte Veranstaltung klein unter dem Raumnamen

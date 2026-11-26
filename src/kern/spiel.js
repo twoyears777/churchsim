@@ -37,7 +37,7 @@ import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
 import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
-import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo } from './skills.js';
+import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo, hatSkill } from './skills.js';
 import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
 import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { zeitungOffen, zeitungSchliessen } from './erster.js';
@@ -438,7 +438,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     forschungAbbrechen() { return forschungAbbrechen(z); },
     // Haltungs-Multiplikator (Skill des Hauptamtlichen): nächste Stufe sofort mit Heiligkeit kaufen
     // → 'ok' | 'person' | 'max' | 'erfahrung' | 'heiligkeit'
-    multiplikatorKaufen(personId = 'pastor') { return multiplikatorKaufen(z, personId); },
+    multiplikatorKaufen(personId) { return multiplikatorKaufen(z, personId); },
     // Seelsorge-Fenster → 'ok' | 'keine' | 'geld'
     seelsorgeAblehnen() { return seelsorgeAblehnen(z); },
     seelsorgeRat(nr) { return seelsorgeRaten(z, nr, zufall); },
@@ -488,7 +488,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
           // Unterwegs zur Evangelisation vor dem Laden → dort
           // Musiker auf dem Weg zum Instrument, dort beim Spielen oder auf dem Rückweg (26.11., musiker.js)
           const pos = kaffeeMitarbeiterPosition(z, p) || evangelisationPosition(z, p) || musikerPosition(mg, p, z.minuten)
-            || (p.id === 'pastor' && z.seelsorge && z.seelsorge.gang ? p : umherPosition(z, nr >= 0 ? raeume.liste[nr] : null, p));
+            || (hatSkill(p, 'seelsorge') && z.seelsorge && z.seelsorge.gang ? p : umherPosition(z, nr >= 0 ? raeume.liste[nr] : null, p));
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
         }).filter(Boolean); })(),
         // Gottesdienst-Besucher, Passanten (ohne den, der gerade zum Pastor geht) und wer zur Seelsorge läuft
@@ -824,7 +824,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const p = z.personen.find(x => x.id === id), d = p && daten(p);
       if (!d) return null;
       const r = eingesetztIn(z, raeume, p);
-      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: id === 'pastor' ? stufeInfo(z) : null,
+      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: hatSkill(p, 'seelsorge') ? stufeInfo(z) : null,
         musik: d.art === 'ehrenamt' ? musikStand(p) : null, evangelisation: d.art === 'ehrenamt' ? evangelisationStand(p) : null, multiplikator: multiplikatorInfo(z, p), heiligkeit: Math.floor(z.heiligkeit || 0) };
     }
   };
