@@ -14,9 +14,14 @@ const faktor = f => f.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 let letzterInhalt = '';
 
 export function fensterOeffnen(f) { ui.fenster = f; letzterInhalt = ''; ui.anzeigeErzwingen(); ui.malen(); }
+// Manche Fenster müssen erst beantwortet werden, bevor man sie schließen darf
+function schliessbar(f) {
+  if (f.art === 'seelsorge' && ui.spiel.seelsorgeOffen()) return false;   // Seelsorge erst beantworten
+  if (f.art === 'fest' && ui.spiel.lage().festAnfrage === f.schluessel) return false;   // Fest-Menü erst beantworten
+  return true;
+}
 export function fensterSchliessen() {
-  if (ui.fenster && ui.fenster.art === 'seelsorge' && ui.spiel.seelsorgeOffen()) return;   // Seelsorge erst beantworten
-  if (ui.fenster && ui.fenster.art === 'fest' && ui.spiel.lage().festAnfrage === ui.fenster.schluessel) return;   // Fest-Menü erst beantworten
+  if (ui.fenster && !schliessbar(ui.fenster)) return;
   ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.malen();
 }
 export function fensterOffen() { return !maske().hidden; }
@@ -25,10 +30,12 @@ export function fensterOffen() { return !maske().hidden; }
 export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
-  const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
+  let inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
     kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
+  // ✕ oben rechts in jedem Fenster, das man schließen darf (bleibt beim Scrollen sichtbar)
+  if (schliessbar(f)) inhalt = `<button class="fenster-x" data-zu aria-label="Schließen" title="Schließen">✕</button>` + inhalt;
   m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender');
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
   m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender');
