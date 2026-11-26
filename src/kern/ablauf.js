@@ -20,7 +20,7 @@ import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum
 import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
-import { werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, beduerfnisErfuellt } from './besucher.js';
+import { einladungPasst, werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, beduerfnisErfuellt } from './besucher.js';
 import { beduerfnisSchritt } from './beduerfnisse.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
 import { zeitpunkt, slotBeginn, WOCHE_MIN } from './zeit.js';
@@ -38,6 +38,7 @@ import { festSchritt, festPlaeneDerWoche, festeAufraeumen, festAusSchluessel } f
 import { festAktiv, konfiTeilnahme, konfirmieren, istJugend } from './konfi.js';
 import { foyers, foyerBonus } from './foyer.js';
 import { strasse } from './bewegung.js';
+import { evangelisationSchritt } from './evangelisation.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: Sonntagvormittag doppelt (Gottesdienst und Lobpreisgottesdienst)
@@ -262,7 +263,7 @@ export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
@@ -543,7 +544,7 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
   if (istKonfirmation(L)) konfirmieren(z);   // Ende des Konfirmations-Gottesdienstes: alle Konfirmanden werden erwachsen
   const neueEA = ehrenamtWerden(z, anwesend, zufall).map(b =>
     personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
-      herkunft: { besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: b.level || 1, kaffee: kaffeeVorliebe(b), zuletzt: b.zuletzt } }));
+      herkunft: { jugend: istJugend(b), besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: b.level || 1, kaffee: kaffeeVorliebe(b), zuletzt: b.zuletzt } }));
   Object.assign(L, { phase: 'ende', ende: z.minuten, neueEhrenamtliche: neueEA.map(p => p.daten.name) });
   if (mitKirchkaffee(L.art)) z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: false, besucher: anwesend.length, heim: L.gaeste.filter(g => !g.sitz).length };
 }
@@ -573,7 +574,7 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
   const plakat = !!z.plakat;
   // Neugierige vom Tor kommen zur nächsten Veranstaltung; neue Besucher über die Bekanntheit verteilen sich auf die Termine der Woche
   const naechster = naechsterTermin(z, raeume), istNaechster = !!(termin && naechster && naechster.id === termin.id);
-  const neugierige = (istNaechster || !termin) && z.ort ? z.ort.leute.filter(p => p.neugierig) : [];
+  const neugierige = (istNaechster || !termin) && z.ort ? z.ort.leute.filter(p => p.neugierig && einladungPasst(p, art)) : [];   // Eingeladene (Evangelisation) nur zu ihrer Veranstaltung
   const anzahl = termineDerWoche(z, raeume, woche).filter(t => zaehltFuerNeue(t.art)).length || 1;
   // ... aber höchstens so viele, wie es im Ort und im Einzugsgebiet noch gibt
   const moeglich = (z.ort ? z.ort.leute.filter(p => !p.neugierig).length : 0) + platzImGebiet(z);
@@ -581,7 +582,8 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
   const kj = terminFaktoren({ woche, plan }, z);
   const neu = zaehltFuerNeue(art) ? Math.min(z.bekanntheit / BEKANNTHEIT.teiler / anzahl * kj.besucher, moeglich) : 0;
   const chance = b => besuchChance(b, { art, woche, faktor: kj.besucher, musik: g && g.typ.id === 'gottesdienst' ? g.ausstattung.musik : undefined });
-  const neugierErwartet = neugierige.reduce((s, p) => s + artFaktor(p, art), 0) * NEUGIER.kommChance;   // Jugendliche/Erwachsene
+  const nf = p => p.eingeladen ? Math.min(1, artFaktor(p, art)) : artFaktor(p, art);   // Eingeladene: höchstens 75 %
+  const neugierErwartet = neugierige.reduce((s, p) => s + nf(p), 0) * NEUGIER.kommChance;   // Jugendliche/Erwachsene
   const erwartet = z.besucher.reduce((s, b) => s + chance(b), 0) + neu + neugierErwartet;
   const anteil = unbegrenzt ? 1 : erwartet ? Math.min(1, plaetze / erwartet) : 0, sitzend = erwartet * anteil;
   // Fällt der Termin wegen eines geplanten Sonderevents aus?
@@ -606,7 +608,7 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
   // Kaffee: erwartete Gäste × Kaffee-Wert (neue im Schnitt 50 %); höchstens so viele Tassen, wie in die Maschinen passen
   // (die Ehrenamtlichen füllen sie auf, wenn das Kirchkaffee zu hat)
   const kaffeeWunsch = (z.besucher.reduce((s, b) => s + chance(b) * kaffeeVorliebe(b), 0) + neu * 0.5
-    + neugierige.reduce((s, p) => s + kaffeeVorliebe(p) * artFaktor(p, art), 0) * NEUGIER.kommChance) * anteil;
+    + neugierige.reduce((s, p) => s + kaffeeVorliebe(p) * nf(p), 0) * NEUGIER.kommChance) * anteil;
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
   const tassen = Math.min(kaffeeWunsch, stationen.length * fassung('kaffeemaschine'));
   return { ...grund, sitzend, geld: kollekteSumme + tassen * PREIS_TASSE, kollekte: kollekteSumme, ehrenamt, tassen };

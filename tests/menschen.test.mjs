@@ -43,15 +43,16 @@ function laufen(z, aus, minuten, zufall, antwort = () => raten(z, 0, zufall)) {
 {
   const zufall = saat(7), { z, aus } = gemeinde(zufall);
   laufen(z, aus, TAG_MIN - z.minuten + 1, zufall);                   // Tag 0 ab 8 Uhr, dann Tag 1 voll geplant
-  assert.ok(z.ort.gaenge.length >= ORT.passantenProTag[0] && z.ort.gaenge.length <= ORT.passantenProTag[1]);
-  const bekannte = z.ort.gaenge.filter(g => z.besucher.some(b => b.id === g.id)).length;
+  const amTorGaenge = z.ort.gaenge.filter(g => !g.laden);                 // am Laden laufen zusätzlich welche (evangelisation.test.mjs)
+  assert.ok(amTorGaenge.length >= ORT.passantenProTag[0] && amTorGaenge.length <= ORT.passantenProTag[1]);
+  const bekannte = amTorGaenge.filter(g => z.besucher.some(b => b.id === g.id)).length;
   assert.ok(bekannte >= 1 && bekannte <= 2);
   laufen(z, aus, 6 * WOCHE_MIN, zufall);
   assert.ok(z.ort.leute.length + z.besucher.length <= EINZUGSGEBIET.start);
   // um 14 Uhr sind Leute unterwegs, alle auf der Gehweg-Zeile
   laufen(z, aus, TAG_MIN - (z.minuten % TAG_MIN) + 14 * 60, zufall);
   const pos = passantenPositionen(z);
-  assert.ok(pos.every(p => p.y === 34 && p.passant));
+  assert.ok(pos.every(p => (p.y === 34 || p.x === 55) && p.passant));   // Gehweg am Tor oder vor dem Laden
 }
 console.log('Passanten-Tests bestanden.');
 
@@ -59,11 +60,11 @@ console.log('Passanten-Tests bestanden.');
 {
   const z = neuesSpiel(() => 0.5);
   const s = ortSchritt(z, () => 0.5); s.tun();                       // Tag planen
-  const g = z.ort.gaenge.find(x => z.ort.leute.some(p => p.id === x.id));
+  const g = z.ort.gaenge.find(x => !x.laden && z.ort.leute.some(p => p.id === x.id));
+  for (const x of z.ort.gaenge) if (x !== g) x.geprueft = true;
   z.minuten = g.tor;
   const amTor = ortSchritt(z, () => 0);
-  assert.equal(amTor.zeit, Math.min(...z.ort.gaenge.map(x => x.tor)));
-  for (const x of z.ort.gaenge) if (x !== g) x.geprueft = true;
+  assert.equal(amTor.zeit, g.tor);
   ortSchritt(z, () => 0).tun();
   const p = z.ort.leute.find(x => x.id === g.id);
   assert.equal(p.neugierig, true); assert.equal(g.halt, NEUGIER.haltMinuten);

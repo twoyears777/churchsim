@@ -531,6 +531,17 @@ export const TEXTE = {
     keinGeld: 'Nicht genug Geld.'
   },
   // Menü der Pforte (in der Spielansicht aufs Tor tippen)
+  // Evangelisation vor dem Laden (Texte von Lukas freigegeben, 26.11.)
+  evangelisation: {
+    feld: 'Evangelisation!',
+    titel: 'Evangelisation',
+    info: 'Ehrenamtliche, die gerade frei haben, gehen von selbst hierher und sprechen Passanten an. Je höher ihr Musik-Level, desto eher kommen die Leute zum nächsten Gottesdienst.',
+    vorOrt: (x, max) => `Vor Ort: ${x} von ${max}`,
+    chance: x => `Chance pro Passant: ${x} %`,
+    niemand: 'Gerade ist niemand vor Ort.',
+    keinJugo: name => `Kein Jugendgottesdienst geplant – ${name} lädt gerade niemanden ein.`,
+    frei: x => `Gerade frei: ${x}`
+  },
   tor: {
     titel: 'Pforte',
     plakat: 'Plakat an der Pforte',

@@ -56,6 +56,7 @@ export function anzeigenAktualisieren() {
   const l = ui.spiel.lage();
   $('anzHauptamt').textContent = `${l.verfuegbarkeit.hauptamt.frei}/${l.verfuegbarkeit.hauptamt.gesamt}`;
   $('anzEhrenamt').textContent = `${l.verfuegbarkeit.ehrenamt.frei}/${l.verfuegbarkeit.ehrenamt.gesamt}`;
+  $('anzEaFrei').textContent = TEXTE.evangelisation.frei(l.ehrenamtFrei);   // live: wie viele Ehrenamtliche gerade frei haben
   personenListen(l.personen);
   for (const id of ['kontostand', 'kontoEditor', 'kontoKurz', 'kontoOben']) $(id).textContent = euro(l.konto);
   $('bekanntheit').textContent = Math.round(l.bekanntheit);

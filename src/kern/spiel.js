@@ -44,6 +44,8 @@ import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, fest
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
 import { umherPosition } from './umherlaufen.js';
+import { evangelisationAnlegen, evangelisationPosition, evangelisationInfo, freieEhrenamtliche } from './evangelisation.js';
+import { EVANGELISATION } from '../inhalte/evangelisation.js';
 import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance, neugierTeile } from './ort.js';
 import { gelaende, aushaenge, aushangGilt, aushangSetzen } from './gelaende.js';
 import { GELAENDE, SCHAUKASTEN } from '../inhalte/gelaende.js';
@@ -69,6 +71,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   jugendAnlegen(z);   // alte Spielstände: 20 % der Besucher und Passanten werden Jugendliche
   baukostenAnlegen(z);
   skillsAnlegen(z);   // Skill-Fächer der Mitarbeiter (26.11.); zieht alte Spielstände um
+  evangelisationAnlegen(z);   // Evangelisation vor dem Laden (26.11.)
   return z;
 }
 // Alte Spielstände (vor den Baukosten, 25.11.): einmalig der Startgeld-Ausgleich; ihre schon gebauten Wände bleiben kostenlos
@@ -436,12 +439,14 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
           angeschlossen: m.art === 'strasse' || m.art === 'parkplatz' ? park.angeschlossen.has(`${m.x},${m.y}`) : null,
           aushang: m.art === 'schaukasten' ? aushangGilt(z, m.aushang) : null })),   // Schaukasten: hängt ein Aushang?
         plakat: !!z.plakat,
+        evangelisation: { ...EVANGELISATION.feld },   // das Feld „Evangelisation!“ vor dem Laden
         bus: { stufe: z.bus || 0, ...BUSHALTESTELLE_ORT },
         personen: z.personen.map(p => {
           const d = daten(p); if (!d) return null;
           // Im Kirchkaffee beschäftigt → dort; Pastor im Seelsorge-Gespräch → an seinem Platz; sonst ein wenig umherlaufen
           const nr = typeof p.x === 'number' ? raeume.gruppe[idx(z, p.x, p.y)] : -1;
-          const pos = kaffeeMitarbeiterPosition(z, p) || (p.id === 'pastor' && z.seelsorge && z.seelsorge.gang ? p
+          // Unterwegs zur Evangelisation vor dem Laden → dort
+          const pos = kaffeeMitarbeiterPosition(z, p) || evangelisationPosition(z, p) || (p.id === 'pastor' && z.seelsorge && z.seelsorge.gang ? p
             : umherPosition(z, nr >= 0 ? raeume.liste[nr] : null, p));
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
         }).filter(Boolean),
@@ -466,6 +471,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         letzterGottesdienst: lg ? { besucher: lg.besucher, heim: lg.heim, ausgefallen: lg.ausgefallen } : null,
         bekannteBesucher: z.besucher.length,
         verfuegbarkeit: verfuegbarkeit(z, raeume), personen,
+        ehrenamtFrei: freieEhrenamtliche(z, raeume),   // Ehrenamtliche, die gerade frei haben (ohne Dienst/Schicht) – live
+
         status: spielStatus(z, raeume),
         beschaeftigt: z.laeufe.some(L => L.phase !== 'ende') || anfrageOffen(z) || z.kaffee.kunden.length > 0,
         seelsorge: seelsorgeLage(z),   // offene Seelsorge-Anfrage mit Status der Person (sonst null)
@@ -605,6 +612,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const o = BUSHALTESTELLE_ORT;
       return (z.bus || 0) > 0 && x >= o.x && x < o.x + o.w && y >= o.y && y < o.y + o.h;
     },
+    // Liegt dieses Kästchen auf dem Feld „Evangelisation!“? Dort öffnet sich sein Menü.
+    evangelisationBei(x, y) { const f = EVANGELISATION.feld; return x === f.x && y === f.y; },
+    // Menü der Evangelisation: wer vor Ort ist, Plätze, Chance pro Passant (Prozent)
+    evangelisationInfo() { return evangelisationInfo(z, raeume); },
     // Liegt dieses Kästchen am Tor (Einfahrt)? Dort öffnet sich das Menü der Pforte.
     torBei(x, y) {
       const g = GRUNDSTUECK;

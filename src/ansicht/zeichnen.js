@@ -19,7 +19,7 @@ export const FARBEN = {
   gitarre: '#c07a32', gitarreHals: '#4a3220',
   // Weitere Instrumente (25.11.) – PLATZHALTER von Claude, Lukas legt Aussehen fest
   keyTasten: '#f4f1ea', keySchwarz: '#2a2a2e', trommel: '#b8433a', trommelFell: '#ece6da', becken: '#d9b54a',
-  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', plakat: '#fff6d6', plakatRand: '#c23b2e',
+  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', plakat: '#fff6d6', plakatRand: '#c23b2e', evangelisation: '#fff6d6', evangelisationRand: '#2d69be',
   // Außen (Einzugsgebiet) – Platzhalter
   strasse: '#6a6d72', strasseRand: '#55585c', parkLinie: '#f2efe6', nichtAngeschlossen: 'rgba(200,55,45,0.45)',
   busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
@@ -284,6 +284,8 @@ function umgebungZeichnen(ctx, z, { k, ox, oy }) {
     ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(cx - b / 2, cy - h / 2, b, h);
     ctx.fillStyle = FARBEN.text; ctx.fillText(TEXTE.laden, cx, cy + 1);
   }
+  // Feld „Evangelisation!“ vor dem Laden (26.11.): kleiner Stand mit Schild – Aussehen ist ein Platzhalter von Claude
+  if (z.evangelisation) evangelisationsFeld(ctx, ansicht, z.evangelisation);
 
   for (const g of GEHWEGE) {
     ctx.fillStyle = FARBEN.gehweg; ctx.fillRect(...P(g.x, g.y, g.w, g.h));
@@ -419,6 +421,17 @@ function klavier(ctx, px, py, k) {
 }
 const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon, klavier };
 // Plakat am Zaun links neben dem Tor (solange es hängt)
+function evangelisationsFeld(ctx, { k, ox, oy }, f) {
+  const px = ox + f.x * k, py = oy + f.y * k;
+  ctx.fillStyle = FARBEN.evangelisation; ctx.fillRect(px + k * 0.08, py + k * 0.08, k * 0.84, k * 0.84);
+  ctx.strokeStyle = FARBEN.evangelisationRand; ctx.lineWidth = Math.max(1.5, k * 0.1); ctx.strokeRect(px + k * 0.08, py + k * 0.08, k * 0.84, k * 0.84);
+  ctx.font = `600 ${Math.max(9, k * 0.5)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const text = TEXTE.evangelisation.feld, b = ctx.measureText(text).width + 8, h = Math.max(13, k * 0.7);
+  const cx = px + k / 2, cy = py - h / 2 - k * 0.1;
+  ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(cx - b / 2, cy - h / 2, b, h);
+  ctx.strokeStyle = FARBEN.evangelisationRand; ctx.lineWidth = 1; ctx.strokeRect(cx - b / 2, cy - h / 2, b, h);
+  ctx.fillStyle = FARBEN.evangelisationRand; ctx.fillText(text, cx, cy + 1);
+}
 function plakat(ctx, { k, ox, oy }) {
   const g = GRUNDSTUECK, x = ox + (g.tor.x - 1.6) * k, y = oy + (g.y + g.h - 0.55) * k;
   ctx.fillStyle = FARBEN.schatten; ctx.fillRect(x + 2, y + 2, k * 1.3, k * 0.9);

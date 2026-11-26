@@ -2,6 +2,7 @@
 // Passanten aus dem Ort (z.ort.leute) haben dieselbe Form; kommen sie zum Gottesdienst, wechseln sie in z.besucher.
 import { NAMEN_ALLTAEGLICH, NAMEN_WORTSPIEL, ANTEIL_WORTSPIEL } from '../inhalte/namen.js';
 import { NEUGIER } from '../inhalte/ort.js';
+import { EVANGELISATION } from '../inhalte/evangelisation.js';
 import { ZWEITER_BESUCH, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { istJugend, jugendFaktor, jugendZuteilen } from './konfi.js';
 import { platzImGebiet } from './einzugsgebiet.js';
@@ -61,7 +62,7 @@ export function neuerBesucher(z, zufriedenheit = NEU_ZUFRIEDENHEIT, zufall = Mat
 // Ein Passant kommt zum ersten Mal: wechselt aus dem Ort zu den Besuchern und behält seine Haltung.
 export function ausDemOrt(z, p) {
   z.ort.leute = z.ort.leute.filter(x => x !== p);
-  delete p.neugierig;
+  delete p.neugierig; delete p.eingeladen;
   z.besucher.push(p);
   return p;
 }
@@ -150,6 +151,11 @@ export function neueBesucherZahl(bekanntheit, zufall = Math.random) {
   return n + (zufall() < s - n ? 1 : 0);
 }
 
+// Bei der Evangelisation eingeladen (26.11.): Passt diese Veranstaltung zur Einladung? (ohne Einladung: jede wie bisher)
+export function einladungPasst(p, art) { return !p.eingeladen || (EVANGELISATION.einladung[p.eingeladen] || []).includes(art); }
+// Kommchance eines Eingeladenen: 75 %, bei Jugendlichen/Erwachsenen × Faktor der Veranstaltung, höchstens 75 %
+export const eingeladenChance = f => NEUGIER.kommChance * Math.min(1, f);
+
 // Wer kommt diesmal? Bekannte Besucher nach ihrer Chance, dazu Neugierige aus dem Ort und die neuen Besucher
 // über die Bekanntheit – diese zuerst aus den bekannten Passanten, sonst ganz neue Leute (nur, solange im Einzugsgebiet Platz ist).
 // o: { art, woche, ausschluss (Kennungen, die gerade woanders sind), neuAnteil (Anteil der Wochen-Neuen für diesen Termin),
@@ -163,6 +169,12 @@ export function werKommt(z, zufall = Math.random, o = {}) {
   for (const p of ort.filter(p => p.neugierig)) {
     const f = artFaktor(p, o.art);
     if (f <= 0) continue;                                  // z. B. Erwachsene beim Konfirmandenunterricht: bleiben neugierig
+    // Bei der Evangelisation eingeladen (26.11.): kommt nur zu der Veranstaltung, zu der er eingeladen wurde – mit 75 %
+    if (p.eingeladen) {
+      if (!einladungPasst(p, o.art)) continue;
+      if (zufall() < eingeladenChance(f)) neue.push(ausDemOrt(z, p)); else { p.neugierig = false; delete p.eingeladen; }
+      continue;
+    }
     if (zufall() < NEUGIER.kommChance * f) neue.push(ausDemOrt(z, p)); else p.neugierig = false;
   }
   let frei = null;

@@ -26,7 +26,7 @@ export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
     kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender');
@@ -283,6 +283,18 @@ function torFenster() {
        <div class="typen"><button data-plakat ${t.leistbar ? '' : 'disabled'}>${T.kaufen(euro(t.preis))}</button></div>
        ${t.leistbar ? '' : `<p class="unter">${T.keinGeld}</p>`}`;
   return `<h2>${T.titel}</h2><h3>${T.plakat}</h3><p>${T.info}</p>${inhalt}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
+
+// Feld „Evangelisation!“ vor dem Laden (26.11.): wer gerade vor Ort ist und die Chance pro Passant
+function evangelisationFenster() {
+  const e = ui.spiel.evangelisationInfo(), T = TEXTE.evangelisation;
+  const leute = e.leute.length
+    ? `<ul class="personen">${e.leute.map(p => `<li>${p.name}${p.laedtEin ? '' : `<br><span class="unter">${T.keinJugo(p.name)}</span>`}</li>`).join('')}</ul>`
+    : `<p class="unter">${T.niemand}</p>`;
+  return `<h2>${T.titel}</h2><p>${T.info}</p>
+    <p class="unter staerker">${T.vorOrt(e.leute.length, e.max)}</p>${leute}
+    <p class="unter">${T.chance(e.chance)}</p>
     <div class="zeile"><button data-zu>Schließen</button></div>`;
 }
 

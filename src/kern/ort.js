@@ -13,10 +13,15 @@ import { feiertagAmTag } from './kalender.js';
 import { FEIERTAG_PASSANTEN } from '../inhalte/kirchenjahr.js';
 import { gelaende, schaukastenNeugier } from './gelaende.js';
 import { erkenneRaeume } from './karte.js';
+import { ansprechen } from './evangelisation.js';
+import { EVANGELISATION } from '../inhalte/evangelisation.js';
 
 const G = GRUNDSTUECK;
 const TOR_X = G.tor.x + G.tor.breite / 2 - 0.5;                        // Mitte des Tors
 const gehwegY = () => (GEHWEGE.find(w => w.w > w.h && w.y >= G.y + G.h) || { y: G.y + G.h + 1 }).y;
+// Gehweg direkt vor dem Laden (senkrecht, zwischen Straße und Laden) – dort steht das Feld „Evangelisation!“ (26.11.)
+const FELD = EVANGELISATION.feld;
+const ladenGehwegX = () => { const w = GEHWEGE.filter(w => w.h > w.w && w.x < FELD.x).sort((a, b) => b.x - a.x)[0]; return w ? w.x : FELD.x - 1; };
 const zwischen = ([a, b], zufall) => a + Math.floor(zufall() * (b - a + 1));
 export const MELDUNG_DAUER = 120;                                     // so lange (Spielminuten) bleibt eine Meldung stehen
 
@@ -35,8 +40,10 @@ function tagPlanen(z, tag, zufall) {
   o.tag = tag; o.gaenge = [];
   // An gesetzlichen Feiertagen (bundesweit + Baden-Württemberg) sind doppelt so viele Leute unterwegs (Lukas, 25.11.)
   const n = zwischen(ORT.passantenProTag, zufall) * (feiertagAmTag(tag) ? FEIERTAG_PASSANTEN : 1), k = Math.min(z.besucher.length, zwischen(ORT.bekannteProTag, zufall));
+  // Am Laden laufen zusätzlich 1,5-mal so viele vorbei wie unten am Tor (Lukas, 26.11.) – dieselben Ortsbewohner
+  const nLaden = Math.round(n * EVANGELISATION.ladenPassanten);
   const nehmen = liste => { const frei = liste.filter(p => !heute.has(p.id)); return frei.length ? frei[Math.floor(zufall() * frei.length)] : null; };
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n + nLaden; i++) {
     let p = null;
     if (i < k) p = nehmen(z.besucher);
     else {
@@ -46,9 +53,15 @@ function tagPlanen(z, tag, zufall) {
     }
     if (!p) continue;
     heute.add(p.id);
-    const richtung = zufall() < 0.5 ? 1 : -1, x0 = richtung > 0 ? -1 : WELT.w;
+    const richtung = zufall() < 0.5 ? 1 : -1;
     const start = tag * TAG_MIN + ORT.von * 60 + Math.floor(zufall() * (ORT.bis - ORT.von) * 60);
     if (start < z.minuten) continue;                                    // Spielstand mitten am Tag geladen: was vorbei ist, entfällt
+    if (i >= n) {   // Weg am Laden: senkrecht über den Gehweg vor dem Laden; „tor“ = wann er am Feld vorbeikommt
+      const y0 = richtung > 0 ? -1 : WELT.h;
+      o.gaenge.push({ id: p.id, start, richtung, y0, laden: true, tor: start + Math.abs(FELD.y - y0) / LAUFTEMPO, halt: 0, geprueft: false });
+      continue;
+    }
+    const x0 = richtung > 0 ? -1 : WELT.w;
     o.gaenge.push({ id: p.id, start, richtung, x0, tor: start + Math.abs(TOR_X - x0) / LAUFTEMPO, halt: 0, geprueft: false });
   }
 }
@@ -77,6 +90,15 @@ function amTor(z, g, zufall, raeume) {
   if (zufall() < kaffeeVorliebe(wer) && passantKommt(z, raeume, { id: wer.id, name: wer.vorname })) g.imKaffee = true;
 }
 
+// Am Feld „Evangelisation!“: Ehrenamtliche vor Ort sprechen den Passanten vielleicht an (evangelisation.js).
+// Wer angesprochen wird, bleibt kurz stehen wie am Tor.
+function amLaden(z, g, zufall, raeume) {
+  g.geprueft = true;
+  const p = z.ort.leute.find(x => x.id === g.id);
+  if (!p || !raeume || Math.abs(ladenGehwegX() - FELD.x) > EVANGELISATION.reichweite) return;
+  if (ansprechen(z, raeume, p, zufall)) g.halt = NEUGIER.haltMinuten;
+}
+
 // Nächster Schritt im Ort (für das Tick-System in ablauf.js)
 export function ortSchritt(z, zufall) {
   if (z.ortRuhig) return null;                                           // nur für Tests: ruhiger Ort ohne Passanten
@@ -84,7 +106,7 @@ export function ortSchritt(z, zufall) {
   if (o.tag < tag) return { zeit: z.minuten, tun: () => tagPlanen(z, tag, zufall) };
   let g = null;
   for (const x of o.gaenge) if (!x.geprueft && (!g || x.tor < g.tor)) g = x;
-  if (g && g.tor < morgen) return { zeit: g.tor, tun: (zz, raeume) => amTor(z, g, zufall, raeume) };
+  if (g && g.tor < morgen) return { zeit: g.tor, tun: (zz, raeume) => (g.laden ? amLaden : amTor)(z, g, zufall, raeume) };
   return { zeit: morgen, tun: () => tagPlanen(z, tag + 1, zufall) };
 }
 
@@ -97,10 +119,15 @@ export function passantenPositionen(z) {
     if (g.imKaffee && t >= g.tor) return null;                      // ist ins Kirchkaffee gegangen
     const p = mensch(z, g.id);
     if (!p) return null;
-    const dTor = Math.abs(TOR_X - g.x0);
+    const dTor = g.laden ? Math.abs(FELD.y - g.y0) : Math.abs(TOR_X - g.x0);
     let d = (t - g.start) * LAUFTEMPO;
     const steht = d >= dTor && d < dTor + g.halt * LAUFTEMPO;
     if (d > dTor) d = Math.max(dTor, d - g.halt * LAUFTEMPO);
+    if (g.laden) {   // Weg am Laden (senkrecht)
+      const yl = g.y0 + g.richtung * d;
+      if (yl < -1 || yl > WELT.h) return null;
+      return { id: g.id, name: p.vorname, x: ladenGehwegX(), y: yl, sitzt: false, passant: true, steht };
+    }
     const x = g.x0 + g.richtung * d;
     if (x < -1 || x > WELT.w) return null;
     return { id: g.id, name: p.vorname, x, y, sitzt: false, passant: true, steht };

@@ -152,7 +152,7 @@ function gemeinde() {
     const z = neuesSpiel(() => 0.5);
     z.minuten = tag * TAG_MIN; z.ort.tag = tag - 1;
     ortSchritt(z, () => 0.5).tun();
-    return z.ort.gaenge.length;
+    return z.ort.gaenge.filter(g => !g.laden).length;   // am Tor (am Laden zusätzlich, evangelisation.test.mjs)
   };
   const normal = zaehlen(HEILIGABEND), feiertag = zaehlen(HEILIGABEND + 1);
   assert.ok(normal > 0);

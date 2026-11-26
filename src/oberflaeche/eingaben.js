@@ -63,7 +63,7 @@ function mauszeiger(e) {
   let c = 'default';
   if (ui.tragen) c = 'grabbing';
   else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || schaukastenBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
-      || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) ? 'pointer' : 'default'; }
+      || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) || ui.spiel.evangelisationBei(f.x, f.y) ? 'pointer' : 'default'; }
   else if (!ui.werkzeug) c = 'default';                       // nichts zum Bauen gewählt
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
   else if (istMoebelWerkzeug()) c = 'crosshair';
@@ -111,7 +111,7 @@ function loslassen(e) {
   }
   if (!ui.editorOffen) {
     // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Stuhl → Verbessern, Raum mit Veranstaltungen → Raum-Fenster,
-    // Kirchkaffee → Öffnungszeiten, Tor → Pforte (Plakat)
+    // Kirchkaffee → Öffnungszeiten, Tor → Pforte (Plakat), Feld vor dem Laden → Evangelisation
     const f = feldAus(e), s = ui.klickStart; ui.klickStart = null;
     if (!s || s.feld.x !== f.x || s.feld.y !== f.y) return;
     if (s.besucher) return fensterOeffnen({ art: 'besucher', id: s.besucher.id });
@@ -128,6 +128,7 @@ function loslassen(e) {
     const kk = spiel.kirchkaffeeBei(f.x, f.y);
     if (kk !== null) return fensterOeffnen({ art: 'kaffee', nr: kk });   // Kirchkaffee → Öffnungszeiten
     if (spiel.torBei(f.x, f.y)) return fensterOeffnen({ art: 'tor' });
+    if (spiel.evangelisationBei(f.x, f.y)) return fensterOeffnen({ art: 'evangelisation' });   // Feld vor dem Laden → Menü
     if (spiel.busBei(f.x, f.y)) fensterOeffnen({ art: 'bus' });
     return;
   }
