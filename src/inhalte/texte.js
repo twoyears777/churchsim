@@ -357,7 +357,17 @@ export const TEXTE = {
     woche: n => `Woche ${n}`,
     level: n => `L${n}`,   // ENTWURF 25.11.: Haltungslevel vor dem Balken
     leer: 'Noch niemand bekannt.',
-    status: { passant: 'Passant', neugierig: 'Neugierig', besucher: 'Besucher', stammgast: 'Stammgast', ehrenamtlich: 'Ehrenamtlich' }
+    status: { passant: 'Passant', neugierig: 'Neugierig', besucher: 'Besucher', stammgast: 'Stammgast', ehrenamtlich: 'Ehrenamtlich' },
+    // ENTWURF 26.11. (Claude, wartet auf Freigabe von Lukas): Gruppen und gesammelte Statistiken
+    gruppen: { ehrenamtlich: 'Ehrenamtliche', stammgast: 'Stammgäste', besucher: 'Besucher', neugierig: 'Neugierige', passant: 'Passanten' },
+    ueberblick: 'Überblick',
+    alle: 'Alle',
+    statSpalten: { gruppe: 'Gruppe', anzahl: 'Anzahl', haltung: 'Ø Haltung', besuche: 'Ø Besuche', kaffee: 'Ø Kaffee', dieseWoche: 'Diese Woche da', jugend: 'Jugendliche', konfirmanden: 'Konfirmanden' },
+    levelZeile: 'Haltungslevel (alle)',
+    levelAnzahl: (n, anzahl) => `L${n}: ${anzahl}`,
+    gruppeKopf: (name, anzahl) => `${name} (${anzahl})`,
+    gruppeHaltung: n => `Ø Haltung ${n}`,
+    gruppeLeer: 'Niemand in dieser Gruppe.'
   },
   // Meldung unten rechts
   meldung: {

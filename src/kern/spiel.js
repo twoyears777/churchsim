@@ -43,6 +43,7 @@ import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
+import { menschenStatistik } from './menschenStatistik.js';
 import { toiletteAktuell } from './toiletten.js';
 import { umherPosition } from './umherlaufen.js';
 import { evangelisationAnlegen, evangelisationPosition, evangelisationInfo, freieEhrenamtliche } from './evangelisation.js';
@@ -790,14 +791,17 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // Fenster „Menschen im Ort“: alle, die die Gemeinde kennt
     menschen() {
       const zeile = b => ({ id: b.id, art: 'besucher', voll: b.voll, haltung: b.zufriedenheit, level: levelVon(b), besuche: b.besuche,
-        zuletzt: typeof b.zuletzt === 'number' ? b.zuletzt + 1 : null, kaffee: b.besuche || b.stamm ? kaffeeVorliebe(b) : null, status: statusVon(z, b) });
+        zuletzt: typeof b.zuletzt === 'number' ? b.zuletzt + 1 : null, kaffee: b.besuche || b.stamm ? kaffeeVorliebe(b) : null, status: statusVon(z, b),
+        jugend: istJugend(b), konfirmand: !!b.konfirmand });
       const ea = z.personen.map(p => ({ p, d: daten(p) })).filter(x => x.d && x.d.art === 'ehrenamt').map(({ p, d }) => {
         const h = d.herkunft || {};
         return { id: p.id, art: 'person', voll: d.name, haltung: h.zufriedenheit ?? null, level: h.level ?? null, besuche: h.besuche ?? null,
-          zuletzt: typeof h.zuletzt === 'number' ? h.zuletzt + 1 : null, kaffee: typeof h.kaffee === 'number' ? h.kaffee : null, status: 'ehrenamtlich' };
+          zuletzt: typeof h.zuletzt === 'number' ? h.zuletzt + 1 : null, kaffee: typeof h.kaffee === 'number' ? h.kaffee : null, status: 'ehrenamtlich', jugend: !!h.jugend, konfirmand: false };
       });
       return [...z.besucher.map(zeile), ...ea, ...z.ort.leute.map(zeile)];
     },
+    // Gesammelte Statistiken je Gruppe (Status) für dasselbe Fenster
+    menschenStatistik() { return menschenStatistik(spiel.menschen(), zeitpunkt(z.minuten).woche + 1); },
     // Charakter-Karte eines Mitarbeiters
     personInfo(id) {
       const p = z.personen.find(x => x.id === id), d = p && daten(p);
@@ -808,7 +812,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'kalenderInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
+  for (const name of ['lage', 'kalenderInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'besucherInfo', 'personInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

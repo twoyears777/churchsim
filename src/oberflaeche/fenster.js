@@ -36,7 +36,7 @@ export function fensterAktualisieren() {
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   // ✕ oben rechts in jedem Fenster, das man schließen darf (bleibt beim Scrollen sichtbar)
   if (schliessbar(f)) inhalt = `<button class="fenster-x" data-zu aria-label="Schließen" title="Schließen">✕</button>` + inhalt;
-  m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender');
+  m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen');
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
   m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
@@ -339,10 +339,12 @@ function besucherKarte(f) {
     </table>`;
 }
 
-// Menschen im Ort: sortierbare Liste. Sortieren ist nur Anzeige, keine Spielregel.
+// Menschen im Ort: oben gesammelte Statistiken, darunter die Gruppen (Status) zum Aufklappen.
+// Aufklappen und Sortieren sind nur Anzeige, keine Spielregel; die Zahlen rechnet das Spiel (menschenStatistik).
 const STATUS_REIHE = ['passant', 'neugierig', 'besucher', 'stammgast', 'ehrenamtlich'];
 function menschenFenster(f) {
-  const T = TEXTE.menschen, liste = ui.spiel.menschen(), sort = f.sort || { spalte: 'status', ab: true };
+  const T = TEXTE.menschen, liste = ui.spiel.menschen(), stat = ui.spiel.menschenStatistik(), sort = f.sort || { spalte: 'name', ab: false };
+  const offen = f.offen || [];
   const wert = (m, sp) => sp === 'name' ? m.voll : sp === 'status' ? STATUS_REIHE.indexOf(m.status) : sp === 'kaffee' ? (m.kaffee === null ? -1 : m.kaffee)
     : sp === 'haltung' ? (m.haltung === null ? -1 : ((m.level || 1) - 1) * 100 + m.haltung) : m[sp] ?? -1;   // Haltung: erst Level, dann Haltung
   liste.sort((a, b) => {
@@ -350,17 +352,33 @@ function menschenFenster(f) {
     const v = typeof x === 'string' ? x.localeCompare(y, 'de') : x - y;
     return (sort.ab ? -v : v) || a.voll.localeCompare(b.voll, 'de');
   });
-  const kopf = Object.entries(T.spalten).map(([id, name]) =>
+  if (!liste.length) return `<h2>${T.titel}</h2><p class="leer">${T.leer}</p>`;
+  const rund = n => n === null ? T.unbekannt : Math.round(n).toLocaleString('de-DE');
+  const eineStelle = n => n === null ? T.unbekannt : n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  const statZeile = (name, g, klasse = '') => `<tr class="${klasse}"><td>${name}</td><td class="zahl">${g.anzahl}</td><td class="zahl">${rund(g.haltung)}</td>
+    <td class="zahl">${eineStelle(g.besuche)}</td><td class="zahl">${g.kaffee === null ? T.unbekannt : T.prozent(Math.round(g.kaffee * 100))}</td>
+    <td class="zahl">${g.dieseWoche}</td><td class="zahl">${g.jugend}</td><td class="zahl">${g.konfirmanden}</td></tr>`;
+  const ueberblick = `<h3>${T.ueberblick}</h3>
+    <table class="menschen statistik"><tr>${Object.values(T.statSpalten).map((n, i) => `<th${i ? ' class="zahl"' : ''}>${n}</th>`).join('')}</tr>
+      ${stat.gruppen.map(g => statZeile(T.gruppen[g.status], g)).join('')}${statZeile(T.alle, stat.alle, 'summe')}</table>
+    <p class="unter">${T.levelZeile}: ${stat.alle.level.map((a, i) => T.levelAnzahl(i + 1, a)).join(' · ')}</p>`;
+  const spalten = Object.entries(T.spalten).filter(([id]) => id !== 'status');   // Status steckt schon in der Gruppe
+  const kopf = spalten.map(([id, name]) =>
     `<th><button class="sortieren${sort.spalte === id ? ' aktiv' : ''}" data-sort="${id}">${name}${sort.spalte === id ? (sort.ab ? ' ▼' : ' ▲') : ''}</button></th>`).join('');
-  const zeilen = liste.map(m => `<tr data-mensch="${m.id}" data-mart="${m.art}">
+  const zeile = m => `<tr data-mensch="${m.id}" data-mart="${m.art}">
       <td>${esc(m.voll)}</td>
       <td>${m.haltung === null ? T.unbekannt : `${m.level ? `<small>${T.level(m.level)}</small> ` : ''}<div class="balken mini"><span style="width:${m.haltung}%"></span></div>`}</td>
       <td class="zahl">${m.besuche ?? T.unbekannt}</td>
       <td>${m.zuletzt === null ? T.unbekannt : T.woche(m.zuletzt)}</td>
-      <td>${m.kaffee === null ? T.unbekannt : T.prozent(Math.round(m.kaffee * 100))}</td>
-      <td>${T.status[m.status]}</td></tr>`).join('');
-  return `<h2>${T.titel}</h2>
-    ${liste.length ? `<table class="menschen"><tr>${kopf}</tr>${zeilen}</table>` : `<p class="leer">${T.leer}</p>`}`;
+      <td>${m.kaffee === null ? T.unbekannt : T.prozent(Math.round(m.kaffee * 100))}</td></tr>`;
+  const gruppen = stat.gruppen.map(g => {
+    const auf = offen.includes(g.status), leute = liste.filter(m => m.status === g.status);
+    const inhalt = !auf ? '' : leute.length ? `<table class="menschen"><tr>${kopf}</tr>${leute.map(zeile).join('')}</table>` : `<p class="leer">${T.gruppeLeer}</p>`;
+    return `<div class="menschengruppe${auf ? ' offen' : ''}">
+      <button class="gruppenkopf" data-gruppe="${g.status}"><span>${auf ? '▾' : '▸'} ${T.gruppeKopf(T.gruppen[g.status], g.anzahl)}</span>
+        <small>${g.haltung === null ? '' : T.gruppeHaltung(Math.round(g.haltung))}</small></button>${inhalt}</div>`;
+  }).join('');
+  return `<h2>${T.titel}</h2>${ueberblick}${gruppen}`;
 }
 
 // Finanzen: diese Woche nach Kategorien, Kirchkaffee im Detail, Verlauf früherer Wochen, Kassenbuch. Alle Zahlen kommen vom Spiel.
@@ -707,7 +725,8 @@ export function fensterEinrichten() {
     const b = e.target.closest('button'), f = ui.fenster, spiel = ui.spiel;
     if (!b || b.disabled || !f) return;
     if (b.hasAttribute('data-zu')) return fensterSchliessen();
-    if (b.dataset.sort) { const s = f.sort || { spalte: 'status', ab: true }; f.sort = { spalte: b.dataset.sort, ab: s.spalte === b.dataset.sort ? !s.ab : true }; }
+    if (b.dataset.gruppe) { const o = f.offen || []; f.offen = o.includes(b.dataset.gruppe) ? o.filter(x => x !== b.dataset.gruppe) : [...o, b.dataset.gruppe]; }
+    else if (b.dataset.sort) { const s = f.sort || { spalte: 'name', ab: false }; f.sort = { spalte: b.dataset.sort, ab: s.spalte === b.dataset.sort ? !s.ab : true }; }
     else if (b.hasAttribute('data-annehmen')) f.angenommen = true;
     else if (b.hasAttribute('data-ablehnen')) spiel.seelsorgeAblehnen();
     else if (b.dataset.rat !== undefined) spiel.seelsorgeRat(Number(b.dataset.rat));
