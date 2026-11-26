@@ -89,8 +89,8 @@ console.log('Platz-Tests bestanden.');
   // Bedürfnis Lobpreis (25.11.): wer beim Lobpreisgottesdienst war, hat es diese Woche erfüllt
   assert.equal(z.besucher.filter(b => b.erfuellt && b.erfuellt.ids.includes('lobpreis')).length, 5);
   assert.equal(z.heiligkeit, 15);   // Lobpreisgottesdienst zählt genauso
-  // Am Abend kommt Kollekte dazu (ohne Sonntagvormittag-Bonus)
-  assert.ok(z.wochenbuch.einnahmen.kollekte > kollekteVormittag);
+  // Am Abend kommt Kollekte dazu – auch sonntagabends mit Sonntagsbonus ×2 (Lukas, 26.11.): ohne Bonus wären es 6 €, mit Bonus 12 €
+  assert.equal(z.wochenbuch.einnahmen.kollekte - kollekteVormittag, 12);
   assert.deepEqual(z.besucher.map(b => b.zufriedenheit), haltungVorher);   // Haltung war schon 100 (Obergrenze)
 }
 console.log('Zwei-Veranstaltungen-Tests bestanden.');

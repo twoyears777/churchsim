@@ -96,7 +96,7 @@ export const HILFE = {
           '**Konfirmandenunterricht:** Im Gemeindesaal möglich, braucht einen Hauptamtlichen und Stühle. Nur Jugendliche kommen. Jeder Ehrenamtliche im Raum bringt mehr Haltung. Wer 7-mal da war, wird am 2. Sonntag im Mai konfirmiert.',   // von Lukas freigegeben (25.11.)
           // ENTWURF von Claude (0.1.11) – Lukas formuliert selbst
           '**Spielenachmittag:** Im Gemeindesaal, nachmittags oder abends. Braucht einen Haupt- oder Ehrenamtlichen und einen Tisch mit mindestens 2 Stühlen direkt daneben (bis 4 Plätze je Tisch). Erfüllt das Bedürfnis Spaß.',
-          '**Sonntagvormittag** gibt es doppelte Kollekte.',
+          '**Sonntags** gibt es doppelte Kollekte.',   // Lukas, 26.11.
           'Sobald Kanzel und Altar im Raum stehen, kannst du eine **zweite Veranstaltung** einstellen.',
           'Fehlt etwas, fällt die Veranstaltung aus – das macht Stammgäste unzufrieden. Das Raum-Fenster zeigt dir rot, was fehlt, und eine Prognose für die Woche.'
         ] }

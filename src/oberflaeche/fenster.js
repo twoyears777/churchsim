@@ -158,7 +158,7 @@ function raumFenster(f) {
         <tr><td>${T.prognosePlaetze}</td><td class="zahl">${v.plaetze === null ? T.plaetzeEgal : v.plaetze}</td></tr>
         <tr><td>${T.prognoseGeld}</td><td class="zahl">${T.ca(euro(Math.round(v.geld)))}</td></tr>
         <tr><td>${T.prognoseEhrenamt}</td><td class="zahl">${T.ca(zahl1(v.ehrenamt))}</td></tr>
-        ${v.sonntagvormittag ? `<tr><td colspan="2">${T.prognoseSonntagvormittag}</td></tr>` : ''}
+        ${v.sonntag ? `<tr><td colspan="2">${T.prognoseSonntag}</td></tr>` : ''}
         ${kirchenjahrZeile(v.kirchenjahr)}
         <tr><td>${T.prognosePlakat}</td><td class="zahl">${v.plakat ? T.plakatJa : T.plakatNein}</td></tr></table>`;
   }).join('');

@@ -42,23 +42,32 @@ function bisNachGottesdienst(z, zufall) {
 }
 const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
 
-// Ohne Ausstattung: 10 Besucher = 10 €, am Sonntagvormittag (Standard-Termin) doppelt = 20 €
+// Ohne Ausstattung: 10 Besucher = 10 €, am Sonntag (Standard-Termin: vormittags) doppelt = 20 €
 {
   const zufall = saat(3), z = gemeinde(zufall);
   bisNachGottesdienst(z, zufall);
   assert.strictEqual(z.letzterGottesdienst.besucher, 10);
   assert.strictEqual(kollekte(z), 20);
 }
-// Anderer Termin (Sonntag abends): einfache Kollekte, 10 €
+// Sonntag abends (Lukas, 26.11.: der Bonus gilt den ganzen Sonntag): ebenfalls doppelt, 20 €
 {
   const zufall = saat(3), z = gemeinde(zufall);
   assert.strictEqual(terminEinstellen(z, raumBei(z, G.x + 5, G.y + 5), 0, 6, 'abend'), 'ok');
-  assert.strictEqual(prognose(z, aus(z)).sonntagvormittag, false);
+  assert.strictEqual(prognose(z, aus(z)).sonntag, true);
+  bisNachGottesdienst(z, zufall);
+  assert.strictEqual(z.letzterGottesdienst.besucher, 10);
+  assert.strictEqual(kollekte(z), 20);
+}
+// Anderer Tag (Mittwoch abends): einfache Kollekte, 10 €
+{
+  const zufall = saat(3), z = gemeinde(zufall);
+  assert.strictEqual(terminEinstellen(z, raumBei(z, G.x + 5, G.y + 5), 0, 2, 'abend'), 'ok');
+  assert.strictEqual(prognose(z, aus(z)).sonntag, false);
   bisNachGottesdienst(z, zufall);
   assert.strictEqual(z.letzterGottesdienst.besucher, 10);
   assert.strictEqual(kollekte(z), 10);
 }
-// Beispiel aus dem Spielprinzip: Polsterstühle, Altar, Lobpreisteam Level 0 → 10 × 1,2 × 1,2 × 1,05 = 15,12, am Sonntagvormittag × 2 = 30,24 → 30 €
+// Beispiel aus dem Spielprinzip: Polsterstühle, Altar, Lobpreisteam Level 0 → 10 × 1,2 × 1,2 × 1,05 = 15,12, am Sonntag × 2 = 30,24 → 30 €
 {
   const zufall = saat(3), z = gemeinde(zufall);
   z.konto = 1000;

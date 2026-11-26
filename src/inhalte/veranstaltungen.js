@@ -60,5 +60,6 @@ export const DRITTER_PLATZ_STANDARD = { tag: 4, slot: 'abend' };   // Veranstalt
 // War ein Besucher in dieser Woche schon bei einer Veranstaltung, kommt er mit dieser Chance × normal (Lukas, 25.11.)
 export const ZWEITER_BESUCH = 0.5;
 
-// Gottesdienst und Lobpreisgottesdienst am Sonntagvormittag (Lukas, 25.11.): Kollekte × diesen Wert
-export const SONNTAGVORMITTAG = { tag: 6, slot: 'vormittag', kollekte: 2 };
+// Sonntagsbonus (Lukas, 25.11.; seit 26.11. den ganzen Sonntag): Kollekte aller Gottesdienstarten × diesen Wert.
+// Spenden im Gemeindesaal und Einnahmen des Kirchkaffees bekommen ihn nicht (Lukas, 26.11.).
+export const SONNTAG = { tag: 6, kollekte: 2 };

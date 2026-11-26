@@ -36,7 +36,7 @@ export const ZEITEN = [
 
 // ---- Feste und Feiertage (Spielprinzip von Lukas, 25.11.2026: claude/vorschlag-kirchenjahr-feste.md) ----
 // besucher: Kommchance der bekannten Besucher × Faktor (höchstens 100 %) und neue Besucher × Faktor.
-// kollekte: Kollekte × Faktor (wird mit dem ×2 am Sonntagvormittag multipliziert).
+// kollekte: Kollekte × Faktor (wird mit dem ×2 am Sonntag multipliziert).
 // gross: vor diesem Fest öffnet sich das Fest-Menü (Sonderevent planen). slot: Vorbelegung im Fest-Menü.
 // wann: wie das Datum berechnet wird – fest (Tag/Monat), um Ostern (Tage Abstand), vor dem 1. Advent (Tage), 1. Sonntag im Oktober,
 //       2. Sonntag im Mai.

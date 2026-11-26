@@ -10,7 +10,7 @@
 //                Wer keinen Kaffee will (oder keinen Platz in der Schlange bekommt), geht gleich nach dem Gottesdienst heim.
 //   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche.
 //                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
-import { VERANSTALTUNGEN, SONNTAGVORMITTAG, PLAETZE, ZWEITER_PLATZ_STANDARD, DRITTER_PLATZ_STANDARD, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
+import { VERANSTALTUNGEN, SONNTAG, PLAETZE, ZWEITER_PLATZ_STANDARD, DRITTER_PLATZ_STANDARD, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
 import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN } from '../inhalte/zeit.js';
 import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
@@ -42,8 +42,8 @@ import { evangelisationSchritt } from './evangelisation.js';
 import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen } from './toiletten.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
-// Kollekte-Faktor für den Termin: Sonntagvormittag doppelt (Gottesdienst und Lobpreisgottesdienst)
-export function zeitFaktor(plan) { return plan && plan.tag === SONNTAGVORMITTAG.tag && plan.slot === SONNTAGVORMITTAG.slot ? SONNTAGVORMITTAG.kollekte : 1; }
+// Kollekte-Faktor für den Termin: am Sonntag doppelt, egal ob vormittags, nachmittags oder abends (Lukas, 26.11.)
+export function zeitFaktor(plan) { return plan && plan.tag === SONNTAG.tag ? SONNTAG.kollekte : 1; }
 // Faktoren des Kirchenjahres für einen Termin (Fest an dem Tag oder Zeit im Kirchenjahr): { besucher, kollekte, fest, zeit }
 // Mit Spielstand z: die Konfirmation zählt nur, wenn es Konfirmanden gibt (konfi.js).
 export function terminFaktoren(t, z = null) { return faktorAmTag(t.woche * 7 + t.plan.tag, z ? f => festAktiv(z, f) : undefined); }
@@ -450,7 +450,7 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   const v = VERANSTALTUNGEN.find(x => x.id === L.art);
   if (v && v.kollekte === false) return saalEnde(z, raeume, L, v, zufall);
   const sitzend = L.gaeste.filter(g => g.sitz);
-  // Kollekte: pro Besucher 1 € × Stuhl, × Altar, Grünpflanzen und Musik des Raums, × 2 am Sonntagvormittag,
+  // Kollekte: pro Besucher 1 € × Stuhl, × Altar, Grünpflanzen und Musik des Raums, × 2 am Sonntag,
   // × Kollekte-Faktor des Kirchenjahres (z. B. Heiligabend ×2); auf ganze Euro gerundet.
   // Dazu merkt sich jeder Gast, wie viel Haltung ihm Stuhl, Kanzel und Blumen bringen (wird am Ende gutgeschrieben).
   const liste = gottesdienstRaeume(z, raeume);
@@ -597,7 +597,7 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
   const wegenFest = g && platz !== 'fest' && verdraengtVon(z, raeume, { woche, plan, raum: raumSchluessel(g.raum), platz });
   const kirchenjahr = { besucher: kj.besucher, kollekte: kj.kollekte, fest: kj.fest, zeit: kj.zeit,
     festName: kj.fest ? FESTE.find(f => f.id === kj.fest).name : null, zeitName: (ZEITEN.find(t => t.id === kj.zeit) || {}).name || null };
-  const grund = { bereit: bereit && !wegenFest, erwartet, plaetze, plakat, saal, sonntagvormittag: !saal && faktor > 1, fehlt: wegenFest ? 'fest' : p ? p.fehlt : 'raum',
+  const grund = { bereit: bereit && !wegenFest, erwartet, plaetze, plakat, saal, sonntag: !saal && faktor > 1, fehlt: wegenFest ? 'fest' : p ? p.fehlt : 'raum',
     kirchenjahr, wegenFest: wegenFest ? festAusSchluessel(wegenFest).fest.name : null };
   if (wegenFest) return { ...grund, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0 };
   if (!bereit) return { ...grund, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0 };

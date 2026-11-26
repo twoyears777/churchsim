@@ -78,7 +78,7 @@ const musiker = (z, n) => {
   veranstaltungEinstellen(z, raumBei(z), 'jugend', 0);
   musiker(z, 2);
   spielAnlegen(z);
-  // Veranstaltung 1 steht standardmäßig auf Sonntagvormittag; zufall 0 → alle mit Chance > 0 kommen
+  // Veranstaltung 1 steht standardmäßig auf Sonntagvormittag (Sonntagsbonus); zufall 0 → alle mit Chance > 0 kommen
   zeitVorruecken(z, aus(z), 6 * TAG_MIN + 14 * 60 - z.minuten, () => 0);
   const da = z.besucher.filter(b => b.besuche > 0);
   assert.equal(da.length, 10);

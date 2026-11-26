@@ -152,7 +152,7 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     assert.equal(gottesdienstBereit(z, aus()).length, 1);
     assert.deepEqual(prognose(z, aus()).plaetze, 3);
     assert.ok(Math.abs(prognose(z, aus()).erwartet - 2.592) < 1e-9);   // 4 × 54 % × 1,2 (Level 2, Haltung 60; 1. Advent: Adventszeit)
-    assert.ok(Math.abs(prognose(z, aus()).geld - 5.184) < 1e-9);      // Sonntagvormittag: Kollekte × 2
+    assert.ok(Math.abs(prognose(z, aus()).geld - 5.184) < 1e-9);      // Sonntag: Kollekte × 2
     zeitVorruecken(z, aus(), SONNTAG_10 - 180 - z.minuten, () => 0);  // Anreise
     assert.equal(z.laeufe[0].phase, 'anreise'); assert.equal(z.laeufe[0].gaeste.length, 4);
     assert.equal(z.laeufe[0].gaeste.filter(g => !g.sitz).length, 1);
