@@ -43,7 +43,7 @@ const ausstatten = z => {
   const z = gemeinde(), r = raumBei(z);
   for (const c of r.zellen) z.veranstaltung[c] = 'gottesdienst';
   z.plan = { tag: 3, slot: 'nachmittag' };
-  assert.deepEqual(programmVon(z, r), [{ art: 'gottesdienst', tag: 3, slot: 'nachmittag' }, { art: null, tag: 6, slot: 'abend' }]);
+  assert.deepEqual(programmVon(z, r), [{ art: 'gottesdienst', tag: 3, slot: 'nachmittag' }, { art: null, tag: 6, slot: 'abend' }, { art: null, tag: 4, slot: 'abend' }]);
   // ein laufender alter Termin (z.lauf) wird übernommen
   const alt = gemeinde(); delete alt.laeufe; alt.lauf = { woche: 0, beginn: SO + 600, phase: 'anreise', gaeste: null, start: 0 };
   spielAnlegen(alt);

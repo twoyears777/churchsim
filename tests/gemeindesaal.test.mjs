@@ -35,7 +35,7 @@ const ea = z => z.personen.find(p => p.daten && p.daten.art === 'ehrenamt') || p
   const z = gemeinde();
   assert.deepEqual(raumBei(z).probleme, []);
   assert.equal(raumBei(z).typ.name, 'Gemeindesaal');
-  assert.deepEqual(saal(z).programm.map(p => p.frei), [true, true]);
+  assert.deepEqual(saal(z).programm.map(p => p.frei), [true, true, false]);   // 3. erst nach der Forschung
   const klein = neuesSpiel(() => 0.5);
   wandRechteck(klein, G.x + 2, G.y + 2, G.x + 12, G.y + 8); tuerUmschalten(klein, G.x + 2, G.y + 5);   // nur 9 × 5
   typZuweisen(klein, raumBei(klein), 'gemeindesaal');

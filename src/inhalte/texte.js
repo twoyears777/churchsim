@@ -55,6 +55,9 @@ export const TEXTE = {
   fehltGesperrt: n => `Veranstaltung ${n} fällt aus – Kanzel und Altar fehlen im Raum.`,
   fehltGitarre: 'Für den Lobpreisgottesdienst fehlt eine Gitarre im Raum.',
   ausgefallenGitarre: 'Der Lobpreisgottesdienst ist ausgefallen – keine Gitarre im Raum.',
+  // Jugendgottesdienst (ENTWÜRFE von Claude, 26.11. – Lukas formuliert selbst)
+  fehltMusiker: 'Für den Jugendgottesdienst fehlen Musiker – mindestens 2 Ehrenamtliche müssen an je einem Instrument spielen.',
+  ausgefallenMusiker: 'Der Jugendgottesdienst ist ausgefallen – zu wenige Musiker im Raum.',
   // ---- Gemeindesaal (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
   // Was einer Veranstaltung im Gemeindesaal fehlt (Codes aus dem Spiel)
   fehltSaal: {
@@ -93,6 +96,7 @@ export const TEXTE = {
     art: 'Art',
     zeit: 'Zeit',
     gesperrt: 'Gesperrt – braucht Kanzel und Altar im Raum',
+    gesperrtForschung: name => `Gesperrt – braucht die Forschung „${name}“`,   // ENTWURF von Claude (26.11.)
     termin: (tag, slot, uhr) => `${tag} ${slot.toLowerCase()} · ${uhr}`,
     zurueck: 'Zurück',                                       // Platzhalter von Claude
     wochenplan: 'Wochenplan',
@@ -153,6 +157,9 @@ export const TEXTE = {
       hauptamt: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: 'normal', haltung: `+${b.gottesdienst} Gottesdienst, +${b.platz} Platz`, geld: `${geld(b.kollekte, 0)} je Besucher` }),
       hauptamtLobpreis: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: '× Lobpreis-Vorliebe',
         haltung: `0 bis +${b.haltungMax} je nach Lobpreis-Vorliebe, +${b.platz} Platz`, geld: `${geld(b.kollekte, 0)} je Besucher` }),
+      // Jugendgottesdienst (ENTWURF von Claude, 26.11. – Lukas formuliert selbst)
+      hauptamtJugend: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: `Jugendliche ${b.jugendProzent} %, Erwachsene ${b.erwachseneProzent} %`,
+        haltung: `+${b.gottesdienst} Gottesdienst, +${b.platz} Platz, erfüllt Spaß (Jugendliche) und Lobpreis`, geld: `${geld(b.kollekte)} je Besucher` }),
       pflichtMoebel: b => ({ name: `${b.name} (Pflicht)` }),
       moebel: b => ({ name: b.max > 1 ? `${b.name} (${b.anzahl} von ${b.max})` : b.name,
         haltung: b.haltung ? (b.max > 1 ? `+${b.haltung} je Stück` : `+${b.haltung}`) : null,
@@ -162,7 +169,7 @@ export const TEXTE = {
       besserStuhl: b => ({ name: 'Bessere Stühle', haltung: '+ Stufe des Stuhls', geld: b.kollekte ? 'Kollekte × Stufe' : null }),
       instrumentOhne: b => ({ name: `${b.name} ohne Ehrenamtlichen` }),
       musiker: b => ({
-        name: (b.nr === 1 ? '1 Ehrenamtlicher' : `${b.nr}. Ehrenamtlicher`)
+        name: (b.nr === 1 ? '1 Ehrenamtlicher' : `${b.nr}. Ehrenamtlicher`) + (b.pflicht ? ' (Pflicht)' : '')
           + (b.brauchtInstrument ? ` (braucht ${b.nr === 1 ? 'ein' : b.nr + '.'} Instrument)` : ' am Instrument')
           + (b.level !== null ? ` (Level ${b.level})` : ''),
         besucher: b.besucher ? `×${zahl(b.besucher.min)} bis ×${zahl(b.besucher.max)} je nach Lobpreis-Vorliebe` : null,
@@ -191,11 +198,12 @@ export const TEXTE = {
     summe: s => ({
       besucher: s.besucher.art === 'musik' ? `×${zahl(s.besucher.min)} bis ×${zahl(s.besucher.max)} je nach Lobpreis-Vorliebe`
         : s.besucher.art === 'vorliebe' ? '× Lobpreis-Vorliebe'
+        : s.besucher.art === 'jugend' ? `Jugendliche ${s.besucher.jugendProzent} %, Erwachsene ${s.besucher.erwachseneProzent} %`   // ENTWURF 26.11.
         : s.besucher.art === 'plaetze' ? `${s.art === 'konfi' ? 'nur Jugendliche' : 'normal'}, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}${s.art === 'spiele' ? ' am Tisch' : ''}`
         : s.besucher.art === 'egal' ? 'normal, Stühle egal' : 'normal',
       haltung: (s.haltung.vorliebeMax !== null
         ? `+${s.haltung.fest}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` : '') + ' je nach Lobpreis-Vorliebe'
-        : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' ? ' je nach Lobpreis-Vorliebe' : '') : ''))
+        : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' || s.art === 'jugend' ? ' je nach Lobpreis-Vorliebe' : '') : ''))
         + (s.haltung.faktor > 1 ? `, dann alles ×${zahl(s.haltung.faktor)}` : ''),   // Multiplikator, freigegeben 25.11. abends
       geld: s.geld.keins ? null : s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher` : `${geld(s.geld.jeBesucher)} je Besucher`,
       ...(s.ehrenamt ? { ehrenamt: `+${s.ehrenamt} Haltung` } : {})   // Konfirmandenunterricht: Plus durch die Ehrenamtlichen im Raum
@@ -711,7 +719,10 @@ export const TEXTE = {
     dauer: sek => sek >= 60 && sek % 60 === 0 ? `Dauer: ${sek / 60} ${sek === 60 ? 'Minute' : 'Minuten'}` : `Dauer: ${sek} Sekunden`,
     dauerInfo: 'Gilt bei normaler Geschwindigkeit. Die Forschung läuft nur, wenn die Spielzeit läuft.',
     rest: sek => `noch ${sek >= 60 ? `${Math.floor(sek / 60)}:${String(sek % 60).padStart(2, '0')} Min.` : `${sek} Sek.`}`,
-    beschreibung: { schulungen1: 'Schaltet frei, dass du Ehrenamtliche auf Schulungen schicken kannst.' },
+    beschreibung: { schulungen1: 'Schaltet frei, dass du Ehrenamtliche auf Schulungen schicken kannst.',
+      // ENTWÜRFE von Claude (26.11.) – Lukas formuliert selbst
+      slot3gottesdienst: 'Schaltet in jedem Gottesdienstraum eine 3. Veranstaltung frei.',
+      slot3saal: 'Schaltet in jedem Gemeindesaal eine 3. Veranstaltung frei.' },
     erforscht: 'Erforscht',
     starten: 'Forschen',
     abbrechen: 'Abbrechen',
@@ -720,5 +731,21 @@ export const TEXTE = {
     abbrechenNein: 'Weiterforschen',
     zustand: { gesperrt: 'Erst die vorherige Forschung abschließen', besetzt: 'Es läuft schon eine andere Forschung', geld: 'Zu wenig Geld', heiligkeit: 'Zu wenig Heiligkeit' },
     schliessen: 'Schließen'
+  },
+  // Gemeindekalender (ENTWÜRFE von Claude, 26.11. – Lukas formuliert selbst)
+  kalender: {
+    knopf: 'Kalender',
+    titel: 'Gemeindekalender',
+    diese: 'Diese Woche',
+    naechste: 'Nächste Woche',
+    woche: n => `Woche ${n} · alle Veranstaltungen in allen Räumen`,
+    fest: (fest, art) => art ? `${fest} (${art})` : fest,
+    kaffee: 'Kirchkaffee geöffnet',
+    bis: stunde => `bis ${String(stunde).padStart(2, '0')}:00`,
+    leer: 'In dieser Woche ist nichts geplant.',
+    zustand: { geplant: '', laeuft: 'Läuft gerade', vorbei: 'Vorbei', faelltAus: 'Fällt aus', ausgefallen: 'Ist ausgefallen' },
+    grund: { fest: 'wegen eines Fests', raum: 'Raum nicht fertig', keine: 'nichts eingestellt', leitung: 'kein Hauptamtlicher', gitarre: 'Gitarre fehlt',
+      gesperrt: 'Platz gesperrt', musiker: 'zu wenige Musiker', ehrenamt: 'kein Ehrenamtlicher', mitarbeiter: 'kein Mitarbeiter', musikLevel: 'Musik-Level zu niedrig',
+      tisch: 'Tisch fehlt', klavier: 'Klavier fehlt', stuehle: 'zu wenige Stühle', stuehleTisch: 'zu wenige Stühle am Tisch' }
   }
 };

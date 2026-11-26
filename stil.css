@@ -113,6 +113,20 @@ li.ok, td.ok { color: #2e7d32; } li.fehlt, td.fehlt { color: #b3261e; }
 .wochenplan th { font-weight: 600; text-align: center; }
 .wochenplan th.slot { text-align: left; padding-right: 6px; }
 .wochenplan th.slot small { display: block; font-weight: 400; color: #6b665b; }
+/* Gemeindekalender (26.11., ENTWURF von Claude – Design legt Lukas fest) */
+.kalender { width: 100%; table-layout: fixed; }
+.kalender th small { display: block; font-weight: 400; color: #6b665b; }
+.kalender th small.fest { color: #8a5a00; font-weight: 600; }
+.kalender td { vertical-align: top; background: #f4f1ea; border-radius: 4px; min-height: 40px; padding: 2px; }
+.kalender td.heute, .kalender th.heute { background: #e3eefb; }
+.kalender .termin { background: #fff; border-left: 3px solid #4a7bb7; border-radius: 3px; padding: 2px 4px; margin: 2px 0; font-size: 12px; line-height: 1.25; }
+.kalender .termin b { display: block; font-weight: 600; }
+.kalender .termin small { display: block; color: #6b665b; }
+.kalender .termin small.fehlt { color: #b3261e; }
+.kalender .termin.faelltAus, .kalender .termin.ausgefallen { border-left-color: #b3261e; }
+.kalender .termin.vorbei { opacity: .6; }
+.kalender .termin.laeuft { border-left-color: #2e7d32; }
+.kalender .termin.kaffee { border-left-color: #8d6e63; }
 .planfeld { min-height: 30px; width: 38px; padding: 0; border-radius: 6px; }
 .inhalt .planfeld.aktiv { background: #2d69be; border-color: #2d69be; }
 .balken { height: 12px; border-radius: 6px; background: #e2dccd; overflow: hidden; margin: 4px 0; }

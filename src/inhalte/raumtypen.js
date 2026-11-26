@@ -34,7 +34,7 @@ export const RAUMTYPEN = [
     minGroesse: [5, 10],
     farbe: '#cfe0c8',               // PLATZHALTER-Farbe von Claude – Lukas legt sie fest
     einsatz: ['hauptamt', 'ehrenamt'],
-    plaetze: [{ braucht: [] }, { braucht: [] }],   // Veranstaltung 1 und 2 von Anfang an (Lukas, 25.11.)
+    plaetze: [{ braucht: [] }, { braucht: [] }, { braucht: [], forschung: 'slot3saal' }],   // 1 und 2 von Anfang an (25.11.), 3 nach Forschung (26.11.)
     kosten: null,
     moebel: [],
     erweiterungen: []

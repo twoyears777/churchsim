@@ -31,9 +31,10 @@ export function bausteineVon(z, raum, info, arten) {
   return aus;
 }
 
-// Gottesdienst und Lobpreisgottesdienst
+// Gottesdienst, Lobpreisgottesdienst und Jugendgottesdienst
 function gottesdienstraum(z, raum, info, v) {
   const lobpreis = !!v.haltungNachVorliebe;
+  const jugend = !!v.musikerMin, kollekte = KOLLEKTE_PRO_BESUCHER * (v.kollekteFaktor || 1);   // Jugendgottesdienst (26.11.)
   const imRaum = info ? info.imRaum : [];
   const hauptamt = imRaum.some(p => daten(p).art === 'hauptamt');
   const hat = art => moebelImRaum(z, raum, art).length > 0;
@@ -44,7 +45,10 @@ function gottesdienstraum(z, raum, info, v) {
   const zeilen = [];
 
   // Pflicht: Hauptamtlicher (beim Lobpreisgottesdienst auch die Gitarre)
-  zeilen.push(lobpreis
+  zeilen.push(jugend
+    ? { id: 'hauptamtJugend', pflicht: true, imRaum: hauptamt, gottesdienst: AENDERUNG.gottesdienst, platz: AENDERUNG.sitzplatz, kollekte,
+      jugendProzent: prozent(JUGEND.faktor[v.id] ?? 1), erwachseneProzent: prozent(v.erwachsene ?? 1) }
+    : lobpreis
     ? { id: 'hauptamtLobpreis', pflicht: true, imRaum: hauptamt, haltungMax: v.haltungNachVorliebe, platz: AENDERUNG.sitzplatz, kollekte: KOLLEKTE_PRO_BESUCHER }
     : { id: 'hauptamt', pflicht: true, imRaum: hauptamt, gottesdienst: AENDERUNG.gottesdienst, platz: AENDERUNG.sitzplatz, kollekte: KOLLEKTE_PRO_BESUCHER });
   for (const art of v.braucht) zeilen.push({ id: 'pflichtMoebel', moebel: art, name: MOEBEL.find(m => m.id === art).name, pflicht: true, imRaum: hat(art) });
@@ -66,16 +70,16 @@ function gottesdienstraum(z, raum, info, v) {
   zeilen.push({ id: 'besserStuhl', imRaum: stuehle.some(s => stuhlStufe(s).stufe > 1), kollekte: true });
 
   // Instrument ohne Spieler (nur beim normalen Gottesdienst; beim Lobpreisgottesdienst ist die Gitarre Pflicht)
-  if (!lobpreis) {
+  if (!lobpreis && !jugend) {
     const erstes = MOEBEL.find(m => m.wirkung && m.wirkung.musik && hat(m.id)) || MOEBEL.find(m => m.id === 'gitarre');
     zeilen.push({ id: 'instrumentOhne', name: erstes.name, imRaum: instrumente > 0 });
   }
 
   // Musiker: jeder spielende Ehrenamtliche eine Zeile, dazu eine Zeile für den nächsten
-  const musikWirktAufBesucher = !lobpreis;
-  for (let nr = 1; nr <= Math.min(MAX_MUSIKER, levels.length + 1); nr++) {
+  const musikWirktAufBesucher = !lobpreis && !jugend;
+  for (let nr = 1; nr <= Math.min(MAX_MUSIKER, Math.max(v.musikerMin || 0, levels.length + 1)); nr++) {
     const da = nr <= levels.length, level = da ? levels[nr - 1] : null;
-    zeilen.push({ id: 'musiker', nr, imRaum: da, level, bonus: da ? prozent(musikBonus(level)) : null, bonusMin: prozent(musikBonus(0)),
+    zeilen.push({ id: 'musiker', nr, imRaum: da, pflicht: nr <= (v.musikerMin || 0), level, bonus: da ? prozent(musikBonus(level)) : null, bonusMin: prozent(musikBonus(0)),
       brauchtInstrument: !da && instrumente < nr,
       besucher: nr === 1 && musikWirktAufBesucher ? { min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : null });
   }
@@ -88,11 +92,12 @@ function gottesdienstraum(z, raum, info, v) {
   const bonus = Math.round(levels.reduce((s, l) => s + musikBonus(l), 0) * 100) / 100;
   const pflichtDa = zeilen.filter(x => x.pflicht).every(x => x.imRaum);
   const summe = {
-    art: lobpreis ? 'lobpreis' : 'gottesdienst', bereit: pflichtDa,
-    besucher: lobpreis ? { art: 'vorliebe' } : levels.length ? { art: 'musik', min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : { art: 'normal' },
+    art: jugend ? 'jugend' : lobpreis ? 'lobpreis' : 'gottesdienst', bereit: pflichtDa,
+    besucher: jugend ? { art: 'jugend', jugendProzent: prozent(JUGEND.faktor[v.id] ?? 1), erwachseneProzent: prozent(v.erwachsene ?? 1) }
+      : lobpreis ? { art: 'vorliebe' } : levels.length ? { art: 'musik', min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : { art: 'normal' },
     haltung: { fest: AENDERUNG.sitzplatz + (lobpreis ? 0 : AENDERUNG.gottesdienst) + haltungFest, vorliebeMax: lobpreis ? v.haltungNachVorliebe : null,
       prozent: prozent(bonus), faktor: mult },
-    geld: { jeBesucher: Math.round(KOLLEKTE_PRO_BESUCHER * faktor * (levels.length ? 1 + bonus : 1) * 100) / 100, spende: false }
+    geld: { jeBesucher: Math.round(kollekte * faktor * (levels.length ? 1 + bonus : 1) * 100) / 100, spende: false }
   };
   return { zeilen, summe };
 }

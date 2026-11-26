@@ -7,6 +7,13 @@ export const VERANSTALTUNGEN = [
   { id: 'gottesdienst', name: 'Gottesdienst', raumtypen: ['gottesdienst'], leitung: 'hauptamt', braucht: [] },
   { id: 'lobpreis', name: 'Lobpreisgottesdienst', raumtypen: ['gottesdienst'], leitung: 'hauptamt', braucht: ['gitarre'],
     haltungNachVorliebe: 10 },  // Lobpreis-Vorliebe 100 % → +10, 50 % → +5, 0 % → 0
+  // Jugendgottesdienst (Lukas, 26.11.: claude/spielprinzip-jugendgottesdienst-dritter-slot.md): Haltung wie beim Gottesdienst.
+  // musikerMin: so viele Ehrenamtliche müssen spielen (jeder an einem eigenen Instrument). kollekteFaktor: Kollekte × diesen Wert.
+  // erwachsene: Faktor auf die Chance zu kommen für Erwachsene (Jugendliche: JUGEND.faktor in besucher.js).
+  // musikFaktor: false = die Lobpreis-Vorliebe wirkt nicht darauf, ob jemand kommt (auf die Haltung schon, wie beim Gottesdienst).
+  // spass: 'jugend' = erfüllt das Bedürfnis Spaß nur für Jugendliche. fest: false = nicht als Fest im Kirchenjahr wählbar.
+  { id: 'jugend', name: 'Jugendgottesdienst', raumtypen: ['gottesdienst'], leitung: 'hauptamt', braucht: [],
+    musikerMin: 2, kollekteFaktor: 0.5, erwachsene: 0.1, musikFaktor: false, spass: 'jugend', fest: false },
 
   // ---- Gemeindesaal (Lukas, 25.11.) ----
   // Besucher kommen, bekommen Haltung, manchmal spontane Spende (SPONTANE_SPENDE); keine Kollekte, kein Kirchkaffee.
@@ -44,9 +51,11 @@ export const KEINE_VERANSTALTUNG = 'Keine';
 // Fehlt später Kanzel oder Altar, bleibt Veranstaltung 2 eingestellt, fällt aber aus.
 export const PLAETZE = [
   { braucht: [] },
-  { braucht: ['kanzel', 'altar'] }
+  { braucht: ['kanzel', 'altar'] },
+  { braucht: [], forschung: 'slot3gottesdienst' }   // Veranstaltung 3: erst nach der Forschung (Lukas, 26.11.)
 ];
 export const ZWEITER_PLATZ_STANDARD = { tag: 6, slot: 'abend' };   // vorgeschlagene Zeit für Veranstaltung 2, bis man sie ändert
+export const DRITTER_PLATZ_STANDARD = { tag: 4, slot: 'abend' };   // Veranstaltung 3: Freitagabend (VORSCHLAG von Claude)
 
 // War ein Besucher in dieser Woche schon bei einer Veranstaltung, kommt er mit dieser Chance × normal (Lukas, 25.11.)
 export const ZWEITER_BESUCH = 0.5;

@@ -2,7 +2,7 @@
 
 // Heiligkeit: kommt nur aus Gottesdiensten, nur die Besucherzahl zählt. Gutschrift am Ende des Gottesdienstes.
 // veranstaltungen: welche Veranstaltungen als Gottesdienst zählen (Feste aus dem Kirchenjahr laufen als eine davon).
-export const HEILIGKEIT = { proBesucher: 1, veranstaltungen: ['gottesdienst', 'lobpreis'] };
+export const HEILIGKEIT = { proBesucher: 1, veranstaltungen: ['gottesdienst', 'lobpreis', 'jugend'] };
 
 // Forschungen. Neue einfach hier ergänzen.
 //   kosten:     Geld (€) und Heiligkeit, beides wird beim Start bezahlt (beim Abbrechen ist es weg)
@@ -10,7 +10,11 @@ export const HEILIGKEIT = { proBesucher: 1, veranstaltungen: ['gottesdienst', 'l
 //   braucht:    ids von Forschungen, die vorher fertig sein müssen (für den späteren Baum)
 //   schaltetFrei: was die Forschung später freischaltet (noch ohne Wirkung, bis das Feature gebaut ist)
 export const FORSCHUNGEN = [
-  { id: 'schulungen1', name: 'Schulungen 1', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'schulungen' }
+  { id: 'schulungen1', name: 'Schulungen 1', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'schulungen' },
+  // 3. Veranstaltungsslot (Lukas, 26.11.): je Raumtyp eine eigene Forschung, Kosten und Dauer wie Schulungen 1, noch ohne Voraussetzung.
+  // Freigeschaltet wird der Platz mit „forschung: …“ in PLAETZE (veranstaltungen.js) bzw. plaetze (raumtypen.js).
+  { id: 'slot3gottesdienst', name: '3. Veranstaltung im Gottesdienstraum', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'platz' },
+  { id: 'slot3saal', name: '3. Veranstaltung im Gemeindesaal', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'platz' }
 ];
 
 // Haltungs-Multiplikator (Lukas, 25.11. abends; seit 26.11. ein Skill des Hauptamtlichen): vervielfacht die Haltung, die ein
@@ -28,5 +32,5 @@ export const HALTUNG_MULTIPLIKATOR = {
     { faktor: 2.5, preis: 1000, gottesdienste: 35 },
     { faktor: 3.0, preis: 2000, gottesdienste: 55 }
   ],
-  veranstaltungen: ['gottesdienst', 'lobpreis']
+  veranstaltungen: ['gottesdienst', 'lobpreis', 'jugend']
 };

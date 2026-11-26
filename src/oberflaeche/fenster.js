@@ -27,11 +27,11 @@ export function fensterAktualisieren() {
   if (!f) { m.hidden = true; return; }
   const inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster }[f.art](f);
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
-  m.classList.toggle('sehr-breit', f.art === 'finanzen');
+  m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender');
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
-  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest');
+  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
 }
@@ -124,9 +124,10 @@ function raumFenster(f) {
   // ---- Übersicht: Veranstaltung 1, 2 ----
   const warnung = e => saal ? (e.art && e.fehlt && ((TEXTE.fehltArt[e.art] || {})[e.fehlt] || TEXTE.fehltSaal[e.fehlt])) || ''
     : e.fehlt === 'gesperrt' && e.art ? TEXTE.fehltGesperrt(e.platz + 1)
-    : e.art && e.fehlt === 'gitarre' ? TEXTE.fehltGitarre : e.art && e.fehlt === 'leitung' ? T.keinMitarbeiter : '';
+    : e.art && e.fehlt === 'gitarre' ? TEXTE.fehltGitarre : e.art && e.fehlt === 'musiker' ? TEXTE.fehltMusiker
+    : e.art && e.fehlt === 'leitung' ? T.keinMitarbeiter : '';
   const plaetze = r.programm.map(e => {
-    if (!e.nutzbar) return `<button class="kachel" disabled><b>${T.platz(e.platz + 1)}</b><small class="unter">${T.gesperrt}</small></button>`;
+    if (!e.nutzbar) return `<button class="kachel" disabled><b>${T.platz(e.platz + 1)}</b><small class="unter">${e.sperre === 'forschung' ? T.gesperrtForschung(esc(e.forschung)) : T.gesperrt}</small></button>`;
     const w = warnung(e);
     return `<button class="kachel${e.art ? ' aktiv' : ''}" data-platz="${e.platz}"><b>${T.platz(e.platz + 1)}</b>
       <span class="klein">${artName(e.art)}</span>${e.art ? `<span>${terminText(e)}</span>` : ''}
@@ -656,6 +657,32 @@ function forschungFenster(f) {
     <div class="forschung-baum">${knoten}</div>
     <div class="zeile"><button data-zu>${T.schliessen}</button></div>`;
 }
+// Gemeindekalender (Lukas, 26.11.): Wochenüberblick über alle Veranstaltungen in allen Räumen, dazu Feste und Kirchkaffee.
+// Diese und nächste Woche zum Umschalten. Spalten = Wochentage, Zeilen = Vormittag/Nachmittag/Abend (wie der Wochenplan).
+function kalenderFenster(f) {
+  const T = TEXTE.kalender, k = ui.spiel.kalenderInfo(f.versatz || 0);
+  const raum = e => e.nummer ? `${esc(e.name)} ${e.nummer}` : esc(e.name || '');
+  const uhr = s => `${String(s.stunde).padStart(2, '0')}:00`;
+  const kopf = k.tage.map(t => `<th class="${t.heute ? 'heute' : ''}">${TEXTE.tageKurz[t.tag]}<small>${t.datum}</small>${
+    t.fest ? `<small class="fest">${esc(t.fest)}</small>` : ''}</th>`).join('');
+  const eintrag = e => {
+    const name = e.festName ? T.fest(esc(e.festName), esc(e.artName || '')) : esc(e.artName || KEINE_VERANSTALTUNG);
+    const grund = e.zustand === 'faelltAus' || e.zustand === 'ausgefallen' ? `<small class="fehlt">${T.zustand[e.zustand]}${T.grund[e.fehlt] ? ` – ${T.grund[e.fehlt]}` : ''}</small>`
+      : T.zustand[e.zustand] ? `<small>${T.zustand[e.zustand]}</small>` : '';
+    return `<div class="termin ${e.zustand}"><b>${name}</b><small>${raum(e)}</small>${grund}</div>`;
+  };
+  const reihen = k.slots.map(s => `<tr><th class="slot">${TEXTE.raum.slots[s.id]}<small>${uhr(s)}</small></th>${k.tage.map(t => {
+    const hier = k.termine.filter(e => e.tag === t.tag && e.slot === s.id).map(eintrag).join('');
+    const kaffee = k.kaffee.filter(e => e.tag === t.tag && e.slot === s.id).map(e => `<div class="termin kaffee"><b>${T.kaffee}</b><small>${raum(e)} · ${T.bis(e.ende)}</small></div>`).join('');
+    return `<td class="${t.heute ? 'heute' : ''}">${hier}${kaffee}</td>`;
+  }).join('')}</tr>`).join('');
+  return `<h2>${T.titel}</h2>
+    <div class="eventtypen"><button class="${k.versatz === 0 ? 'aktiv' : ''}" data-kalender="0">${T.diese}</button><button class="${k.versatz === 1 ? 'aktiv' : ''}" data-kalender="1">${T.naechste}</button></div>
+    <p class="unter">${T.woche(k.woche)}</p>
+    <table class="wochenplan kalender"><tr><th></th>${kopf}</tr>${reihen}</table>
+    ${k.termine.length || k.kaffee.length ? '' : `<p class="unter">${T.leer}</p>`}
+    <div class="zeile"><button data-zu>Schließen</button></div>`;
+}
 // Knöpfe in den Fenstern → Befehle ans Spiel
 export function fensterEinrichten() {
   maske().addEventListener('click', e => {
@@ -695,6 +722,7 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();
     else if (b.dataset.aushang) { const [nr, platz] = b.dataset.aushang.split(':').map(Number); spiel.aushangSetzen(f.x, f.y, nr, platz); }
     else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);
+    else if (b.dataset.kalender !== undefined) f.versatz = Number(b.dataset.kalender);   // Gemeindekalender: diese / nächste Woche
     else if (b.dataset.forschung) { spiel.forschungStarten(b.dataset.forschung); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-forschung-abbrechen')) f.abbrechenFragen = true;
     else if (b.dataset.multiplikator) spiel.multiplikatorKaufen(b.dataset.multiplikator);

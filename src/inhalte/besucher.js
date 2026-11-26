@@ -45,7 +45,7 @@ export const BEKANNTHEIT = {
 // Jugendliche (Lukas, 25.11.): 20 % aller Menschen (Besucher und Passanten) sind Jugendliche.
 // Kommchance = normale (haltungsabhängige) Kommchance × Faktor der Veranstaltung. Nicht aufgeführt: × 1.
 // Später (Jugendgottesdienst): dort höher.
-export const JUGEND = { anteil: 0.2, faktor: { gottesdienst: 0.5, lobpreis: 0.5, senioren: 0, chorprobe: 0.2, konfi: 0.6, spiele: 0.25 } };
+export const JUGEND = { anteil: 0.2, faktor: { gottesdienst: 0.5, lobpreis: 0.5, senioren: 0, chorprobe: 0.2, konfi: 0.6, spiele: 0.25, jugend: 2.5 } };
 // Konfirmandenunterricht (Lukas, 25.11.): so viele Teilnahmen in einem Jahrgang (von Konfirmation zu Konfirmation) → Konfirmand
 export const KONFI = { teilnahmen: 7 };
 

@@ -31,6 +31,8 @@ export function anzeigenEinrichten() {
   $('textHeiligkeit').textContent = TEXTE.heiligkeit;
   $('forschungAuf').textContent = TEXTE.forschung.knopf;
   $('forschungAuf').addEventListener('click', () => fensterOeffnen({ art: 'forschung' }));
+  $('kalenderAuf').textContent = TEXTE.kalender.knopf;
+  $('kalenderAuf').addEventListener('click', () => fensterOeffnen({ art: 'kalender', versatz: 0 }));
   $('bekanntheitAuf').addEventListener('click', () => fensterOeffnen({ art: 'bekanntheit' }));
   // Finanzen in der Seitenleiste → Finanz-Fenster (Maus oder Enter/Leertaste)
   $('finanzenAuf').addEventListener('click', () => fensterOeffnen({ art: 'finanzen' }));
@@ -110,12 +112,13 @@ function hinweisText(s) {
   if (saal && s.phase === 'ausgefallen' && s.grund !== 'fest') return TEXTE.ausgefallenSaal(s.artName, fehltText(s.grund));
   if (s.phase === 'anreise' || s.phase === 'gottesdienst' || s.phase === 'kirchkaffee') return TEXTE.laeuft[s.phase] + (s.heim ? ' ' + TEXTE.heimgeschickt(s.heim) : '');
   if (s.phase === 'ausgefallen' && s.grund === 'fest') return TEXTE.faelltAusWegen(s.platz, s.fest);
-  if (s.phase === 'ausgefallen') return s.grund === 'gesperrt' ? TEXTE.fehltGesperrt(s.platz + 1) : s.grund === 'gitarre' ? TEXTE.ausgefallenGitarre : TEXTE.ausgefallen;
+  if (s.phase === 'ausgefallen') return s.grund === 'gesperrt' ? TEXTE.fehltGesperrt(s.platz + 1) : s.grund === 'gitarre' ? TEXTE.ausgefallenGitarre : s.grund === 'musiker' ? TEXTE.ausgefallenMusiker : TEXTE.ausgefallen;
   if (s.phase === 'vorbei') return TEXTE.heimgeschickt(s.heim);
   if (s.fehlt === 'raum') return TEXTE.fehltRaum;
   if (s.fehlt === 'veranstaltung') return TEXTE.fehltVeranstaltung;
   if (s.fehlt === 'leitung') return TEXTE.fehltLeitung;
   if (s.fehlt === 'gitarre') return TEXTE.fehltGitarre;
+  if (s.fehlt === 'musiker') return TEXTE.fehltMusiker;
   if (s.fehlt === 'gesperrt') return TEXTE.fehltGesperrt(s.platz + 1);
   return '';
 }

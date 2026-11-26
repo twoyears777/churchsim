@@ -120,9 +120,10 @@ export function kaffeeVorliebe(b) {
 // o.konfirmation: Konfirmations-Gottesdienst – Konfirmanden kommen sicher.
 export function besuchChance(b, o = {}) {
   if (o.konfirmation && b.konfirmand && istJugend(b)) return 1;
-  let c = kommChance(b) * artFaktor(b, o.art);
+  const v = o.art ? VERANSTALTUNGEN.find(x => x.id === o.art) : null;
+  let c = Math.min(1, kommChance(b) * artFaktor(b, o.art));   // Jugendgottesdienst: Jugendliche × 2,5 (höchstens 100 %)
   if (o.art === 'lobpreis') c *= lobpreisVorliebe(b);
-  else if (typeof o.musik === 'boolean') c = Math.min(1, c * musikFaktor(b, o.musik));
+  else if (typeof o.musik === 'boolean' && !(v && v.musikFaktor === false)) c = Math.min(1, c * musikFaktor(b, o.musik));
   if (o.woche !== undefined && b.besuchtWoche === o.woche) c *= ZWEITER_BESUCH;
   if (o.faktor) c = Math.min(1, c * o.faktor);   // Feste und Zeiten im Kirchenjahr (höchstens 100 %)
   return c;
@@ -131,6 +132,7 @@ export function besuchChance(b, o = {}) {
 // Jugendliche/Erwachsene: Faktor für diese Veranstaltung (1 = wie bisher)
 export function artFaktor(b, art) {
   const v = art ? VERANSTALTUNGEN.find(x => x.id === art) : null;
+  if (v && typeof v.erwachsene === 'number' && !istJugend(b)) return v.erwachsene;   // Jugendgottesdienst: Erwachsene × 0,1
   return jugendFaktor(b, art, !!(v && v.nurJugend));
 }
 
