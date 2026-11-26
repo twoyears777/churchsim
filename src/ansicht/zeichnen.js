@@ -3,6 +3,7 @@
 import { FELD } from '../kern/spiel.js';
 import { ART_FARBE } from '../inhalte/mitarbeiter.js';
 import { TEXTE } from '../inhalte/texte.js';
+import { menschZeichnen } from './menschen.js';
 import { GRUNDSTUECK, STRASSEN, GEHWEGE, NACHBARN, BAEUME, LADEN } from '../inhalte/umgebung.js';
 
 // Platzhalter-Farben – das Design legt Lukas fest.
@@ -136,16 +137,16 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   }
 
   // Besucher
+  // Figuren-Schublade (src/ansicht/menschen.js); Oberteil-Farbe = Bedeutung. Jugendliche: kräftiges Grün (Lukas, 25.11.)
+  const besucherHoehe = Math.max(16, k * 0.95);
   for (const b of z.besucher) {
-    const cx = ox + (b.x + 0.5) * k, cy = oy + (b.y + 0.5) * k, r = Math.max(5, k * 0.32);
-    ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * 0.3, r, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = b.jugend ? FARBEN.jugend : FARBEN.besucher; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();   // Jugendliche: kräftiges Grün (Lukas, 25.11.)
-    ctx.strokeStyle = b.id === extra.markiert ? FARBEN.auswahl : '#fff'; ctx.lineWidth = b.id === extra.markiert ? 3 : 1.5; ctx.stroke();
+    menschZeichnen(ctx, ox + (b.x + 0.5) * k, oy + (b.y + 0.5) * k, besucherHoehe,
+      { kleidung: b.jugend ? FARBEN.jugend : FARBEN.besucher, id: b.id, jugend: b.jugend, rand: b.id === extra.markiert ? FARBEN.auswahl : null });
   }
   // Vornamen klein neben den Besuchern
   ctx.font = `500 11px system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   for (const b of z.besucher) if (b.name && !b.sitzt) { // beim Hinsetzen verschwindet der Name
-    const cx = ox + (b.x + 0.5) * k + Math.max(5, k * 0.32) + 2, cy = oy + (b.y + 0.5) * k;
+    const cx = ox + (b.x + 0.5) * k + besucherHoehe * 0.2 + 3, cy = oy + (b.y + 0.5) * k;
     ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.strokeText(b.name, cx, cy);
     ctx.fillStyle = FARBEN.text; ctx.fillText(b.name, cx, cy);
   }
@@ -342,17 +343,16 @@ function zaunZeichnen(ctx, { k, ox, oy }) {
 }
 
 function figur(ctx, cx, cy, k, f, angehoben, schrift) {
-  const r = Math.max(9, k * 0.48) * (angehoben ? 1.25 : 1);
-  ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.arc(cx + r * 0.2, cy + r * (angehoben ? 0.6 : 0.25), r, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = ART_FARBE[f.art] || '#666'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.font = `600 ${r * 1.05}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(f.kuerzel, cx, cy + 1);
+  // Mitarbeiter als Figur aus der Figuren-Schublade; Oberteil in der Farbe der Art (Hauptamt/Ehrenamt), Kürzel auf dem Oberteil
+  const hoehe = Math.max(26, k * 1.35) * (angehoben ? 1.25 : 1);
+  const lage = menschZeichnen(ctx, cx, cy, hoehe, { kleidung: ART_FARBE[f.art] || '#666', id: f.id, jugend: false, schattenTiefer: angehoben });
+  ctx.fillStyle = '#fff'; ctx.font = `600 ${Math.max(8, lage.koerperHoehe * 0.55)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(f.kuerzel, lage.koerperMitte.x, lage.koerperMitte.y + 1);
   const n = Math.max(11, schrift * 0.8);
   ctx.font = `500 ${n}px system-ui, sans-serif`;
   const b = ctx.measureText(f.name).width + 8;
-  ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(cx - b / 2, cy + r + 3, b, n + 4);
-  ctx.fillStyle = FARBEN.text; ctx.fillText(f.name, cx, cy + r + 5 + n / 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(cx - b / 2, lage.fuesse + 3, b, n + 4);
+  ctx.fillStyle = FARBEN.text; ctx.fillText(f.name, cx, lage.fuesse + 5 + n / 2);
 }
 
 function stuhl(ctx, px, py, k, stufe = 1) {
