@@ -11,7 +11,7 @@ import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 import { besuchChance } from '../src/kern/besucher.js';
 import { festAmTag, feiertagAmTag, faktorAmTag, tagAnzeige, kommendeFeste, zeitAmTag } from '../src/kern/kalender.js';
-import { festSchluessel } from '../src/kern/feste.js';
+import { festSchluessel, festPlanSetzen } from '../src/kern/feste.js';
 import { ortSchritt } from '../src/kern/ort.js';
 import { TAG_MIN } from '../src/kern/zeit.js';
 
@@ -101,6 +101,16 @@ function gemeinde() {
   const k = spiel.kirchenjahrInfo();
   assert.equal(k.feste[0].id, 'heiligabend'); assert.equal(k.feste[0].gross, true); assert.equal(k.feste[0].plan, null);
   assert.equal(k.zeit, 'advent'); assert.deepEqual(k.gesperrt, []);   // Konfirmation seit dem Konfirmandenunterricht frei
+}
+
+// ---- Fest-Menü: schon vorher von Hand geplant → öffnet sich 7 Tage vorher nicht mehr ----
+{
+  const z = gemeinde();
+  assert.equal(festPlanSetzen(z, 'heiligabend:31', { slot: 'nachmittag', raum: 0, leitung: 'pastor', art: 'gottesdienst' }), 'ok');   // frühzeitig geplant
+  zeitVorruecken(z, aus(z), (HEILIGABEND - 7) * TAG_MIN + 8 * 60 + 1 - z.minuten, () => 0.99);
+  assert.ok(z.feste.gefragt.includes('heiligabend:31'));
+  assert.notEqual(z.feste.anfrage, 'heiligabend:31');
+  assert.ok(z.feste.plaene['heiligabend:31']);
 }
 
 // ---- Sonderevent: findet statt, verdrängt die Veranstaltung im selben Raum zur gleichen Zeit (ohne Haltungs-Abzug) ----

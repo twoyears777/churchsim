@@ -1,7 +1,8 @@
 // Spiellogik der Feste im Kirchenjahr: Fest-Menü vor großen Festen und das geplante Sonderevent.
 // Kennt keine Grafik und keine Texte.
 //
-// - Vor jedem großen Fest (FESTE mit gross: true) öffnet sich einmal das Fest-Menü (FEST_MENUE.tageVorher Tage vorher, 8:00).
+// - Vor jedem großen Fest (FESTE mit gross: true) öffnet sich einmal das Fest-Menü (FEST_MENUE.tageVorher Tage vorher, 8:00) –
+//   aber nur, wenn das Sonderevent noch nicht von Hand geplant wurde.
 //   Solange es offen ist, steht die Zeit (spiel.tick), wie bei einer Seelsorge-Anfrage.
 // - Im Menü plant man das Sonderevent: Zeit (vormittags/nachmittags/abends), Raum, Leitung (Hauptamtlicher), Art, Ehrenamtliche.
 //   Ehrenamtliche haben noch keine Wirkung (vorbereitet, Lukas legt sie später fest).
@@ -35,9 +36,11 @@ export function festSchritt(z) {
   const zeit = (f.tagNr - FEST_MENUE.tageVorher) * TAG_MIN + FEST_MENUE.stunde * 60;
   const k = festSchluessel(f.id, f.tagNr), fest = FESTE.find(x => x.id === f.id);
   // Konfirmation ohne Konfirmanden: kein Menü, nur eine Meldung (die Konfirmation fällt aus)
+  // Schon vorher von Hand geplant (z. B. im Fenster „Kirchenjahr“): kein Menü mehr (Lukas, 26.11.)
   return { zeit: Math.max(zeit, z.minuten), tun: zz => {
     zz.feste.gefragt.push(k);
-    if (festAktiv(zz, fest)) zz.feste.anfrage = k; else keineKonfirmandenMelden(zz);
+    if (!festAktiv(zz, fest)) keineKonfirmandenMelden(zz);
+    else if (!zz.feste.plaene[k]) zz.feste.anfrage = k;
   } };
 }
 
