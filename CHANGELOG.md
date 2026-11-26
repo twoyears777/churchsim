@@ -3,6 +3,28 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.14
+
+**Veranstaltungen**
+- Neu: Jugendgottesdienst im Gottesdienstraum – mit Hauptamtlichem und mindestens 2 Musikern, zieht vor allem Jugendliche an
+- Neu: Gemeindekalender (Knopf „Kalender“ oben) – alle Veranstaltungen dieser und nächster Woche auf einen Blick
+
+**Forschung**
+- Neu: 3. Veranstaltung im Gottesdienstraum und im Gemeindesaal freischalten
+
+**Ehrenamtliche**
+- Neu: Evangelisation vor dem Laden
+
+**Bauen**
+- Neu: Raum „Toiletten“ mit WC-Kabine und Waschbecken
+
+**Besucher**
+- Neu: Bedürfnis Toilette – Gäste gehen vor oder während der Veranstaltung und vor dem Heimweg zur Toilette
+- Alle Figuren laufen jetzt über Wege, statt quer über die Wiese abzukürzen
+
+**Spielstart**
+- Neu: kurzes Intro beim Öffnen
+
 ## 0.1.13
 
 **Technik**
