@@ -11,9 +11,10 @@ import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 import { strasse, punktAufWeg } from './bewegung.js';
+import { seelsorgeStufe, seelsorgePunkteDazu } from './skills.js';
 
 export function seelsorgeAnlegen(z) {
-  if (!z.seelsorge) z.seelsorge = { punkte: 0, anfrage: null, tag: -1, pruefungen: [], letzte: null };
+  if (!z.seelsorge) z.seelsorge = { anfrage: null, tag: -1, pruefungen: [], letzte: null };
   const S = z.seelsorge;
   if (typeof S.anzahl !== 'number') S.anzahl = 0;      // so viele Anfragen gab es schon (für den Anfangsschub)
   if (!S.gang) S.gang = null;                           // wer gerade zum Pastor (oder wieder heim) läuft
@@ -40,21 +41,7 @@ function wegZumPastor(z, zufall) {
 }
 export function anfrageOffen(z) { return !!(z.seelsorge && z.seelsorge.anfrage); }
 
-// Stufe aus den Erfahrungspunkten
-export function stufe(punkte) {
-  let s = 1;
-  SEELSORGE.stufeAb.forEach((ab, i) => { if (punkte >= ab) s = i + 1; });
-  return s;
-}
-// Für die Charakter-Karte: Stufe, Punkte, Bonus auf die Erfolgschance (in %), letzte und nächste Freischaltung
-export function stufeInfo(z) {
-  const p = z.seelsorge.punkte, s = stufe(p), F = SEELSORGE.freischaltungen;
-  return { stufe: s, maxStufe: SEELSORGE.stufeAb.length, punkte: p, von: SEELSORGE.stufeAb[s - 1],
-    bis: s < SEELSORGE.stufeAb.length ? SEELSORGE.stufeAb[s] : null, bonus: bonusProzent(s),
-    freigeschaltet: [...F].reverse().find(n => n <= s) || null, naechsteFreischaltung: F.find(n => n > s) || null };
-}
-// Bonus auf die Erfolgschance in Prozentpunkten (z. B. Stufe 3 → 3)
-export const bonusProzent = st => Math.round(SEELSORGE.bonusProStufe * (st - 1) * 1000) / 10;
+// Stufe, Punkte und Charakter-Karte der Seelsorge: seit 26.11. in skills.js (Punkte im Skill-Fach von Pastor Harder)
 
 // Pro Stunde zwischen 8 und 20 Uhr wird einmal geprüft, ob jemand fragt. Die Chance ist so gewählt,
 // dass es im Schnitt so viele Anfragen pro Woche gibt, wie für die Stufe festgelegt.
@@ -70,7 +57,7 @@ function pruefen(z, gesperrt, zufall) {
   const S = z.seelsorge;
   if (S.anfrage || S.gang || gesperrt(z)) return;
   const stunden = 7 * (SEELSORGE.bis - SEELSORGE.von);
-  if (zufall() >= SEELSORGE.anfragenProWoche[stufe(S.punkte) - 1] * schub(S.anzahl) / stunden) return;
+  if (zufall() >= SEELSORGE.anfragenProWoche[seelsorgeStufe(z) - 1] * schub(S.anzahl) / stunden) return;
   const besucher = z.besucher, ort = z.ort ? z.ort.leute : [];
   if (!besucher.length && !ort.length) return;
   const liste = besucher.length && (!ort.length || zufall() < SEELSORGE.anteilBesucher) ? besucher : ort;
@@ -118,7 +105,7 @@ export function raten(z, nr, zufall = Math.random) {
   const S = z.seelsorge, A = S.anfrage, sit = situation(z), rat = sit && sit.raete[nr];
   if (!A || A.phase !== 'frage' || !rat) return 'keine';
   if (rat.kosten && !kannBezahlen(z, rat.kosten)) return 'geld';
-  const p = mensch(z, A.id), vorher = stufe(S.punkte);
+  const p = mensch(z, A.id), vorher = seelsorgeStufe(z);
   const gut = zufall() < chanceVon(rat, vorher);
   const e = {
     rat: nr, gut, haltungVorher: p ? p.zufriedenheit : null, haltungNachher: null, kommChance: null,
@@ -135,8 +122,8 @@ export function raten(z, nr, zufall = Math.random) {
   if (gut && passant && !p.neugierig) { p.neugierig = true; e.neugierig = true; }
   // Vorher → nachher, und bei Besuchern: mit welcher Chance sie jetzt zur nächsten Veranstaltung kommen
   if (p) { e.haltungNachher = p.zufriedenheit; if (!passant) e.kommChance = Math.round(kommChance(p) * 100); }
-  S.punkte += SEELSORGE.erfahrung.gespraech + (gut ? SEELSORGE.erfahrung.gutExtra : 0);
-  const nachher = stufe(S.punkte);
+  seelsorgePunkteDazu(z, SEELSORGE.erfahrung.gespraech + (gut ? SEELSORGE.erfahrung.gutExtra : 0));
+  const nachher = seelsorgeStufe(z);
   if (nachher > vorher) {
     e.neueStufe = nachher;
     e.stufeBonus = Math.round(SEELSORGE.bonusProStufe * (nachher - vorher) * 1000) / 10;   // so viel % mehr Erfolgschance
@@ -162,7 +149,7 @@ export function anfrageInfo(z) {
   if (!A) return null;
   const p = mensch(z, A.id), sit = situation(z);
   if (!p || !sit) { z.seelsorge.anfrage = null; z.seelsorge.gang = null; return null; }              // Person gibt es nicht mehr
-  const st = stufe(z.seelsorge.punkte), E = SEELSORGE.einschaetzung;
+  const st = seelsorgeStufe(z), E = SEELSORGE.einschaetzung;
   const chancen = sit.raete.map(r => chanceVon(r, st)), beste = chancen.indexOf(Math.max(...chancen));
   return { id: p.id, voll: p.voll, vorname: p.vorname, situation: sit.id, phase: A.phase, ergebnis: A.ergebnis,
     besuche: p.besuche || 0, haltung: p.zufriedenheit,

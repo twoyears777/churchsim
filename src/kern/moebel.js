@@ -3,6 +3,7 @@ import { LEER, idx, aufGrundstueck, fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
 import { MOEBEL, STUHL_STUFEN, MUSIK } from '../inhalte/moebel.js';
 import { kannBezahlen, buchen } from './finanzen.js';
+import { musikBonus } from './skills.js';
 
 export function moebelAnlegen(z) { if (!Array.isArray(z.moebel)) z.moebel = []; }
 const typVon = art => MOEBEL.find(t => t.id === art) || {};
@@ -102,24 +103,7 @@ export function grenzeErreicht(z, raum, art) {
   const typ = MOEBEL.find(m => m.id === art);
   return !!(raum && typ && typ.max && moebelImRaum(z, raum, art).length >= typ.max);
 }
-// ---- Musik-Level der Ehrenamtlichen ----
-// Erfahrung steht an der Person (person.musikErfahrung). Level 0 … MUSIK.maxLevel.
-export function musikLevel(person) {
-  return Math.min(MUSIK.maxLevel, Math.floor(((person && person.musikErfahrung) || 0) / MUSIK.erfahrungProLevel));
-}
-// Bonus des Lobpreisteams bei diesem Level (0.05 = 5 %), auf ganze Prozent gerundet
-export function musikBonus(level) { return Math.round((MUSIK.start + MUSIK.proLevel * level) * 100) / 100; }
-// Nach einem Auftritt: etwas Erfahrung dazu (beim höchsten Level bleibt es stehen)
-export function musikErfahrungDazu(person) {
-  const max = MUSIK.maxLevel * MUSIK.erfahrungProLevel;
-  person.musikErfahrung = Math.min(max, (person.musikErfahrung || 0) + MUSIK.erfahrungProAuftritt);
-}
-// Stand fürs Anzeigen (Karte des Ehrenamtlichen): Level und Fortschritt bis zum nächsten Level (0 … 1)
-export function musikStand(person) {
-  const level = musikLevel(person), e = (person && person.musikErfahrung) || 0;
-  const fortschritt = level >= MUSIK.maxLevel ? 1 : (e - level * MUSIK.erfahrungProLevel) / MUSIK.erfahrungProLevel;
-  return { level, maxLevel: MUSIK.maxLevel, fortschritt };
-}
+// Musik-Level der Ehrenamtlichen: steht seit 26.11. mit allen anderen Skills in skills.js
 
 // Instrumente (Möbel mit wirkung.musik), die im Raum stehen – jedes zählt höchstens so oft wie sein max
 export function instrumenteImRaum(z, raum) {

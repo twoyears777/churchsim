@@ -2,6 +2,7 @@
 // Ablauf (Haltung, spontane Spende, kein Kirchkaffee, keine Kollekte), Ausfall und Prognose.
 // Starten mit: node tests/gemeindesaal.test.mjs
 import assert from 'node:assert';
+import { skillsVon } from '../src/kern/skills.js';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel } from '../src/kern/spiel.js';
@@ -79,7 +80,7 @@ console.log('Seniorennachmittag-Voraussetzungen bestanden.');
   assert.equal(fehlt(), 'ehrenamt');            // der Pastor reicht nicht
   const e = ea(z); versetzen(z, e, G.x + 5, G.y + 4);
   assert.equal(fehlt(), 'musikLevel');          // Level 0
-  e.musikErfahrung = 300;                        // Level 3
+  skillsVon(e).musik = 300;                        // Level 3
   assert.equal(fehlt(), 'klavier');
   moebelSetzen(z, 'klavier', G.x + 10, G.y + 3, G.x + 10, G.y + 3);
   assert.equal(fehlt(), null);
@@ -117,7 +118,7 @@ console.log('Seniorennachmittag-Ablauf bestanden.');
 // Kirchenchorprobe läuft: Stühle egal – alle kommen hinein. Haltung +5 (Platz) + Musik-Bonus × Haltung; Ehrenamtliche sammelt Erfahrung.
 {
   const z = gemeinde(), r = raumBei(z), e = ea(z);
-  versetzen(z, e, G.x + 5, G.y + 4); e.musikErfahrung = 100;   // Level 1 → 6 %
+  versetzen(z, e, G.x + 5, G.y + 4); skillsVon(e).musik = 100;   // Level 1 → 6 %
   moebelSetzen(z, 'klavier', G.x + 10, G.y + 3, G.x + 10, G.y + 3);
   veranstaltungEinstellen(z, r, 'chorprobe');
   terminEinstellen(z, raumBei(z), 0, 2, 'abend');
@@ -130,7 +131,7 @@ console.log('Seniorennachmittag-Ablauf bestanden.');
   assert.ok(!L.ausgefallen);
   assert.ok(L.gaeste.length === 4 && L.gaeste.every(g => g.sitz));
   assert.deepEqual(z.besucher.map(b => b.zufriedenheit), [58, 58, 58, 58]);   // 50 + 5 + round(50 × 0,06)
-  assert.equal(e.musikErfahrung, 102);
+  assert.equal(skillsVon(e).musik, 102);
   assert.equal(z.wochenbuch.einnahmen.spende, undefined);
 }
 console.log('Kirchenchorprobe-Ablauf bestanden.');

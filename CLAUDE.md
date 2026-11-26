@@ -15,6 +15,7 @@ Die vollständigen Regeln stehen im claude.ai-Projekt „Church-Sim“ (projektr
 ## Aufbau
 - `src/inhalte/` – Inhaltsdateien (z. B. Raumtypen, Zahlen, Texte in `texte.js`). Kann Lukas selbst erweitern.
 - `src/kern/` – Spiellogik ohne Grafik: Zahlen, Berechnungen, Tick-System. Wird mit Tests geprüft. Das Kirchkaffee (Öffnungszeiten, Bedienung, Einkauf) steht in `src/kern/kirchkaffee.js`, Kassenbuch und Wochen-Verlauf der Finanzen in `src/kern/finanzen.js`.
+- **Skills der Mitarbeiter** (Seelsorge, Musik-Level, Haltungs-Multiplikator) stehen alle an einem Ort: gespeichert im Skill-Fach jeder Person (`person.skills`), Regeln in `src/kern/skills.js`, wer welchen Skill hat in `src/inhalte/skills.js`. Alte Spielstände zieht `skillsAnlegen` beim Laden um. Test: `node tests/skills.test.mjs`. Neue Skills immer dort ergänzen.
 - `src/kern/spiel.js` – die **Schalterwand**: einziger Zugang der Oberfläche zur Spiellogik (Befehle + Abfragen).
 - `src/ansicht/` – Darstellung (zeichnet nur, ändert nichts).
 - `src/oberflaeche/` – Bedienung: `start.js` (Uhr, Zeichnen), `eingaben.js`, `bauleiste.js` (Bauleiste unten: Reiter + Kärtchen), `anzeigen.js`, `fenster.js`, `speicher.js`, `hauptmenue.js` (Startmenü: Weiterspielen/Neues Spiel, Escape und Knopf „Hauptmenü“; Zeit steht, solange es offen ist).

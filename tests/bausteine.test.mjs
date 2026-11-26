@@ -2,6 +2,7 @@
 // Bausteine pro Eventtyp, „im Raum“, Musiker mit echtem Level, Zeile „Zusammen“ – und die Texte daraus.
 // Starten mit: node tests/bausteine.test.mjs
 import assert from 'node:assert';
+import { skillsVon } from '../src/kern/skills.js';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { TEXTE } from '../src/inhalte/texte.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
@@ -29,7 +30,7 @@ function gottesdienstraum() {
   moebelSetzen(z, 'gitarre', G.x + 12, G.y + 6, G.x + 12, G.y + 6);
   z.personen = z.personen.filter(p => p.id === 'pastor');
   const ea = personHinzufuegen(z, { name: 'Erna Musik', kuerzel: 'E', art: 'ehrenamt' });
-  ea.musikErfahrung = 200;   // Level 2 → 7 %
+  skillsVon(ea).musik = 200;   // Level 2 → 7 %
   versetzen(z, ea, G.x + 13, G.y + 6);
   return z;
 }
@@ -100,7 +101,7 @@ console.log('Bausteintabelle Pflicht fehlt bestanden.');
   typZuweisen(z, raumBei(z), 'gemeindesaal');
   z.personen = z.personen.filter(p => p.id === 'pastor');
   versetzen(z, z.personen[0], G.x + 4, G.y + 4);
-  const ea = personHinzufuegen(z, { name: 'Erna', kuerzel: 'E', art: 'ehrenamt' }); ea.musikErfahrung = 100;   // Level 1 → 6 %
+  const ea = personHinzufuegen(z, { name: 'Erna', kuerzel: 'E', art: 'ehrenamt' }); skillsVon(ea).musik = 100;   // Level 1 → 6 %
   versetzen(z, ea, G.x + 5, G.y + 4);
   moebelSetzen(z, 'tisch', G.x + 8, G.y + 5, G.x + 8, G.y + 5);
   for (const dx of [7, 9, 10]) moebelSetzen(z, 'stuhl', G.x + dx, G.y + 5, G.x + dx, G.y + 5);
@@ -119,7 +120,7 @@ console.log('Bausteintabelle Pflicht fehlt bestanden.');
   assert.equal(text(c.zeilen[1]).name, 'Klavier (Pflicht)');
   assert.equal(c.summe.bereit, false);           // Klavier fehlt
   moebelSetzen(z, 'klavier', G.x + 11, G.y + 3, G.x + 11, G.y + 3);
-  ea.musikErfahrung = 300;                       // Level 3 → 8 %
+  skillsVon(ea).musik = 300;                       // Level 3 → 8 %
   const c2 = tabelle(z, ['chorprobe']).chorprobe;
   assert.equal(c2.summe.bereit, true);
   assert.equal(c2.zeilen[2].imRaum, true);

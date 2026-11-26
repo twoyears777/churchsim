@@ -13,7 +13,7 @@ import { foyerWert } from './foyer.js';
 import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
-  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, musikStand, musikLevel, instrumenteImRaum, istHindernis } from './moebel.js';
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, instrumenteImRaum, istHindernis } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht, stornieren } from './finanzen.js';
@@ -36,7 +36,8 @@ import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
-import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe, multiplikatorKaufen, multiplikatorInfo } from './forschung.js';
+import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
+import { skillsAnlegen, musikStand, musikLevel, stufeInfo, multiplikatorKaufen, multiplikatorInfo } from './skills.js';
 import { HEILIGKEIT } from '../inhalte/forschung.js';
 import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
@@ -47,7 +48,7 @@ import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance, neu
 import { gelaende, aushaenge, aushangGilt, aushangSetzen } from './gelaende.js';
 import { GELAENDE, SCHAUKASTEN } from '../inhalte/gelaende.js';
 import { seelsorgeAnlegen, anfrageOffen, anfrageInfo, ablehnen as seelsorgeAblehnen, raten as seelsorgeRaten,
-  schliessen as seelsorgeZu, stufeInfo, seelsorgePositionen, seelsorgeUnterwegs } from './seelsorge.js';
+  schliessen as seelsorgeZu, seelsorgePositionen, seelsorgeUnterwegs } from './seelsorge.js';
 import { STAMMGAST_AB_BESUCHEN, PLAKAT, NEUGIER } from '../inhalte/ort.js';
 import { BEKANNTHEIT } from '../inhalte/besucher.js';
 import { SEELSORGE } from '../inhalte/seelsorge.js';
@@ -66,6 +67,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); beduerfnisseAnlegen(z); forschungAnlegen(z);
   jugendAnlegen(z);   // alte Spielstände: 20 % der Besucher und Passanten werden Jugendliche
   baukostenAnlegen(z);
+  skillsAnlegen(z);   // Skill-Fächer der Mitarbeiter (26.11.); zieht alte Spielstände um
   return z;
 }
 // Alte Spielstände (vor den Baukosten, 25.11.): einmalig der Startgeld-Ausgleich; ihre schon gebauten Wände bleiben kostenlos

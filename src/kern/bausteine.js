@@ -7,11 +7,11 @@ import { VERANSTALTUNGEN, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js'
 import { AENDERUNG, LOBPREIS_MUSIK, JUGEND } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { MOEBEL } from '../inhalte/moebel.js';
-import { moebelImRaum, stuhlStufe, musikLevel, musikBonus, instrumenteImRaum } from './moebel.js';
+import { moebelImRaum, stuhlStufe, instrumenteImRaum } from './moebel.js';
 import { daten } from './personen.js';
 import { fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
-import { multiplikatorFaktor } from './forschung.js';
+import { musikLevel, musikBonus, multiplikatorFaktor } from './skills.js';
 import { amTisch } from './kirchkaffee.js';
 
 const MAX_MUSIKER = MOEBEL.filter(m => m.wirkung && m.wirkung.musik).length;   // so viele Instrumente gibt es

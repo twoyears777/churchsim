@@ -1,12 +1,13 @@
 // Prüft die Ausstattung des Gottesdienstraums: Stuhlstufen, Kanzel, Altar, Blumen, Grünpflanze, Gitarre/Musiker, Plakat.
 // Starten mit: node tests/ausstattung.test.mjs
 import assert from 'node:assert';
+import { skillsVon, musikLevel, musikBonus, musikErfahrungDazu, musikStand } from '../src/kern/skills.js';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { NEUGIER, PLAKAT } from '../src/inhalte/ort.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, prognose, gottesdienstRaeume } from '../src/kern/ablauf.js';
-import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, instrumenteImRaum, grenzeErreicht, musikLevel, musikBonus, musikErfahrungDazu, musikStand } from '../src/kern/moebel.js';
+import { moebelSetzen, moebelBei, moebelAbreissen, stuhlVerbessern, raumAusstattung, instrumenteImRaum, grenzeErreicht } from '../src/kern/moebel.js';
 import { MUSIK } from '../src/inhalte/moebel.js';
 import { STARTGELD } from '../src/inhalte/finanzen.js';
 import { versetzen, personHinzufuegen, eingesetztIn } from '../src/kern/personen.js';
@@ -71,7 +72,7 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   assert.ok(Math.abs(p.kollekte - 30.24) < 1e-9, 'Prognose rechnet Stuhl, Altar und Lobpreisteam mit');
   bisNachGottesdienst(z, zufall);
   assert.strictEqual(kollekte(z), 30);
-  assert.strictEqual(ea.musikErfahrung, MUSIK.erfahrungProAuftritt, 'Der Musiker bekommt nach dem Auftritt etwas Erfahrung');
+  assert.strictEqual(skillsVon(ea).musik, MUSIK.erfahrungProAuftritt, 'Der Musiker bekommt nach dem Auftritt etwas Erfahrung');
   // Polsterstuhl +2 Haltung: 100 bleibt 100 (Obergrenze) – Haltung testen wir unten mit niedrigerem Wert
 }
 // Ohne Gitarre ist der Ehrenamtliche im Gottesdienstraum nicht eingesetzt und es gibt keine Musik
@@ -99,7 +100,7 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   assert.ok(grenzeErreicht(z, r(), 'schlagzeug') && !grenzeErreicht(z, r(), 'bass'), 'Jedes Instrument nur 1× pro Raum');
   const eas = [0, 1, 2, 5].map((lv, i) => {
     const p = personHinzufuegen(z, { name: 'Musiker ' + i, kuerzel: 'M', art: 'ehrenamt' });
-    p.musikErfahrung = lv * MUSIK.erfahrungProLevel; versetzen(z, p, G.x + 12 + i, G.y + 7); return p;
+    skillsVon(p).musik = lv * MUSIK.erfahrungProLevel; versetzen(z, p, G.x + 12 + i, G.y + 7); return p;
   });
   const g = gottesdienstRaeume(z, aus(z))[0];
   assert.deepStrictEqual(g.spieler.map(musikLevel), [5, 2, 1], 'Drei Instrumente: die drei mit dem höchsten Level spielen');
@@ -108,8 +109,8 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   assert.ok(Math.abs(raumAusstattung(z, r(), [0, 1, 2]).musikBonus - 0.18) < 1e-9, 'Beispiel: Level 0, 1, 2 → +18 %');
   assert.strictEqual(raumAusstattung(z, r(), [0, 0, 0, 0, 0]).musiker, 3, 'Mehr Musiker als Instrumente zählen nicht');
   bisNachGottesdienst(z, zufall);
-  assert.strictEqual(eas[0].musikErfahrung, 0, 'Wer kein Instrument hat, bekommt keine Erfahrung');
-  for (const p of eas.slice(1)) assert.ok(p.musikErfahrung > 0 && p.musikErfahrung % MUSIK.erfahrungProLevel === MUSIK.erfahrungProAuftritt, 'Alle Spieler bekommen Erfahrung');
+  assert.strictEqual(skillsVon(eas[0]).musik, 0, 'Wer kein Instrument hat, bekommt keine Erfahrung');
+  for (const p of eas.slice(1)) assert.ok(skillsVon(p).musik > 0 && skillsVon(p).musik % MUSIK.erfahrungProLevel === MUSIK.erfahrungProAuftritt, 'Alle Spieler bekommen Erfahrung');
 }
 // Ein Instrument ohne eigenen Spieler zählt nicht: 2 Instrumente, 1 Ehrenamtlicher → 1 Musiker
 {
@@ -125,8 +126,9 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
 }
 // Musik-Level: startet bei 0, ca. 50 Auftritte je Level, höchstens Level 10 (+15 %)
 {
-  const p = {};
+  const p = { id: 'ea-test', daten: { name: 'Test', art: 'ehrenamt' } };
   assert.strictEqual(musikLevel(p), 0);
+  musikErfahrungDazu({ id: 'pastor' }); assert.strictEqual(musikLevel({ id: 'pastor' }), 0, 'Musik-Level nur für Ehrenamtliche');
   for (let i = 0; i < 49; i++) musikErfahrungDazu(p);
   assert.strictEqual(musikLevel(p), 0);
   musikErfahrungDazu(p);

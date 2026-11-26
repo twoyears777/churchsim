@@ -6,7 +6,8 @@ import assert from 'node:assert';
 import { FORSCHUNGEN, HEILIGKEIT, HALTUNG_MULTIPLIKATOR } from '../src/inhalte/forschung.js';
 import { neuesSpiel, spielStarten } from '../src/kern/spiel.js';
 import { heiligkeitFuerGottesdienst, forschungStarten, forschungAbbrechen, forschungSchritt, forschungListe, istErforscht, dauerMinuten,
-  multiplikatorFaktor, mitMultiplikator, multiplikatorKaufen, multiplikatorInfo, multiplikatorErfahrung } from '../src/kern/forschung.js';
+ } from '../src/kern/forschung.js';
+import { skillsVon, multiplikatorFaktor, mitMultiplikator, multiplikatorKaufen, multiplikatorInfo, multiplikatorErfahrung } from '../src/kern/skills.js';
 import { SEKUNDEN_PRO_STUNDE } from '../src/inhalte/zeit.js';
 
 const S1 = FORSCHUNGEN.find(f => f.id === 'schulungen1');
@@ -106,7 +107,7 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
   assert.deepEqual(HALTUNG_MULTIPLIKATOR.stufen.map(x => [x.faktor, x.preis, x.gottesdienste]),
     [[1.3, 100, 4], [1.6, 250, 10], [2.0, 500, 20], [2.5, 1000, 35], [3.0, 2000, 55]]);
   const z = neuesSpiel(() => 0.5);
-  const pastor = z.personen.find(p => p.id === 'pastor');
+  const pastor = z.personen.find(p => p.id === 'pastor'), M = () => skillsVon(pastor).multiplikator;
   assert.equal(z.multiplikator, undefined);
   assert.equal(multiplikatorFaktor(pastor, 'gottesdienst'), 1);
   assert.equal(multiplikatorFaktor(null, 'gottesdienst'), 1);
@@ -116,11 +117,11 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
   assert.equal(multiplikatorKaufen(z, 'pastor'), 'erfahrung'); assert.equal(z.heiligkeit, 500);
   assert.equal(multiplikatorKaufen(z, 'gibtsnicht'), 'person');
   // Erfahrung: nur Gottesdienst und Lobpreisgottesdienst zählen
-  multiplikatorErfahrung(pastor, 'senioren'); assert.equal(pastor.geleitet || 0, 0);
+  multiplikatorErfahrung(pastor, 'senioren'); assert.equal(M().geleitet, 0);
   for (let i = 0; i < 3; i++) multiplikatorErfahrung(pastor, 'gottesdienst');
-  multiplikatorErfahrung(pastor, 'lobpreis'); assert.equal(pastor.geleitet, 4);
+  multiplikatorErfahrung(pastor, 'lobpreis'); assert.equal(M().geleitet, 4);
   z.heiligkeit = 99; assert.equal(multiplikatorKaufen(z, 'pastor'), 'heiligkeit'); assert.equal(z.heiligkeit, 99);
-  z.heiligkeit = 120; assert.equal(multiplikatorKaufen(z, 'pastor'), 'ok'); assert.equal(z.heiligkeit, 20); assert.equal(pastor.multiplikator, 1);
+  z.heiligkeit = 120; assert.equal(multiplikatorKaufen(z, 'pastor'), 'ok'); assert.equal(z.heiligkeit, 20); assert.equal(M().stufe, 1);
   assert.equal(multiplikatorKaufen(z, 'pastor'), 'erfahrung');   // Stufe 2 erst ab 10
   // wirkt bei Gottesdienst und Lobpreisgottesdienst dieser Leitung, nicht im Gemeindesaal, nicht ohne Leitung; nur Pluswerte, gerundet
   assert.equal(mitMultiplikator(pastor, 'gottesdienst', 15), 20);   // 19,5 → 20
@@ -129,14 +130,14 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
   assert.equal(mitMultiplikator(null, 'gottesdienst', 10), 10);
   assert.equal(mitMultiplikator(pastor, 'gottesdienst', -10), -10);
   assert.equal(mitMultiplikator(pastor, 'gottesdienst', 0), 0);
-  pastor.geleitet = 55; z.heiligkeit = 10000;
+  M().geleitet = 55; z.heiligkeit = 10000;
   ['ok', 'ok', 'ok', 'ok', 'max'].forEach(e => assert.equal(multiplikatorKaufen(z, 'pastor'), e));
   assert.equal(z.heiligkeit, 10000 - 250 - 500 - 1000 - 2000);
   assert.equal(multiplikatorFaktor(pastor, 'gottesdienst'), 3);
   assert.equal(multiplikatorInfo(z, pastor).naechste, null);
   // Schalterwand + Speichern
   const spiel = spielStarten(null, () => 0.5);
-  const d = JSON.parse(spiel.speicherText()); d.zustand.heiligkeit = 300; d.zustand.personen.find(p => p.id === 'pastor').geleitet = 4;
+  const d = JSON.parse(spiel.speicherText()); d.zustand.heiligkeit = 300; d.zustand.personen.find(p => p.id === 'pastor').skills.multiplikator.geleitet = 4;
   const sp = spielStarten(JSON.stringify(d), () => 0.5);
   assert.equal(sp.personInfo('pastor').multiplikator.naechste.leistbar, true);
   assert.equal(sp.multiplikatorKaufen('pastor'), 'ok');
@@ -148,6 +149,13 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
   const sp3 = spielStarten(JSON.stringify(alt), () => 0.5);
   assert.equal(sp3.personInfo('pastor').multiplikator.stufe, 2);
   assert.equal(JSON.parse(sp3.speicherText()).zustand.multiplikator, undefined);
+  // Spielstand aus 0.1.12: Multiplikator direkt an der Person → Skill-Fach
+  const alt12 = JSON.parse(spiel.speicherText()), p12 = alt12.zustand.personen.find(p => p.id === 'pastor');
+  delete p12.skills; p12.multiplikator = 1; p12.geleitet = 7;
+  const sp4 = spielStarten(JSON.stringify(alt12), () => 0.5);
+  assert.deepEqual(sp4.personInfo('pastor').multiplikator.stufe, 1); assert.equal(sp4.personInfo('pastor').multiplikator.geleitet, 7);
+  const p4 = JSON.parse(sp4.speicherText()).zustand.personen.find(p => p.id === 'pastor');
+  assert.equal(p4.multiplikator, undefined); assert.equal(p4.geleitet, undefined);
   const alt0 = JSON.parse(spiel.speicherText()); alt0.zustand.multiplikator = 0;
   assert.equal(spielStarten(JSON.stringify(alt0), () => 0.5).personInfo('pastor').multiplikator.stufe, 0);
 }

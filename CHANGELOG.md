@@ -3,6 +3,11 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.13
+
+**Technik**
+- Alle Fähigkeiten der Mitarbeiter (Seelsorge, Musik-Level, Haltungs-Multiplikator) werden jetzt an einem Ort gespeichert. Im Spiel ändert sich nichts, Spielstände werden automatisch übernommen
+
 ## 0.1.12
 
 **Pastor**

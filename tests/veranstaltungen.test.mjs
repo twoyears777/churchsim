@@ -1,6 +1,7 @@
 // Prüft mehrere Veranstaltungen pro Raum, den Lobpreisgottesdienst und das Bekanntheit-Protokoll.
 // Starten mit: node tests/veranstaltungen.test.mjs
 import assert from 'node:assert';
+import { skillsVon } from '../src/kern/skills.js';
 import { GRUNDSTUECK as G } from '../src/inhalte/umgebung.js';
 import { ZWEITER_BESUCH } from '../src/inhalte/veranstaltungen.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
@@ -110,7 +111,7 @@ console.log('Zwei-Veranstaltungen-Tests bestanden.');
 {
   const lauf = stufe => {
     const z = gemeinde(), r = raumBei(z);
-    ausstatten(z); z.personen.find(p => p.id === 'pastor').multiplikator = stufe;
+    ausstatten(z); skillsVon(z.personen.find(p => p.id === 'pastor')).multiplikator.stufe = stufe;
     veranstaltungEinstellen(z, r, 'lobpreis');
     z.besucher.forEach(b => { b.zufriedenheit = 30; b.lobpreis = 1; });
     z.besucher[9].lobpreis = 0.5;
@@ -124,7 +125,7 @@ console.log('Zwei-Veranstaltungen-Tests bestanden.');
   const z = gemeinde(), r = raumBei(z);
   ausstatten(z); veranstaltungEinstellen(z, r, 'gottesdienst');
   zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
-  assert.equal(z.personen.find(p => p.id === 'pastor').geleitet, 1);
+  assert.equal(skillsVon(z.personen.find(p => p.id === 'pastor')).multiplikator.geleitet, 1);
 }
 console.log('Multiplikator-Gottesdienst-Tests bestanden.');
 console.log('Lobpreis-Haltungs-Tests bestanden.');
