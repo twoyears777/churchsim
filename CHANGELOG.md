@@ -3,6 +3,24 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.11
+
+**Besucher**
+- Neu: Haltungslevel. Bei voller Haltung steigt jemand ein Level auf und entwickelt ein Bedürfnis (Lobpreis, Kaffee oder Spaß). Wird es in der Woche nicht erfüllt, sinkt die Haltung.
+
+**Gemeindesaal**
+- Neu: Spielenachmittag – Tisch und Stühle, nachmittags oder abends, erfüllt das Bedürfnis Spaß.
+
+**Seelsorge**
+- Der Pastor steigt jetzt bis Stufe 20 auf. Neues gibt es alle 5 Stufen, dazwischen gelingen seine Ratschläge mit jeder Stufe öfter.
+
+**Forschung**
+- Neu: Haltungs-Multiplikator – mit Heiligkeit kaufen, vervielfacht die Haltung aus Gottesdiensten.
+
+**Finanzen**
+- Dauerspender wird man jetzt ab Haltungslevel 3.
+- Die Prognose in der Seitenleiste rechnet geplante Feste jetzt mit ein.
+
 ## 0.1.10
 
 **Bauen**

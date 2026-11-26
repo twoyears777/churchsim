@@ -94,6 +94,8 @@ export const HILFE = {
           '**Gottesdienst:** braucht den Pastor im Raum. Bringt Kollekte, Zufriedenheit und Bekanntheit.',
           '**Lobpreisgottesdienst:** braucht einen Hauptamtlichen und eine Gitarre. Wie gut er ankommt, hängt davon ab, wie sehr jemand Lobpreis mag.',
           '**Konfirmandenunterricht:** Im Gemeindesaal möglich, braucht einen Hauptamtlichen und Stühle. Nur Jugendliche kommen. Jeder Ehrenamtliche im Raum bringt mehr Haltung. Wer 7-mal da war, wird am 2. Sonntag im Mai konfirmiert.',   // von Lukas freigegeben (25.11.)
+          // ENTWURF von Claude (0.1.11) – Lukas formuliert selbst
+          '**Spielenachmittag:** Im Gemeindesaal, nachmittags oder abends. Braucht einen Haupt- oder Ehrenamtlichen und einen Tisch mit mindestens 2 Stühlen direkt daneben (bis 4 Plätze je Tisch). Erfüllt das Bedürfnis Spaß.',
           '**Sonntagvormittag** gibt es doppelte Kollekte.',
           'Sobald Kanzel und Altar im Raum stehen, kannst du eine **zweite Veranstaltung** einstellen.',
           'Fehlt etwas, fällt die Veranstaltung aus – das macht Stammgäste unzufrieden. Das Raum-Fenster zeigt dir rot, was fehlt, und eine Prognose für die Woche.'
@@ -113,6 +115,8 @@ export const HILFE = {
       titel: 'Besucher und Haltung',
       inhalt: [
         'Jeder Besucher hat eine **Haltung** zur Gemeinde. Je höher sie ist, desto wahrscheinlicher kommt er wieder.',
+        // ENTWURF von Claude (0.1.11) – Lukas formuliert selbst
+        'Erreicht die Haltung 100, steigt der Besucher ein **Level** auf (bis Level 5) und die Haltung beginnt wieder bei 0. Mit jedem Level kommt er öfter – und er entwickelt ein neues **Bedürfnis** (Lobpreis, Kaffee oder Spaß). Am Sonntagabend wird geprüft: Jedes Bedürfnis, das in der Woche nicht erfüllt wurde, kostet 5 Haltung. Fällt die Haltung auf 0, geht es ein Level zurück. Ab Level 3 wird jemand Dauerspender.',
         { punkte: [
           'Mehr Haltung: Sitzplatz, guter Gottesdienst, Kaffee, gute Möbel, gute Seelsorge.',
           'Weniger Haltung: kein Stuhl frei, kein Kaffee, ausgefallene Veranstaltung.',
@@ -148,7 +152,7 @@ export const HILFE = {
       titel: 'Seelsorge',
       inhalt: [
         'Ab und zu möchte jemand mit Pastor Harder sprechen. Die Zeit hält dann an. Nimmst du das Gespräch an, wählst du einen von drei Ratschlägen. Geht er gut aus, steigt die Haltung (manchmal auch Bekanntheit oder eine Spende), sonst sinkt sie. Ablehnen enttäuscht die Person.',
-        'Mit jedem Gespräch sammelt der Pastor Erfahrung und steigt in der Seelsorge-Stufe. Je höher die Stufe, desto besser kann er einschätzen, welcher Rat passt.'
+        'Mit jedem Gespräch sammelt der Pastor Erfahrung und steigt in der Seelsorge-Stufe. Je höher die Stufe, desto besser kann er einschätzen, welcher Rat passt. Es gibt 20 Stufen: Alle 5 Stufen kommt etwas Neues dazu, dazwischen gelingen seine Ratschläge mit jeder Stufe etwas öfter.'
       ]
     },
     {
