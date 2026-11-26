@@ -43,6 +43,7 @@ import { DAUERSPENDE } from '../inhalte/finanzen.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
+import { toiletteAktuell } from './toiletten.js';
 import { umherPosition } from './umherlaufen.js';
 import { evangelisationAnlegen, evangelisationPosition, evangelisationInfo, freieEhrenamtliche } from './evangelisation.js';
 import { EVANGELISATION } from '../inhalte/evangelisation.js';
@@ -754,7 +755,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return { id: b.id, voll: b.voll, besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: levelVon(b), levelMax: HALTUNGSLEVEL.max,
         wochenBeduerfnisse: besucher ? wochenBeduerfnisse(z, b) : null, status: statusVon(z, b), lobpreis: lobpreisVorliebe(b),
         kaffee: kaffeeVorliebe(b), jugend: istJugend(b), konfi: istJugend(b) ? konfiStand(z, b) : null,
-        beduerfnisse: besucher ? beduerfnisse(z, b) : null };
+        beduerfnisse: besucher ? beduerfnisse(z, b) : null, toilette: toiletteAktuell(z, b.id) };
     },
     seelsorgeOffen() { return anfrageOffen(z); },
     // Fenster „Menschen im Ort“: alle, die die Gemeinde kennt

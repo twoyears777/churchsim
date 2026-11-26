@@ -311,7 +311,8 @@ function besucherKarte(f) {
     <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>
     <p class="unter">${T.levelInfo}</p>
     <p class="unter">${T.lobpreis(Math.round(b.lobpreis * 100))}</p>
-    <p class="unter">${T.kaffeeWert(Math.round(b.kaffee * 100))}</p>`;
+    <p class="unter">${T.kaffeeWert(Math.round(b.kaffee * 100))}</p>
+    ${b.toilette === null ? '' : `<h3>${T.toilette}</h3><div class="balken"><span style="width:${b.toilette}%"></span></div><p class="unter">${b.toilette} %</p>`}`;
   if (!n) return `${kopf}<div class="zeile"><button data-zu>Schließen</button></div>`;   // Passant: keine Bedürfnisse
   // Bedürfnisse am Ende der Woche (25.11.): entwickeln sich mit dem Level
   const wb = b.wochenBeduerfnisse || [];

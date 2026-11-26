@@ -49,5 +49,17 @@ export const RAUMTYPEN = [
     kosten: null,
     moebel: [],
     erweiterungen: []
+  },
+  {
+    // Toiletten (Lukas, 26.11.): Besucher gehen hierher, wenn das Bedürfnis Toilette hoch ist (siehe inhalte/toiletten.js).
+    // Braucht eine Tür; zählt erst mit mindestens einer WC-Kabine. Größe und Farbe: PLATZHALTER von Claude – Lukas legt sie fest.
+    id: 'toiletten',
+    name: 'Toiletten',
+    minGroesse: [2, 2],
+    farbe: '#d3e3ea',
+    einsatz: [],                    // hier arbeitet niemand
+    kosten: null,
+    moebel: [],
+    erweiterungen: []
   }
 ];

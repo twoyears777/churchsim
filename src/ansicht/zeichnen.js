@@ -11,7 +11,7 @@ export const FARBEN = {
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
   raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
-  wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878', glas: '#a9d3ea', glasHell: '#dff0f9', garderobe: '#6b4f36', jacke1: '#8a3b3b', jacke2: '#3b5f8a', infotisch: '#7c6a54', infoBlatt: '#f4f0e4',   // Fenster, Garderobe, Infotisch: PLATZHALTER
+  wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878', glas: '#a9d3ea', glasHell: '#dff0f9', garderobe: '#6b4f36', jacke1: '#8a3b3b', jacke2: '#3b5f8a', infotisch: '#7c6a54', infoBlatt: '#f4f0e4', wcWand: '#9fb3bd', wcSchuessel: '#f7f9fa', wcDeckel: '#c9d6dc', becken: '#e9eef0', hahn: '#8c979c',   // Fenster, Garderobe, Infotisch: PLATZHALTER
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
   kanzel: '#6b4a2c', kanzelHell: '#a07445', altar: '#efeae0', altarTuch: '#7b3b8c', vase: '#6d7fa3',
@@ -118,6 +118,8 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     else if (m.art === 'tisch') tisch(ctx, px, py, k);
     else if (m.art === 'garderobe') garderobe(ctx, px, py, k);
     else if (m.art === 'infotisch') infotisch(ctx, px, py, k);
+    else if (m.art === 'wc') wc(ctx, px, py, k);
+    else if (m.art === 'waschbecken') waschbecken(ctx, px, py, k);
     else if (m.art === 'kanzel') kanzel(ctx, px, py, k);
     else if (m.art === 'altar') altar(ctx, px, py, k);
     else if (m.art === 'blumen') blumen(ctx, px, py, k);
@@ -471,6 +473,20 @@ function infotisch(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.infoBlatt; ctx.fillRect(px + k * 0.18, py + k * 0.3, k * 0.22, k * 0.28); ctx.fillRect(px + k * 0.5, py + k * 0.34, k * 0.3, k * 0.2);
 }
 
+// WC-Kabine und Waschbecken (Toiletten, 26.11.) – PLATZHALTER-Aussehen von Claude, Lukas entscheidet
+function wc(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.wcWand; ctx.fillRect(px + k * 0.05, py + k * 0.05, k * 0.9, k * 0.12);
+  ctx.fillRect(px + k * 0.05, py + k * 0.05, k * 0.1, k * 0.9); ctx.fillRect(px + k * 0.85, py + k * 0.05, k * 0.1, k * 0.9);
+  ctx.fillStyle = FARBEN.wcDeckel; ctx.fillRect(px + k * 0.32, py + k * 0.2, k * 0.36, k * 0.16);
+  ctx.fillStyle = FARBEN.wcSchuessel; ctx.beginPath(); ctx.ellipse(px + k * 0.5, py + k * 0.56, k * 0.17, k * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = FARBEN.wcDeckel; ctx.lineWidth = Math.max(1, k * 0.04); ctx.stroke();
+}
+function waschbecken(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.becken; ctx.fillRect(px + k * 0.15, py + k * 0.12, k * 0.7, k * 0.5);
+  ctx.fillStyle = FARBEN.wcDeckel; ctx.beginPath(); ctx.ellipse(px + k * 0.5, py + k * 0.4, k * 0.24, k * 0.15, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.hahn; ctx.fillRect(px + k * 0.46, py + k * 0.12, k * 0.08, k * 0.16);
+}
+
 function theke(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.theke; ctx.fillRect(px, py, k, k);
   ctx.fillStyle = FARBEN.thekeHell; ctx.fillRect(px, py + k * 0.15, k, k * 0.35);
@@ -588,7 +604,7 @@ const AUSSENDEKO = {
 export function symbolZeichnen(ctx, id, g) {
   ctx.clearRect(0, 0, g, g);
   const k = g * 0.72, p = (g - k) / 2;
-  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, garderobe, infotisch, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
+  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, garderobe, infotisch, wc, waschbecken, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
     kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
   if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();

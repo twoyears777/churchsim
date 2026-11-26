@@ -4,6 +4,7 @@ import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { LAUFTEMPO, ABSTAND, DAUER } from '../inhalte/zeit.js';
 import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
+import { gangBei, gangOrt } from './toiletten.js';
 
 // Wegstücke werden einmal berechnet und gemerkt (Schlüssel → Pfad und Länge)
 export function strecke(z, speicher, schluessel, von, nach) {
@@ -50,12 +51,19 @@ function laufPositionen(z, speicher, L) {
     if (t < t0) return null;
     const hin = st(s + 'hin', start, g.sitz || g.tuer);
     let ort = punktAufWeg(hin, (t - t0) * LAUFTEMPO), sitzt = !!g.sitz && !ort.unterwegs, ziel = g.sitz;
+    // Toilettengang (26.11., toiletten.js): solange er läuft, zeigt er, wo die Person ist
+    const gang = gangBei(g, t), wc = gg => ({ id: g.id, name: g.name, ...gangOrt(gg, t, st, punktAufWeg, s + 'wc' + g.gaenge.indexOf(gg)), sitzt: false });
+    const vorher = (g.gaenge || []).find(x => x.art === 'vorher');
+    if (vorher) { if (t < vorher.zurueckBis) return wc(vorher); ort = { x: g.sitz.x, y: g.sitz.y, unterwegs: false }; sitzt = true; }
     if (!g.sitz) {   // kein Stuhl frei: wieder nach Hause
       const t1 = t0 + hin.laenge / LAUFTEMPO;
       if (t >= t1) { ort = punktAufWeg(st(s + 'heim', g.tuer, start), (t - t1) * LAUFTEMPO); if (!ort.unterwegs) return null; }
       return { id: g.id, name: g.name, x: ort.x, y: ort.y, sitzt: false };
     }
     if (g.kaffee && typeof g.kaffee.ab === 'number' && t >= g.kaffee.ab) return null;   // steht jetzt im Kirchkaffee an
+    if (gang && gang.art === 'sitz') return wc(gang);
+    const heimGang = (g.gaenge || []).find(x => x.art === 'heim');
+    if (heimGang && t >= heimGang.hinAb) return t < heimGang.zurueckBis ? wc(heimGang) : null;   // über die Toilette nach Hause
     // Heimweg: wer keinen Kaffee will, gleich nach dem Gottesdienst; sonst (und bei Ausfall) am Ende.
     // Alte Spielstände ohne gottesdienstEnde: Ende = Beginn + Dauer des Gottesdienstes.
     const ohneKaffee = !L.ausgefallen && !(g.kaffee && typeof g.kaffee.ab === 'number');

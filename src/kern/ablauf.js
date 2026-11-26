@@ -39,6 +39,7 @@ import { festAktiv, konfiTeilnahme, konfirmieren, istJugend } from './konfi.js';
 import { foyers, foyerBonus } from './foyer.js';
 import { strasse } from './bewegung.js';
 import { evangelisationSchritt } from './evangelisation.js';
+import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen } from './toiletten.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: Sonntagvormittag doppelt (Gottesdienst und Lobpreisgottesdienst)
@@ -327,7 +328,7 @@ function laufSchritt(z, L) {
   if (L.phase === 'anreise') return { zeit: L.beginn, tun: (z, r, zf) => beginnen(z, r, zf, L) };
   if (L.phase === 'gottesdienst') return { zeit: L.beginn + dauerVon(L.art), tun: (z, r, zf) => gottesdienstEnde(z, r, L, zf) };
   if (L.phase === 'kirchkaffee') return { zeit: ende, tun: (z, r, zf) => abschliessen(z, r, zf, L) };
-  if (L.phase === 'ende') return { zeit: L.ende + HEIMWEG, tun: z => { z.laeufe = z.laeufe.filter(x => x !== L); } };
+  if (L.phase === 'ende') return { zeit: Math.max(L.ende + HEIMWEG, L.wcBis || 0), tun: z => { z.laeufe = z.laeufe.filter(x => x !== L); } };
   return null;
 }
 
@@ -403,6 +404,8 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
   L.ankunft = z.minuten;
   const platz = i => frei ? (sitze.length ? { ...sitze[i % sitze.length] } : { ...tuer }) : i < sitze.length ? sitze[i] : null;
   L.gaeste = kommen.map((b, i) => ({ id: b.id, name: b.vorname, voll: b.voll, sitz: platz(i), tuer, kaffee: null }));
+  // Bedürfnis Toilette (26.11.): Startwerte und geplante Toilettengänge (toiletten.js)
+  gaengeBeimAnreisen(z, raeume, L, strasse, L.beginn, L.beginn + dauerVon(L.art));
 }
 // Freie Kästchen im Raum (ohne Möbel)
 function freieFelder(z, raum) {
@@ -425,6 +428,7 @@ function beginnen(z, raeume, zufall, L) {
   if (fest) {
     // Ein Sonderevent findet zur gleichen Zeit im selben Raum oder mit derselben Leitung statt: dieser Termin fällt aus
     // (ohne Abzug bei der Haltung – die Besucher können ja zum Fest kommen).
+    gaengeAbsagen(z, L);
     Object.assign(L, { phase: 'ende', ausgefallen: true, grund: 'fest', wegenFest: fest, ende: z.minuten });
     return;
   }
@@ -433,6 +437,7 @@ function beginnen(z, raeume, zufall, L) {
     // Kein Hauptamtlicher im Raum, nichts eingestellt, Gitarre oder Kanzel/Altar fehlen: Die Veranstaltung fällt aus.
     for (const b of z.besucher) zufriedenheitAendern(b, AENDERUNG.ausfall);
     const grund = info ? info.p.fehlt : 'raum';
+    gaengeAbsagen(z, L);   // Toilettengänge am Platz fallen weg, alle gehen heim
     Object.assign(L, { phase: 'ende', ausgefallen: true, grund, ende: z.minuten });
     if (mitKirchkaffee(L.art)) z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: true, grund, besucher: 0, heim: 0 };
     return;
@@ -477,6 +482,7 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   });
   if (!gottesdienstKunden(z, raeume, L, wollen)) for (const { g } of wollen) g.kaffee.ergebnis = 'keinPlatz';
   L.gottesdienstEnde = z.minuten;   // wer keinen Kaffee will, geht ab jetzt nach Hause (bewegung.js)
+  gaengeBeimHeimgehen(z, raeume, L, strasse);   // ab 80 % vorher noch zur Toilette
   L.phase = 'kirchkaffee';
 }
 
@@ -504,6 +510,7 @@ function saalEnde(z, raeume, L, v, zufall) {
   if (info && v.musikLevelMin && info.p.leitung) musikErfahrungDazu(info.p.leitung);
   if (v.bekanntheit !== false) bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');   // Konfirmandenunterricht: nur Haltung
   L.gottesdienstEnde = z.minuten;
+  gaengeBeimHeimgehen(z, raeume, L, strasse);   // ab 80 % vorher noch zur Toilette
   abschliessen(z, raeume, zufall, L);
 }
 

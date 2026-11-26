@@ -251,6 +251,7 @@ export const TEXTE = {
     neugierig: 'Neugierig – kommt vielleicht zum nächsten Gottesdienst',
     lobpreis: prozent => `Mag Lobpreis: ${prozent} %`,  // Lukas, 25.11.
     kaffeeWert: prozent => `Mag Kaffee: ${prozent} %`,  // Lukas, 25.11.
+    toilette: 'Toilette',   // Bedürfnis Toilette (26.11.) – ENTWURF von Claude, Lukas formuliert selbst
     // Konfirmandenunterricht (von Lukas freigegeben, 25.11.)
     jugendlich: 'Jugendlich',
     konfi: (n, von) => `Konfirmandenunterricht: ${n} von ${von}`,
@@ -486,7 +487,10 @@ export const TEXTE = {
     wand: `Zieh ein Rechteck, um Wände zu bauen. Jedes neue Wandstück kostet ${BAUKOSTEN.wand} €.`,
     fenster: `Klicke auf eine Wand, um ein Fenster einzusetzen (${BAUKOSTEN.fenster} €) oder wieder zu entfernen. Jedes Fenster bringt +${FENSTER.haltung} Haltung im Raum.`,
     garderobe: `Klicke, um eine Garderobe aufzustellen (wirkt im Foyer: +${foyerHaltung('garderobe')} Haltung für jeden, der hindurchläuft).`,
-    infotisch: `Klicke, um einen Infotisch aufzustellen (wirkt im Foyer: +${foyerHaltung('infotisch')} Haltung für jeden, der hindurchläuft).`
+    infotisch: `Klicke, um einen Infotisch aufzustellen (wirkt im Foyer: +${foyerHaltung('infotisch')} Haltung für jeden, der hindurchläuft).`,
+    // ---- Toiletten (26.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
+    wc: 'Klicke, um eine WC-Kabine aufzustellen (Toiletten, eine Person gleichzeitig).',
+    waschbecken: 'Klicke, um ein Waschbecken aufzustellen (Toiletten).'
   },
   // ---- Baukosten, Fenster, Foyer (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
   bauGeld: {
@@ -567,7 +571,7 @@ export const TEXTE = {
 
   // ---- Bauleiste unten (25.11.; Reiter von Lukas freigegeben, übrige Texte ENTWÜRFE von Claude) ----
   bauleiste: {
-    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', deko: 'Deko', aussen: 'Außen' },   // „Foyer“: ENTWURF
+    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“: ENTWURF
     werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', raum: 'Raum festlegen', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF
     jeStueck: preis => `${preis} je Stück`,   // Preis der Wand (ENTWURF von Claude, 25.11.)
     abBekanntheit: n => `ab Bekanntheit ${n}`,
