@@ -67,7 +67,7 @@ function raumTypFenster(f) {
   return `<h2>Raumfunktion</h2>
     ${w.tueren === 0 ? '<p class="warnung">Dieser Raum hat noch keine Tür.</p>' : ''}
     <div class="typen">${zeilen}</div>
-    <div class="zeile">${w.hatTyp ? '<button data-typ="">Funktion entfernen</button>' : ''}<button data-zu>Schließen</button></div>`;
+    <div class="zeile">${w.hatTyp ? '<button data-typ="">Funktion entfernen</button>' : ''}</div>`;
 }
 
 // Charakter-Karte eines Mitarbeiters
@@ -92,8 +92,7 @@ function personenKarte(f) {
   if (p.multiplikator) skills = (p.seelsorge || p.musik ? skills : '') + multiplikatorSkill(p.multiplikator, p.id);
   return `<h2>${esc(p.name)}</h2>
     <p class="unter">${ART_TEXT[p.art]} · ${p.einsatz ? 'Im Einsatz: ' + p.einsatz : 'Verfügbar'}</p>
-    <h3>Skills</h3>${skills}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    <h3>Skills</h3>${skills}`;
 }
 
 // Haltungs-Multiplikator des Hauptamtlichen (26.11.): Stufe, geleitete Gottesdienste, Kauf der nächsten Stufe mit Heiligkeit
@@ -137,7 +136,7 @@ function raumFenster(f) {
     return `<h2>${T.platzEinstellen(p.platz + 1)}</h2><p class="unter">${r.typName}</p>
       <h3>${T.art}</h3><div class="eventtypen">${knoepfe}</div>${tabelle}
       <h3>${T.zeit}</h3><p class="unter">${p.art === 'spiele' ? T.wochenplanInfoSpiele : saal ? T.wochenplanInfoSaal : T.wochenplanInfo}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
-      <div class="zeile"><button data-zurueck>${T.zurueck}</button><button data-zu>Schließen</button></div>`;
+      <div class="zeile"><button data-zurueck>${T.zurueck}</button></div>`;
   }
 
   // ---- Übersicht: Veranstaltung 1, 2 ----
@@ -172,8 +171,7 @@ function raumFenster(f) {
   return `<h2>${r.typName}</h2>
     <h3>${T.veranstaltung}</h3><div class="kacheln">${plaetze}</div>
     <h3>${T.mitarbeiter}</h3>${mitarbeiter}
-    ${vorschau}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    ${vorschau}`;
 }
 
 // Bausteintabelle: eine Zeile pro Baustein (Pflicht grau hinterlegt), unten „Zusammen“. Spalte Ehrenamt: bisher nur beim Konfirmandenunterricht.
@@ -215,8 +213,7 @@ function maschinenFenster(f) {
     <div class="balken"><span style="width:${Math.round(m.fuellung / m.fassung * 100)}%"></span></div>
     <p class="unter">${T.fuellstand(m.fuellung, m.fassung)}</p>
     ${m.fuellung === 0 ? `<p class="warnung">${T.leer}</p>` : ''}
-    ${m.imKirchkaffee ? `<p class="unter">${T.auffuellen}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    ${m.imKirchkaffee ? `<p class="unter">${T.auffuellen}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}`;
 }
 
 // Kirchkaffee: Zustand und eigene Öffnungszeiten (höchstens 3 Schichten pro Woche).
@@ -239,7 +236,7 @@ function kaffeeFenster(f) {
       TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${gesetzt(tag, s.id) ? ' aktiv' : ''}" data-schicht="${tag}:${s.id}" ${gesetzt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${T.slot[s.id]}"></button></td>`).join('')}</tr>`).join('');
     return `<h2>${T.hinzufuegen}</h2><p class="unter">${r.typName}</p>
       <p class="unter">${T.info}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
-      <div class="zeile"><button data-zurueck>${TEXTE.raum.zurueck}</button><button data-zu>Schließen</button></div>`;
+      <div class="zeile"><button data-zurueck>${TEXTE.raum.zurueck}</button></div>`;
   }
   const liste = r.schichten.map((s, i) => `<div class="kachel klein-kachel schicht"><b>${TEXTE.tage[s.tag]}</b><small>${T.slot[s.slot]}</small>
       <button class="klein-knopf" data-schicht-weg="${i}">${T.entfernen}</button></div>`).join('');
@@ -249,8 +246,7 @@ function kaffeeFenster(f) {
     <div class="typen"><button data-schicht-neu ${voll ? 'disabled' : ''}>${T.hinzufuegen}</button></div>
     ${voll ? `<p class="unter">${T.voll}</p>` : ''}
     <p class="unter staerker">${T.sitzplaetze(r.sitzplaetze.anzahl, r.sitzplaetze.amTisch)}</p>
-    <p class="unter">${T.sitzInfo(r.sitzChance)}</p>
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    <p class="unter">${T.sitzInfo(r.sitzChance)}</p>`;
 }
 
 // Foyer (25.11.): was es jedem bringt, der hindurchläuft, und wer dort steht
@@ -267,8 +263,7 @@ function foyerFenster(f) {
     ${r.fertig ? '' : `<p class="warnung">${T.nichtFertig}</p>`}
     <p class="unter staerker">${T.zusammen(r.haltung)}</p>
     <ul class="quellen">${zeilen.map(z => `<li>${z}</li>`).join('')}</ul>
-    <h3>${T.mitarbeiter}</h3>${leute}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    <h3>${T.mitarbeiter}</h3>${leute}`;
 }
 
 // Stuhl verbessern (Editor): Stufe, Wirkung, nächste Stufe, alle Stühle im Raum
@@ -289,8 +284,7 @@ function stuhlFenster(f) {
     <p class="unter staerker">${T.stufe(s.stufe, s.maxStufe)}</p>
     <p class="unter">${T.wirkung(s.haltung, faktor(s.kollekte))}</p>
     <p class="unter">${T.trinkgeld(faktor(s.trinkgeld))}</p>
-    ${naechste}${alle}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    ${naechste}${alle}`;
 }
 
 // Pforte (Tor): Plakat aufhängen
@@ -301,8 +295,7 @@ function torFenster() {
     : `<p class="unter">${T.chance(t.chanceOhne, t.chanceMit)}</p>
        <div class="typen"><button data-plakat ${t.leistbar ? '' : 'disabled'}>${T.kaufen(euro(t.preis))}</button></div>
        ${t.leistbar ? '' : `<p class="unter">${T.keinGeld}</p>`}`;
-  return `<h2>${T.titel}</h2><h3>${T.plakat}</h3><p>${T.info}</p>${inhalt}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+  return `<h2>${T.titel}</h2><h3>${T.plakat}</h3><p>${T.info}</p>${inhalt}`;
 }
 
 // Feld „Evangelisation!“ vor dem Laden (26.11.): wer gerade vor Ort ist und die Chance pro Passant
@@ -313,8 +306,7 @@ function evangelisationFenster() {
     : `<p class="unter">${T.niemand}</p>`;
   return `<h2>${T.titel}</h2><p>${T.info}</p>
     <p class="unter staerker">${T.vorOrt(e.leute.length, e.max)}</p>${leute}
-    <p class="unter">${T.chance(e.chance)}</p>
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    <p class="unter">${T.chance(e.chance)}</p>`;
 }
 
 // Besucher-Kärtchen: Bedürfnisse und Zufriedenheit
@@ -332,7 +324,7 @@ function besucherKarte(f) {
     <p class="unter">${T.lobpreis(Math.round(b.lobpreis * 100))}</p>
     <p class="unter">${T.kaffeeWert(Math.round(b.kaffee * 100))}</p>
     ${b.toilette === null ? '' : `<h3>${T.toilette}</h3><div class="balken"><span style="width:${b.toilette}%"></span></div><p class="unter">${b.toilette} %</p>`}`;
-  if (!n) return `${kopf}<div class="zeile"><button data-zu>Schließen</button></div>`;   // Passant: keine Bedürfnisse
+  if (!n) return `${kopf}`;   // Passant: keine Bedürfnisse
   // Bedürfnisse am Ende der Woche (25.11.): entwickeln sich mit dem Level
   const wb = b.wochenBeduerfnisse || [];
   const woche = `<h3>${T.wochenBeduerfnisse}</h3>
@@ -344,8 +336,7 @@ function besucherKarte(f) {
       <tr><td>${T.sitzplatz}</td>${status(n.sitzplatz)}</tr>
       <tr><td>${T.kaffee}</td>${n.kaffee === 'keinWunsch' ? `<td class="zahl">${T.keinKaffee}</td>` : status(n.kaffee)}</tr>
       <tr><td>${T.gottesdienst}</td>${status(n.gottesdienst)}</tr>
-    </table>
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    </table>`;
 }
 
 // Menschen im Ort: sortierbare Liste. Sortieren ist nur Anzeige, keine Spielregel.
@@ -369,8 +360,7 @@ function menschenFenster(f) {
       <td>${m.kaffee === null ? T.unbekannt : T.prozent(Math.round(m.kaffee * 100))}</td>
       <td>${T.status[m.status]}</td></tr>`).join('');
   return `<h2>${T.titel}</h2>
-    ${liste.length ? `<table class="menschen"><tr>${kopf}</tr>${zeilen}</table>` : `<p class="leer">${T.leer}</p>`}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    ${liste.length ? `<table class="menschen"><tr>${kopf}</tr>${zeilen}</table>` : `<p class="leer">${T.leer}</p>`}`;
 }
 
 // Finanzen: diese Woche nach Kategorien, Kirchkaffee im Detail, Verlauf früherer Wochen, Kassenbuch. Alle Zahlen kommen vom Spiel.
@@ -430,8 +420,7 @@ function finanzFenster() {
     <h3>${T.kaffee}</h3>${kaffee}
     <h3>${T.dauerspender}</h3>${dauerspender}
     <h3>${T.verlauf}</h3><p class="unter">${T.verlaufInfo(f.verlaufWochen)}</p>${verlauf}
-    <h3>${T.kassenbuch}</h3>${kassenbuch}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    <h3>${T.kassenbuch}</h3>${kassenbuch}`;
 }
 
 // Bekanntheit: woher, Verlauf (Kurve + letzte Änderungen), was sie bewirkt. Alle Zahlen kommen vom Spiel.
@@ -462,8 +451,7 @@ function bekanntheitFenster() {
       <li>${T.neugier(prozent(w.neugierGrund), prozent(w.neugier), w.plakatFaktor)}</li>
       ${w.teile.gelaende || w.teile.schaukasten ? `<li>${T.neugierDazu(prozent(w.teile.gelaende), prozent(w.teile.schaukasten))}</li>` : ''}</ul>
     ${gelaendeAbschnitt()}
-    ${einzugsgebietAbschnitt()}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    ${einzugsgebietAbschnitt()}`;
 }
 
 // Gelände: Wert, woraus er besteht, Wirkung auf die Neugier, Aushänge der Schaukästen (ENTWURF 25.11.)
@@ -495,7 +483,7 @@ function schaukastenFenster(f) {
     ${s.aushang ? '' : `<p class="unter">${S.leer}</p>`}
     ${liste}
     <p class="unter">${S.doppelt}</p>
-    <div class="zeile">${s.aushang ? `<button data-aushang-weg>${S.abnehmen}</button>` : ''}<button data-zu>Schließen</button></div>`;
+    <div class="zeile">${s.aushang ? `<button data-aushang-weg>${S.abnehmen}</button>` : ''}</div>`;
 }
 
 // Einzugsgebiet: Stand, woraus die Grenze besteht, Maßnahmen (Parkplatz, Bushaltestelle, Werbekampagne)
@@ -535,7 +523,7 @@ function busFenster() {
       ${n.frei ? '' : `<p class="fehlt">${E.frei(n.abBekanntheit)}</p>`}
       <div class="typen"><button data-bus-ausbauen ${n.frei && n.leistbar ? '' : 'disabled'}>${n.stufe === 1 ? E.kaufen : E.ausbauen(esc(n.name))}</button></div>
       ${n.frei && !n.leistbar ? `<p class="unter">${E.keinGeld}</p>` : ''}` : `<p class="ok">${B.hoechste}</p>`;
-  return `<h2>${B.titel}</h2>${jetzt}${weiter}<div class="zeile"><button data-zu>Schließen</button></div>`;
+  return `<h2>${B.titel}</h2>${jetzt}${weiter}`;
 }
 
 // Changelog: Änderungen der aktuellen Version (aus CHANGELOG.md)
@@ -544,8 +532,7 @@ function changelogFenster() {
   let inhalt = '';
   if (c.fehler) inhalt = `<p class="leer">${T.fehler}</p>`;
   else if (c.bereiche) inhalt = c.bereiche.map(b => `${b.titel ? `<h3>${esc(b.titel)}</h3>` : ''}<ul class="changelog">${b.punkte.map(p => `<li>${esc(p)}</li>`).join('')}</ul>`).join('');
-  return `<h2>${T.titel}</h2><p class="unter">${T.version(VERSION)}</p>${inhalt}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+  return `<h2>${T.titel}</h2><p class="unter">${T.version(VERSION)}</p>${inhalt}`;
 }
 
 // Hilfe: Themenliste → ein Thema (Texte aus inhalte/hilfe.js). Solange sie offen ist, steht die Zeit (start.js).
@@ -554,13 +541,12 @@ function hilfeFenster(f) {
   const H = HILFE, thema = f.thema !== undefined ? H.themen.find(t => t.id === f.thema) : null;
   if (!thema) {
     const liste = H.themen.map(t => `<button class="hilfe-thema" data-hilfe="${t.id}">${esc(t.titel)}</button>`).join('');
-    return `<h2>${H.titel}</h2><p class="unter">${H.info}</p><div class="hilfe-themen">${liste}</div>
-      <div class="zeile"><button data-zu>Schließen</button></div>`;
+    return `<h2>${H.titel}</h2><p class="unter">${H.info}</p><div class="hilfe-themen">${liste}</div>`;
   }
   const inhalt = thema.inhalt.map(b => typeof b === 'string' ? `<p class="hilfe-text">${fett(b)}</p>`
     : `<ul class="hilfe-punkte">${b.punkte.map(pk => `<li>${fett(pk)}</li>`).join('')}</ul>`).join('');
   return `<h2>${esc(thema.titel)}</h2>${inhalt}
-    <div class="zeile"><button data-hilfe-zurueck>${H.zurueck}</button><button data-zu>Schließen</button></div>`;
+    <div class="zeile"><button data-hilfe-zurueck>${H.zurueck}</button></div>`;
 }
 
 // Kirchenjahr: jetzt (Zeit, Farbe, Erklärung, nächster Sonntag), kommende Feste in Worten, alle Zeiten. Alles vom Spiel.
@@ -587,8 +573,7 @@ function kirchenjahrFenster() {
     <p class="unter">${K.erklaerung[jetzt.id]}</p>
     <p class="unter">${K.naechsterSonntag(esc(k.sonntag.name), k.sonntag.datum)}${heute ? ' · ' + heute : ''}</p>
     <h3>${K.kommend}</h3><div class="kacheln">${feste}${gesperrt}</div>
-    <h3>${K.zeiten}</h3><ul class="quellen kirchenjahr-zeiten">${zeiten}</ul>
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    <h3>${K.zeiten}</h3><ul class="quellen kirchenjahr-zeiten">${zeiten}</ul>`;
 }
 
 // Fest-Menü: Zeit, Raum, Leitung, Art, Ehrenamtliche wählen → „Fest planen“ oder „Diesmal nicht“.
@@ -610,7 +595,7 @@ function festFenster(f) {
   const kannPlanen = a.raumNr !== null && a.leitung && a.art;
   const unten = m.offen
     ? `<button data-fest-nicht>${M.nicht}</button><button class="haupt" data-fest-planen ${kannPlanen ? '' : 'disabled'}>${M.planen}</button>`
-    : `${m.geplant ? `<button data-fest-nicht>${M.absagen}</button>` : ''}${f.vonKirchenjahr ? `<button data-fest-zurueck>${M.zurueck}</button>` : '<button data-zu>Schließen</button>'}<button class="haupt" data-fest-planen ${kannPlanen ? '' : 'disabled'}>${M.planen}</button>`;
+    : `${m.geplant ? `<button data-fest-nicht>${M.absagen}</button>` : ''}${f.vonKirchenjahr ? `<button data-fest-zurueck>${M.zurueck}</button>` : ''}<button class="haupt" data-fest-planen ${kannPlanen ? '' : 'disabled'}>${M.planen}</button>`;
   return `<h2>${M.titel}</h2>
     <p class="unter staerker">${M.zeile(m.konfirmanden !== null ? M.konfirmanden(esc(m.name), m.konfirmanden) : esc(m.name), TEXTE.tage[m.wochentag], m.datum, TEXTE.kirchenjahr.inTagen(m.tageBis))}</p>
     ${wort ? `<p class="unter">${M.erwartet(wort)}</p>` : ''}
@@ -686,8 +671,7 @@ function forschungFenster(f) {
   }).join('');
   return `<h2>${T.titel}</h2>
     <p class="unter">${T.vorrat(Math.floor(info.heiligkeit), euro(info.konto))}</p>
-    <div class="forschung-baum">${knoten}</div>
-    <div class="zeile"><button data-zu>${T.schliessen}</button></div>`;
+    <div class="forschung-baum">${knoten}</div>`;
 }
 // Gemeindekalender (Lukas, 26.11.): Wochenüberblick über alle Veranstaltungen in allen Räumen, dazu Feste und Kirchkaffee.
 // Diese und nächste Woche zum Umschalten. Spalten = Wochentage, Zeilen = Vormittag/Nachmittag/Abend (wie der Wochenplan).
@@ -712,8 +696,7 @@ function kalenderFenster(f) {
     <div class="eventtypen"><button class="${k.versatz === 0 ? 'aktiv' : ''}" data-kalender="0">${T.diese}</button><button class="${k.versatz === 1 ? 'aktiv' : ''}" data-kalender="1">${T.naechste}</button></div>
     <p class="unter">${T.woche(k.woche)}</p>
     <table class="wochenplan kalender"><tr><th></th>${kopf}</tr>${reihen}</table>
-    ${k.termine.length || k.kaffee.length ? '' : `<p class="unter">${T.leer}</p>`}
-    <div class="zeile"><button data-zu>Schließen</button></div>`;
+    ${k.termine.length || k.kaffee.length ? '' : `<p class="unter">${T.leer}</p>`}`;
 }
 // Knöpfe in den Fenstern → Befehle ans Spiel
 export function fensterEinrichten() {
