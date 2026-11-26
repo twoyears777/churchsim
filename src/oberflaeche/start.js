@@ -1,5 +1,6 @@
 // Start der Oberfläche: Spiel laden, Uhr antreiben, Karte zeichnen.
 // Die Uhr hier sagt dem Spiel nur „so viele echte Sekunden sind vergangen“ – was dabei passiert, entscheidet der Kern.
+import { introStarten } from './intro.js';
 import { spielStarten } from '../kern/spiel.js';
 import { ui, $, euro } from './ui.js';
 import { ladenText, speichern } from './speicher.js';
@@ -10,6 +11,7 @@ import { aktualisierungStarten } from './aktualisieren.js';
 import { zeichne } from '../ansicht/zeichnen.js';
 import { bauleisteAktualisieren } from './bauleiste.js';
 
+introStarten();   // schwarzes Intro „twoyears 2026“, danach ist das Hauptmenü zu sehen
 ui.spiel = spielStarten(ladenText());
 const leinwand = $('karte'), ctx = leinwand.getContext('2d'), flaeche = $('flaeche');
 

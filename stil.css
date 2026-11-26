@@ -232,6 +232,15 @@ p .farbe, .kirchenjahr-zeiten .farbe { display: inline-block; width: 14px; heigh
 .kachel .feiertag { color: #6b665b; font-size: 13px; }
 .kacheln + p.unter { margin-top: 6px; }
 
+/* Intro beim Öffnen: schwarzer Grund, weiße schlichte Schrift, ein- und ausblenden, ca. 2 Sekunden (Lukas, 26.11.2026) */
+.intro { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+  background: #000; cursor: pointer; transition: opacity .2s ease; }
+.intro.weg { opacity: 0; pointer-events: none; }
+.intro-text { margin: 0; color: #fff; opacity: 0; font-size: 44px; font-weight: 300; letter-spacing: 4px;
+  font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; user-select: none; }
+.intro.laeuft .intro-text { animation: intro-blenden 1.8s ease-in-out forwards; }
+@keyframes intro-blenden { 0% { opacity: 0; } 28% { opacity: 1; } 72% { opacity: 1; } 100% { opacity: 0; } }
+
 /* Hauptmenü – Holz und Messing (Lukas, 25.11.2026), Karte dahinter unscharf */
 .hauptmenue { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
   background: rgba(25,18,10,.35); backdrop-filter: blur(5px) brightness(.7); -webkit-backdrop-filter: blur(5px) brightness(.7); }

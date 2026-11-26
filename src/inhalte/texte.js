@@ -24,6 +24,9 @@ export const TEXTE = {
   kontostand: 'Kontostand',
   bekanntheit: 'Bekanntheit',
 
+  // Intro beim Öffnen der App (Text von Lukas, 26.11.2026)
+  intro: 'twoyears 2026',
+
   // Hauptmenü (Texte von Lukas freigegeben, 25.11.2026)
   hauptmenue: {
     titel: 'Churchsim',
