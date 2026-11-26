@@ -3,6 +3,41 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.16
+
+**Spielstart**
+- Neu: Beim ersten Gottesdienst berichtet die Zeitung über die neue Gemeinde – es kommen 10 Leute mehr, und mindestens einer wird danach Ehrenamtlicher
+
+**Kirchkaffee**
+- Eine Tasse Kaffee kostet jetzt 2 € statt 1 €
+- Neu: Getränkeautomat – wird vom Kirchkaffee-Ehrenamtlichen aufgefüllt, Gäste auf dem Gelände kaufen auch außerhalb der Öffnungszeiten
+- Gäste im Kirchkaffee gehen jetzt auch zur Toilette
+
+**Ehrenamtliche**
+- Neu: Skill „Evangelisation“ – wer vor dem Laden steht, wird mit der Zeit besser darin, Menschen einzuladen
+- Das Evangelisation-Menü zeigt jetzt, wer vor Ort ist, wie viel jeder beiträgt und was heute und diese Woche passiert ist
+- Musiker gehen bei Veranstaltungen zu ihrem Instrument und danach zurück
+
+**Pastor**
+- Seelsorge-Stufen steigen deutlich langsamer
+
+**Veranstaltungen**
+- Die doppelte Kollekte gilt jetzt den ganzen Sonntag, für alle Gottesdienstarten
+- Das Fest-Menü erscheint nicht mehr, wenn das Fest schon vorher geplant wurde
+
+**Bauen**
+- Neue Bauleiste mit Hauptmenü und Untermenüs
+- Raumfunktion festlegen: einfach in einen Raum klicken
+- Eine Tür kostet jetzt 10 €
+
+**Menschen**
+- Menschen werden jetzt als Figuren gezeigt statt als Kugeln
+- Das Menü „Menschen“ ist übersichtlicher: Gruppen zum Aufklappen und ein Überblick mit Statistiken
+
+**Bedienung**
+- Alle Fenster schließen jetzt mit dem ✕ oben rechts
+- Das Evangelisation-Feld lässt sich wieder zuverlässig anklicken
+
 ## 0.1.15
 
 **Fehlerbehebung**
