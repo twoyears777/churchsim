@@ -512,8 +512,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         status: spielStatus(z, raeume),
         beschaeftigt: z.laeufe.some(L => L.phase !== 'ende') || anfrageOffen(z) || z.kaffee.kunden.length > 0,
         seelsorge: seelsorgeLage(z),   // offene Seelsorge-Anfrage mit Status der Person (sonst null)
-        festAnfrage: z.feste ? z.feste.anfrage : null,
-        zeitung: zeitungOffen(z),   // Zeitungsartikel vor dem ersten Gottesdienst ist offen (Zeit steht, bis weitergeklickt)   // Fest-Menü steht an (Schlüssel des Fests; Zeit steht, bis beantwortet)
+        festAnfrage: z.feste ? z.feste.anfrage : null,   // Fest-Menü steht an (Schlüssel des Fests; Zeit steht, bis beantwortet)
+        zeitung: zeitungOffen(z),   // Zeitungsartikel vor dem ersten Gottesdienst ist offen (Zeit steht, bis weitergeklickt)
         meldung: neuesteMeldung(z)   // z. B. jemand ist neugierig am Tor stehen geblieben, zu wenig Geld für den Kaffee-Einkauf
       };
     },

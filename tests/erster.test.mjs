@@ -67,7 +67,6 @@ function bis(z, ziel, zufall = () => 0.5) {
   assert.ok(lauf + 1 >= ERSTER_GOTTESDIENST.neueLeute, 'die Neuen waren da');
   assert.equal(ea(z), 2);                                         // Frau des Pastors + 1
   assert.equal(z.erster.erledigt, true);
-  if (process.env.ZAHLEN) console.log('Besucher beim ersten Gottesdienst:', z.letzterGottesdienst.besucher);
   assert.equal(zeitungOffen(z), false);
   // Nächste Woche: keine Zeitung, keine zusätzlichen Leute, kein sicherer Ehrenamtlicher
   const anzahl = z.besucher.length;
