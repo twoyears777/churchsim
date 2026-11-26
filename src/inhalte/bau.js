@@ -1,8 +1,8 @@
 // Inhaltsdatei: Baukosten, Fenster und Foyer (Spielprinzip von Lukas, 25.11.2026 – claude/spielprinzip-baukosten-fenster-foyer.md).
 
-// Baukosten: jedes neue Wandstück kostet `wand` €. Türen kosten nichts extra (eine Tür ist ein Wandstück).
-// Ein Fenster kostet `fenster` € zusätzlich zur Wand. Beim Abriss gibt es alles voll zurück.
-export const BAUKOSTEN = { wand: 5, fenster: 10 };
+// Baukosten: jedes neue Wandstück kostet `wand` €. Eine Tür kostet `tuer` € zusätzlich zur Wand (Lukas, 26.11.: 10 €),
+// ein Fenster `fenster` € zusätzlich zur Wand. Beim Abriss (oder Tür/Fenster wieder zur Wand) gibt es alles voll zurück.
+export const BAUKOSTEN = { wand: 5, tuer: 10, fenster: 10 };
 
 // Alte Spielstände (vor den Baukosten): einmalig so viel Geld dazu (neues Startgeld 1.000 € statt 50 €).
 // Ihre schon gebauten Wände bleiben kostenlos – beim Abriss gibt es für sie darum auch kein Geld zurück.

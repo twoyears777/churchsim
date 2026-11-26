@@ -496,6 +496,7 @@ export const TEXTE = {
   bauGeld: {
     wand: (kosten, stuecke) => `Nicht genug Geld für diese Wände (${stuecke} Stück, ${kosten}).`,
     fenster: preis => `Nicht genug Geld für ein Fenster (${preis}).`,
+    tuer: preis => `Nicht genug Geld für eine Tür (${preis}).`,   // ENTWURF von Claude (26.11.), nach Vorbild Fenster – Lukas formuliert
     vorschau: (stuecke, kosten) => `${stuecke} ${stuecke === 1 ? 'Wandstück' : 'Wandstücke'} · ${kosten}`
   },
   foyerFenster: {
@@ -572,7 +573,7 @@ export const TEXTE = {
   // ---- Bauleiste unten (25.11.; Reiter von Lukas freigegeben, übrige Texte ENTWÜRFE von Claude) ----
   bauleiste: {
     kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“: ENTWURF
-    werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', raum: 'Raum festlegen', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF
+    werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF
     jeStueck: preis => `${preis} je Stück`,   // Preis der Wand (ENTWURF von Claude, 25.11.)
     abBekanntheit: n => `ab Bekanntheit ${n}`,
     drehen: 'Drehen (R)'

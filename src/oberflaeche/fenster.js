@@ -34,6 +34,18 @@ export function fensterAktualisieren() {
   m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
+  amZeiger(m, f.zeiger);
+}
+
+// Raummenü im Editor (26.11.): erscheint neben dem Mauszeiger statt unten rechts – so weit verschoben, dass es ganz sichtbar bleibt
+function amZeiger(m, zeiger) {
+  m.classList.toggle('am-zeiger', !!zeiger);
+  if (!zeiger) { m.style.left = m.style.top = ''; return; }
+  const abstand = 14, rand = 8, b = m.offsetWidth, h = m.offsetHeight;
+  let x = zeiger.x + abstand, y = zeiger.y + abstand;
+  if (x + b > innerWidth - rand) x = zeiger.x - abstand - b;      // rechts kein Platz: links vom Zeiger
+  if (y + h > innerHeight - rand) y = innerHeight - rand - h;     // unten kein Platz: hochrücken
+  m.style.left = Math.max(rand, x) + 'px'; m.style.top = Math.max(rand, y) + 'px';
 }
 
 // Raumfunktion festlegen (Editor)

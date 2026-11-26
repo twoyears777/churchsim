@@ -8,7 +8,7 @@ export const LEER = 0, WAND = 1, TUER = 2, FENSTER = 3;
 export const istWandStueck = t => t === WAND || t === TUER || t === FENSTER;
 
 export function neuerZustand() {
-  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {}, veranstaltung: {}, moebel: [], personen: [], woche: 0, konto: STARTGELD, wochenbuch: { einnahmen: {}, ausgaben: {} }, baukosten: true };   // baukosten: Spielstand kennt die Baukosten schon
+  return { version: 2, w: WELT.w, h: WELT.h, zellen: new Array(WELT.w * WELT.h).fill(LEER), raumTyp: {}, veranstaltung: {}, moebel: [], personen: [], woche: 0, konto: STARTGELD, wochenbuch: { einnahmen: {}, ausgaben: {} }, baukosten: true, tuerkosten: true };   // baukosten/tuerkosten: Spielstand kennt die Baukosten bzw. den Türpreis schon
 }
 export function idx(z, x, y) { return y * z.w + x; }
 function imFeld(z, x, y) { return x >= 0 && y >= 0 && x < z.w && y < z.h; }
@@ -45,19 +45,22 @@ export function wandRechteck(z, x0, y0, x1, y1) {
   abgleichen(z);
   return neu;
 }
-// Reißt alles im Rechteck ab. → was weg ist (fürs Erstatten): { waende: Wandstücke inkl. Türen/Fenster, fenster, gratis }
+// Reißt alles im Rechteck ab. → was weg ist (fürs Erstatten): { waende: Wandstücke inkl. Türen/Fenster, fenster, tueren, gratis }
 // gratis: Wandstücke aus alten Spielständen, die nichts gekostet haben (z.gratisWaende) – dafür gibt es kein Geld zurück.
+// Genauso Türen aus Spielständen vor dem Türpreis (z.gratisTueren): für sie gibt es den Türpreis nicht zurück.
 export function abriss(z, x0, y0, x1, y1) {
   [x0, y0, x1, y1] = begrenzen(x0, y0, x1, y1);
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
-  const gratis = new Set(z.gratisWaende || []), weg = { waende: 0, fenster: 0, gratis: 0 };
+  const gratis = new Set(z.gratisWaende || []), gratisTueren = new Set(z.gratisTueren || []), weg = { waende: 0, fenster: 0, tueren: 0, gratis: 0 };
   for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
     const i = idx(z, x, y), t = z.zellen[i];
     if (istWandStueck(t)) { if (gratis.delete(i)) weg.gratis++; else weg.waende++; }
     if (t === FENSTER) weg.fenster++;
+    if (t === TUER && !gratisTueren.delete(i)) weg.tueren++;
     z.zellen[i] = LEER;
   }
   if (z.gratisWaende) z.gratisWaende = [...gratis];
+  if (z.gratisTueren) z.gratisTueren = [...gratisTueren];
   abgleichen(z);
   return weg;
 }
@@ -83,6 +86,7 @@ export function fensterAnRaum(z, raum) {
   }
   return gesehen.size;
 }
+// Tür setzen (auf eine Wand) oder wieder zur Wand machen. → 'gesetzt' | 'entfernt' | false
 export function tuerUmschalten(z, x, y) {
   if (!aufGrundstueck(x, y)) return false;
   const i = idx(z, x, y);
@@ -90,7 +94,7 @@ export function tuerUmschalten(z, x, y) {
   else if (z.zellen[i] === TUER) z.zellen[i] = WAND;
   else return false;
   abgleichen(z);
-  return true;
+  return z.zellen[i] === TUER ? 'gesetzt' : 'entfernt';
 }
 
 // Raumerkennung: Fläche von außen "fluten"; was nicht erreicht wird, ist umschlossen.

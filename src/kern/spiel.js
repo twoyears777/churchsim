@@ -71,6 +71,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); beduerfnisseAnlegen(z); forschungAnlegen(z);
   jugendAnlegen(z);   // alte Spielstände: 20 % der Besucher und Passanten werden Jugendliche
   baukostenAnlegen(z);
+  tuerkostenAnlegen(z);   // Türpreis (26.11.): schon gebaute Türen bleiben kostenlos
   skillsAnlegen(z);   // Skill-Fächer der Mitarbeiter (26.11.); zieht alte Spielstände um
   evangelisationAnlegen(z);   // Evangelisation vor dem Laden (26.11.)
   return z;
@@ -83,6 +84,14 @@ function baukostenAnlegen(z) {
   z.zellen.forEach((t, i) => { if (istWandStueck(t)) z.gratisWaende.push(i); });
   buchen(z, 'einnahmen', 'ausgleich', STARTGELD_AUSGLEICH, { was: 'ausgleich' });
   z.baukosten = true;
+}
+// Spielstände vor dem Türpreis (26.11.): Türen, die schon stehen, haben nichts gekostet – sie werden in z.gratisTueren gemerkt,
+// damit es für sie beim Abriss oder beim Zurückmachen zur Wand keinen Türpreis „zurück“ gibt.
+function tuerkostenAnlegen(z) {
+  if (z.tuerkosten) return;
+  z.gratisTueren = [];
+  z.zellen.forEach((t, i) => { if (t === TUER) z.gratisTueren.push(i); });
+  z.tuerkosten = true;
 }
 // Neues Spiel: Pastor (aus der Inhaltsdatei) und die Start-Ehrenamtlichen (z. B. Frau des Pastors); sie stehen am Tor.
 // start: true – gehört von Anfang an dazu, zählt nicht zum Einzugsgebiet.
@@ -97,6 +106,7 @@ export function neuesSpiel(zufall = Math.random) {
 export function ausRundenSpielstand(alt) {
   const z = neuerZustand();
   delete z.baukosten;   // ganz alter Spielstand: bekommt den Startgeld-Ausgleich
+  delete z.tuerkosten;  // … und seine Türen bleiben kostenlos
   for (const k of ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'konto', 'naechsteId']) if (k in alt) z[k] = alt[k];
   return spielAnlegen(z);
 }
@@ -192,7 +202,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
 
   // Bauen mit Rückgängig. Gemerkt wird nur das Gebaute (Wände, Räume, Möbel, wo Mitarbeiter stehen) und das Geld dafür –
   // die Zeit, die Besucher und das Kaffeegeld laufen beim Rückgängigmachen nicht zurück.
-  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende'];
+  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende', 'gratisTueren'];
   function aendern(fn) {
     const vorher = JSON.stringify(BAU.map(k => z[k])), kontoVor = z.konto;
     const alteBuchungen = new Set(z.wochenbuch ? z.wochenbuch.buchungen : []);
@@ -250,12 +260,30 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     abreissen(x0, y0, x1, y1) {
       aendern(() => {
         const weg = abriss(z, x0, y0, x1, y1);
-        const betrag = weg.waende * BAUKOSTEN.wand + weg.fenster * BAUKOSTEN.fenster;
-        if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag, { was: 'abriss', stuecke: weg.waende, fenster: weg.fenster });
+        const betrag = weg.waende * BAUKOSTEN.wand + weg.fenster * BAUKOSTEN.fenster + weg.tueren * BAUKOSTEN.tuer;
+        if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag, { was: 'abriss', stuecke: weg.waende, fenster: weg.fenster, tueren: weg.tueren });
         moebelAbreissen(z, x0, y0, x1, y1);
       });
     },
-    tuerUmschalten(x, y) { return z.zellen[idx(z, x, y)] ? aendern(() => tuerSchalten(z, x, y)) : false; },
+    // Tür (26.11.): auf eine Wand setzen (kostet BAUKOSTEN.tuer) oder wieder zur Wand machen (Geld zurück,
+    // außer bei Türen aus Spielständen vor dem Türpreis) → 'ok' | 'geld' | 'keine' (keine Wand bzw. Tür an der Stelle, z. B. ein Fenster)
+    tuerUmschalten(x, y) {
+      if (x < 0 || y < 0 || x >= z.w || y >= z.h) return 'keine';
+      const i = idx(z, x, y), t = z.zellen[i];
+      if (t !== WAND && t !== TUER) return 'keine';
+      if (t === WAND && !kannBezahlen(z, BAUKOSTEN.tuer)) return 'geld';
+      const e = aendern(() => {
+        const r = tuerSchalten(z, x, y);
+        if (r === 'gesetzt') buchen(z, 'ausgaben', 'bau', BAUKOSTEN.tuer, { was: 'tuer' });
+        if (r === 'entfernt') {
+          const gratis = z.gratisTueren ? z.gratisTueren.indexOf(i) : -1;
+          if (gratis >= 0) z.gratisTueren.splice(gratis, 1);
+          else buchen(z, 'einnahmen', 'rueckerstattung', BAUKOSTEN.tuer, { was: 'tuer' });
+        }
+        return r;
+      });
+      return e ? 'ok' : 'keine';
+    },
     // Fenster (25.11.): auf eine Wand setzen (kostet BAUKOSTEN.fenster) oder wieder zur Wand machen (Geld zurück)
     // → 'ok' | 'geld' | 'keine' (keine Wand bzw. kein Fenster an der Stelle, z. B. eine Tür)
     fensterUmschalten(x, y) {
@@ -372,10 +400,11 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     rueckgaengig() {
       const e = verlauf.pop();
       if (!e) return false;
-      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende] = JSON.parse(e.bau);
+      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende, gratisTueren] = JSON.parse(e.bau);
       for (const m of moebel) { const jetzt = moebelAuf(z, m.x, m.y); if (jetzt && jetzt.art === m.art && 'fuellung' in jetzt) m.fuellung = jetzt.fuellung; }
       Object.assign(z, { zellen, raumTyp, veranstaltung, moebel, kaffeeZeiten: kaffeeZeiten || {} });
       if (gratisWaende) z.gratisWaende = gratisWaende; else delete z.gratisWaende;
+      if (gratisTueren) z.gratisTueren = gratisTueren; else delete z.gratisTueren;
       for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt) { p.x = alt.x; p.y = alt.y; } }
       stornieren(z, e.buchungen, e.woche);   // Buchungen des Schritts zurücknehmen (dieselbe Woche: ganz weg, sonst Gegenbuchung)
       personenPruefen(z); raeume = raeumeAuswerten(z);
@@ -569,8 +598,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     raumNrBei: raumNr,
     foyerBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && r.typ && r.typ.id === 'foyer' ? nr : null; },
     // Baukosten für die Bauleiste und die Vorschau (25.11.)
-    baukosten() { return { wand: BAUKOSTEN.wand, fenster: BAUKOSTEN.fenster, konto: z.konto,
-      wandLeistbar: kannBezahlen(z, BAUKOSTEN.wand), fensterLeistbar: kannBezahlen(z, BAUKOSTEN.fenster) }; },
+    baukosten() { return { wand: BAUKOSTEN.wand, tuer: BAUKOSTEN.tuer, fenster: BAUKOSTEN.fenster, konto: z.konto,
+      wandLeistbar: kannBezahlen(z, BAUKOSTEN.wand), tuerLeistbar: kannBezahlen(z, BAUKOSTEN.tuer), fensterLeistbar: kannBezahlen(z, BAUKOSTEN.fenster) }; },
     // Foyer-Fenster in der Spielansicht: was das Foyer jedem bringt, der hindurchläuft
     foyerInfo(nr) {
       const r = raeume.liste[nr];

@@ -185,6 +185,16 @@ button.bau-karte[aria-pressed="true"] .preis { background: rgba(255,255,255,.14)
 button.abriss-knopf[aria-pressed="true"] { background: #b3261e; color: #fff; border-color: #fff; }
 .bau-rechts .kontoEditor { flex-direction: column; align-items: flex-end; gap: 0; font-size: 12px; color: #c9c4b8; padding: 0 6px; }
 .bau-rechts .kontoEditor b { font-size: 16px; color: #f3efe6; }
+/* Bauleiste mit zwei Ebenen (26.11.): im Hauptmenü nur die Menüpunkte, im Untermenü links die Zurück-Kachel.
+   Farbe der Zurück-Kachel: PLATZHALTER von Claude – Lukas legt sie fest */
+.bauleiste:not(.im-untermenue) .reiter { flex: 1; }
+.bau-karten[hidden] { display: none; }
+.reiter .zurueck-kachel { width: 82px; min-height: 84px; padding: 6px 4px; border-radius: 10px;
+  background: #2f5d8a; border: 2px solid #5b8fc4; display: flex; align-items: center; justify-content: center; }
+.reiter .zurueck-kachel:hover { background: #3a6fa3; border-color: #8fb7e0; }
+.reiter .zurueck-kachel canvas.symbol { width: 44px; height: 44px; }
+/* Raummenü am Mauszeiger */
+.maske.am-zeiger { position: fixed; right: auto; bottom: auto; z-index: 30; }
 
 /* Einzugsgebiet im Bekanntheit-Fenster */
 .zeile.links { justify-content: flex-start; margin-top: 6px; }

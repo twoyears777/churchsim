@@ -2,7 +2,7 @@
 // welches Fenster offen ist). Der Spielstand selbst liegt im Kern und wird nur über `ui.spiel` angesprochen.
 export const ui = {
   spiel: null,                       // die Schalterwand zum Spiel (kern/spiel.js)
-  werkzeug: 'wand',
+  werkzeug: null,                    // nichts zum Bauen gewählt (Bauleiste startet im Hauptmenü, 26.11.)
   editorOffen: false,
   menueOffen: false,                 // Hauptmenü offen (Zeit steht)
   dreh: false,                       // Parkplatz längs statt quer (Taste R)

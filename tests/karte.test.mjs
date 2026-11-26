@@ -259,10 +259,10 @@ import { spielStarten } from '../src/kern/spiel.js';
   assert.deepEqual(spiel.lage().status, { fehlt: 'raum' });
   // Bauen über Befehle
   assert.equal(spiel.wandBauen(G.x + 2, G.y + 2, G.x + 18, G.y + 8), 'ok');
-  const K = STARTGELD - 44 * 5;   // Baukosten (25.11.): 44 Wandstücke à 5 €
+  assert.equal(spiel.lage().konto, STARTGELD - 44 * 5);   // Baukosten (25.11.): 44 Wandstücke à 5 €
+  assert.equal(spiel.tuerUmschalten(G.x + 2, G.y + 5), 'ok');
+  const K = STARTGELD - 44 * 5 - 10;   // Tür kostet 10 € zusätzlich zur Wand (26.11.)
   assert.equal(spiel.lage().konto, K);
-  spiel.tuerUmschalten(G.x + 2, G.y + 5);
-  assert.equal(spiel.lage().konto, K);   // Tür kostet nichts extra
   const nr = spiel.raumNrBei(G.x + 5, G.y + 5);
   spiel.raumTypSetzen(nr, 'gottesdienst');
   assert.equal(spiel.veranstaltungsraumBei(G.x + 5, G.y + 5), nr);

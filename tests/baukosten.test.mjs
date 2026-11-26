@@ -26,19 +26,27 @@ assert.equal(STARTGELD, 1000);
   assert.equal(s.lage().konto, 880);
   // Raum daneben teilt sich eine Wand: nur die neuen Stücke kosten
   assert.equal(s.wandVorschau(G.x + 9, G.y + 2, G.x + 14, G.y + 8).stuecke, 17);   // 24 Stücke, 7 davon stehen schon
-  s.tuerUmschalten(G.x + 2, G.y + 5);
-  assert.equal(s.lage().konto, 880);   // Tür gratis
+  // Tür (26.11.): 10 € zusätzlich zur Wand, wieder zur Wand → Geld zurück; auf leerem Feld oder Fenster nicht
+  assert.equal(BAUKOSTEN.tuer, 10);
+  assert.equal(s.tuerUmschalten(G.x + 2, G.y + 5), 'ok');
+  assert.equal(s.zelle(G.x + 2, G.y + 5), 'tuer');
+  assert.equal(s.lage().konto, 870);
+  assert.equal(s.tuerUmschalten(G.x + 5, G.y + 5), 'keine');   // leer
+  assert.equal(s.tuerUmschalten(G.x + 2, G.y + 5), 'ok');
+  assert.equal(s.zelle(G.x + 2, G.y + 5), 'wand'); assert.equal(s.lage().konto, 880);
+  assert.ok(s.rueckgaengig()); assert.equal(s.zelle(G.x + 2, G.y + 5), 'tuer'); assert.equal(s.lage().konto, 870);
   // Fenster: 10 €, wieder weg → Geld zurück; auf Tür oder leerem Feld nicht
   assert.equal(s.fensterUmschalten(G.x + 5, G.y + 2), 'ok');
   assert.equal(s.zelle(G.x + 5, G.y + 2), 'fenster');
-  assert.equal(s.lage().konto, 870);
+  assert.equal(s.lage().konto, 860);
+  assert.equal(s.tuerUmschalten(G.x + 5, G.y + 2), 'keine');    // Fenster
   assert.equal(s.fensterUmschalten(G.x + 2, G.y + 5), 'keine');   // Tür
   assert.equal(s.fensterUmschalten(G.x + 5, G.y + 5), 'keine');   // leer
   assert.equal(s.fensterUmschalten(G.x + 5, G.y + 2), 'ok');
-  assert.equal(s.zelle(G.x + 5, G.y + 2), 'wand'); assert.equal(s.lage().konto, 880);
+  assert.equal(s.zelle(G.x + 5, G.y + 2), 'wand'); assert.equal(s.lage().konto, 870);
   // Rückgängig gibt die 10 € wieder ab (Fenster ist zurück)
-  assert.ok(s.rueckgaengig()); assert.equal(s.zelle(G.x + 5, G.y + 2), 'fenster'); assert.equal(s.lage().konto, 870);
-  // Abriss: 24 Wandstücke à 5 € + 1 Fenster à 10 € zurück
+  assert.ok(s.rueckgaengig()); assert.equal(s.zelle(G.x + 5, G.y + 2), 'fenster'); assert.equal(s.lage().konto, 860);
+  // Abriss: 24 Wandstücke à 5 € + 1 Fenster à 10 € + 1 Tür à 10 € zurück
   s.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
   assert.equal(s.lage().konto, 1000);
   // Rückgängig nach dem Bauen gibt das Geld zurück
@@ -46,14 +54,15 @@ assert.equal(STARTGELD, 1000);
   assert.ok(s.rueckgaengig()); assert.equal(s.lage().konto, 1000); assert.equal(s.zelle(G.x + 2, G.y + 2), 'leer');
   // Kassenbuch: Kategorie „Bau“
   s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
-  // Rückgängig nimmt die Buchungen ganz heraus: übrig bleiben zweimal Wände (120 €) + 1 Fenster (10 €), Abriss erstattet 130 €
-  assert.equal(s.finanzInfo().woche.ausgaben.bau, 2 * 120 + 10);
-  assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 130);
+  // Rückgängig nimmt die Buchungen ganz heraus: übrig bleiben zweimal Wände (120 €) + 1 Tür (10 €) + 1 Fenster (10 €);
+  // erstattet bleibt nur der Abriss (140 €) – die Erstattung der Tür hat „Rückgängig“ wieder herausgenommen
+  assert.equal(s.finanzInfo().woche.ausgaben.bau, 2 * 120 + 10 + 10);
+  assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 140);
   // Abriss rückgängig: keine „Möbel“-Ausgabe, die Rückerstattung verschwindet wieder
-  s.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 250);
+  s.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 260);
   assert.ok(s.rueckgaengig());
   const w = s.finanzInfo().woche;
-  assert.equal(w.einnahmen.rueckerstattung, 130); assert.equal(w.ausgaben.moebel, undefined); assert.equal(s.lage().konto, 880);
+  assert.equal(w.einnahmen.rueckerstattung, 140); assert.equal(w.ausgaben.moebel, undefined); assert.equal(s.lage().konto, 880);
   assert.ok(!s.finanzInfo().buchungen.some(b => b.was === 'rueckgaengig'));
 }
 
@@ -71,6 +80,37 @@ assert.equal(STARTGELD, 1000);
   assert.equal(t.fensterUmschalten(G.x + 3, G.y + 2), 'ok'); assert.equal(t.lage().konto, 0);
   assert.equal(t.fensterUmschalten(G.x + 5, G.y + 2), 'geld');
   assert.equal(t.baukosten().fensterLeistbar, false);
+}
+
+// Spielstand vor dem Türpreis (26.11.): schon stehende Türen bleiben kostenlos – zur Wand gemacht oder abgerissen gibt es
+// für sie keinen Türpreis zurück; neue Türen kosten und werden voll erstattet. Rückgängig stellt die Gratis-Tür wieder her.
+{
+  const s = spielStarten(null, () => 0.5);
+  s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);                    // 880 €
+  s.tuerUmschalten(G.x + 2, G.y + 5); s.tuerUmschalten(G.x + 8, G.y + 5);   // 860 €
+  const d = JSON.parse(s.speicherText());
+  delete d.zustand.tuerkosten; d.zustand.konto = 880;                 // so, als hätten die Türen nichts gekostet
+  const alt = spielStarten(JSON.stringify(d), () => 0.5);
+  assert.equal(alt.lage().konto, 880);                                // kein Ausgleich für Türen
+  assert.equal(alt.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(alt.lage().konto, 880);   // alte Tür → Wand: nichts zurück
+  assert.ok(alt.rueckgaengig()); assert.equal(alt.zelle(G.x + 2, G.y + 5), 'tuer');
+  assert.equal(alt.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(alt.lage().konto, 880);   // nach Rückgängig weiterhin gratis
+  assert.equal(alt.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(alt.lage().konto, 870);   // neu gesetzt: kostet
+  alt.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
+  assert.equal(alt.lage().konto, 1000);                               // 24 × 5 € + neue Tür 10 €, alte Tür nichts
+  const wieder = spielStarten(alt.speicherText(), () => 0.5);         // beim nächsten Laden nichts Neues gemerkt
+  wieder.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); wieder.tuerUmschalten(G.x + 2, G.y + 5);
+  assert.equal(wieder.lage().konto, 870);
+  assert.equal(wieder.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(wieder.lage().konto, 880);
+}
+// Nicht genug Geld für eine Tür: bleibt Wand
+{
+  const s = spielStarten(null, () => 0.5);
+  s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
+  const d = JSON.parse(s.speicherText()); d.zustand.konto = 9;
+  const t = spielStarten(JSON.stringify(d), () => 0.5);
+  assert.equal(t.tuerUmschalten(G.x + 2, G.y + 5), 'geld'); assert.equal(t.zelle(G.x + 2, G.y + 5), 'wand'); assert.equal(t.lage().konto, 9);
+  assert.equal(t.baukosten().tuer, 10); assert.equal(t.baukosten().tuerLeistbar, false);
 }
 
 // Alter Spielstand: +950 € einmalig, alte Wände kostenlos (beim Abriss kein Geld zurück), neue kosten

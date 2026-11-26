@@ -2,16 +2,15 @@
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro } from './ui.js';
 import { fensterOeffnen, fensterSchliessen, fensterOffen } from './fenster.js';
-import { bauleisteEinrichten, werkzeugWaehlen } from './bauleiste.js';
+import { bauleisteEinrichten, werkzeugWaehlen, imUntermenue, hauptmenueZeigen } from './bauleiste.js';
 import { hauptmenueEinrichten, menueOeffnen, menueEscape } from './hauptmenue.js';
 
 const HINWEISE = {
   wand: 'Zieh ein Rechteck, um Wände zu bauen.',
-  tuer: 'Klicke auf eine Wand, um eine Tür zu setzen oder zu entfernen.',
+  tuer: 'Klicke auf eine Wand, um eine Tür zu setzen oder zu entfernen.',   // TODO Lukas: Preis dazuschreiben? (Vorschlag vorgelegt 26.11.)
   ...TEXTE.hinweise,
   ...TEXTE.hinweiseAussen,
-  abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
-  raum: 'Klicke in einen Raum, um seine Funktion festzulegen.'
+  abriss: 'Zieh über den Bereich, der abgerissen werden soll.'
 };
 const hinweisFuer = id => HINWEISE[id || 'keinWerkzeug'];   // ohne gewähltes Werkzeug: eigener Hinweis
 const leinwand = $('karte');
@@ -52,10 +51,15 @@ function kurzerHinweis(text) {
   hinweisTimer = setTimeout(() => { h.textContent = hinweisFuer(ui.werkzeug); h.classList.remove('warnung'); }, 3000);
 }
 function abbrechen() { if (ui.ziehen || ui.tragen) { ui.ziehen = null; ui.tragen = null; ui.malen(); } }
-// Rechtsklick: erst ein laufendes Ziehen abbrechen, sonst im Editor die Bauauswahl aufheben (dann baut ein Klick nichts)
+// Rechtsklick im Editor, der Reihe nach: laufendes Ziehen abbrechen → Raummenü am Mauszeiger schließen →
+// Bauauswahl aufheben (dann baut ein Klick nichts) → aus dem Untermenü zurück ins Hauptmenü der Bauleiste
+const raumMenueOffen = () => !!(ui.fenster && ui.fenster.art === 'raumtyp');
 function rechtsklick() {
   if (ui.ziehen || ui.tragen) return abbrechen();
-  if (ui.editorOffen && ui.werkzeug) werkzeugWaehlen(null);
+  if (!ui.editorOffen) return;
+  if (raumMenueOffen()) return fensterSchliessen();
+  if (ui.werkzeug) return werkzeugWaehlen(null);
+  if (imUntermenue()) hauptmenueZeigen();
 }
 
 // Mauszeiger zeigt, was man tun kann
@@ -64,10 +68,10 @@ function mauszeiger(e) {
   if (ui.tragen) c = 'grabbing';
   else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || stuhlBei(f) || schaukastenBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
       || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) || ui.spiel.evangelisationBei(f.x, f.y) ? 'pointer' : 'default'; }
-  else if (!ui.werkzeug) c = 'default';                       // nichts zum Bauen gewählt
+  else if (!ui.werkzeug) { const f = feldAus(e); c = ui.spiel.raumNrBei(f.x, f.y) >= 0 ? 'pointer' : 'default'; }   // nichts gewählt: Raum anklickbar (Raumfunktion)
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
   else if (istMoebelWerkzeug()) c = 'crosshair';
-  else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'fenster' || ui.werkzeug === 'raum' ? 'pointer' : 'crosshair';
+  else c = ui.werkzeug === 'tuer' || ui.werkzeug === 'fenster' ? 'pointer' : 'crosshair';
   if (leinwand.style.cursor !== c) leinwand.style.cursor = c;
 }
 
@@ -81,6 +85,7 @@ function druecken(e) {
   }
   const f = feldAus(e);
   ui.moebelStart = f;
+  ui.klickStart = { feld: f };
   if (ZIEH_WERKZEUGE.includes(ui.werkzeug)) {
     leinwand.setPointerCapture(e.pointerId);
     ui.ziehen = { x0: f.x, y0: f.y, x1: f.x, y1: f.y, art: ui.werkzeug };
@@ -166,14 +171,21 @@ function loslassen(e) {
     else if (ergebnis === 'tor') kurzerHinweis(TEXTE.aussenMeldung.tor);
     return fertig();
   }
-  if (ui.werkzeug === 'tuer') { spiel.tuerUmschalten(f.x, f.y); return fertig(); }
+  if (ui.werkzeug === 'tuer') {
+    if (spiel.tuerUmschalten(f.x, f.y) === 'geld') kurzerHinweis(TEXTE.bauGeld.tuer(euro(spiel.baukosten().tuer)));
+    return fertig();
+  }
   if (ui.werkzeug === 'fenster') {
     if (spiel.fensterUmschalten(f.x, f.y) === 'geld') kurzerHinweis(TEXTE.bauGeld.fenster(euro(spiel.baukosten().fenster)));
     return fertig();
   }
-  if (ui.werkzeug === 'raum') {
+  // Nichts zum Bauen gewählt (26.11.): Klick in einen Raum → Raumfunktion wählen, das Menü erscheint neben dem Mauszeiger.
+  // Klick daneben (kein Raum) schließt es; dort, wo kein Raum ist, passiert sonst nichts.
+  if (!ui.werkzeug) {
+    const s = ui.klickStart; ui.klickStart = null;
+    if (!s || s.feld.x !== f.x || s.feld.y !== f.y) return;     // nur Tippen, kein Ziehen
     const nr = spiel.raumNrBei(f.x, f.y);
-    if (nr >= 0) fensterOeffnen({ art: 'raumtyp', nr }); else fensterSchliessen();
+    if (nr >= 0) fensterOeffnen({ art: 'raumtyp', nr, zeiger: { x: e.clientX, y: e.clientY } }); else fensterSchliessen();
   }
 }
 
@@ -183,6 +195,7 @@ function drehen() { if (drehbar()) { ui.dreh = !ui.dreh; ui.malen(); } }
 
 function editorUmschalten(offen) {
   ui.editorOffen = offen; ui.ziehen = null; ui.tragen = null;
+  if (offen) hauptmenueZeigen();                             // Bauleiste startet im Hauptmenü, nichts gewählt
   ui.spiel.bauModus(offen);                                  // im Editor steht die Zeit still
   document.body.classList.toggle('modus-editor', offen);
   document.body.classList.toggle('modus-spiel', !offen);
@@ -210,19 +223,21 @@ export function eingabenEinrichten() {
   leinwand.addEventListener('pointercancel', abbrechen);
   leinwand.addEventListener('pointerleave', () => { ui.maus = null; ui.schwebe = null; ui.malen(); });
 
-  // Escape: erst Ziehen abbrechen, dann Fenster schließen, dann Editor schließen, dann Hauptmenü öffnen
+  // Escape: erst Ziehen abbrechen, dann Fenster schließen (auch das Raummenü), dann Untermenü der Bauleiste, dann Editor schließen, dann Hauptmenü öffnen
   document.addEventListener('keydown', e => {
     if ((e.key === 'r' || e.key === 'R') && ui.editorOffen && !e.target.closest('input')) { drehen(); return; }
     if (e.key !== 'Escape') return;
     if (ui.menueOffen) return menueEscape();
     if (ui.ziehen || ui.tragen) return abbrechen();
     if (fensterOffen()) return fensterSchliessen();
+    if (ui.editorOffen && imUntermenue()) return hauptmenueZeigen();   // Bauleiste: aus dem Untermenü zurück (26.11.)
     if (ui.editorOffen) return editorUmschalten(false);
     menueOeffnen();   // nichts mehr offen: Hauptmenü
   });
 
   bauleisteEinrichten({
     beiWahl: id => { $('hinweis').textContent = hinweisFuer(id); $('hinweis').classList.remove('warnung'); $('drehen').hidden = !drehbar(); fensterSchliessen(); ui.malen(); },
+    beiMenue: () => { $('hinweis').textContent = hinweisFuer(null); $('hinweis').classList.remove('warnung'); fensterSchliessen(); },
     beiBus: () => { $('hinweis').textContent = HINWEISE.bushaltestelle; fensterOeffnen({ art: 'bus' }); }
   });
   $('drehen').textContent = TEXTE.bauleiste.drehen;
