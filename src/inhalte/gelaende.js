@@ -9,3 +9,8 @@ export const GELAENDE = { max: 100, neugierProPunkt: 0.001 };
 // Mehrere Schaukästen dürfen für verschiedene Veranstaltungen werben; für dieselbe Veranstaltung zählt der Bonus nur einmal.
 // Der Aushang ist kostenlos (Lukas, 25.11.).
 export const SCHAUKASTEN = { neugier: 0.10 };
+
+// Wegfindung (Spielprinzip „Wegfindung“, 26.11.): Figuren laufen über Wege, wann immer es möglich ist (Lukas).
+// Als Weg zählen die Außenteile unten, der Gehweg an der Straße, Türen und der Boden in Räumen; alles andere draußen ist Wiese.
+// Ein Kästchen Wiese „kostet“ so viel wie `wiese` Kästchen Weg – so hoch, dass immer der Weg gewinnt, solange es einen gibt.
+export const WEGFINDUNG = { wiese: 10000, wegTeile: ['weg', 'strasse', 'parkplatz'] };
