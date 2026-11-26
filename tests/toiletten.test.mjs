@@ -8,8 +8,9 @@ import { MOEBEL } from '../src/inhalte/moebel.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel } from '../src/kern/spiel.js';
 import { zeitVorruecken, veranstaltungEinstellen } from '../src/kern/ablauf.js';
-import { moebelSetzen } from '../src/kern/moebel.js';
-import { versetzen } from '../src/kern/personen.js';
+import { moebelSetzen, moebelKaufen } from '../src/kern/moebel.js';
+import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
+import { kaffeeKundenPositionen } from '../src/kern/kirchkaffee.js';
 import { TAG_MIN } from '../src/kern/zeit.js';
 import { besucherPositionen } from '../src/kern/bewegung.js';
 import { toiletteWert, toiletteAktuell, startWert, kabinen } from '../src/kern/toiletten.js';
@@ -193,4 +194,71 @@ console.log('Heimweg-Tests bestanden.');
   zuruecksetzen();
 }
 console.log('Ausfall-Tests bestanden.');
+// Kirchkaffee (Lukas, 26.11. abends): Gäste im Kirchkaffee gehen auch zur Toilette – gleiches Bedürfnis, ab 80 %
+function kaffeeGemeinde(mitWc = true) {
+  const z = neuesSpiel(() => 0.9);
+  z.ortRuhig = true; z.konto = 1000; z.bekanntheit = 0;
+  wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 10); tuerUmschalten(z, G.x + 2, G.y + 5);
+  wandRechteck(z, G.x + 18, G.y + 2, G.x + 26, G.y + 10); tuerUmschalten(z, G.x + 18, G.y + 5);
+  typZuweisen(z, raumBei(z, G.x + 5, G.y + 5), 'gottesdienst'); typZuweisen(z, raumBei(z, G.x + 20, G.y + 5), 'kirchkaffee');
+  veranstaltungEinstellen(z, raumBei(z, G.x + 5, G.y + 5), 'gottesdienst');
+  moebelSetzen(z, 'stuhl', G.x + 6, G.y + 4, G.x + 10, G.y + 4);
+  versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+  assert.equal(moebelKaufen(z, 'kaffeemaschine', G.x + 20, G.y + 3), 'ok');
+  assert.equal(moebelKaufen(z, 'theke', G.x + 22, G.y + 3), 'ok');
+  versetzen(z, personHinzufuegen(z, { name: 'Helfer', kuerzel: 'H', art: 'ehrenamt' }), G.x + 25, G.y + 4);
+  if (mitWc) {
+    wandRechteck(z, G.x + 2, G.y + 12, G.x + 7, G.y + 16); tuerUmschalten(z, G.x + 4, G.y + 12);
+    typZuweisen(z, raumBei(z, G.x + 4, G.y + 14), 'toiletten');
+    moebelSetzen(z, 'wc', G.x + 3, G.y + 15, G.x + 3, G.y + 15);
+  }
+  z.besucher = Array.from({ length: 5 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X',
+    level: 5, zufriedenheit: 100, kaffeeWert: 1, besuche: 0, lobpreis: 0.5 }));
+  return z;
+}
+const schritte = (z, bis, jedesMal = () => {}) => { while (z.minuten < bis) { zeitVorruecken(z, aus(z), 1, () => 0); jedesMal(); } };
+{
+  // vorher und während der Veranstaltung nie, damit alle mit hohem Wert ins Kirchkaffee kommen
+  TOILETTE.vorherAb = 100; TOILETTE.waehrendAb = 200; TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 25;
+  const z = kaffeeGemeinde();
+  const gesehen = new Map();   // id → Kunde (mit seinen Gängen), auch nachdem er heimgegangen ist
+  let inKabine = false;
+  schritte(z, BEGINN + 900, () => {
+    for (const k of z.kaffee ? z.kaffee.kunden : []) gesehen.set(k.id, k);
+    for (const k of z.kaffee ? z.kaffee.kunden : []) {
+      if (!k.gang || z.minuten < k.gang.drinAb || z.minuten >= k.gang.drinBis) continue;
+      const p = kaffeeKundenPositionen(z).find(x => x.id === k.id);
+      assert.deepEqual([p.x, p.y], [k.gang.kabine.x, k.gang.kabine.y]);   // in der Kabine zu sehen
+      assert.equal(toiletteAktuell(z, k.id), 0);
+      inKabine = true;
+    }
+  });
+  assert.ok(inKabine);
+  assert.equal(gesehen.size, 5);
+  const gaenge = [...gesehen.values()].flatMap(k => (k.gaenge || []).map(s => ({ k, s })));
+  assert.ok(gaenge.length >= 5);
+  for (const { k, s } of gaenge) {
+    assert.ok(['kaffee', 'heim'].includes(s.art));
+    assert.ok(toiletteWert({ wc0: k.wc0, gaenge: k.gaenge.filter(x => x !== s && x.drinBis <= s.hinAb) }, s.hinAb) >= TOILETTE.suchenAb - 1e-6);
+    if (s.art === 'kaffee') assert.deepEqual(s.nach, s.von);           // zurück an denselben Platz
+    else assert.deepEqual(s.nach, k.heimweg);                           // über die Toilette heim
+  }
+  // Wert lief vom Gottesdienst weiter (startet im Kirchkaffee nicht neu bei 0)
+  for (const k of gesehen.values()) assert.ok(k.wc0.w > 0);
+  // Am Ende sind alle zu Hause
+  assert.equal(z.kaffee.kunden.length, 0);
+  zuruecksetzen();
+}
+{
+  // Ohne Toilette: kein Gang, das Kirchkaffee läuft wie bisher
+  TOILETTE.vorherAb = 100; TOILETTE.waehrendAb = 200; TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 25;
+  const z = kaffeeGemeinde(false);
+  const gesehen = new Map();
+  schritte(z, BEGINN + 900, () => { for (const k of z.kaffee ? z.kaffee.kunden : []) gesehen.set(k.id, k); });
+  assert.ok(gesehen.size > 0);
+  for (const k of gesehen.values()) assert.equal((k.gaenge || []).length, 0);
+  assert.equal(z.kaffee.kunden.length, 0);
+  zuruecksetzen();
+}
+console.log('Kirchkaffee-Tests bestanden.');
 console.log('Alle Toiletten-Tests bestanden.');

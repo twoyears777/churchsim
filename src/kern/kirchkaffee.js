@@ -18,7 +18,8 @@ import { eingesetztIn, daten } from './personen.js';
 import { buchen, kannBezahlen } from './finanzen.js';
 import { zufriedenheitAendern, beduerfnisErfuellt } from './besucher.js';
 import { weg, glaetten } from './wege.js';
-import { punktAufWeg, strasse } from './bewegung.js';
+import { punktAufWeg, strasse, strecke } from './bewegung.js';
+import { gibtToiletten, wertMitnehmen, mussZurToilette, wannZurToilette, gangJetzt, gangOrt } from './toiletten.js';
 import { umherPosition } from './umherlaufen.js';
 import { slotBeginn, zeitpunkt } from './zeit.js';
 import { LAUFTEMPO, SLOTS, DAUER } from '../inhalte/zeit.js';
@@ -290,8 +291,25 @@ function heimSchicken(z, k, t) {
     zahlZeigen(z, posBei(k.bew, t), k.trinkgeld, 'trinkgeld');
   }
   k.phase = 'heim';
+  // Ab 80 % erst noch zur Toilette, dann heim (Lukas, 26.11.)
+  const gang = wcGang(z, k, 'heim', posBei(k.bew, t), k.heimweg, t);
+  if (gang) { k.bew = { pfad: [{ ...k.heimweg }], laenge: 0, t0: gang.zurueckBis }; return; }
   k.bew = gehen(z, posBei(k.bew, t), k.heimweg, t);
 }
+// ---- Toilette (Lukas, 26.11. abends): Gottesdienst-Gäste im Kirchkaffee gehen ab 80 % zur Toilette, wie alle Besucher ----
+// Die Räume merkt sich kaffeeAktualisieren für die Dauer eines Durchgangs (wird nicht gespeichert).
+let raeumeJetzt = null, toilettenJetzt = false;
+const wcUnterwegs = (k, t) => !!(k.gang && t < k.gang.zurueckBis - EPS);
+// Gang planen, wenn er fällig ist und es eine Toilette gibt → Gang oder null
+function wcGang(z, k, art, von, nach, t) {
+  if (!toilettenJetzt || !k.wc0 || wcUnterwegs(k, t) || !mussZurToilette(k, t)) return null;
+  const gang = gangJetzt(z, raeumeJetzt, art, von, nach, t);
+  if (!gang) return null;
+  k.gang = gang; (k.gaenge = k.gaenge || []).push(gang);
+  return gang;
+}
+// Wege der Toilettengänge für die Anzeige (einmal berechnet, gemerkt)
+const wcWege = new Map();
 // Kein Kaffee (Maschine leer, Station weg): −10 Haltung, geht heim
 function ohneKaffee(z, k, t) {
   const m = menschVon(z, k.id);
@@ -331,8 +349,13 @@ export function gottesdienstKunden(z, raeume, L, gaeste) {
   if (!stationen.length) return false;
   const S = L.beginn + DAUER.gottesdienst;
   gaeste.forEach(({ g, i }) => {
-    const ab = S + i * 0.5;
-    if (kundeAnlegen(z, stationen, { id: g.id, name: g.name }, g.sitz, ab, L.id, strasse(i))) g.kaffee.ab = ab;
+    // Wer gerade noch auf der Toilette ist, kommt erst danach
+    const ab = Math.max(S + i * 0.5, ...(g.gaenge || []).map(s => s.zurueckBis));
+    if (kundeAnlegen(z, stationen, { id: g.id, name: g.name }, g.sitz, ab, L.id, strasse(i))) {
+      g.kaffee.ab = ab;
+      const k = z.kaffee.kunden[z.kaffee.kunden.length - 1], wc0 = wertMitnehmen(g, ab);
+      if (wc0) { k.wc0 = wc0; k.gaenge = []; k.gang = null; }   // Toilettenwert läuft im Kirchkaffee weiter
+    }
     else g.kaffee.ergebnis = 'keinPlatz';
   });
   return true;
@@ -435,6 +458,21 @@ function keinGeld(z, p, t) {
 
 function kundeSchritt(z, k, t) {
   const K = z.kaffee;
+  // Toilettengang: solange er läuft, passiert nichts; danach wieder am Platz (oder auf dem Heimweg schon weg)
+  if (k.gang) {
+    if (wcUnterwegs(k, t)) return false;
+    const nach = k.gang.nach;
+    k.gang = null;
+    if (k.phase === 'heim') { K.kunden = K.kunden.filter(x => x !== k); return true; }
+    k.bew = { pfad: [{ x: nach.x, y: nach.y }], laenge: 0, t0: t };
+    return true;
+  }
+  // Sitzt oder steht er an seinem Platz und hat 80 %: zur Toilette und zurück an denselben Platz
+  if ((k.phase === 'steht' || k.phase === 'sitzt') && t < k.stehBis - EPS && angekommen(k.bew, t)) {
+    const platz = k.bew.pfad[k.bew.pfad.length - 1];
+    const gang = wcGang(z, k, 'kaffee', platz, platz, t);
+    if (gang) { k.stehBis = Math.max(k.stehBis, gang.zurueckBis); return true; }
+  }
   if ((k.phase === 'steht' || k.phase === 'sitzt') && t >= k.stehBis - EPS) { heimSchicken(z, k, t); return true; }
   if (k.phase === 'heim' && angekommen(k.bew, t)) { K.kunden = K.kunden.filter(x => x !== k); return true; }
   return false;
@@ -444,6 +482,7 @@ function kundeSchritt(z, k, t) {
 export function kaffeeAktualisieren(z, raeume, zufall = Math.random) {
   kaffeeAnlegen(z);
   const K = z.kaffee, t = z.minuten;
+  raeumeJetzt = raeume; toilettenJetzt = gibtToiletten(z, raeume);
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
   const vonEa = new Map(stationen.map(s => [s.ea.id, s]));
   // Mitarbeiter, die keine Station mehr haben oder versetzt wurden: Aufgabe abbrechen, wieder an ihrem Platz
@@ -476,7 +515,13 @@ export function kaffeeSchritt(z, raeume) {
     if (m.aufgabe && m.aufgabe.bis) zeiten.push(m.aufgabe.bis);
   }
   for (const v of Object.values(K.gesperrt)) zeiten.push(v);
-  for (const k of K.kunden) { zeiten.push(ankunft(k.bew), k.ab); if (k.stehBis !== null) zeiten.push(k.stehBis); }
+  const wc = K.kunden.some(k => k.wc0) && gibtToiletten(z, raeume);
+  for (const k of K.kunden) {
+    zeiten.push(ankunft(k.bew), k.ab);
+    if (k.stehBis !== null) zeiten.push(k.stehBis);
+    if (k.gang) zeiten.push(k.gang.zurueckBis);
+    else if (wc && k.wc0 && (k.phase === 'steht' || k.phase === 'sitzt')) zeiten.push(wannZurToilette(k, Math.max(t, ankunft(k.bew))));
+  }
   for (const r of raeume.liste) if (r.typ && r.typ.id === 'kirchkaffee') for (const f of schichtFenster(z, r, t)) zeiten.push(f.von, f.bis);
   const naechste = Math.min(...zeiten.filter(x => x > t + EPS));
   return Number.isFinite(naechste) ? { zeit: naechste, tun: (zz, rr, zf) => kaffeeAktualisieren(zz, rr, zf) } : null;
@@ -487,7 +532,12 @@ export function kaffeeSchritt(z, raeume) {
 export function kaffeeKundenPositionen(z) {
   if (!z.kaffee) return [];
   const t = z.minuten;
+  if (wcWege.size > 2000) wcWege.clear();
   return z.kaffee.kunden.filter(k => t >= k.ab).map(k => {
+    if (k.gang && t >= k.gang.hinAb && t < k.gang.zurueckBis) {   // auf dem Weg zur Toilette, wartend, drin oder zurück
+      const o = gangOrt(k.gang, t, (s, a, b) => strecke(z, wcWege, s, a, b), punktAufWeg, `kk:${k.id}:${k.gang.hinAb}:`);
+      return { id: k.id, name: k.name, x: o.x, y: o.y, sitzt: false };
+    }
     const p = posBei(k.bew, t);
     if (k.phase === 'heim' && !p.unterwegs) return null;
     return { id: k.id, name: k.name, x: p.x, y: p.y, sitzt: k.phase === 'sitzt' && !p.unterwegs };

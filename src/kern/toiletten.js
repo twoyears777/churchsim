@@ -122,7 +122,7 @@ export function gaengeBeimAnreisen(z, raeume, L, start, beginn, ende) {
 }
 
 // Nach der Veranstaltung (ablauf.js → gottesdienstEnde/saalEnde): Wer ohne Kaffee heimgeht und 80 % hat, geht vorher zur Toilette.
-// Kaffeegäste: noch nicht (offener Punkt im Spielprinzip).
+// Kaffeegäste: übernimmt das Kirchkaffee (siehe unten, kirchkaffee.js).
 export function gaengeBeimHeimgehen(z, raeume, L, start) {
   wcAnlegen(z);
   const liste = kabinen(z, raeume);
@@ -134,6 +134,25 @@ export function gaengeBeimHeimgehen(z, raeume, L, start) {
     if ((g.gaenge || []).some(s => s.zurueckBis > ab)) return;   // ist gerade unterwegs zur Toilette
     if (toiletteWert(g, ab) >= TOILETTE.suchenAb) gangDazu(L, g, gangPlanen(z, liste, 'heim', g.sitz, start(i), ab, wiese));
   });
+}
+
+// ── Kirchkaffee (Lukas, 26.11. abends: „gehen auch zur Toilette, gleiches Bedürfnis“) ──
+// Wer nach dem Gottesdienst ins Kirchkaffee geht, nimmt seinen Wert mit: Der Kunde bekommt ein eigenes wc0 (Wert beim Wechsel)
+// und eigene gaenge – so rechnet toiletteWert() mit ihm genauso wie mit einem Gast der Veranstaltung.
+// Das Kirchkaffee plant die Gänge nicht vorab, sondern im Moment, in dem es so weit ist (kirchkaffee.js).
+export function gibtToiletten(z, raeume) { return kabinen(z, raeume).length > 0; }
+// Wert des Gastes zur Zeit ab als Startpunkt für das Kirchkaffee (oder null, wenn er noch keinen Wert hat)
+export function wertMitnehmen(g, ab) { const w = toiletteWert(g, ab); return w === null ? null : { t: ab, w }; }
+// Muss er jetzt zur Toilette? (ab 80 % – im Kirchkaffee läuft keine Veranstaltung)
+export function mussZurToilette(g, t) { const w = toiletteWert(g, t); return w !== null && w >= TOILETTE.suchenAb - EPS; }
+// Wann erreicht er die 80 %? (ab Zeit ab)
+export function wannZurToilette(g, ab) { return zeitBis(g, ab, TOILETTE.suchenAb); }
+// Einen Gang jetzt planen: von → Kabine → nach, Start ab. → Gang oder null (keine Toilette, kein Weg)
+export function gangJetzt(z, raeume, art, von, nach, ab) {
+  wcAnlegen(z); aufraeumen(z);
+  const liste = kabinen(z, raeume);
+  if (!liste.length) return null;
+  return gangPlanen(z, liste, art, { x: Math.round(von.x), y: Math.round(von.y) }, nach, ab, wiesenKarte(z));
 }
 
 // Fällt die Veranstaltung aus, gehen alle heim: noch nicht begonnene Gänge am Platz und ihre Belegung fallen weg.
@@ -164,6 +183,12 @@ export function gangOrt(s, t, strecke, punktAufWeg, schluessel) {
 
 // Für das Besucher-Kärtchen: aktueller Wert (0–100, ganze Zahl) oder null, wenn die Person gerade nicht bei der Gemeinde ist
 export function toiletteAktuell(z, id) {
+  // Im Kirchkaffee: der eigene Wert des Kunden
+  const k = z.kaffee && z.kaffee.kunden.find(x => x.id === id && x.wc0);
+  if (k && z.minuten >= k.wc0.t) {
+    if (k.phase === 'heim' && !(k.gang && k.gang.zurueckBis > z.minuten)) return null;   // schon auf dem Heimweg
+    return Math.round(toiletteWert(k, z.minuten));
+  }
   for (const L of (z.laeufe || []).slice().reverse()) {
     const g = L.gaeste && L.gaeste.find(x => x.id === id);
     if (!g || !g.wc0) continue;
