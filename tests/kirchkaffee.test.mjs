@@ -3,7 +3,7 @@
 // Starten mit: node tests/kirchkaffee.test.mjs
 import assert from 'node:assert';
 import { GRUNDSTUECK as G, LADEN } from '../src/inhalte/umgebung.js';
-import { EINKAUF, LADEN_MINUTEN, MAX_SCHICHTEN, STEHEN_PASSANT, SITZEN } from '../src/inhalte/kirchkaffee.js';
+import { PREIS_TASSE, EINKAUF, LADEN_MINUTEN, MAX_SCHICHTEN, STEHEN_PASSANT, SITZEN } from '../src/inhalte/kirchkaffee.js';
 import { AENDERUNG } from '../src/inhalte/besucher.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
@@ -134,11 +134,11 @@ console.log('Einkaufs-Tests bestanden.');
     zeitVorruecken(z, aus(), 1, () => 0);
     const a = z.kaffee.ma[eas[0].id].aufgabe, s = a && a.art === 'bedienen' ? a.phase : null;
     if (s && s !== schritte.at(-1)) schritte.push(s);
-    if (s === 'laden') assert.equal(z.konto, konto + z.kaffee.zahlen.filter(e => e.betrag === 1).length);   // die Tasse in Arbeit ist noch nicht bezahlt
+    if (s === 'laden') assert.equal(z.konto, konto + PREIS_TASSE * z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE).length);   // die Tasse in Arbeit ist noch nicht bezahlt
   }
   assert.deepEqual(schritte.slice(0, 3), ['hin', 'laden', 'zurueck']);
-  assert.equal(z.konto, konto + 3); assert.equal(maschinen()[0].fuellung, 27);
-  assert.equal(z.kaffee.zahlen.filter(e => e.betrag === 1).length, 3);   // „+1 €“ über jedem Kunden
+  assert.equal(z.konto, konto + 3 * PREIS_TASSE); assert.equal(maschinen()[0].fuellung, 27);
+  assert.equal(z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE).length, 3);   // „+2 €“ über jedem Kunden
   assert.ok(z.kaffee.kunden.every(k => k.phase === 'steht' || (k.phase === 'heim' && z.minuten >= SO + 600 + 180)));   // bleiben stehen (bis das Kirchkaffee zu ist)
   assert.deepEqual(L.gaeste.map(g => g.kaffee.ergebnis), ['ja', 'ja', 'ja']);
   assert.ok(z.besucher.every(b => b.erfuellt && b.erfuellt.ids.includes('kaffee')));   // Bedürfnis Kaffee diese Woche erfüllt (25.11.)
@@ -204,7 +204,7 @@ console.log('Bedienungs-Tests bestanden.');
     return { minuten: z.minuten - start, geld: z.wochenbuch.einnahmen.kirchkaffee };
   };
   const eine = dauer(1), zwei = dauer(2);
-  assert.equal(eine.geld, 10); assert.equal(zwei.geld, 10);
+  assert.equal(eine.geld, 10 * PREIS_TASSE); assert.equal(zwei.geld, 10 * PREIS_TASSE);
   assert.ok(zwei.minuten < eine.minuten * 0.75, `1 Theke ${eine.minuten} min, 2 Theken ${zwei.minuten} min`);
 }
 // Wer beim Schließen noch ansteht, wird fertig bedient
@@ -218,7 +218,7 @@ console.log('Bedienungs-Tests bestanden.');
   bis(z, aus, 19 * 60 + 1);
   assert.equal(kirchkaffeeOffen(z, aus()).length, 0);                // geschlossen …
   bis(z, aus, 26 * 60);                                               // (Weg vom Tor durch den Gottesdienstraum: fast 4 Stunden)
-  assert.equal(z.wochenbuch.einnahmen.kirchkaffee, 4);                // … aber alle 4 bekommen ihren Kaffee
+  assert.equal(z.wochenbuch.einnahmen.kirchkaffee, 4 * PREIS_TASSE);                // … aber alle 4 bekommen ihren Kaffee
   assert.ok(z.ort.leute.every(p => p.zufriedenheit === 40 + AENDERUNG.kaffeeJa));
 }
 console.log('Theken- und Schließ-Tests bestanden.');
@@ -343,8 +343,8 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
       for (const k of z.kaffee.kunden) if (k.phase === 'sitzt') {
         sassen.set(k.id, k.trinkgeld);
         if (!geprueft) {                                                        // beim Sitzen noch kein Trinkgeld gebucht
-          const tassen = z.kaffee.zahlen.filter(e => e.betrag === 1 && !e.art).length;
-          assert.equal(z.wochenbuch.einnahmen.kirchkaffee, tassen);
+          const tassen = z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE && !e.art).length;
+          assert.equal(z.wochenbuch.einnahmen.kirchkaffee, tassen * PREIS_TASSE);
           geprueft = true;
         }
       }
@@ -352,7 +352,7 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
     assert.ok(sassen.size >= 1, 'mindestens einer setzt sich');
     assert.ok([...sassen.values()].every(v => v === 1.3 || v === 1.2));
     const trinkgeld = [...sassen.values()].reduce((a, b) => a + b, 0);
-    assert.ok(Math.abs(z.wochenbuch.einnahmen.kirchkaffee - (3 + trinkgeld)) < 1e-9);   // 3 Gäste (3 Plätze im Gottesdienst)
+    assert.ok(Math.abs(z.wochenbuch.einnahmen.kirchkaffee - (3 * PREIS_TASSE + trinkgeld)) < 1e-9);   // 3 Gäste (3 Plätze im Gottesdienst)
     assert.equal(zahlen.size, sassen.size);                                     // grüne Zahl beim Gehen
     assert.ok(saehtSitzen);                                                     // Anzeige: sitzt (Name verschwindet)
   }
@@ -360,7 +360,7 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
   {
     const { z, aus } = aufbau();
     bis(z, aus, SO + 600 + 300, () => 0.9);
-    assert.equal(z.wochenbuch.einnahmen.kirchkaffee, 3);
+    assert.equal(z.wochenbuch.einnahmen.kirchkaffee, 3 * PREIS_TASSE);
   }
   // Passant zu Öffnungszeiten: bleibt 60 Spielminuten sitzen, dann Trinkgeld
   {

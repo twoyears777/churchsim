@@ -4,7 +4,7 @@
 // So läuft es (alle Zeiten in Spielminuten, Laufen mit LAUFTEMPO):
 //   • Offen ist ein Kirchkaffee nach jedem Gottesdienst (2 Stunden) und in seinen eigenen Schichten (bis zu 3 pro Woche).
 //   • Kunden stellen sich an der Theke an. Steht der vorderste an der Theke, bestellt er: Der Ehrenamtliche geht zur
-//     Maschine, sie lädt, er geht zurück und gibt den Kaffee – erst dann gibt es 1 € (grüne Zahl) und +5 Haltung.
+//     Maschine, sie lädt, er geht zurück und gibt den Kaffee – erst dann gibt es 2 € (grüne Zahl) und +5 Haltung.
 //   • Wer beim Schließen noch ansteht, wird fertig bedient.
 //   • Danach setzt er sich mit SITZEN.chance auf einen freien Stuhl (sonst Stehplatz) und gibt beim Gehen Trinkgeld.
 //     Wer sitzt, bleibt ab Ankunft am Stuhl mindestens SITZEN.mindestens Minuten (auch nach Schluss).
@@ -321,7 +321,7 @@ function ohneKaffee(z, k, t) {
   ergebnisEintragen(z, k, 'leer');
   heimSchicken(z, k, t);
 }
-// Kaffee übergeben: 1 €, +5 Haltung, dann auf einen Sitz- oder Stehplatz (Gottesdienst-Gäste bis zum Ende, Passanten eine Weile)
+// Kaffee übergeben: 2 €, +5 Haltung, dann auf einen Sitz- oder Stehplatz (Gottesdienst-Gäste bis zum Ende, Passanten eine Weile)
 function uebergeben(z, stationen, s, k, t, zufall) {
   buchen(z, 'einnahmen', 'kirchkaffee', PREIS_TASSE, { tassen: 1, anlass: k.lauf ? 'gottesdienst' : 'oeffnungszeit' });
   zahlZeigen(z, posBei(k.bew, t), PREIS_TASSE);

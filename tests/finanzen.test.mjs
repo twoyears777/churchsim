@@ -120,7 +120,7 @@ console.log('Wochenwechsel-Tests bestanden.');
   bis(WOCHE_MIN + 1);
   info = finanzUebersicht(z);
   assert.equal(info.verlauf.length, 1);
-  assert.deepEqual(info.verlauf[0].kaffee.gottesdienst, { tassen: 3, euro: 3 });
+  assert.deepEqual(info.verlauf[0].kaffee.gottesdienst, { tassen: 3, euro: 3 * PREIS_TASSE });
   assert.equal(info.verlauf[0].konto, z.konto);                       // seit Montag 0:00 nichts mehr gebucht
 }
 console.log('Ablauf-Tests bestanden.');

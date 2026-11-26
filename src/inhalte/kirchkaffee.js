@@ -1,7 +1,7 @@
 // Inhaltsdatei: Kirchkaffee. Spielprinzip vom 25.11.2026 (claude/spielprinzip-kirchkaffee-oeffnungszeiten.md).
 // Je Kaffeemaschine braucht es 1 Ehrenamtlichen und 1 Theke. Ohne Maschine kein Kaffee.
 // Nach jedem Gottesdienst hat das Kirchkaffee automatisch offen (Dauer: DAUER.kirchkaffee in zeit.js, 2 Stunden).
-export const PREIS_TASSE = 1;                        // € pro verkaufter Tasse
+export const PREIS_TASSE = 2;                        // € pro verkaufter Tasse
 
 // Eigene Öffnungszeiten („Schichten“): höchstens 3 pro Woche, ein Slot geht bis zum nächsten Slot.
 export const MAX_SCHICHTEN = 3;

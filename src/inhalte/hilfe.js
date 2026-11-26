@@ -106,7 +106,7 @@ export const HILFE = {
       id: 'kirchkaffee',
       titel: 'Kirchkaffee',
       inhalt: [
-        'Nach jedem Gottesdienst hat das Kirchkaffee 2 Stunden offen. Klick auf den Raum, um bis zu 3 weitere Öffnungszeiten pro Woche festzulegen. Geöffnet ist es nur mit Kaffeemaschine, Theke und einem Ehrenamtlichen im Raum. Die Kunden stellen sich an der Theke an; jede Tasse bringt 1 €. Mehr Theken bedeuten kürzere Schlangen. Wenn das Kirchkaffee zu hat, kauft der Ehrenamtliche im Laden Kaffee nach. Wer Kaffee will und keinen bekommt, ist enttäuscht.',
+        'Nach jedem Gottesdienst hat das Kirchkaffee 2 Stunden offen. Klick auf den Raum, um bis zu 3 weitere Öffnungszeiten pro Woche festzulegen. Geöffnet ist es nur mit Kaffeemaschine, Theke und einem Ehrenamtlichen im Raum. Die Kunden stellen sich an der Theke an; jede Tasse bringt 2 €. Mehr Theken bedeuten kürzere Schlangen. Wenn das Kirchkaffee zu hat, kauft der Ehrenamtliche im Laden Kaffee nach. Wer Kaffee will und keinen bekommt, ist enttäuscht.',
         'Stell Stühle und Tische ins Kirchkaffee: Die Hälfte der Kunden setzt sich nach dem Kaffee hin und gibt beim Gehen Trinkgeld. Bessere Stühle und ein Tisch daneben erhöhen es.'
       ]
     },
