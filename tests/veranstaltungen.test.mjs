@@ -19,6 +19,8 @@ import { TEXTE } from '../src/inhalte/texte.js';
 const aus = z => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
 const raumBei = z => { const a = aus(z); return a.liste[a.gruppe[G.x + 5 + (G.y + 5) * z.w]]; };
 const SO = 6 * TAG_MIN;
+// Lobpreisgottesdienst (27.11.): ein Ehrenamtlicher an der Gitarre
+const mitGitarrist = z => { const ea = personHinzufuegen(z, { name: 'Erna Musik', kuerzel: 'E', art: 'ehrenamt' }); versetzen(z, ea, G.x + 15, G.y + 6); return ea; };
 
 // Gottesdienstraum mit 10 Stühlen, Pastor, Kanzel, Altar, Gitarre; 10 Besucher mit Haltung 100.
 // Die ersten 5 lieben Lobpreis (100 %), die anderen 5 gar nicht (0 %).
@@ -79,6 +81,8 @@ console.log('Platz-Tests bestanden.');
   assert.equal(z.heiligkeit, 10);   // Forschungsbaum: 1 Heiligkeit pro Gottesdienstbesucher
   const kollekteVormittag = z.wochenbuch.einnahmen.kollekte;
   assert.ok(kollekteVormittag > 0);
+  // Lobpreisgottesdienst (27.11.): ein Ehrenamtlicher muss die Gitarre spielen – erst jetzt dazu, damit der Vormittag ohne Musik bleibt
+  mitGitarrist(z);
   // Abend: Chance = Haltung × Vorliebe × 0,5 (schon da gewesen). Zufall 0,4: Lobpreis-Fans (0,5) kommen, die anderen (0) nicht.
   const b0 = z.besucher[0], b9 = z.besucher[9];
   assert.equal(besuchChance(b0, { art: 'lobpreis', woche: 0 }), kommChance(b0) * 1 * ZWEITER_BESUCH);
@@ -90,8 +94,9 @@ console.log('Platz-Tests bestanden.');
   // Bedürfnis Lobpreis (25.11.): wer beim Lobpreisgottesdienst war, hat es diese Woche erfüllt
   assert.equal(z.besucher.filter(b => b.erfuellt && b.erfuellt.ids.includes('lobpreis')).length, 5);
   assert.equal(z.heiligkeit, 15);   // Lobpreisgottesdienst zählt genauso
-  // Am Abend kommt Kollekte dazu – auch sonntagabends mit Sonntagsbonus ×2 (Lukas, 26.11.): ohne Bonus wären es 6 €, mit Bonus 12 €
-  assert.equal(z.wochenbuch.einnahmen.kollekte - kollekteVormittag, 12);
+  // Am Abend kommt Kollekte dazu – auch sonntagabends mit Sonntagsbonus ×2 (Lukas, 26.11.): ohne Bonus wären es 6 €, mit Bonus 12 €;
+  // dazu +5 % fürs Lobpreisteam (Gitarrist, Level 0): 12,6 → 13 €
+  assert.equal(z.wochenbuch.einnahmen.kollekte - kollekteVormittag, 13);
   assert.deepEqual(z.besucher.map(b => b.zufriedenheit), haltungVorher);   // Haltung war schon 100 (Obergrenze)
 }
 console.log('Zwei-Veranstaltungen-Tests bestanden.');
@@ -99,20 +104,21 @@ console.log('Zwei-Veranstaltungen-Tests bestanden.');
 // Haltung nach Lobpreis-Vorliebe: 100 % → +10, 0 % → 0 (statt fest +5)
 {
   const z = gemeinde(), r = raumBei(z);
-  ausstatten(z);
+  ausstatten(z); mitGitarrist(z);
   veranstaltungEinstellen(z, r, 'lobpreis');
   z.besucher.forEach(b => { b.zufriedenheit = 50; b.lobpreis = 1; });
   z.besucher[9].lobpreis = 0.5;
   zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
   // Fans: +5 Sitzplatz +10 Lobpreis; Besucher 9 (50 %): +5 +5. (Kanzel/Blumen bringen Haltung über den Stuhl-Bonus.)
   const fan = z.besucher[0].zufriedenheit, halb = z.besucher[9].zufriedenheit;
-  assert.equal(fan - halb, 5);
+  // 27.11.: dazu der Gitarrist (Lobpreisteam, Level 0): wirkt nur beim Fan (100 % Vorliebe), bei 50 % nicht → 3 mehr
+  assert.equal(fan - halb, 8);
 }
 // Haltungs-Multiplikator (25.11. abends): vervielfacht die Summe nach allen Boni; Stufe 3 = ×2
 {
   const lauf = stufe => {
     const z = gemeinde(), r = raumBei(z);
-    ausstatten(z); skillsVon(z.personen.find(p => p.id === 'pastor')).multiplikator.stufe = stufe;
+    ausstatten(z); mitGitarrist(z); skillsVon(z.personen.find(p => p.id === 'pastor')).multiplikator.stufe = stufe;
     veranstaltungEinstellen(z, r, 'lobpreis');
     z.besucher.forEach(b => { b.zufriedenheit = 30; b.lobpreis = 1; });
     z.besucher[9].lobpreis = 0.5;
@@ -310,3 +316,20 @@ console.log('Anbau-Test bestanden.');
   assert.equal(TEXTE.naechstesEvent('Gottesdienst', 59), 'Nächstes Event „Gottesdienst“ in unter 1 Stunde');
 }
 console.log('Nächstes-Event-Test bestanden.');
+
+// Lobpreisgottesdienst braucht einen Ehrenamtlichen, der die Gitarre spielt (Lukas, 27.11.)
+{
+  const z = gemeinde(), r = raumBei(z);
+  ausstatten(z);
+  veranstaltungEinstellen(z, r, 'lobpreis');
+  assert.equal(gottesdienstRaeume(z, aus(z))[0].programm[0].fehlt, 'gitarrist', 'Gitarre ohne Spieler reicht nicht');
+  // ohne Spieler fällt er aus
+  zeitVorruecken(z, aus(z), SO + 10 * 60 + 190 - z.minuten, () => 0);
+  assert.equal(z.letzterGottesdienst.ausgefallen, true, 'ohne Gitarrist fällt der Lobpreisgottesdienst aus');
+  assert.equal(z.letzterGottesdienst.grund, 'gitarrist');
+  // mit Ehrenamtlichem an der Gitarre findet er statt
+  mitGitarrist(z);
+  assert.equal(gottesdienstRaeume(z, aus(z))[0].programm[0].fehlt, null);
+  assert.ok(TEXTE.fehltGitarrist && TEXTE.ausgefallenGitarrist && TEXTE.kalender.grund.gitarrist);
+}
+console.log('Gitarrist-Tests bestanden.');

@@ -66,6 +66,9 @@ export const TEXTE = {
   fehltGesperrt: n => `Veranstaltung ${n} fällt aus – Kanzel und Altar fehlen im Raum.`,
   fehltGitarre: 'Für den Lobpreisgottesdienst fehlt eine Gitarre im Raum.',
   ausgefallenGitarre: 'Der Lobpreisgottesdienst ist ausgefallen – keine Gitarre im Raum.',
+  // Gitarrist Pflicht (27.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst
+  fehltGitarrist: 'Für den Lobpreisgottesdienst fehlt ein Ehrenamtlicher, der die Gitarre spielt.',
+  ausgefallenGitarrist: 'Der Lobpreisgottesdienst ist ausgefallen – niemand hat die Gitarre gespielt.',
   // Jugendgottesdienst (ENTWÜRFE von Claude, 26.11. – Lukas formuliert selbst)
   fehltMusiker: 'Für den Jugendgottesdienst fehlen Musiker – mindestens 2 Ehrenamtliche müssen an je einem Instrument spielen.',
   ausgefallenMusiker: 'Der Jugendgottesdienst ist ausgefallen – zu wenige Musiker im Raum.',
@@ -142,7 +145,8 @@ export const TEXTE = {
     },
     lobpreis: {   // Lukas, 25.11.
       bringt: ['Kollekte: 1 € pro Besucher', 'Haltung je nach Lobpreis-Vorliebe', 'Bekanntheit der Gemeinde'],
-      bedingungen: [{ text: 'Hauptamtlicher im Raum', bedingung: 'leitung' }, { text: 'Gitarre im Raum', bedingung: 'gitarre' }]
+      bedingungen: [{ text: 'Hauptamtlicher im Raum', bedingung: 'leitung' }, { text: 'Gitarre im Raum', bedingung: 'gitarre' },
+        { text: 'Ehrenamtlicher spielt die Gitarre', bedingung: 'gitarrist' }]   // ENTWURF 27.11.
     },
     keine: { bringt: ['Nichts'], bedingungen: ['Stammgäste werden unzufrieden'] },
     // ---- Gemeindesaal (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
@@ -836,7 +840,7 @@ export const TEXTE = {
     bis: stunde => `bis ${String(stunde).padStart(2, '0')}:00`,
     leer: 'In dieser Woche ist nichts geplant.',
     zustand: { geplant: '', laeuft: 'Läuft gerade', vorbei: 'Vorbei', faelltAus: 'Fällt aus', ausgefallen: 'Ist ausgefallen' },
-    grund: { fest: 'wegen eines Fests', raum: 'Raum nicht fertig', keine: 'nichts eingestellt', leitung: 'kein Hauptamtlicher', gitarre: 'Gitarre fehlt',
+    grund: { fest: 'wegen eines Fests', raum: 'Raum nicht fertig', keine: 'nichts eingestellt', leitung: 'kein Hauptamtlicher', gitarre: 'Gitarre fehlt', gitarrist: 'kein Gitarrist',
       gesperrt: 'Platz gesperrt', musiker: 'zu wenige Musiker', ehrenamt: 'kein Ehrenamtlicher', mitarbeiter: 'kein Mitarbeiter', musikLevel: 'Musik-Level zu niedrig',
       tisch: 'Tisch fehlt', klavier: 'Klavier fehlt', stuehle: 'zu wenige Stühle', stuehleTisch: 'zu wenige Stühle am Tisch' }
   },

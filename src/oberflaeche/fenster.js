@@ -155,7 +155,7 @@ function raumFenster(f) {
   // ---- Übersicht: Veranstaltung 1, 2 ----
   const warnung = e => saal ? (e.art && e.fehlt && ((TEXTE.fehltArt[e.art] || {})[e.fehlt] || TEXTE.fehltSaal[e.fehlt])) || ''
     : e.fehlt === 'gesperrt' && e.art ? TEXTE.fehltGesperrt(e.platz + 1)
-    : e.art && e.fehlt === 'gitarre' ? TEXTE.fehltGitarre : e.art && e.fehlt === 'musiker' ? TEXTE.fehltMusiker
+    : e.art && e.fehlt === 'gitarre' ? TEXTE.fehltGitarre : e.art && e.fehlt === 'gitarrist' ? TEXTE.fehltGitarrist : e.art && e.fehlt === 'musiker' ? TEXTE.fehltMusiker
     : e.art && e.fehlt === 'leitung' ? T.keinMitarbeiter : '';
   const plaetze = r.programm.map(e => {
     if (!e.nutzbar) return `<button class="kachel" disabled><b>${T.platz(e.platz + 1)}</b><small class="unter">${e.sperre === 'forschung' ? T.gesperrtForschung(esc(e.forschung)) : T.gesperrt}</small></button>`;

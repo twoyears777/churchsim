@@ -120,12 +120,13 @@ function hinweisText(s) {
   if (saal && s.phase === 'ausgefallen' && s.grund !== 'fest') return TEXTE.ausgefallenSaal(s.artName, fehltText(s.grund));
   if (s.phase === 'anreise' || s.phase === 'gottesdienst' || s.phase === 'kirchkaffee') return TEXTE.laeuft[s.phase] + (s.heim ? ' ' + TEXTE.heimgeschickt(s.heim) : '');
   if (s.phase === 'ausgefallen' && s.grund === 'fest') return TEXTE.faelltAusWegen(s.platz, s.fest);
-  if (s.phase === 'ausgefallen') return s.grund === 'gesperrt' ? TEXTE.fehltGesperrt(s.platz + 1) : s.grund === 'gitarre' ? TEXTE.ausgefallenGitarre : s.grund === 'musiker' ? TEXTE.ausgefallenMusiker : TEXTE.ausgefallen;
+  if (s.phase === 'ausgefallen') return s.grund === 'gesperrt' ? TEXTE.fehltGesperrt(s.platz + 1) : s.grund === 'gitarre' ? TEXTE.ausgefallenGitarre : s.grund === 'gitarrist' ? TEXTE.ausgefallenGitarrist : s.grund === 'musiker' ? TEXTE.ausgefallenMusiker : TEXTE.ausgefallen;
   if (s.phase === 'vorbei') return TEXTE.heimgeschickt(s.heim);
   if (s.fehlt === 'raum') return TEXTE.fehltRaum;
   if (s.fehlt === 'veranstaltung') return TEXTE.fehltVeranstaltung;
   if (s.fehlt === 'leitung') return TEXTE.fehltLeitung;
   if (s.fehlt === 'gitarre') return TEXTE.fehltGitarre;
+  if (s.fehlt === 'gitarrist') return TEXTE.fehltGitarrist;
   if (s.fehlt === 'musiker') return TEXTE.fehltMusiker;
   if (s.fehlt === 'gesperrt') return TEXTE.fehltGesperrt(s.platz + 1);
   return '';

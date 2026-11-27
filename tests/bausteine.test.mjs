@@ -58,6 +58,9 @@ function gottesdienstraum() {
   assert.equal(text(l.zeilen[1]).name, 'Gitarre (Pflicht)');
   assert.ok(!l.zeilen.some(b => b.id === 'instrumentOhne'));
   assert.equal(text(l.zeilen.find(b => b.id === 'musiker')).besucher, null);
+  // 27.11.: der erste Ehrenamtliche am Instrument (er spielt die Gitarre) ist Pflicht
+  assert.deepEqual(l.zeilen.filter(b => b.id === 'musiker').map(b => b.pflicht), [true, false]);
+  assert.equal(text(l.zeilen.find(b => b.id === 'musiker')).name, '1 Ehrenamtlicher (Pflicht) am Instrument (Level 2)');
   assert.deepEqual(B.summe(l.summe), { besucher: '× Lobpreis-Vorliebe', haltung: '+9, dazu 0 bis +10 und +7 % je nach Lobpreis-Vorliebe', geld: '1,07 € je Besucher' });
 }
 console.log('Bausteintabelle Gottesdienst/Lobpreisgottesdienst bestanden.');

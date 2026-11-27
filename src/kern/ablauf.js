@@ -153,6 +153,7 @@ export function gottesdienstRaeume(z, raeume) {
 // fehlt: null | 'leitung' (Hauptamtlicher fehlt) | 'ehrenamt' (Ehrenamtlicher fehlt) | 'musikLevel' (kein Ehrenamtlicher mit genug
 // Musik-Level) | Kennung des fehlenden Möbels (z. B. 'gitarre', 'tisch', 'klavier') | 'stuehle' (zu wenige Stühle)
 // | 'musiker' (Jugendgottesdienst: zu wenige Ehrenamtliche spielen ein Instrument)
+// | 'gitarrist' (Lobpreisgottesdienst: kein Ehrenamtlicher spielt die Gitarre)
 // leitung: wer die Veranstaltung leitet (der erste der verlangten Mitarbeiter, z. B. der Hauptamtliche beim Seniorennachmittag).
 function voraussetzungen(z, r, v, imRaum, ehrenamtliche, spieler = []) {
   let leitung = null, musik = 0;
@@ -171,6 +172,7 @@ function voraussetzungen(z, r, v, imRaum, ehrenamtliche, spieler = []) {
   }
   const fehltMoebel = v.braucht.find(a => !moebelImRaum(z, r, a).length);
   if (fehltMoebel) return { leitung, fehlt: fehltMoebel };
+  if (v.gitarrist && !spieler.length) return { leitung, fehlt: 'gitarrist' };   // Lobpreisgottesdienst: einer spielt die Gitarre (27.11.)
   if (v.musikerMin && spieler.length < v.musikerMin) return { leitung, fehlt: 'musiker' };   // Jugendgottesdienst: mind. 2 an Instrumenten
   if (v.amTisch && stuehleAmTisch(z, moebelImRaum(z, r, 'stuhl')).length < v.stuehleMin) return { leitung, fehlt: 'stuehleTisch' };
   if (!v.amTisch && v.stuehleMin && moebelImRaum(z, r, 'stuhl').length < v.stuehleMin) return { leitung, fehlt: 'stuehle' };
@@ -379,7 +381,8 @@ export function terminStand(z, raeume, t) {
 function festProgramm(z, g, L) {
   const plan = z.feste && z.feste.plaene[L.fest], v = VERANSTALTUNGEN.find(x => x.id === (plan ? plan.art : L.art)) || null;
   const leitung = plan ? g.imRaum.find(p => p.id === plan.leitung && daten(p).art === 'hauptamt') || null : null;
-  const fehlt = !v || !plan || v.fest === false ? 'keine' : !leitung ? 'leitung' : v.braucht.some(a => !moebelImRaum(z, g.raum, a).length) ? 'gitarre' : null;
+  const fehlt = !v || !plan || v.fest === false ? 'keine' : !leitung ? 'leitung' : v.braucht.some(a => !moebelImRaum(z, g.raum, a).length) ? 'gitarre'
+    : v.gitarrist && !g.spieler.length ? 'gitarrist' : null;
   return { platz: 'fest', art: v ? v.id : null, tag: L.plan.tag, slot: L.plan.slot, veranstaltung: v, frei: true, leitung, fehlt, bereit: !fehlt };
 }
 // Wird dieser (normale) Termin von einem Sonderevent verdrängt? Gleiche Zeit und gleicher Raum oder dieselbe Leitung.

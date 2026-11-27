@@ -141,7 +141,7 @@ export function raeumeAuswerten(z) {
 
 const artName = id => (VERANSTALTUNGEN.find(v => v.id === id) || {}).name || null;
 // Was gerade läuft bzw. was für die Veranstaltungen fehlt (als Code; den Text macht die Oberfläche)
-// fehlt: 'raum' | 'veranstaltung' | 'leitung' | 'gitarre' | 'gesperrt' (Kanzel/Altar für Veranstaltung 2)
+// fehlt: 'raum' | 'veranstaltung' | 'leitung' | 'gitarre' | 'gitarrist' | 'gesperrt' (Kanzel/Altar für Veranstaltung 2)
 export function spielStatus(z, raeume) {
   const L = z.laeufe || [];
   const aktiv = L.filter(l => l.phase !== 'ende').sort((a, b) => a.beginn - b.beginn)[0];
@@ -768,7 +768,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return {
         nr, typName: r.typ.name, typId: r.typ.id,
         moeglich: moeglicheVeranstaltungen(r.typ).map(x => ({ id: x.id, name: x.name, slots: x.slots ? [...x.slots] : null })),
-        bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre'), instrument: instrumenteImRaum(z, r) > 0,
+        bedingungen: { leitung: !!(info && info.hauptamt.length), gitarre: hat('gitarre'), gitarrist: hat('gitarre') && !!(info && info.spieler.length), instrument: instrumenteImRaum(z, r) > 0,
           // Gemeindesaal: Ehrenamtlicher im Raum, Ehrenamtlicher mit Musik-Level ab 1, Tisch, mind. 2 Stühle, Klavier
           ehrenamt: eaImRaum.length > 0, musikLevel: eaImRaum.some(p => musikLevel(p) >= 1), tisch: hat('tisch'), klavier: hat('klavier'),
           stuehle: moebelImRaum(z, r, 'stuhl').length >= 2 },

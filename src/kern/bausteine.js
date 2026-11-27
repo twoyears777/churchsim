@@ -44,7 +44,7 @@ function gottesdienstraum(z, raum, info, v) {
   const instrumente = instrumenteImRaum(z, raum);
   const zeilen = [];
 
-  // Pflicht: Hauptamtlicher (beim Lobpreisgottesdienst auch die Gitarre)
+  // Pflicht: Hauptamtlicher (beim Lobpreisgottesdienst auch die Gitarre und ein Ehrenamtlicher, der sie spielt)
   zeilen.push(jugend
     ? { id: 'hauptamtJugend', pflicht: true, imRaum: hauptamt, gottesdienst: AENDERUNG.gottesdienst, platz: AENDERUNG.sitzplatz, kollekte,
       jugendProzent: prozent(JUGEND.faktor[v.id] ?? 1), erwachseneProzent: prozent(v.erwachsene ?? 1) }
@@ -77,9 +77,9 @@ function gottesdienstraum(z, raum, info, v) {
 
   // Musiker: jeder spielende Ehrenamtliche eine Zeile, dazu eine Zeile für den nächsten
   const musikWirktAufBesucher = !lobpreis && !jugend;
-  for (let nr = 1; nr <= Math.min(MAX_MUSIKER, Math.max(v.musikerMin || 0, levels.length + 1)); nr++) {
+  for (let nr = 1; nr <= Math.min(MAX_MUSIKER, Math.max(v.musikerMin || (v.gitarrist ? 1 : 0), levels.length + 1)); nr++) {
     const da = nr <= levels.length, level = da ? levels[nr - 1] : null;
-    zeilen.push({ id: 'musiker', nr, imRaum: da, pflicht: nr <= (v.musikerMin || 0), level, bonus: da ? prozent(musikBonus(level)) : null, bonusMin: prozent(musikBonus(0)),
+    zeilen.push({ id: 'musiker', nr, imRaum: da, pflicht: nr <= (v.musikerMin || (v.gitarrist ? 1 : 0)), level, bonus: da ? prozent(musikBonus(level)) : null, bonusMin: prozent(musikBonus(0)),
       brauchtInstrument: !da && instrumente < nr,
       besucher: nr === 1 && musikWirktAufBesucher ? { min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : null });
   }

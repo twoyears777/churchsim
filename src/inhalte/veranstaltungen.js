@@ -6,7 +6,9 @@
 export const VERANSTALTUNGEN = [
   { id: 'gottesdienst', name: 'Gottesdienst', raumtypen: ['gottesdienst'], leitung: 'hauptamt', braucht: [] },
   { id: 'lobpreis', name: 'Lobpreisgottesdienst', raumtypen: ['gottesdienst'], leitung: 'hauptamt', braucht: ['gitarre'],
-    haltungNachVorliebe: 10 },  // Lobpreis-Vorliebe 100 % → +10, 50 % → +5, 0 % → 0
+    haltungNachVorliebe: 10, gitarrist: true },  // Lobpreis-Vorliebe 100 % → +10, 50 % → +5, 0 % → 0
+  // gitarrist: true = ein eingesetzter Ehrenamtlicher muss die Gitarre spielen (Lukas, 27.11.). Die Gitarre steht in der
+  // Reihenfolge der Instrumente vorn, also spielt sie immer der erste Musiker – es reicht, dass einer spielt.
   // Jugendgottesdienst (Lukas, 26.11.: claude/spielprinzip-jugendgottesdienst-dritter-slot.md): Haltung wie beim Gottesdienst.
   // musikerMin: so viele Ehrenamtliche müssen spielen (jeder an einem eigenen Instrument). kollekteFaktor: Kollekte × diesen Wert.
   // erwachsene: Faktor auf die Chance zu kommen für Erwachsene (Jugendliche: JUGEND.faktor in besucher.js).
