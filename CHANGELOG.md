@@ -3,6 +3,11 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.17
+
+**Technik**
+- Aufgeräumt: Sichtbare Texte und Spielwerte liegen jetzt zentral an einer Stelle – im Spiel ändert sich nichts
+
 ## 0.1.16
 
 **Spielstart**
