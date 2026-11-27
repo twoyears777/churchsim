@@ -1,0 +1,102 @@
+// Menü „Mitarbeiter“: Dienstplan der Ehrenamtlichen als Wochenkalender (Lukas, 27.11.2026 – Aufbau freigegeben).
+// Oben die Ehrenamtlichen mit ihren Schichten (Punkte), darunter die Wochentage. Ein Klick auf einen Tag öffnet ihn:
+// drei Zeitblöcke mit allen Terminen und ihren Stellen. Einteilen per Ziehen (gedrückte Maustaste) oder per Klick
+// (erst Ehrenamtlichen, dann Stelle). Klick auf eine besetzte Stelle nimmt ihn wieder heraus.
+// Die Regeln (Schichten, Überschneidungen) prüft das Spiel – hier wird nur angezeigt und der Befehl geschickt.
+import { TEXTE } from '../inhalte/texte.js';
+import { ui, esc } from './ui.js';
+
+const ZAEHLT = ['veranstaltung', 'kaffeeNach', 'kaffee'];   // Wochenleiste „x frei“: nur Stellen, die ein Termin braucht
+const raumText = r => r ? (r.nummer ? `${r.name} ${r.nummer}` : r.name) : '';
+const terminName = t => t.art === 'veranstaltung' ? t.veranstaltungName || '' : TEXTE.dienstplan.termin[t.art];
+const terminOrt = t => t.art === 'kaffeeNach' ? `${raumText(t.raum)} · ${raumText(t.nachRaum)}` : raumText(t.raum);
+function stelleName(s, stellen) {
+  const f = TEXTE.dienstplan.stelle[s.code];
+  const n = stellen.filter(x => x.code === s.code).indexOf(s) + 1;
+  return f ? f(s.dingName || '', n, s.code === 'begruessung' ? raumText(s.raum) : null) : s.code;
+}
+
+export function dienstplanFenster(f) {
+  const T = TEXTE.dienstplan, d = ui.spiel.dienstplan(), l = ui.spiel.lage();
+  if (f.tag === undefined) f.tag = l.tag;
+  if (f.auswahl && !d.personen.some(p => p.id === f.auswahl)) delete f.auswahl;
+  if (!f.auswahl && d.personen.length) f.auswahl = d.personen[0].id;
+  const punkte = p => Array.from({ length: p.max }, (_, i) => `<span class="dp-punkt${i < p.belegt ? ' an' : ''}"></span>`).join('');
+  const leute = d.personen.length
+    ? d.personen.map(p => `<button class="dp-ea${p.id === f.auswahl ? ' gewaehlt' : ''}${p.jugend ? ' jugend' : ''}" draggable="true" data-dp-ea="${esc(p.id)}">
+        <span class="dp-griff" aria-hidden="true">⋮⋮</span><b>${esc(p.name)}</b><span class="dp-punkte">${punkte(p)}</span><small>${T.schichten(p.belegt, p.max)}</small></button>`).join('')
+    : `<p class="unter">${T.keineEA}</p>`;
+  const tage = TEXTE.tageKurz.map((name, tag) => {
+    const st = d.termine.filter(t => t.tag === tag && ZAEHLT.includes(t.art)).flatMap(t => t.stellen);
+    const frei = st.filter(s => !s.person).length;
+    const unter = !st.length ? '–' : frei ? T.frei(frei) : T.voll;
+    return `<button class="dp-tag${tag === f.tag ? ' offen' : ''}${tag === l.tag ? ' heute' : ''}" data-dp-tag="${tag}"><b>${name}</b><small class="${frei ? 'frei' : ''}">${unter}</small></button>`;
+  }).join('');
+  const bloecke = Object.keys(TEXTE.kaffeeFenster.slot).map(slot => {
+    const hier = d.termine.filter(t => t.tag === f.tag && t.slot === slot);
+    const termine = hier.length ? hier.map(t => `<div class="dp-termin ${t.art}"><b>${esc(terminName(t))}</b>
+        ${terminOrt(t) ? `<small>${esc(terminOrt(t))}</small>` : ''}
+        ${t.stellen.map(s => s.person
+          ? `<button class="dp-stelle besetzt" data-dp-weg="${esc(t.key)}|${esc(s.id)}" title="${esc(s.person.name)}"><b>${esc(s.person.name)}</b><span>${esc(stelleName(s, t.stellen))}</span><span aria-hidden="true">✕</span></button>`
+          : `<button class="dp-stelle frei" data-dp-stelle="${esc(t.key)}|${esc(s.id)}"><span aria-hidden="true">+</span> ${esc(stelleName(s, t.stellen))}</button>`).join('')}
+      </div>`).join('') : `<p class="unter">${T.keinTermin}</p>`;
+    return `<div class="dp-block"><div class="dp-block-kopf">${TEXTE.tage[f.tag]} · ${TEXTE.kaffeeFenster.slot[slot]}</div>${termine}</div>`;
+  }).join('');
+  return `<h2>${T.titel}</h2>
+    <p class="unter">${T.schritt1}</p>
+    <div class="dp-leute">${leute}</div>
+    <div class="dp-tage">${tage}</div>
+    <p class="unter">${T.schritt2}</p>
+    <div class="dp-bloecke">${bloecke}</div>
+    <p class="warnung dp-fehler">${f.fehler ? esc(f.fehler) : ''}</p>
+    <p class="unter">${T.info}</p>`;
+}
+
+// Befehl schicken und die Antwort als Hinweis zeigen
+function setzen(f, wert, personId) {
+  const T = TEXTE.dienstplan, [key, stelle] = wert.split('|');
+  if (!personId) { f.fehler = T.fehler.auswahl(); return; }
+  const e = ui.spiel.stelleSetzen(key, stelle, personId);
+  const p = ui.spiel.dienstplan().personen.find(x => x.id === personId);
+  f.fehler = e === 'ok' ? '' : (T.fehler[e] || T.fehler.keine)(p ? p.name : '');
+}
+// Klicks im Fenster (aus fensterEinrichten) → true, wenn es ein Knopf des Dienstplans war
+export function dienstplanKlick(b, f) {
+  if (f.art !== 'dienstplan') return false;
+  if (b.dataset.dpEa) { f.auswahl = b.dataset.dpEa; f.fehler = ''; return true; }
+  if (b.dataset.dpTag !== undefined) { f.tag = Number(b.dataset.dpTag); f.fehler = ''; return true; }
+  if (b.dataset.dpStelle) { setzen(f, b.dataset.dpStelle, f.auswahl); return true; }
+  if (b.dataset.dpWeg) { const [key, stelle] = b.dataset.dpWeg.split('|'); ui.spiel.stelleSetzen(key, stelle, null); f.fehler = ''; return true; }
+  return false;
+}
+// Ziehen mit gedrückter Maustaste: Ehrenamtlichen auf eine freie (oder besetzte) Stelle fallen lassen
+export function dienstplanEinrichten(maske) {
+  let gezogen = null;
+  maske.addEventListener('dragstart', e => {
+    const ea = e.target.closest && e.target.closest('[data-dp-ea]');
+    if (!ea) return;
+    gezogen = ea.dataset.dpEa;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', gezogen);
+  });
+  const ziel = e => e.target.closest && e.target.closest('[data-dp-stelle], [data-dp-weg]');
+  maske.addEventListener('dragover', e => {
+    const s = ziel(e);
+    if (!s || !gezogen) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    maske.querySelectorAll('.dp-stelle.ueber').forEach(x => { if (x !== s) x.classList.remove('ueber'); });
+    s.classList.add('ueber');
+  });
+  maske.addEventListener('dragleave', e => { const s = ziel(e); if (s && !s.contains(e.relatedTarget)) s.classList.remove('ueber'); });
+  maske.addEventListener('dragend', () => { gezogen = null; maske.querySelectorAll('.dp-stelle.ueber').forEach(x => x.classList.remove('ueber')); });
+  maske.addEventListener('drop', e => {
+    const s = ziel(e), f = ui.fenster;
+    if (!s || !f || f.art !== 'dienstplan') return;
+    e.preventDefault();
+    const id = gezogen || e.dataTransfer.getData('text/plain');
+    gezogen = null;
+    f.auswahl = id;
+    setzen(f, s.dataset.dpStelle || s.dataset.dpWeg, id);
+    ui.speichern(); ui.anzeigeErzwingen(); ui.malen();
+  });
+}

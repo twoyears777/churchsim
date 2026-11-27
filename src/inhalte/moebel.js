@@ -41,6 +41,8 @@ export const MOEBEL = [
   // Namen und Preise sind PLATZHALTER von Claude – Lukas legt sie fest.
   { id: 'wc', kategorie: 'toiletten', name: 'WC-Kabine', kosten: 30 },
   { id: 'waschbecken', kategorie: 'toiletten', name: 'Waschbecken', kosten: 15 },
+  // Lager (Lukas, 27.11.): 1 Regal pro Logistik-Mitarbeiter und Zeitblock
+  { id: 'regal', kategorie: 'lager', name: 'Regal', kosten: 50 },
 
   // Außen (Spielprinzip Einzugsgebiet, 25.11.): nur draußen auf dem Grundstück, nicht in Räumen. Man kann darüber laufen.
   // groesse: [Breite, Länge] in Kästchen (lässt sich drehen). Preise sind PLATZHALTER von Claude.

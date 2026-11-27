@@ -6,6 +6,7 @@ import { ui, $, euro, zahl1, esc } from './ui.js';
 import { changelogHolen } from './changelog.js';
 import { HILFE } from '../inhalte/hilfe.js';
 import { VERSION } from '../version.js';
+import { dienstplanFenster, dienstplanKlick, dienstplanEinrichten } from './dienstplan.js';
 
 const maske = () => $('maske');
 const ART_TEXT = TEXTE.personKarte.art;   // „Hauptamtlich“ / „Ehrenamtlich“ für die Mitarbeiter-Kacheln im Raum- und Foyer-Fenster (fehlte in 0.1.17: Raum-Fenster ging nicht mehr auf)
@@ -30,7 +31,7 @@ export function fensterOffen() { return !maske().hidden; }
 function fensterInhalt(f) {
   return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster }[f.art](f);
 }
 // Wird bei jeder Anzeige-Aktualisierung aufgerufen; baut das Fenster nur neu, wenn sich der Inhalt geändert hat.
 export function fensterAktualisieren() {
@@ -45,10 +46,10 @@ export function fensterAktualisieren() {
   // ✕ oben rechts in jedem Fenster, das man schließen darf (bleibt beim Scrollen sichtbar)
   if (schliessbar(f)) inhalt = `<button class="fenster-x" data-zu aria-label="Schließen" title="Schließen">✕</button>` + inhalt;
   m.classList.toggle('zeitung', f.art === 'zeitung');
-  m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen');
+  m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen' || f.art === 'dienstplan');
   m.classList.toggle('wochenbericht', f.art === 'wochenbericht');   // Wochenzusammenfassung (27.11.): in der Mitte wie die Zeitung
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
-  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender');
+  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender' || f.art === 'dienstplan');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
   amZeiger(m, f.zeiger);
@@ -262,13 +263,13 @@ function kaffeeFenster(f) {
     const reihen = r.slots.map(s => `<tr><th class="slot">${T.slot[s.id]}</th>${
       TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${gesetzt(tag, s.id) ? ' aktiv' : ''}" data-schicht="${tag}:${s.id}" ${gesetzt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${T.slot[s.id]}"></button></td>`).join('')}</tr>`).join('');
     return `<h2>${T.hinzufuegen}</h2><p class="unter">${r.typName}</p>
-      <p class="unter">${T.info}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
+      <p class="unter">${r.schichtbetrieb ? TEXTE.schichtbetrieb.kaffeeInfo : T.info}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
       <div class="zeile"><button data-zurueck>${TEXTE.raum.zurueck}</button></div>`;
   }
   const liste = r.schichten.map((s, i) => `<div class="kachel klein-kachel schicht"><b>${TEXTE.tage[s.tag]}</b><small>${T.slot[s.slot]}</small>
       <button class="klein-knopf" data-schicht-weg="${i}">${T.entfernen}</button></div>`).join('');
   return `<h2>${r.typName}</h2>${zustand}
-    <h3>${T.oeffnungszeiten}</h3><p class="unter">${T.info}</p>
+    <h3>${T.oeffnungszeiten}</h3><p class="unter">${r.schichtbetrieb ? TEXTE.schichtbetrieb.kaffeeInfo : T.info}</p>
     ${liste ? `<div class="kacheln">${liste}</div>` : ''}
     <div class="typen"><button data-schicht-neu ${voll ? 'disabled' : ''}>${T.hinzufuegen}</button></div>
     ${voll ? `<p class="unter">${T.voll}</p>` : ''}
@@ -339,14 +340,15 @@ function evangelisationFenster() {
   const leute = e.leute.length
     ? `<table class="finanzen hell"><tr><td class="unter">${T.spalten.name}</td><td class="unter">${T.spalten.level}</td><td class="zahl unter">${T.spalten.beitrag}</td></tr>
         ${e.leute.map(zeile).join('')}</table>`
-    : `<p class="unter">${T.niemand}${e.zeiten.jetzt ? '' : ' ' + T.zeiten(e.zeiten.von, e.zeiten.bis)}</p>`;
+    : `<p class="unter">${T.niemand}${!e.zeiten || e.zeiten.jetzt ? '' : ' ' + T.zeiten(e.zeiten.von, e.zeiten.bis)}</p>`;   // Schichtbetrieb: keine Uhrzeit (27.11.)
   const jugend = e.leute.some(p => p.jugend && p.laedtEin) ? `<p class="unter">${T.chanceJugend(e.chanceJugend)}</p>` : '';
   const S = e.statistik, stat = k => `<tr><td>${T.statZeilen[k]}</td><td class="zahl">${S.heute[k]}</td><td class="zahl">${S.dieseWoche[k]}</td></tr>`;
-  return `<h2>${T.titel}</h2><p>${T.info}</p>
+  const S0 = TEXTE.schichtbetrieb, dienst = !e.zeiten;   // Schichtbetrieb (27.11.): eingeteilt über den Dienstplan
+  return `<h2>${T.titel}</h2><p>${dienst ? S0.evangelisationInfo : T.info}</p>
     <p class="unter staerker">${T.vorOrt(e.leute.length, e.max)}</p>${leute}
     <p class="staerker">${T.chance(e.chance)} ${e.gedeckelt ? `<span class="unter">${T.obergrenze(e.maxChance)}</span>` : ''}</p>${jugend}
     <p class="unter">${T.rechnung}</p>
-    <p class="unter">${T.frei(e.frei)}${e.unterwegs ? ' · ' + T.unterwegs(e.unterwegs) : ''}</p>
+    <p class="unter">${dienst ? S0.daheim(e.frei) : T.frei(e.frei)}${e.unterwegs ? ' · ' + T.unterwegs(e.unterwegs) : ''}</p>
     <h3>${T.statistik}</h3>
     <table class="finanzen hell"><tr><td></td><td class="zahl unter">${T.statSpalten.heute}</td><td class="zahl unter">${T.statSpalten.woche}</td></tr>
       ${['vorbei', 'angesprochen', 'gekommen'].map(stat).join('')}</table>`;
@@ -871,6 +873,7 @@ function wochenberichtFenster(f) {
 }
 // Knöpfe in den Fenstern → Befehle ans Spiel
 export function fensterEinrichten() {
+  dienstplanEinrichten(maske());   // Dienstplan: Ehrenamtliche mit gedrückter Maustaste auf Stellen ziehen (27.11.)
   maske().addEventListener('click', e => {
     // Zeile in der Menschen-Liste → Kärtchen der Person
     const zeile = e.target.closest('tr[data-mensch]');
@@ -879,6 +882,7 @@ export function fensterEinrichten() {
     if (!b || b.disabled || !f) return;
     if (b.hasAttribute('data-zu')) return fensterSchliessen();
     if (b.hasAttribute('data-wochenbericht-weiter')) { spiel.wochenberichtWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
+    if (dienstplanKlick(b, f)) { ui.speichern(); ui.anzeigeErzwingen(); return ui.malen(); }   // Menü „Mitarbeiter“ (27.11.)
     if (b.hasAttribute('data-zeitung-weiter')) { spiel.zeitungWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
     if (b.dataset.gruppe) { const o = f.offen || []; f.offen = o.includes(b.dataset.gruppe) ? o.filter(x => x !== b.dataset.gruppe) : [...o, b.dataset.gruppe]; }
     else if (b.dataset.sort) { const s = f.sort || { spalte: 'name', ab: false }; f.sort = { spalte: b.dataset.sort, ab: s.spalte === b.dataset.sort ? !s.ab : true }; }

@@ -35,7 +35,7 @@ function naechste(e, liste, radius) {
 // oder ein vorbeilaufender Passant den Klick und das Menü lässt sich nicht öffnen (Fehler, Lukas 26.11.).
 // Klick-Box = der ganze gezeichnete Stand mit Rand und Schild, nicht mehr nur ein Kästchen (Lukas, 27.11.).
 const aufEvangelisationsFeld = e => { const { px, py } = punktAus(e); return evangelisationsStandTrifft(px, py, ui.ansicht, ui.spiel.karte().evangelisation); };
-const figurBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id, x: p.x, y: p.y })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
+const figurBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().personen.filter(p => !p.daheim).map(p => ({ id: p.id, x: p.x, y: p.y, art: p.art })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
   Math.max(22, ui.ansicht.k * 1.1));
 const besucherBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
 const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
@@ -82,7 +82,9 @@ function druecken(e) {
   if (e.button === 2) { rechtsklick(); return; }      // Rechtsklick bricht Ziehen bzw. Bauauswahl ab
   if (!ui.editorOffen) {
     const p = figurBei(e);
-    if (p) { leinwand.setPointerCapture(e.pointerId); const a = punktAus(e); ui.tragen = { id: p.id, ...a, start: a, bewegt: false }; ui.malen(); }
+    // Schichtbetrieb (27.11.): Ehrenamtliche werden im Menü „Mitarbeiter“ eingeteilt – antippen öffnet nur die Charakter-Karte
+    if (p && p.art === 'ehrenamt' && ui.spiel.lage().schichtbetrieb) ui.klickStart = { person: p.id };
+    else if (p) { leinwand.setPointerCapture(e.pointerId); const a = punktAus(e); ui.tragen = { id: p.id, ...a, start: a, bewegt: false }; ui.malen(); }
     else ui.klickStart = { feld: feldAus(e), besucher: besucherBei(e), stand: aufEvangelisationsFeld(e) };
     return;
   }
@@ -121,6 +123,7 @@ function loslassen(e) {
     // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Stuhl → Verbessern, Raum mit Veranstaltungen → Raum-Fenster,
     // Kirchkaffee → Öffnungszeiten, Tor → Pforte (Plakat), Feld vor dem Laden → Evangelisation
     const f = feldAus(e), s = ui.klickStart; ui.klickStart = null;
+    if (s && s.person) return fensterOeffnen({ art: 'person', id: s.person });
     if (s && s.stand && aufEvangelisationsFeld(e)) return fensterOeffnen({ art: 'evangelisation' });   // Stand vor dem Laden → Menü (große Klick-Box)
     if (!s || s.feld.x !== f.x || s.feld.y !== f.y) return;
     if (s.besucher) return fensterOeffnen({ art: 'besucher', id: s.besucher.id });

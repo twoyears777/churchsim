@@ -342,3 +342,39 @@ table.menschen .zahl { text-align: right; font-variant-numeric: tabular-nums; }
 .wb-inhalt { padding: 0 4px 8px; }
 .wb-inhalt td.fehlt, .wb-inhalt span.fehlt { color: #b3261e; } .wb-inhalt span.ok { color: #2e7d32; }
 .wb-weiter { justify-content: flex-end; margin-top: 10px; }
+
+/* ---- Menü „Mitarbeiter“: Dienstplan der Ehrenamtlichen (27.11.) – ENTWURF-Aussehen von Claude nach der freigegebenen Vorschau ---- */
+.dienstplan-knopf { width: 100%; margin-top: 2px; }
+.dp-leute { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.inhalt .dp-ea { display: flex; align-items: center; gap: 6px; padding: 6px 10px; height: auto; border-radius: 8px; background: #fff; color: #2b2a27;
+  border: 1px solid #cfc9bb; font-size: 13px; cursor: grab; }
+.inhalt .dp-ea:active { cursor: grabbing; }
+.inhalt .dp-ea.gewaehlt { border: 2px solid #2d69be; padding: 5px 9px; }
+.inhalt .dp-ea small { color: #6b665b; }
+.dp-griff { color: #a8a294; letter-spacing: -2px; }
+.dp-punkte { display: inline-flex; gap: 2px; }
+.dp-punkt { width: 8px; height: 8px; border-radius: 50%; background: #d6d0c2; }
+.dp-punkt.an { background: #ba7517; }
+.dp-tage { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.inhalt .dp-tag { display: flex; flex-direction: column; align-items: center; gap: 1px; height: auto; padding: 6px 4px; border-radius: 8px;
+  background: #fff; color: #2b2a27; border: 1px solid #cfc9bb; }
+.inhalt .dp-tag.heute b { text-decoration: underline; }
+.inhalt .dp-tag.offen { border: 2px solid #2d69be; padding: 5px 3px; }
+.dp-tag small { font-size: 11px; color: #6b665b; }
+.dp-tag small.frei { color: #9a5b00; }
+.dp-bloecke { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dp-block { background: #e7e1d4; border-radius: 8px; padding: 8px; min-height: 110px; }
+.dp-block-kopf { font-size: 12px; color: #6b665b; margin-bottom: 2px; }
+.dp-termin { background: #fff; border: 1px solid #d6d0c2; border-left: 3px solid #4a7bb7; border-radius: 6px; padding: 6px 8px; margin-top: 6px; }
+.dp-termin.kaffeeNach, .dp-termin.kaffee { border-left-color: #a8794a; }
+.dp-termin.logistik { border-left-color: #c9a77c; }
+.dp-termin.evangelisation { border-left-color: #2f6b3a; }
+.dp-termin > b { display: block; font-size: 13px; font-weight: 600; }
+.dp-termin > small { display: block; font-size: 12px; color: #6b665b; }
+.inhalt .dp-stelle { display: flex; align-items: center; gap: 4px; width: 100%; height: auto; margin-top: 4px; padding: 4px 6px; border-radius: 6px;
+  font-size: 12px; text-align: left; background: transparent; color: #6b665b; border: 1px dashed #a8a294; }
+.inhalt .dp-stelle.ueber { background: #e6f1fb; border-color: #2d69be; }
+.inhalt .dp-stelle.besetzt { background: #faeeda; color: #633806; border: 1px solid #ef9f27; }
+.inhalt .dp-stelle.besetzt span:nth-of-type(1) { margin-left: auto; opacity: .8; }
+.dp-fehler { min-height: 18px; margin-top: 8px; }
+.inhalt .dp-ea, .inhalt .dp-tag, .inhalt .dp-stelle { min-height: 0; }

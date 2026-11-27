@@ -542,7 +542,9 @@ export const TEXTE = {
     infotisch: `Klicke, um einen Infotisch aufzustellen (wirkt im Foyer: +${foyerHaltung('infotisch')} Haltung für jeden, der hindurchläuft).`,
     // ---- Toiletten (26.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
     wc: 'Klicke, um eine WC-Kabine aufzustellen (Toiletten, eine Person gleichzeitig).',
-    waschbecken: 'Klicke, um ein Waschbecken aufzustellen (Toiletten).'
+    waschbecken: 'Klicke, um ein Waschbecken aufzustellen (Toiletten).',
+    // ---- Lager (27.11.) – ENTWURF von Claude, Lukas formuliert selbst ----
+    regal: 'Klicke, um ein Regal aufzustellen (Lager). Je Regal kann pro Zeitblock ein Ehrenamtlicher für die Logistik eingeteilt werden.'
   },
   // ---- Baukosten, Fenster, Foyer (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
   bauGeld: {
@@ -644,7 +646,7 @@ export const TEXTE = {
   // Spicker rechts im Bau-Modus: Mindestgröße je Raum. ENTWURF von Claude (27.11.) – Lukas formuliert selbst
   raumSpicker: { titel: 'Mindestgröße', groesse: (b, h) => `${b} × ${h}` },
   bauleiste: {
-    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“: ENTWURF
+    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', lager: 'Lager', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“: ENTWURF
     werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF
     jeStueck: preis => `${preis} je Stück`,   // Preis der Wand (ENTWURF von Claude, 25.11.)
     abBekanntheit: n => `ab Bekanntheit ${n}`,
@@ -930,5 +932,47 @@ export const TEXTE = {
     skills: 'Skills',
     skillsSpaeter: 'Skills folgen später'
   },
-  keineVeranstaltung: 'Keine'   // Auswahl im Raum-Fenster und Kalender (stand bis 26.11. als KEINE_VERANSTALTUNG in veranstaltungen.js)
+  keineVeranstaltung: 'Keine',   // Auswahl im Raum-Fenster und Kalender (stand bis 26.11. als KEINE_VERANSTALTUNG in veranstaltungen.js)
+
+  // ---- Menü „Mitarbeiter“: Dienstplan der Ehrenamtlichen (27.11.) – ENTWURF von Claude, Lukas formuliert selbst ----
+  // Aufbau (Kalender, Ziehen und Klicken) von Lukas mit „das sieht super aus“ freigegeben; die Texte sind noch Entwürfe.
+  dienstplan: {
+    knopf: 'Dienstplan',
+    titel: 'Mitarbeiter · Ehrenamtliche',
+    schritt1: '1. Ehrenamtlichen anklicken oder mit gedrückter Maustaste auf eine Stelle ziehen',
+    schritt2: '2. Freie Stelle anklicken (Klick auf einen Namen nimmt ihn wieder heraus)',
+    info: 'Ohne Schicht sind Ehrenamtliche daheim. Sonntagvormittags kommen sie mit 90 % in den Gottesdienst.',
+    schichten: (belegt, max) => `${belegt}/${max}`,
+    keineEA: 'Noch keine Ehrenamtlichen.',
+    frei: n => `${n} frei`,
+    voll: 'voll',
+    keinTermin: 'Kein Termin',
+    daheim: 'daheim',
+    termin: { kaffeeNach: 'Kirchkaffee danach', kaffee: 'Kirchkaffee-Schicht', logistik: 'Logistik · Lager', evangelisation: 'Evangelisation' },
+    stelle: {
+      musik: ding => ding,                     // Name des Instruments, z. B. „Gitarre“
+      leitung: () => 'Leitung',
+      chorleitung: () => 'Chorleitung · Klavier',
+      mitarbeit: (_, n) => `Mitarbeit ${n}`,
+      begruessung: (_, n, raum) => raum ? `Begrüßung · ${raum}` : 'Begrüßung',
+      theke: (_, n) => `Theke ${n}`,
+      regal: (_, n) => `Regal ${n}`,
+      evangelisation: (_, n) => `Platz ${n}`
+    },
+    fehler: {
+      doppelt: name => `${name} hat bei diesem Termin schon eine Stelle.`,
+      voll: name => `${name} hat schon alle Schichten dieser Woche.`,
+      zeit: name => `${name} arbeitet zu dieser Zeit schon bei einem anderen Termin.`,
+      person: () => 'Nur Ehrenamtliche können eingeteilt werden.',
+      keine: () => 'Diese Stelle gibt es nicht mehr.',
+      auswahl: () => 'Wähle zuerst einen Ehrenamtlichen aus.'
+    }
+  },
+  // Schichtbetrieb (27.11.) – ENTWÜRFE von Claude: geänderte Texte, wo Ehrenamtliche über den Dienstplan kommen
+  schichtbetrieb: {
+    kaffeeInfo: 'Das Kirchkaffee öffnet nach dem Gottesdienst für 2h und zu den Öffnungszeiten, die du hier festlegst. Bedient wird nur, wenn im Dienstplan Ehrenamtliche eingeteilt sind.',
+    evangelisationInfo: 'Ehrenamtliche, die im Dienstplan für die Evangelisation eingeteilt sind, stehen hier und sprechen Passanten an. Je höher ihr Evangelisation-Level, desto eher kommen die Leute zum nächsten Gottesdienst.',
+    daheim: x => `Gerade daheim: ${x}`,
+    seiteEA: (einsatz, daheim, belegt, max) => `${einsatz || (daheim ? 'daheim' : 'unterwegs')} · ${belegt}/${max} Schichten`
+  }
 };

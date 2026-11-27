@@ -32,6 +32,7 @@ import { termineDerWoche, naechsteKaffeeOeffnung, dauerVon, gottesdienstRaeume }
 import { offenBei, kirchkaffeeZustand } from './kirchkaffee.js';
 import { istJugend } from './konfi.js';
 import { musikerVorlauf } from './musiker.js';
+import { aktiveSchicht, dienstAngekommen, dienstAnkunft } from './dienst.js';
 
 const EPS = 1e-6;
 // Beitrag eines Ehrenamtlichen zur Chance pro Passant (0–1): Grund + je Level, ohne Rechenkrümel
@@ -117,9 +118,38 @@ export function evangelisationVersetzt(z, p) {
   delete A.ma[p.id];
 }
 
+// ---- Schichtbetrieb (Lukas, 27.11.: claude/spielprinzip-ehrenamt-schichten-lager.md) ----
+// Zur Evangelisation geht nur, wer im Dienstplan für diesen Zeitblock eingeteilt ist. Es gelten die 2 Standplätze,
+// aber keine Uhrzeit mehr (der Zeitblock bestimmt sie). Hingehen und Zurückgehen steuert der Dienstplan (dienst.js):
+// Für die Regeln steht der Ehrenamtliche während der Schicht am Standplatz (p.x, p.y).
+// Evangelisation-Erfahrung: für die Zeit vor Ort, gutgeschrieben bei jeder Kontrolle und wenn er geht.
+const imEvangelisationDienst = (z, raeume, p) => { const s = raeume ? aktiveSchicht(z, raeume, p) : null; return !!s && s.t.art === 'evangelisation'; };
+function standplatzDienst(p) { return E.standplaetze.some(o => o.x === p.x && o.y === p.y); }
+function dienstGutschreiben(z, p, bisT) {
+  const A = z.evangelisation;
+  if (!A.gezaehlt) A.gezaehlt = {};
+  const von = Math.max(A.gezaehlt[p.id] ?? -Infinity, dienstAnkunft(z, p));
+  if (Number.isFinite(von) && bisT > von) evangelisationErfahrungDazu(p, bisT - von);
+  A.gezaehlt[p.id] = Math.max(bisT, A.gezaehlt[p.id] ?? -Infinity);
+}
+// Geht ein Ehrenamtlicher (Schicht vorbei oder woanders hin): Zeit vor Ort gutschreiben (dienst.js)
+export function evangelisationVerlassen(z, p) {
+  if (!z.schichtbetrieb || !z.evangelisation || p.daheim || !standplatzDienst(p)) return;
+  dienstGutschreiben(z, p, z.minuten);
+  delete z.evangelisation.gezaehlt[p.id];
+}
+function vorOrtDienst(z) {
+  return ehrenamtliche(z).filter(p => !p.daheim && standplatzDienst(p) && dienstAngekommen(z, p));
+}
+
 // ---- Alles bis jetzt Fällige ausführen ----
 export function evangelisationAktualisieren(z, raeume) {
   evangelisationAnlegen(z);
+  if (z.schichtbetrieb) {
+    z.evangelisation.ma = {};
+    for (const p of vorOrtDienst(z)) dienstGutschreiben(z, p, z.minuten);
+    return;
+  }
   const A = z.evangelisation, t = z.minuten, f = fenster(t), termine = termineJetzt(z, raeume);
   const eas = ehrenamtliche(z), infos = new Map(eas.map(p => [p.id, dienst(z, raeume, p, termine)]));
   // Wer gerade frei hat, seit wann (für den Gleichstand beim Auswählen)
@@ -157,6 +187,10 @@ export function evangelisationAktualisieren(z, raeume) {
 // Nächster Zeitpunkt, zu dem bei der Evangelisation etwas passiert (für das Tick-System)
 export function evangelisationSchritt(z) {
   if (!z.evangelisation || !z.personen.some(p => { const d = daten(p); return d && d.art === 'ehrenamt'; })) return null;
+  if (z.schichtbetrieb) {   // nur zum Gutschreiben der Erfahrung, solange jemand vor Ort ist
+    if (!ehrenamtliche(z).some(p => !p.daheim && standplatzDienst(p))) return null;
+    return { zeit: (Math.floor(z.minuten / E.pruefen + EPS) + 1) * E.pruefen, tun: (zz, rr) => evangelisationAktualisieren(zz, rr) };
+  }
   const A = z.evangelisation, t = z.minuten, f = fenster(t), zeiten = [];
   for (const m of Object.values(A.ma)) {
     if (m.phase === 'da') zeiten.push(m.bis); else zeiten.push(ankunft(m.bew));
@@ -173,6 +207,7 @@ export function evangelisationSchritt(z) {
 // ---- Wirkung: ein Passant läuft am Feld vorbei ----
 // Wer steht gerade dort (angekommen, noch nicht auf dem Rückweg)?
 export function vorOrt(z) {
+  if (z.schichtbetrieb) return vorOrtDienst(z);
   if (!z.evangelisation) return [];
   const t = z.minuten;
   return Object.entries(z.evangelisation.ma).filter(([, m]) => m.phase !== 'zurueck' && t >= ankunft(m.bew) - EPS && t < m.bis - EPS)
@@ -214,6 +249,7 @@ export function evangelisationPosition(z, p) {
 }
 // Wie viele Ehrenamtliche haben gerade frei (keinem Dienst zugewiesen oder gerade ohne Schicht/Dienst)?
 export function freieEhrenamtliche(z, raeume) {
+  if (z.schichtbetrieb) return ehrenamtliche(z).filter(p => p.daheim).length;   // ohne Schicht = daheim
   const termine = termineJetzt(z, raeume);
   return ehrenamtliche(z).filter(p => !dienst(z, raeume, p, termine).jetzt).length;
 }
@@ -226,8 +262,10 @@ export function evangelisationInfo(z, raeume) {
   const prozent = x => Math.round(Math.min(E.maxChance, x) * 100);
   return {
     max: E.plaetze, jugendgottesdienst: jugo, maxChance: Math.round(E.maxChance * 100),
-    zeiten: { von: E.von, bis: E.bis, jetzt: t >= f.von && t < f.bis },
-    unterwegs: Object.values(z.evangelisation ? z.evangelisation.ma : {}).filter(m => m.phase === 'hin' && t < ankunft(m.bew) - EPS).length,
+    // Schichtbetrieb (27.11.): keine feste Uhrzeit mehr – es zählt der Dienstplan (zeiten: null)
+    zeiten: z.schichtbetrieb ? null : { von: E.von, bis: E.bis, jetzt: t >= f.von && t < f.bis },
+    unterwegs: z.schichtbetrieb ? ehrenamtliche(z).filter(p => !p.daheim && imEvangelisationDienst(z, raeume, p) && !dienstAngekommen(z, p)).length
+      : Object.values(z.evangelisation ? z.evangelisation.ma : {}).filter(m => m.phase === 'hin' && t < ankunft(m.bew) - EPS).length,
     frei: freieEhrenamtliche(z, raeume),
     leute: leute.map(p => {
       const jugend = istJugendEA(p), laedtEin = !jugend || jugo;

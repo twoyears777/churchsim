@@ -46,6 +46,7 @@ import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen, unfallSchritt }
 import { ERSTER_GOTTESDIENST } from '../inhalte/besucher.js';
 import { ersterAnlegen, ersterOffen, zeitungOffen, zeitungSchritt, zusatzLeute, ehrenamtSicher } from './erster.js';
 import { automatenBeimAnreisen, automatenBeimHeimgehen, automatenSchritt } from './automaten.js';
+import { dienstAnlegen, dienstMerken, dienstVergessen, dienstAktualisieren, dienstSchritt, veranstaltungDienst, begruessungDienst, kaffeeNachBesetzt, naechsteKaffeeSchicht, besuchendeEhrenamtliche } from './dienst.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: am Sonntag doppelt, egal ob vormittags, nachmittags oder abends (Lukas, 26.11.)
@@ -134,22 +135,34 @@ export function gottesdienstRaeume(z, raeume) {
     const imRaum = z.personen.filter(p => zellen.has(idx(z, p.x, p.y)) && daten(p));
     const hauptamt = imRaum.filter(p => daten(p).art === 'hauptamt');
     // Ehrenamtliche im Raum, die dort eingesetzt sind (das geht nur, wenn mindestens ein Instrument im Raum steht)
-    const ehrenamtliche = imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r);
     // Pro Instrument spielt ein Ehrenamtlicher. Sind es mehr Ehrenamtliche als Instrumente, spielen die mit dem höchsten Musik-Level.
-    const spieler = ehrenamtliche.map((p, i) => ({ p, i })).sort((a, b) => musikLevel(b.p) - musikLevel(a.p) || a.i - b.i)
+    const spielerAus = liste => liste.map((p, i) => ({ p, i })).sort((a, b) => musikLevel(b.p) - musikLevel(a.p) || a.i - b.i)
       .slice(0, instrumenteImRaum(z, r)).map(x => x.p);
-    const musiker = spieler;
+    // Ehrenamtliche der Veranstaltung: bisher wer im Raum steht (das geht nur, wenn mindestens ein Instrument im Raum steht);
+    // im Schichtbetrieb (27.11.) wer im Dienstplan für diese Veranstaltung eingeteilt ist – egal, wo er gerade ist.
+    const vorOrt = imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r), spielerVorOrt = spielerAus(vorOrt);
+    const ehrenamtFuer = i => {
+      if (!z.schichtbetrieb) return { ehrenamtliche: vorOrt, spieler: spielerVorOrt };
+      const d = veranstaltungDienst(z, raeume, r, i);
+      return { ehrenamtliche: d.alle, spieler: spielerAus(d.musik) };
+    };
     const programm = programmVon(z, r).map((e, i) => {
       const v = VERANSTALTUNGEN.find(x => x.id === e.art) || null, sperre = platzSperre(z, r, i), frei = !sperre;
+      const { ehrenamtliche, spieler } = ehrenamtFuer(i);
       const pruefung = v ? voraussetzungen(z, r, v, imRaum, ehrenamtliche, spieler) : { leitung: null, fehlt: null };
       const fehlt = !v ? 'keine' : !frei ? 'gesperrt' : pruefung.fehlt;
       return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, sperre, leitung: pruefung.leitung, fehlt, bereit: !fehlt,
-        musikBonus: pruefung.musikBonus || 0, ehrenamtBonus: v ? ehrenamtBonus(v, ehrenamtliche) : 0 };
+        musikBonus: pruefung.musikBonus || 0, ehrenamtBonus: v ? ehrenamtBonus(v, ehrenamtliche) : 0,
+        dienst: { ehrenamtliche, spieler, musiker: spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)) } };
     });
-    return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt, ehrenamtliche,
-      leitung: hauptamt[0] || null, musiker, spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)), bereit: programm.some(p => p.bereit) };
+    // Für den Raum als Ganzes (Raum-Fenster, Übersichten) gelten die Ehrenamtlichen von Veranstaltung 1
+    const d0 = programm[0].dienst;
+    return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt, ehrenamtliche: d0.ehrenamtliche,
+      leitung: hauptamt[0] || null, musiker: d0.musiker, spieler: d0.spieler, ausstattung: d0.ausstattung, bereit: programm.some(p => p.bereit) };
   });
 }
+// Raum-Eintrag mit den Ehrenamtlichen genau dieser Veranstaltung (Musiker, Ausstattung mit Lobpreisteam …)
+export const mitDienst = (g, p) => p && p.dienst ? { ...g, ...p.dienst } : g;
 // Kann diese Veranstaltung im Raum stattfinden? → { leitung, fehlt, musikBonus }
 // fehlt: null | 'leitung' (Hauptamtlicher fehlt) | 'ehrenamt' (Ehrenamtlicher fehlt) | 'musikLevel' (kein Ehrenamtlicher mit genug
 // Musik-Level) | Kennung des fehlenden Möbels (z. B. 'gitarre', 'tisch', 'klavier') | 'stuehle' (zu wenige Stühle)
@@ -282,24 +295,30 @@ export const berichtPause = z => WOCHENBERICHT.pause && wochenberichtOffen(z);
 // Prüft, welcher Schritt als Nächstes ansteht (Veranstaltungen, Passanten im Ort, Seelsorge-Anfrage),
 // und führt alle Schritte bis zur Zielzeit aus. Kommt eine Seelsorge-Anfrage, bleibt die Zeit genau dort stehen.
 export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
-  ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z);
+  ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z); dienstAnlegen(z);
   if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) return;
+  dienstMerken(z, raeume);   // Dienstplan-Termine für diesen Durchgang nur einmal ausrechnen
+  try {
   const ziel = z.minuten + minuten, gesperrt = zz => seelsorgeGesperrt(zz, raeume);
-  kaffeeAktualisieren(z, raeume, zufall);
+  // Dienstplan (27.11.): vor jedem Schritt kommen bzw. gehen die Ehrenamtlichen, deren Schicht gerade beginnt bzw. endet
+  const aktuell = () => { dienstAktualisieren(z, raeume); kaffeeAktualisieren(z, raeume, zufall); };
+  aktuell();
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), wochenberichtSchritt(z), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), dienstSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), wochenberichtSchritt(z), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
+    if (z.schichtbetrieb) dienstAktualisieren(z, raeume);   // z. B. Kirchkaffee-Schicht beginnt genau am Ende des Gottesdienstes
     s.tun(z, raeume, zufall);
-    kaffeeAktualisieren(z, raeume, zufall);   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
+    aktuell();   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
     if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) { wochenbuchPruefen(z); return; }   // Seelsorge-Anfrage / Zeitung / Wochenzusammenfassung: Zeit steht genau hier
   }
   z.minuten = ziel;
-  kaffeeAktualisieren(z, raeume, zufall);
+  aktuell();
   wochenbuchPruefen(z);
+  } finally { dienstVergessen(); }
 }
 // Alte Spielstände: ein einzelner laufender Termin (z.lauf) wird zum ersten Eintrag in z.laeufe
 export function ablaufAnlegen(z) {
@@ -366,8 +385,13 @@ export function terminInfo(z, raeume, L) {
     const g0 = gottesdienstRaeume(z, raeume)[0];
     return g0 ? { g: g0, p: g0.programm[0] } : null;
   }
-  if (g && L.fest) return { g, p: festProgramm(z, g, L) };
-  return g ? { g, p: g.programm[L.platz] } : null;
+  if (g && L.fest) {
+    // Sonderevent: es spielen die Ehrenamtlichen, die zu dieser Zeit im selben Raum eingeteilt sind (sonst niemand)
+    const gleich = g.programm.find(e => e.art && e.tag === L.plan.tag && e.slot === L.plan.slot);
+    const ohne = z.schichtbetrieb ? { ehrenamtliche: [], spieler: [], musiker: [], ausstattung: raumAusstattung(z, g.raum, []) } : null;
+    return { g: gleich ? mitDienst(g, gleich) : ohne ? { ...g, ...ohne } : g, p: festProgramm(z, g, L) };
+  }
+  return g ? { g: mitDienst(g, g.programm[L.platz]), p: g.programm[L.platz] } : null;
 }
 // Gemeindekalender (Lukas, 26.11.): Stand eines Termins aus termineDerWoche, ohne etwas zu verändern.
 // → { zustand: 'geplant' | 'faelltAus' | 'laeuft' | 'vorbei' | 'ausgefallen', fehlt (Code, wenn er ausfällt/ausfiel) }
@@ -428,6 +452,8 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
     musik: info.g.typ.id === 'gottesdienst' ? info.g.ausstattung.musik : undefined, keineNeuen: !zaehltFuerNeue(L.art), konfirmation: istKonfirmation(L) });
   // Erster Gottesdienst (26.11.): zusätzlich fest ERSTER_GOTTESDIENST.neueLeute Menschen
   if (istErster(z, L)) { L.erster = true; kommen.push(...zusatzLeute(z, zufall)); }
+  // Schichtbetrieb (27.11.): Ehrenamtliche ohne Schicht kommen sonntagvormittags mit 90 % in den Gottesdienst – wie Besucher
+  kommen.push(...besuchendeEhrenamtliche(z, raeume, L, info.g, zufall));
   for (let i = kommen.length - 1; i > 0; i--) { const j = Math.floor(zufall() * (i + 1)); [kommen[i], kommen[j]] = [kommen[j], kommen[i]]; }
   const tuer = raumTuer(z, info.g.raum);
   L.ankunft = z.minuten;
@@ -486,7 +512,9 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   // Kollekte: pro Besucher 1 € × Stuhl, × Altar, Grünpflanzen und Musik des Raums, × 2 am Sonntag,
   // × Kollekte-Faktor des Kirchenjahres (z. B. Heiligabend ×2); auf ganze Euro gerundet.
   // Dazu merkt sich jeder Gast, wie viel Haltung ihm Stuhl, Kanzel und Blumen bringen (wird am Ende gutgeschrieben).
-  const liste = gottesdienstRaeume(z, raeume);
+  const info = terminInfo(z, raeume, L);
+  // Ausstattung genau dieser Veranstaltung (im Schichtbetrieb spielt bei Veranstaltung 2 evtl. ein anderes Lobpreisteam)
+  const liste = gottesdienstRaeume(z, raeume).map(x => info && x.raum === info.g.raum ? info.g : x);
   let summeKollekte = 0;
   const faktor = zeitFaktor(L.plan) * terminFaktoren(L, z).kollekte * ((v && v.kollekteFaktor) || 1);   // Jugendgottesdienst: × 0,5
   // Über jedem Kopf erscheint kurz, was er gegeben hat (wie „+1 €“ beim Kaffee; auf Cent gerundet, gebucht wird die Summe auf ganze Euro).
@@ -496,7 +524,6 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
     if (gabe > 0) zahlZeigen(z, g.sitz, gabe);
   }
   // Lobpreisteam: Jeder, der ein Instrument gespielt hat, bekommt etwas Musik-Erfahrung.
-  const info = terminInfo(z, raeume, L);
   if (info && info.g.ausstattung.musik) for (const p of info.g.spieler) musikErfahrungDazu(p);
   // Haltungs-Multiplikator (Skill des Hauptamtlichen, 26.11.): wer leitet, merken – wirkt beim Abschluss; +1 geleiteter Gottesdienst
   L.leitung = info && info.p && info.p.leitung ? info.p.leitung.id : null;
@@ -569,7 +596,8 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
   const anwesend = [], v = VERANSTALTUNGEN.find(x => x.id === L.art) || {};
   const sitzplatz = v.sitzplatzHaltung === false ? 0 : AENDERUNG.sitzplatz;   // Konfirmandenunterricht: Sitzplatz ist nur Bedingung
   const leitung = L.leitung ? z.personen.find(p => p.id === L.leitung) || null : null;   // für den Haltungs-Multiplikator
-  const foyerListe = foyers(z, raeume);   // Foyer (25.11.): wer auf dem Weg hindurchgelaufen ist, bekommt Haltung
+  // Foyer (25.11.): wer auf dem Weg hindurchgelaufen ist, bekommt Haltung. Begrüßungsdienst im Schichtbetrieb: laut Dienstplan (27.11.)
+  const foyerListe = foyers(z, raeume, z.schichtbetrieb && !L.fest && L.raum !== null ? begruessungDienst(z, raeume, L.raum, L.platz) : z.schichtbetrieb ? new Set() : null);
   L.gaeste.forEach((g, i) => { if (g.sitz) g.foyer = foyerBonus(z, raeume, strasse(i), g.sitz, foyerListe); });
   for (const g of L.gaeste) {
     const b = z.besucher.find(x => x.id === g.id);
@@ -622,7 +650,8 @@ function festPrognose(z, raeume, t) {
   if (!g) return null;
   return prognoseFuer(z, raeume, g, festProgramm(z, g, t), t, 'fest');
 }
-function prognoseFuer(z, raeume, g, p, termin, platz) {
+function prognoseFuer(z, raeume, g0, p, termin, platz) {
+  const g = g0 && p ? mitDienst(g0, p) : g0;   // Lobpreisteam und Ausstattung genau dieser Veranstaltung
   const art = p ? p.art : null;
   const plan = p ? { tag: p.tag, slot: p.slot } : STANDARD_PLAN, faktor = zeitFaktor(plan);
   const woche = termin ? termin.woche : zeitpunkt(z.minuten).woche;
@@ -670,8 +699,10 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
   // (die Ehrenamtlichen füllen sie auf, wenn das Kirchkaffee zu hat)
   const kaffeeWunsch = (z.besucher.reduce((s, b) => s + chance(b) * kaffeeVorliebe(b), 0) + neu * VORLIEBE_SCHNITT
     + neugierige.reduce((s, p) => s + kaffeeVorliebe(p) * nf(p), 0) * NEUGIER.kommChance) * anteil;
-  const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
-  const tassen = Math.min(kaffeeWunsch, stationen.length * fassung('kaffeemaschine'));
+  // Schichtbetrieb (27.11.): so viele Stationen, wie im Kirchkaffee nach dieser Veranstaltung Ehrenamtliche eingeteilt sind
+  const stationen = z.schichtbetrieb ? (platz === 'fest' ? 0 : kaffeeNachBesetzt(z, raeume, raumSchluessel(g.raum), platz))
+    : kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen).length;
+  const tassen = Math.min(kaffeeWunsch, stationen * fassung('kaffeemaschine'));
   return { ...grund, sitzend, geld: kollekteSumme + tassen * PREIS_TASSE, kollekte: kollekteSumme, ehrenamt, tassen };
 }
 // Der anstehende (oder gerade in der Anreise befindliche) Termin dieser Veranstaltung, sonst null
@@ -715,6 +746,7 @@ export function finanzPrognose(z, raeume) {
 
 // Wann öffnet dieses Kirchkaffee als Nächstes? Nächste eigene Schicht oder Ende des nächsten Gottesdienstes (Minuten oder null)
 export function naechsteKaffeeOeffnung(z, raeume, raum) {
+  if (z.schichtbetrieb) return naechsteKaffeeSchicht(z, raeume, raum);   // 27.11.: nur Öffnungen, für die jemand eingeteilt ist
   const t = z.minuten, w = zeitpunkt(t).woche, werte = [];
   const s = naechsteSchicht(z, raum, t);
   if (s !== null) werte.push(s);

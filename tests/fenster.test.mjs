@@ -98,6 +98,40 @@ function oeffnen(f, name) {
   oeffnen({ art: 'wochenbericht', offen: ['geld', 'veranstaltungen', 'gemeinde', 'werte', 'monat'] }, 'Wochenzusammenfassung aufgeklappt');
   WOCHENBERICHT.pause = false;
 }
+// Menü „Mitarbeiter“ / Dienstplan (27.11.): Fenster baut sich auf, Klick auf Ehrenamtlichen und freie Stelle teilt ein,
+// Klick auf die besetzte Stelle nimmt ihn heraus, Fehler (keine Schichten mehr) erscheint als Hinweis
+{
+  const { dienstplanFenster, dienstplanKlick } = await import('../src/oberflaeche/dienstplan.js');
+  const { moebelKaufen } = await import('../src/kern/moebel.js');
+  const { personHinzufuegen } = await import('../src/kern/personen.js');
+  const z = neuesSpiel(() => 0.5);
+  z.schichtbetrieb = true;
+  wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
+  typZuweisen(z, raumBei(z), 'gottesdienst');
+  z.konto = 500; moebelKaufen(z, 'gitarre', G.x + 10, G.y + 3);
+  versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+  const ea = personHinzufuegen(z, { name: 'Anna Test', kuerzel: 'A', art: 'ehrenamt' });
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  ui.spiel.veranstaltungSetzen(ui.spiel.veranstaltungsraumBei(G.x + 5, G.y + 5), 0, 'gottesdienst');
+  oeffnen({ art: 'dienstplan' }, 'Dienstplan-Fenster');
+  const f = { art: 'dienstplan', tag: 6 };
+  const html = dienstplanFenster(f);
+  assert.ok(html.includes('Anna Test') && html.includes('Gitarre') && html.includes('Gottesdienst'), 'Ehrenamtliche, Stelle und Termin stehen drin');
+  const knopf = ds => ({ dataset: ds });
+  const stelle = /data-dp-stelle="([^"]+)"/.exec(html.replace(/&#39;|&quot;/g, ''))[1];
+  assert.ok(dienstplanKlick(knopf({ dpEa: ea.id }), f));
+  assert.ok(dienstplanKlick(knopf({ dpStelle: stelle }), f));
+  assert.equal(f.fehler, '');
+  assert.ok(dienstplanFenster(f).includes('dp-stelle besetzt'), 'Stelle ist besetzt');
+  assert.ok(dienstplanKlick(knopf({ dpWeg: stelle }), f));
+  assert.ok(!dienstplanFenster(f).includes('dp-stelle besetzt'), 'wieder frei');
+  // Drei Evangelisation-Blöcke + Gottesdienst = 4 > 3 Schichten → Hinweis
+  const ev = [0, 1, 2].map(tag => ui.spiel.dienstplan().termine.find(t => t.art === 'evangelisation' && t.tag === tag && t.slot === 'abend').key);
+  for (const k of ev) ui.spiel.stelleSetzen(k, 'platz0', ea.id);
+  dienstplanKlick(knopf({ dpStelle: stelle }), f);
+  assert.ok(f.fehler && f.fehler.includes('Anna Test'), 'Hinweis: keine Schichten mehr');
+  assert.ok(!dienstplanKlick(knopf({ dpEa: ea.id }), { art: 'raum' }), 'andere Fenster bleiben unberührt');
+}
 // Sicherung: Stürzt ein Fenster beim Aufbau ab, geht es nur zu – kein Fehler nach außen (sonst bleibt die Uhr stehen)
 {
   const echt = console.error; console.error = () => {};

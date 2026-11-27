@@ -71,6 +71,7 @@ import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
 import { istAutomat, lagerVon, automatInfo } from './automaten.js';
 import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
+import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax } from './dienst.js';
 const forschungName = id => (FORSCHUNGEN.find(f => f.id === id) || {}).name || null;
 
 export const FELD = { LEER, WAND, TUER, FENSTER };   // Inhalt eines Kästchens auf der Karte
@@ -87,6 +88,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   evangelisationAnlegen(z);   // Evangelisation vor dem Laden (26.11.)
   abrissAnlegen(z);   // Abriss-Wert (27.11.): schon Gebautes zählt wie heute gebaut
   wochenberichtAnlegen(z);   // Wochenzusammenfassung (27.11.): erstes „Foto“ der Gemeinde (nach Dauerspendern und Mitgliedern)
+  dienstAnlegen(z);   // Dienstplan der Ehrenamtlichen (27.11.): Schichtbetrieb für neue und alte Spielstände
   return z;
 }
 // Alte Spielstände (vor den Baukosten, 25.11.): einmalig der Startgeld-Ausgleich; ihre schon gebauten Wände bleiben kostenlos
@@ -375,6 +377,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     personVersetzen(id, x, y) {
       const p = z.personen.find(q => q.id === id);
       if (!p || (p.x === x && p.y === y)) return false;
+      // Schichtbetrieb (27.11.): Ehrenamtliche werden im Menü „Mitarbeiter“ eingeteilt, nicht in Räume gezogen
+      if (z.schichtbetrieb && daten(p) && daten(p).art === 'ehrenamt') return false;
       // Wer gerade zur Evangelisation oder für das Kirchkaffee unterwegs ist, bricht das sofort ab (27.11.) –
       // sonst würde er bis zur nächsten Kontrolle noch am alten Ort gezeichnet.
       return aendern(() => {
@@ -383,6 +387,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         return ok;
       });
     },
+    // Dienstplan (27.11.): Ehrenamtlichen auf eine Stelle setzen (personId = null: Stelle frei machen)
+    // → 'ok' | 'keine' | 'person' | 'doppelt' | 'voll' | 'zeit' (siehe stelleSetzen in dienst.js)
+    stelleSetzen(key, stelleId, personId) { return stelleSetzen(z, raeume, key, stelleId, personId || null); },
     raumTypSetzen(nr, typId) { const r = raeume.liste[nr]; if (r) aendern(() => typZuweisen(z, r, typId || null)); },
     // Art einer Veranstaltung (platz 0 = Veranstaltung 1) → 'ok' | 'gesperrt' (Platz noch nicht frei) | 'keine'
     veranstaltungSetzen(nr, platz, id) {
@@ -461,7 +468,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (gratisWaende) z.gratisWaende = gratisWaende; else delete z.gratisWaende;
       if (gratisTueren) z.gratisTueren = gratisTueren; else delete z.gratisTueren;
       z.bauzeit = bauzeit || {}; z.zusatzzeit = zusatzzeit || {};
-      for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt) { p.x = alt.x; p.y = alt.y; } }
+      for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt && !p.daheim && !alt.daheim) { p.x = alt.x; p.y = alt.y; } }   // daheim (27.11.): bleibt daheim
       stornieren(z, e.buchungen, e.woche);   // Buchungen des Schritts zurücknehmen (dieselbe Woche: ganz weg, sonst Gegenbuchung)
       personenPruefen(z); raeume = raeumeAuswerten(z);
       return true;
@@ -505,8 +512,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const park = parkplaetzeAuswerten(z, raeume.gruppe);
       // Kirchkaffee unter dem Raumnamen: 'offen' | 'zu' (mit nächster Öffnung) | was fehlt
       const kk = new Map(kirchkaffeeZustand(z, raeume).map(k => {
-        if (!k.stationen.length) return [k.raum, { code: k.fehlt }];
-        if (offenBei(z, k.raum)) return [k.raum, { code: 'offen' }];
+        // Schichtbetrieb (27.11.): ohne Ehrenamtliche vor Ort ist es zu – „kein Ehrenamtlicher“ nur, wenn niemand eingeteilt ist
+        const geplant = z.schichtbetrieb && k.fehlt === 'keinEhrenamt' && k.maschinen.length && kaffeeGeplant(z, raeume, k.raum);
+        if (!k.stationen.length && !geplant) return [k.raum, { code: k.fehlt }];
+        if (k.stationen.length && offenBei(z, k.raum)) return [k.raum, { code: 'offen' }];
         const n = naechsteKaffeeOeffnung(z, raeume, k.raum), zp = n === null ? null : zeitpunkt(n);
         return [k.raum, { code: 'zu', naechste: zp ? { tag: zp.tag, stunde: zp.stunde, minute: zp.minute } : null }];
       }));
@@ -530,11 +539,14 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         bus: { stufe: z.bus || 0, ...BUSHALTESTELLE_ORT },
         personen: (() => { const mg = musikerGaenge(z, raeume, wegSpeicher); return z.personen.map(p => {
           const d = daten(p); if (!d) return null;
+          // Dienstplan (27.11.): auf dem Weg zur Schicht oder nach Hause; wer daheim ist, wird nicht gezeichnet
+          const unterwegs = dienstPosition(z, p);
+          if (p.daheim) return unterwegs ? { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: unterwegs.x, y: unterwegs.y, feldX: null, feldY: null, daheim: true } : null;
           // Im Kirchkaffee beschäftigt → dort; Pastor im Seelsorge-Gespräch → an seinem Platz; sonst ein wenig umherlaufen
           const nr = typeof p.x === 'number' ? raeume.gruppe[idx(z, p.x, p.y)] : -1;
           // Unterwegs zur Evangelisation vor dem Laden → dort
           // Musiker auf dem Weg zum Instrument, dort beim Spielen oder auf dem Rückweg (26.11., musiker.js)
-          const pos = kaffeeMitarbeiterPosition(z, p) || evangelisationPosition(z, p) || musikerPosition(mg, p, z.minuten)
+          const pos = unterwegs || kaffeeMitarbeiterPosition(z, p) || evangelisationPosition(z, p) || musikerPosition(mg, p, z.minuten)
             || (hatSkill(p, 'seelsorge') && z.seelsorge && z.seelsorge.gang ? p : umherPosition(z, nr >= 0 ? raeume.liste[nr] : null, p));
           return { id: p.id, name: d.name, kuerzel: d.kuerzel, art: d.art, x: pos.x, y: pos.y, feldX: p.x, feldY: p.y };
         }).filter(Boolean); })(),
@@ -549,7 +561,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // Anzeigen oben und in der Seitenleiste
     lage() {
       const zp = zeitpunkt(z.minuten), lg = z.letzterGottesdienst;
-      const personen = z.personen.map(p => { const d = daten(p), r = eingesetztIn(z, raeume, p); return d && { id: p.id, art: d.art, name: d.name, einsatz: r ? r.typ.name : null }; }).filter(Boolean);
+      // daheim/schichten (27.11.): im Schichtbetrieb ist ein Ehrenamtlicher ohne Schicht daheim; schichten = belegt/max pro Woche
+      const personen = z.personen.map(p => { const d = daten(p), r = eingesetztIn(z, raeume, p); return d && { id: p.id, art: d.art, name: d.name, einsatz: r ? r.typ.name : null,
+        daheim: !!p.daheim, schichten: z.schichtbetrieb && d.art === 'ehrenamt' ? { belegt: schichtenBelegt(z, raeume, p), max: schichtenMax(p) } : null }; }).filter(Boolean);
       return {
         woche: zp.woche + 1, tag: zp.tag, datum: tagAnzeige(Math.floor(z.minuten / TAG_MIN)).datum, stunde: zp.stunde, minute: zp.minute, tageBisSonntag: tageBisSonntag(z.minuten),
         naechstesEvent: naechstesEvent(z, raeume),   // läuft gerade eins / das nächste mit Minuten bis Beginn / null
@@ -561,6 +575,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         verfuegbarkeit: verfuegbarkeit(z, raeume), personen,
         ehrenamtFrei: freieEhrenamtliche(z, raeume),   // Ehrenamtliche, die gerade frei haben (ohne Dienst/Schicht) – live
 
+        schichtbetrieb: !!z.schichtbetrieb,   // 27.11.: Ehrenamtliche über den Dienstplan (Menü „Mitarbeiter“)
         status: spielStatus(z, raeume),
         beschaeftigt: z.laeufe.some(L => L.phase !== 'ende') || anfrageOffen(z) || z.kaffee.kunden.length > 0,
         seelsorge: seelsorgeLage(z),   // offene Seelsorge-Anfrage mit Status der Person (sonst null)
@@ -570,6 +585,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         meldung: neuesteMeldung(z)   // z. B. jemand ist neugierig am Tor stehen geblieben, zu wenig Geld für den Kaffee-Einkauf
       };
     },
+    // Menü „Mitarbeiter“ (27.11.): Ehrenamtliche mit Schichten, Termine der Woche mit ihren Stellen (dienst.js)
+    dienstplan() { return kopie(dienstplanInfo(z, raeume)); },
     // Forschungs-Fenster: Heiligkeit, Kontostand und alle Forschungen mit Zustand, Kosten, Dauer (echte Sekunden bei x1) und Fortschritt
     forschungInfo() { return { heiligkeit: z.heiligkeit, konto: z.konto, forschungen: forschungListe(z) }; },
     // Finanz-Fenster: diese Woche (nach Kategorien, Kirchkaffee im Detail), Kassenbuch der Woche, Verlauf früherer Wochen.
@@ -865,9 +882,11 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (!r || !r.typ || r.typ.id !== 'kirchkaffee') return null;
       const k = kirchkaffeeZustand(z, raeume).find(x => x.raum === r);
       const n = naechsteKaffeeOeffnung(z, raeume, r), zp = n === null ? null : zeitpunkt(n);
-      const zustand = !k ? 'raum' : !k.stationen.length ? k.fehlt : offenBei(z, r) ? 'offen' : 'zu';
-      return { nr, typName: r.typ.name, zustand, naechste: zp ? { tag: zp.tag, stunde: zp.stunde, minute: zp.minute } : null,
-        schichten: schichtenVon(z, r), max: MAX_SCHICHTEN, stationen: k ? k.stationen.length : 0,
+      // Schichtbetrieb (27.11.): ohne Ehrenamtliche vor Ort „zu“, solange jemand eingeteilt ist; keine Grenze von 3 Öffnungszeiten
+      const geplant = z.schichtbetrieb && k && k.fehlt === 'keinEhrenamt' && k.maschinen.length && kaffeeGeplant(z, raeume, r);
+      const zustand = !k ? 'raum' : !k.stationen.length ? (geplant ? 'zu' : k.fehlt) : offenBei(z, r) ? 'offen' : 'zu';
+      return { nr, typName: r.typ.name, zustand, naechste: zp ? { tag: zp.tag, stunde: zp.stunde, minute: zp.minute } : null, schichtbetrieb: !!z.schichtbetrieb,
+        schichten: schichtenVon(z, r), max: z.schichtbetrieb ? 7 * SLOTS.length : MAX_SCHICHTEN, stationen: k ? k.stationen.length : 0,
         sitzplaetze: sitzplaetzeVon(z, r), sitzChance: Math.round(SITZEN.chance * 100),
         slots: SLOTS.map(s => ({ id: s.id, stunde: s.stunde, ende: SCHICHT_ENDE[s.id] })) };
     },

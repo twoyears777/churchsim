@@ -9,9 +9,10 @@ import { eingesetztIn, daten } from './personen.js';
 import { weg } from './wege.js';
 
 // Was ein fertiges Foyer bringt → { haltung, begruessung (ja/nein), teile: [{ id, name, anzahl, haltung }] }
-export function foyerWert(z, raeume, raum) {
+// dienst: im Schichtbetrieb (27.11.) die Foyers (Raum-Nummern), für die laut Dienstplan jemand begrüßt; sonst null = wer dort steht
+export function foyerWert(z, raeume, raum, dienst = null) {
   if (!raum || !raum.typ || raum.typ.id !== 'foyer' || raum.probleme.length) return { haltung: 0, begruessung: false, teile: [] };
-  const begruessung = z.personen.some(p => daten(p) && daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === raum);
+  const begruessung = dienst ? dienst.has(raum.nr) : z.personen.some(p => daten(p) && daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === raum);
   let haltung = begruessung ? FOYER.begruessung : 0;
   const teile = [];
   for (const typ of MOEBEL.filter(m => m.foyer)) {
@@ -23,8 +24,8 @@ export function foyerWert(z, raeume, raum) {
 }
 
 // Fertige Foyers mit ihrem Wert (nur die, die etwas bringen)
-export function foyers(z, raeume) {
-  return raeume.liste.filter(r => r.typ && r.typ.id === 'foyer').map(r => ({ raum: r, ...foyerWert(z, raeume, r) })).filter(f => f.haltung > 0);
+export function foyers(z, raeume, dienst = null) {
+  return raeume.liste.filter(r => r.typ && r.typ.id === 'foyer').map(r => ({ raum: r, ...foyerWert(z, raeume, r, dienst) })).filter(f => f.haltung > 0);
 }
 
 // Haltung für einen Besucher, der von `start` zu `ziel` läuft: jedes Foyer auf dem Weg zählt einmal.

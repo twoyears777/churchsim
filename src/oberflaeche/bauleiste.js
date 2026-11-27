@@ -8,8 +8,8 @@ import { ui, $, euro, esc } from './ui.js';
 import { symbolZeichnen } from '../ansicht/zeichnen.js';
 
 const T = TEXTE.bauleiste;
-const KATEGORIEN = ['bauen', 'gottesdienst', 'kirchkaffee', 'gemeindesaal', 'foyer', 'toiletten', 'deko', 'aussen'];
-const SYMBOL = { bauen: 'wand', gottesdienst: 'kanzel', kirchkaffee: 'kaffeemaschine', gemeindesaal: 'klavier', foyer: 'garderobe', toiletten: 'wc', deko: 'blumen', aussen: 'parkplatz' };
+const KATEGORIEN = ['bauen', 'gottesdienst', 'kirchkaffee', 'gemeindesaal', 'foyer', 'toiletten', 'lager', 'deko', 'aussen'];
+const SYMBOL = { bauen: 'wand', gottesdienst: 'kanzel', kirchkaffee: 'kaffeemaschine', gemeindesaal: 'klavier', foyer: 'garderobe', toiletten: 'wc', lager: 'regal', deko: 'blumen', aussen: 'parkplatz' };
 const WERKZEUGE = { bauen: ['wand', 'tuer', 'fenster'] };   // Werkzeuge mit Preis (Baukosten); „Raum festlegen“ ist seit 26.11. ein Klick in den Raum
 const BAUKOSTEN_KARTEN = ['wand', 'tuer', 'fenster'];
 // kategorie: geöffneter Menüpunkt, null = Hauptmenü

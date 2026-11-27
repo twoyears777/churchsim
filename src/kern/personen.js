@@ -42,7 +42,7 @@ export function platzFrei(z, x, y, ausser) {
 }
 
 export function versetzen(z, person, x, y) {
-  if (!platzFrei(z, x, y, person)) return false;
+  if (person.daheim || !platzFrei(z, x, y, person)) return false;
   person.x = x; person.y = y;
   return true;
 }
@@ -50,6 +50,7 @@ export function versetzen(z, person, x, y) {
 // Nach dem Bauen: Figuren, die jetzt in einer Wand stehen, zurück zum Startplatz.
 export function personenPruefen(z) {
   for (const p of z.personen) {
+    if (p.daheim) continue;   // Schichtbetrieb (27.11.): wer daheim ist, steht nirgends
     if (!platzFrei(z, p.x, p.y, p)) {
       const s = startPlatz();
       p.x = s.x; p.y = s.y;

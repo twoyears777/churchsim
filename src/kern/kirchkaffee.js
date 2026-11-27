@@ -28,6 +28,8 @@ import { LAUFTEMPO, SLOTS, DAUER, MELDUNG_DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
 import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN } from '../inhalte/kirchkaffee.js';
 import { GRUNDSTUECK, GEHWEGE, LADEN } from '../inhalte/umgebung.js';
+import { AUTOMAT } from '../inhalte/automaten.js';
+import { aktiveSchicht } from './dienst.js';
 import { kaufzeitenImKirchkaffee, gangJetztZumAutomaten, automatZumAuffuellen, auffuellen, auffuellPlatz } from './automaten.js';
 
 const EPS = 1e-6;
@@ -133,9 +135,11 @@ function schlangenPlaetze(z, s, belegt) {
 
 // ---- Öffnungszeiten ----
 // Gespeichert in z.kaffeeZeiten: für jedes Kästchen des Raums dieselbe Liste [{ tag, slot }] (übersteht Umbauten).
+// Schichtbetrieb (27.11.): keine Grenze mehr – geöffnet wird, so oft es eingeteilte Ehrenamtliche gibt (jeder Zeitblock der Woche)
+const maxOeffnungen = z => z.schichtbetrieb ? 7 * SLOTS.length : MAX_SCHICHTEN;
 export function schichtenVon(z, raum) {
   const l = z.kaffeeZeiten && z.kaffeeZeiten[raum.zellen[0]];
-  return Array.isArray(l) ? l.filter(s => s.tag >= 0 && s.tag <= 6 && SLOTS.some(x => x.id === s.slot)).slice(0, MAX_SCHICHTEN) : [];
+  return Array.isArray(l) ? l.filter(s => s.tag >= 0 && s.tag <= 6 && SLOTS.some(x => x.id === s.slot)).slice(0, maxOeffnungen(z)) : [];
 }
 function schichtenSchreiben(z, raum, liste) {
   if (!z.kaffeeZeiten) z.kaffeeZeiten = {};
@@ -146,7 +150,7 @@ export function schichtHinzufuegen(z, raum, tag, slot) {
   if (!(tag >= 0 && tag <= 6) || !SLOTS.some(s => s.id === slot)) return 'zeit';
   const liste = schichtenVon(z, raum);
   if (liste.some(s => s.tag === tag && s.slot === slot)) return 'belegt';
-  if (liste.length >= MAX_SCHICHTEN) return 'voll';
+  if (liste.length >= maxOeffnungen(z)) return 'voll';
   liste.push({ tag, slot });
   liste.sort((a, b) => a.tag - b.tag || SLOTS.findIndex(s => s.id === a.slot) - SLOTS.findIndex(s => s.id === b.slot));
   schichtenSchreiben(z, raum, liste);
@@ -470,7 +474,8 @@ function stationSchritt(z, stationen, s, t, zufall) {
     }
     return false;
   }
-  const fehlt = fassung('kaffeemaschine') - (maschine.fuellung || 0);
+  // Schichtbetrieb (27.11.): Einkaufen und Auffüllen macht nur noch die Logistik aus dem Lager (logistikSchritt)
+  const fehlt = z.schichtbetrieb ? 0 : fassung('kaffeemaschine') - (maschine.fuellung || 0);
   if (fehlt > 0 && !(K.gesperrt[id] > t)) {
     const menge = Math.min(EINKAUF.tragen, fehlt), preis = Math.round(menge * EINKAUF.preisTasse * 100) / 100;
     if (!kannBezahlen(z, preis)) { keinGeld(z, p, t); return true; }
@@ -479,7 +484,7 @@ function stationSchritt(z, stationen, s, t, zufall) {
   }
   // Automaten im Raum auffüllen (26.11.): wie beim Kaffee. 27.11.: erst ab auffuellenAb fehlenden, dann alles bis voll
   const reserviert = new Set(Object.values(K.ma).filter(x => x !== m && x.aufgabe && x.aufgabe.automat).map(x => idx(z, x.aufgabe.automat.x, x.aufgabe.automat.y)));
-  const au = !(K.gesperrt[id] > t) && automatZumAuffuellen(z, s.raum, reserviert);
+  const au = !z.schichtbetrieb && !(K.gesperrt[id] > t) && automatZumAuffuellen(z, s.raum, reserviert);
   if (au) {
     const menge = au.fehlt, preis = Math.round(menge * au.typ.einkauf * 100) / 100;
     if (!kannBezahlen(z, preis)) { keinGeld(z, p, t, au.typ.id); return true; }
@@ -489,6 +494,84 @@ function stationSchritt(z, stationen, s, t, zufall) {
   if (!istBei(m.bew, m.heim, t)) { m.aufgabe = { art: 'gehen' }; geh(m.heim); return true; }
   return false;
 }
+// ---- Logistik (Lukas, 27.11.: claude/spielprinzip-ehrenamt-schichten-lager.md) ----
+// Ehrenamtliche mit einer Logistik-Schicht stehen im Lager. Solange ihre Schicht läuft, kaufen sie im Laden ein, was fehlt –
+// auch wenn das Kirchkaffee offen ist: erst Kaffee für jede Kaffeemaschine, dann Ware für jeden Automaten (je Gang höchstens
+// EINKAUF.tragen bzw. AUTOMAT.tragen). Ohne Logistik füllt niemand auf.
+// Wer gerade mit Ware unterwegs ist, bringt sie noch hin, auch wenn die Schicht inzwischen zu Ende ist (kaffeeBeschaeftigt).
+function lagerVonPerson(z, raeume, p) {
+  if (p.daheim) return null;
+  const r = eingesetztIn(z, raeume, p);
+  return r && r.typ.id === 'lager' && moebelImRaum(z, r, 'regal').length ? r : null;
+}
+export function logistikMitarbeiter(z, raeume) {
+  if (!z.schichtbetrieb) return [];
+  // aktiv: Logistik-Schicht läuft noch (sonst bringt er nur noch hin, was er schon gekauft hat, und kauft nichts Neues)
+  return z.personen.map(p => ({ p, raum: lagerVonPerson(z, raeume, p) })).filter(x => x.raum)
+    .map(x => { const s = aktiveSchicht(z, raeume, x.p); return { ...x, aktiv: !!s && s.t.art === 'logistik' }; });
+}
+function logistikSchritt(z, raeume, p, raum, t, aktiv = true) {
+  const K = z.kaffee, id = p.id;
+  const m = K.ma[id] || (K.ma[id] = { heim: { x: p.x, y: p.y }, bew: stehen(p, t), aufgabe: null, logistik: true });
+  const a = m.aufgabe, da = angekommen(m.bew, t);
+  const hier = !a && istBei(m.bew, m.heim, t) ? umherPosition(z, raum, p, t) : posBei(m.bew, t);
+  const geh = ziel => { m.bew = gehen(z, hier, ziel, t); };
+  if (a && a.art === 'einkauf') {
+    if (a.phase === 'hin' && da) {
+      if (kannBezahlen(z, a.preis)) {
+        if (a.automat) buchen(z, 'ausgaben', a.ware, a.preis, { automat: a.ware, stueck: a.menge, was: 'einkauf' });
+        else buchen(z, 'ausgaben', 'kaffee', a.preis, { tassen: a.menge, anlass: 'einkauf' });
+        zahlZeigen(z, hier, -a.preis); delete K.gemeldet[id];
+      }
+      else { a.menge = 0; keinGeld(z, p, t, a.automat ? a.ware : null); }
+      a.phase = 'zurueck'; geh(a.platz); return true;
+    }
+    if (a.phase === 'zurueck' && da) {
+      if (a.automat) auffuellen(z, a.automat, a.menge);
+      else { const mm = moebelBei(z, a.maschine.x, a.maschine.y); if (mm && mm.art === 'kaffeemaschine') mm.fuellung = Math.min(fassung('kaffeemaschine'), (mm.fuellung || 0) + a.menge); }
+      m.aufgabe = null; return true;
+    }
+    return false;
+  }
+  if (a && a.art === 'gehen') { if (!da) return false; m.aufgabe = null; return true; }
+  if (aktiv && !(K.gesperrt[id] > t)) {
+    // Was andere Logistiker gerade schon holen, holt er nicht auch noch
+    const andere = Object.values(K.ma).filter(x => x !== m && x.aufgabe && x.aufgabe.art === 'einkauf');
+    const schonMaschine = new Set(andere.filter(x => x.aufgabe.maschine && !x.aufgabe.automat).map(x => idx(z, x.aufgabe.maschine.x, x.aufgabe.maschine.y)));
+    const schonAutomat = new Set(andere.filter(x => x.aufgabe.automat).map(x => idx(z, x.aufgabe.automat.x, x.aufgabe.automat.y)));
+    for (const kr of raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee' && !r.probleme.length)) {
+      for (const ma of moebelImRaum(z, kr, 'kaffeemaschine')) {
+        const fehlt = fassung('kaffeemaschine') - (ma.fuellung || 0);
+        if (fehlt <= 0 || schonMaschine.has(idx(z, ma.x, ma.y))) continue;
+        const menge = Math.min(EINKAUF.tragen, fehlt), preis = Math.round(menge * EINKAUF.preisTasse * 100) / 100;
+        if (!kannBezahlen(z, preis)) { keinGeld(z, p, t); return true; }
+        const platz = standplatz(z, kr, ma, ma) || { x: ma.x, y: ma.y + 1 };
+        m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, maschine: { x: ma.x, y: ma.y }, platz };
+        geh(LADEN.eingang); return true;
+      }
+    }
+    for (const r of raeume.liste.filter(r => r.typ && !r.probleme.length)) {
+      const au = automatZumAuffuellen(z, r, schonAutomat);
+      if (!au) continue;
+      const menge = Math.min(AUTOMAT.tragen, au.fehlt), preis = Math.round(menge * au.typ.einkauf * 100) / 100;
+      if (!kannBezahlen(z, preis)) { keinGeld(z, p, t, au.typ.id); return true; }
+      m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, ware: au.typ.id, automat: { x: au.m.x, y: au.m.y }, platz: auffuellPlatz(z, r, au.m) };
+      geh(LADEN.eingang); return true;
+    }
+  }
+  if (!istBei(m.bew, m.heim, t)) { m.aufgabe = { art: 'gehen' }; geh(m.heim); return true; }
+  return false;
+}
+// Ist dieser Ehrenamtliche im Kirchkaffee oder in der Logistik noch beschäftigt? (Schlange bedienen, Ware hinbringen)
+// Dann geht er erst danach heim bzw. zu seiner nächsten Schicht (dienst.js).
+export function kaffeeBeschaeftigt(z, id) {
+  const K = z.kaffee;
+  if (!K) return false;
+  const a = K.ma[id] && K.ma[id].aufgabe;
+  if (a && a.art !== 'gehen') return true;
+  return K.kunden.some(k => k.ea === id && (k.phase === 'schlange' || k.phase === 'bestellt'));
+}
+
 // Zu wenig Geld für den Einkauf: Meldung (nur einmal, bis es wieder klappt), später nochmal versuchen
 // ware: Automat (z. B. 'getraenkeautomat') oder null beim Kaffee
 function keinGeld(z, p, t, ware = null) {
@@ -537,10 +620,12 @@ export function kaffeeAktualisieren(z, raeume, zufall = Math.random) {
   raeumeJetzt = raeume; toilettenJetzt = gibtToiletten(z, raeume);
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen);
   const vonEa = new Map(stationen.map(s => [s.ea.id, s]));
+  const lager = logistikMitarbeiter(z, raeume), vonLager = new Map(lager.map(x => [x.p.id, x]));   // Logistik (27.11.)
   // Mitarbeiter, die keine Station mehr haben oder versetzt wurden: Aufgabe abbrechen, wieder an ihrem Platz
   for (const id of Object.keys(K.ma)) {
     const p = z.personen.find(x => x.id === id), m = K.ma[id];
-    if (!p || !vonEa.has(id) || m.heim.x !== p.x || m.heim.y !== p.y) { abbrechen(z, id); delete K.ma[id]; }
+    const passt = m.logistik ? vonLager.has(id) : vonEa.has(id);
+    if (!p || !passt || m.heim.x !== p.x || m.heim.y !== p.y) { abbrechen(z, id); delete K.ma[id]; }
   }
   // Kunden, deren Station es nicht mehr gibt: an eine andere Schlange, sonst ohne Kaffee heim
   for (const k of K.kunden) {
@@ -552,6 +637,7 @@ export function kaffeeAktualisieren(z, raeume, zufall = Math.random) {
   for (let runde = 0; runde < 200; runde++) {
     let geaendert = false;
     for (const s of stationen) if (stationSchritt(z, stationen, s, t, zufall)) geaendert = true;
+    for (const x of lager) if (logistikSchritt(z, raeume, x.p, x.raum, t, x.aktiv)) geaendert = true;
     for (const k of [...K.kunden]) if (kundeSchritt(z, k, t)) geaendert = true;
     if (!geaendert) break;
   }

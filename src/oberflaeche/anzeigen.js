@@ -36,6 +36,8 @@ export function anzeigenEinrichten() {
   $('textHeiligkeit').textContent = TEXTE.heiligkeit;
   $('forschungAuf').textContent = TEXTE.forschung.knopf;
   $('forschungAuf').addEventListener('click', () => fensterOeffnen({ art: 'forschung' }));
+  $('dienstplanAuf').textContent = TEXTE.dienstplan.knopf;   // Menü „Mitarbeiter“ (27.11.): Dienstplan der Ehrenamtlichen
+  $('dienstplanAuf').addEventListener('click', () => fensterOeffnen({ art: 'dienstplan' }));
   $('kalenderAuf').textContent = TEXTE.kalender.knopf;
   $('kalenderAuf').addEventListener('click', () => fensterOeffnen({ art: 'kalender', versatz: 0 }));
   $('bekanntheitAuf').addEventListener('click', () => fensterOeffnen({ art: 'bekanntheit' }));
@@ -61,7 +63,9 @@ export function anzeigenAktualisieren() {
   const l = ui.spiel.lage();
   $('anzHauptamt').textContent = `${l.verfuegbarkeit.hauptamt.frei}/${l.verfuegbarkeit.hauptamt.gesamt}`;
   $('anzEhrenamt').textContent = `${l.verfuegbarkeit.ehrenamt.frei}/${l.verfuegbarkeit.ehrenamt.gesamt}`;
-  $('anzEaFrei').textContent = TEXTE.evangelisation.frei(l.ehrenamtFrei);   // live: wie viele Ehrenamtliche gerade frei haben
+  // live: wie viele Ehrenamtliche gerade frei haben (Schichtbetrieb, 27.11.: wie viele gerade daheim sind)
+  $('anzEaFrei').textContent = l.schichtbetrieb ? TEXTE.schichtbetrieb.daheim(l.ehrenamtFrei) : TEXTE.evangelisation.frei(l.ehrenamtFrei);
+  $('dienstplanAuf').hidden = !l.schichtbetrieb;
   personenListen(l.personen);
   for (const id of ['kontostand', 'kontoEditor', 'kontoKurz', 'kontoOben']) $(id).textContent = euro(l.konto);
   $('bekanntheit').textContent = Math.round(l.bekanntheit);
@@ -106,7 +110,8 @@ function personenListen(personen) {
     if (!eigene.length) { const li = document.createElement('li'); li.className = 'leer'; li.textContent = LEERTEXT[art]; ul.append(li); }
     for (const x of eigene) {
       const li = document.createElement('li'), n = document.createElement('span'), o = document.createElement('small');
-      n.textContent = x.name; o.textContent = x.einsatz || 'verfügbar'; li.append(n, o); li.dataset.person = x.id;
+      n.textContent = x.name; li.append(n, o); li.dataset.person = x.id;
+      o.textContent = x.schichten ? TEXTE.schichtbetrieb.seiteEA(x.einsatz, x.daheim, x.schichten.belegt, x.schichten.max) : x.einsatz || 'verfügbar';
       ul.append(li);
     }
   }

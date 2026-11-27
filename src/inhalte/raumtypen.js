@@ -61,5 +61,17 @@ export const RAUMTYPEN = [
     kosten: null,
     moebel: [],
     erweiterungen: []
+  },
+  {
+    // Lager (Lukas, 27.11.): mind. 3 × 2, braucht eine Tür, Farbe braun. Je Regal kann pro Zeitblock ein Ehrenamtlicher
+    // für die Logistik eingeteilt werden (Kaffee einkaufen, Automaten auffüllen – siehe kern/dienst.js und kern/kirchkaffee.js).
+    id: 'lager',
+    name: 'Lager',
+    minGroesse: [3, 2],
+    farbe: '#c9a77c',               // braun (Lukas); genauer Farbton: Entwurf von Claude
+    einsatz: ['ehrenamt'],          // Logistik: Ehrenamtliche
+    kosten: null,
+    moebel: [],
+    erweiterungen: []
   }
 ];

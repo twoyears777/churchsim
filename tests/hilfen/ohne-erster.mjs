@@ -7,7 +7,9 @@ import { neuesSpiel as neuesSpielEcht, spielStarten as spielStartenEcht, SPEICHE
 EHRENAMT.sicher.bisAnzahl = 0;
 // Ältere Tests spielen viele Wochen am Stück – die Wochenzusammenfassung (27.11.) soll sie nicht jeden Montag anhalten; sie prüft tests/wochenbericht.test.mjs.
 WOCHENBERICHT.pause = false;
-const erledigt = z => { z.erster = { erledigt: true, zeitung: true, offen: false }; return z; };
+// Ältere Tests stellen Ehrenamtliche direkt in Räume (27.11.: vor dem Dienstplan) – sie laufen ohne Schichtbetrieb.
+// Den Schichtbetrieb prüft tests/dienst.test.mjs.
+const erledigt = z => { z.erster = { erledigt: true, zeitung: true, offen: false }; z.schichtbetrieb = false; return z; };
 export const neuesSpiel = (...a) => erledigt(neuesSpielEcht(...a));
 export function spielStarten(gespeichert = null, zufall = Math.random) {
   if (gespeichert) return spielStartenEcht(gespeichert, zufall);

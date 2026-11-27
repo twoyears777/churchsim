@@ -57,6 +57,7 @@ function standplatz(z, raum, instrument, p, belegt) {
 function gaengeFuer(z, raeume, speicher, g, art, leitung, gaeste = []) {
   const belegt = new Set(gaeste.filter(x => x.sitz).map(x => `${x.sitz.x},${x.sitz.y}`)), liste = [];
   for (const { p, instrument } of belegung(z, g, art, leitung)) {
+    if (p.daheim) continue;   // Schichtbetrieb (27.11.): noch nicht da – läuft erst zur Schicht
     const ziel = standplatz(z, g.raum, instrument, p, belegt);
     if (!ziel || (ziel.x === p.x && ziel.y === p.y)) continue;   // schon dort oder kein Platz frei
     belegt.add(`${ziel.x},${ziel.y}`);

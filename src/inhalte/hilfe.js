@@ -83,7 +83,10 @@ export const HILFE = {
           '**Hauptamtliche** (blau), z. B. Pastor Harder, leiten die Veranstaltungen.',
           '**Ehrenamtliche** (orange) machen im Gottesdienstraum Musik (ein Ehrenamtlicher pro Instrument) oder öffnen das Kirchkaffee.',
           `Wer oft kommt, wird mit der Zeit selbst Ehrenamtlicher (ab ${EHRENAMT_AB_BESUCHEN} Besuchen).`
-        ] }
+        ] },
+        // ENTWURF von Claude (27.11.): Dienstplan und Lager – Lukas formuliert selbst
+        '**Dienstplan:** Ehrenamtliche ziehst du nicht in Räume, sondern teilst sie im Menü „Mitarbeiter“ (Knopf „Dienstplan“ links) für Stellen ein: Musik, Leitung, Begrüßung im Foyer, Kirchkaffee, Logistik oder Evangelisation. Jede Stelle bei einem Termin ist eine Schicht; jeder kann 3 Schichten pro Woche übernehmen (die Frau des Pastors 5). Ohne Schicht ist er daheim – sonntagvormittags kommt er mit 90 % in den Gottesdienst.',
+        '**Lager** (mindestens 3 × 2 Kästchen, mit Tür): Für jedes Regal kann pro Zeitblock ein Ehrenamtlicher die Logistik übernehmen. Er kauft im Laden Kaffee und Ware für die Automaten ein und füllt auf. Ohne Logistik füllt niemand auf.'
       ]
     },
     {
