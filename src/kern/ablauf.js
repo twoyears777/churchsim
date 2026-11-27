@@ -284,11 +284,11 @@ export function naechstesEvent(z, raeume = raeumeVon(z)) {
 }
 
 // Sitzplätze der bereiten Gottesdiensträume, beste Plätze zuerst (höchste Stuhlstufe, dann meiste Kollekte).
-// wert: Kollekte der Person auf diesem Platz (1 € × Stuhl × Raum); haltung: + Haltung für sie.
+// wert: Kollekte der Person auf diesem Platz (1 € × Stuhl × Raum, + Bühne je Kachel); haltung: + Haltung für sie.
 export function sitzplaetze(liste) {
   const plaetze = liste.flatMap(g => g.stuehle.map(s => {
     const st = stuhlStufe(s);
-    return { x: s.x, y: s.y, stufe: st.stufe, wert: KOLLEKTE_PRO_BESUCHER * st.kollekte * g.ausstattung.faktor, haltung: st.haltung + g.ausstattung.haltung };
+    return { x: s.x, y: s.y, stufe: st.stufe, wert: KOLLEKTE_PRO_BESUCHER * st.kollekte * g.ausstattung.faktor + (g.ausstattung.buehneGeld || 0), haltung: st.haltung + g.ausstattung.haltung };
   }));
   return plaetze.sort((a, b) => b.stufe - a.stufe || b.wert - a.wert);
 }
@@ -296,8 +296,8 @@ export function sitzplaetze(liste) {
 function platzWirkung(z, raeume, sitz, liste) {
   const nr = raeume.gruppe[idx(z, sitz.x, sitz.y)], g = liste.find(x => x.raum.nr === nr);
   const m = moebelBei(z, sitz.x, sitz.y), st = m && m.art === 'stuhl' ? stuhlStufe(m) : stuhlStufe(null);
-  const a = g ? g.ausstattung : { faktor: 1, haltung: 0, musikBonus: 0 };
-  return { kollekte: KOLLEKTE_PRO_BESUCHER * st.kollekte * a.faktor, haltung: st.haltung + a.haltung, musikHaltung: a.musikBonus || 0 };
+  const a = g ? g.ausstattung : { faktor: 1, haltung: 0, musikBonus: 0, buehneGeld: 0 };   // Bühne (27.11.): + fester Betrag je Kachel
+  return { kollekte: KOLLEKTE_PRO_BESUCHER * st.kollekte * a.faktor + (a.buehneGeld || 0), haltung: st.haltung + a.haltung, musikHaltung: a.musikBonus || 0 };
 }
 
 // Wochenzusammenfassung offen (27.11.): Zeit steht, bis sie geschlossen ist (in Tests abschaltbar, siehe WOCHENBERICHT.pause)
@@ -544,7 +544,7 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   const v = VERANSTALTUNGEN.find(x => x.id === L.art);
   if (v && v.kollekte === false) return saalEnde(z, raeume, L, v, zufall);
   const sitzend = L.gaeste.filter(g => g.sitz);
-  // Kollekte: pro Besucher 1 € × Stuhl, × Altar, Grünpflanzen und Musik des Raums, × 2 am Sonntag,
+  // Kollekte: pro Besucher 1 € × Stuhl, × Altar, Grünpflanzen und Musik des Raums, + Bühne je Kachel (27.11.), × 2 am Sonntag,
   // × Kollekte-Faktor des Kirchenjahres (z. B. Heiligabend ×2); auf ganze Euro gerundet.
   // Dazu merkt sich jeder Gast, wie viel Haltung ihm Stuhl, Kanzel und Blumen bringen (wird am Ende gutgeschrieben).
   const info = terminInfo(z, raeume, L);

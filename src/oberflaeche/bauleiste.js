@@ -11,7 +11,8 @@ const T = TEXTE.bauleiste;
 const KATEGORIEN = ['bauen', 'gottesdienst', 'kirchkaffee', 'gemeindesaal', 'foyer', 'toiletten', 'lager', 'buero', 'deko', 'aussen'];
 const SYMBOL = { bauen: 'wand', gottesdienst: 'kanzel', kirchkaffee: 'kaffeemaschine', gemeindesaal: 'klavier', foyer: 'garderobe', toiletten: 'wc', lager: 'regal', buero: 'schreibtisch', deko: 'blumen', aussen: 'parkplatz' };
 const WERKZEUGE = { bauen: ['wand', 'tuer', 'fenster'] };   // Werkzeuge mit Preis (Baukosten); „Raum festlegen“ ist seit 26.11. ein Klick in den Raum
-const BAUKOSTEN_KARTEN = ['wand', 'tuer', 'fenster'];
+const BAUKOSTEN_KARTEN = ['wand', 'tuer', 'fenster', 'buehne'];
+const BODEN = { gottesdienst: ['buehne'] };   // Bodentypen zum Aufziehen (27.11.: Bühne) – stehen vor den Möbeln ihres Menüpunkts
 // kategorie: geöffneter Menüpunkt, null = Hauptmenü
 let kategorie = null, aufWahl = () => {}, aufBus = () => {}, aufMenue = () => {};
 
@@ -25,13 +26,15 @@ function symboleMalen(wurzel) {
 // Kategorie eines Werkzeugs (für den passenden Reiter)
 function kategorieVon(id) {
   if (WERKZEUGE.bauen.includes(id)) return 'bauen';
+  for (const [k, liste] of Object.entries(BODEN)) if (liste.includes(id)) return k;
   const m = ui.spiel.moebelArten().find(x => x.id === id);
   if (m && m.auchIn.includes(kategorie)) return kategorie;   // z. B. Stuhl: steht auch unter „Kirchkaffee“ – Reiter bleibt
   return m ? m.kategorie : null;
 }
 function eintraege(kat) {
   if (WERKZEUGE[kat]) return WERKZEUGE[kat].map(id => ({ id, name: T.werkzeuge[id], werkzeug: true }));
-  const liste = ui.spiel.moebelArten().filter(m => m.kategorie === kat || m.auchIn.includes(kat));
+  const liste = [...(BODEN[kat] || []).map(id => ({ id, name: T.werkzeuge[id], werkzeug: true })),
+    ...ui.spiel.moebelArten().filter(m => m.kategorie === kat || m.auchIn.includes(kat))];
   if (kat === 'aussen') liste.push({ id: 'bushaltestelle', name: T.werkzeuge.bushaltestelle, fenster: true });
   return liste;
 }
@@ -73,7 +76,7 @@ export function werkzeugWaehlen(id) {
 let letzterStand = '';
 export function bauleisteAktualisieren() {
   const arten = ui.spiel.moebelArten(), bk = ui.spiel.baukosten();
-  const stand = JSON.stringify([kategorie, ui.werkzeug, arten.map(m => [m.leistbar, m.gesperrt]), bk.wandLeistbar, bk.tuerLeistbar, bk.fensterLeistbar]);
+  const stand = JSON.stringify([kategorie, ui.werkzeug, arten.map(m => [m.leistbar, m.gesperrt]), bk.wandLeistbar, bk.tuerLeistbar, bk.fensterLeistbar, bk.buehneLeistbar]);
   if (stand === letzterStand) return;
   letzterStand = stand;
   for (const el of document.querySelectorAll('.bauleiste [data-preis]')) {

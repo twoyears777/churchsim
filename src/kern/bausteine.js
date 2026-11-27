@@ -6,8 +6,9 @@
 import { VERANSTALTUNGEN, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
 import { AENDERUNG, LOBPREIS_MUSIK, JUGEND } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
-import { MOEBEL, TON } from '../inhalte/moebel.js';
-import { moebelImRaum, stuhlStufe, instrumenteImRaum, tonImRaum } from './moebel.js';
+import { MOEBEL, TON, BUEHNE } from '../inhalte/moebel.js';
+import { moebelImRaum, stuhlStufe, instrumenteImRaum, tonImRaum, moebelWirkung, instrumenteReihe } from './moebel.js';
+import { buehneImRaum } from './buehne.js';
 import { daten } from './personen.js';
 import { fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
@@ -17,7 +18,7 @@ import { amTisch, STUEHLE_JE_TISCH } from './kirchkaffee.js';
 const hauptamtDa = (info, imRaum) => info && Array.isArray(info.hauptamt) ? info.hauptamt.length > 0 : imRaum.some(p => daten(p).art === 'hauptamt');
 
 const MAX_MUSIKER = MOEBEL.filter(m => m.wirkung && m.wirkung.musik).length;   // so viele Instrumente gibt es
-const prozent = b => Math.round(b * 100);
+const prozent = b => Math.round(b * 1000) / 10;   // eine Nachkommastelle (Bühne, 27.11.: +7,5 %)
 const DEKO = ['kanzel', 'altar', 'blumen', 'gruenpflanze'];   // Ausstattung des Gottesdienstraums, Reihenfolge der Tabelle
 // Erwartete spontane Spende pro Besucher (Gemeindesaal): Chance × durchschnittlicher Betrag
 const spendeJeBesucher = () => SPONTANE_SPENDE.chance * (SPONTANE_SPENDE.min + SPONTANE_SPENDE.max) / 2;
@@ -58,13 +59,16 @@ function gottesdienstraum(z, raum, info, v) {
   // Ausstattung: Kanzel, Altar, Blumen, Grünpflanze
   let haltungFest = 0, faktor = 1;
   for (const id of DEKO) {
-    const m = MOEBEL.find(x => x.id === id);
-    const anzahl = Math.min(m.max || Infinity, moebelImRaum(z, raum, id).length);
-    haltungFest += (m.wirkung.haltung || 0) * anzahl;
-    faktor *= (m.wirkung.kollekte || 1) ** anzahl;
-    zeilen.push({ id: 'moebel', moebel: id, name: m.name, imRaum: anzahl > 0, anzahl, max: m.max || null,
+    const m = MOEBEL.find(x => x.id === id), w = moebelWirkung(z, raum, m);
+    haltungFest += w.haltung;
+    faktor *= w.kollekte;
+    // Werte je Stück wie in der Inhaltsdatei; aufBuehne (27.11.): so viele davon stehen auf der Bühne (Bonus ×1,5)
+    zeilen.push({ id: 'moebel', moebel: id, name: m.name, imRaum: w.anzahl > 0, anzahl: w.anzahl, max: m.max || null, aufBuehne: w.aufBuehne,
       haltung: m.wirkung.haltung || 0, kollekte: m.wirkung.kollekte || null });
   }
+  // Bühne (27.11.): + Kollekte pro Besucher je Kachel
+  const kacheln = buehneImRaum(z, raum), buehneGeld = kacheln * BUEHNE.kollekteProKachel;
+  zeilen.push({ id: 'buehne', imRaum: kacheln > 0, anzahl: kacheln, proKachel: BUEHNE.kollekteProKachel });
   // Fenster (25.11.): + Haltung je Fenster, ohne Obergrenze
   const fenster = fensterAnRaum(z, raum);
   haltungFest += FENSTER.haltung * fenster;
@@ -79,9 +83,11 @@ function gottesdienstraum(z, raum, info, v) {
 
   // Musiker: jeder spielende Ehrenamtliche eine Zeile, dazu eine Zeile für den nächsten
   const musikWirktAufBesucher = !lobpreis && !jugend;
+  const reihe = instrumenteReihe(z, raum);   // Instrument des n. Musikers auf der Bühne? (27.11.)
   for (let nr = 1; nr <= Math.min(MAX_MUSIKER, Math.max(v.musikerMin || (v.gitarrist ? 1 : 0), levels.length + 1)); nr++) {
-    const da = nr <= levels.length, level = da ? levels[nr - 1] : null;
-    zeilen.push({ id: 'musiker', nr, imRaum: da, pflicht: nr <= (v.musikerMin || (v.gitarrist ? 1 : 0)), level, bonus: da ? prozent(musikBonus(level)) : null, bonusMin: prozent(musikBonus(0)),
+    const da = nr <= levels.length, level = da ? levels[nr - 1] : null, aufBuehne = da && !!reihe[nr - 1];
+    zeilen.push({ id: 'musiker', nr, imRaum: da, pflicht: nr <= (v.musikerMin || (v.gitarrist ? 1 : 0)), level, aufBuehne,
+      bonus: da ? prozent(musikBonus(level) * (aufBuehne ? BUEHNE.bonus : 1)) : null, bonusMin: prozent(musikBonus(0)),
       brauchtInstrument: !da && instrumente < nr,
       besucher: nr === 1 && musikWirktAufBesucher ? { min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : null });
   }
@@ -104,7 +110,7 @@ function gottesdienstraum(z, raum, info, v) {
   if (mult > 1) zeilen.push({ id: 'multiplikator', imRaum: true, faktor: mult });
 
   // Zusammen: so wie der Raum jetzt ist
-  const bonus = Math.round(levels.reduce((s, l) => s + musikBonus(l), 0) * 100) / 100;
+  const bonus = Math.round(levels.reduce((s, l, i) => s + musikBonus(l) * (reihe[i] ? BUEHNE.bonus : 1), 0) * 10000) / 10000;
   const pflichtDa = zeilen.filter(x => x.pflicht).every(x => x.imRaum);
   const summe = {
     art: jugend ? 'jugend' : lobpreis ? 'lobpreis' : 'gottesdienst', bereit: pflichtDa,
@@ -112,7 +118,7 @@ function gottesdienstraum(z, raum, info, v) {
       : lobpreis ? { art: 'vorliebe' } : levels.length ? { art: 'musik', min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : { art: 'normal' },
     haltung: { fest: AENDERUNG.sitzplatz + (lobpreis ? 0 : AENDERUNG.gottesdienst) + haltungFest, vorliebeMax: lobpreis ? v.haltungNachVorliebe : null,
       prozent: prozent(bonus), ton: prozent(tonBonus), faktor: mult },
-    geld: { jeBesucher: Math.round(kollekte * faktor * (levels.length ? 1 + bonus : 1) * (1 + tonBonus) * 100) / 100, spende: false },
+    geld: { jeBesucher: Math.round((kollekte * faktor * (levels.length ? 1 + bonus : 1) * (1 + tonBonus) + buehneGeld * (v.kollekteFaktor || 1)) * 100) / 100, spende: false },
     tonPlaetze: tonAktiv ? ton.plaetze : null
   };
   return { zeilen, summe };

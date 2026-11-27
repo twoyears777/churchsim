@@ -3,9 +3,11 @@
 // ENTWÜRFE von Claude – Lukas formuliert sie selbst, seine Fassung wird hier übernommen.
 // Zahlen im deutschen Format: 1.05 → „1,05“; Geld: 1.07 → „1,07 €“ (stellen = Nachkommastellen, 0 bei glatten Beträgen)
 import { BAUKOSTEN, FENSTER } from './bau.js';
-import { MOEBEL } from './moebel.js';
+import { MOEBEL, BUEHNE } from './moebel.js';
 const foyerHaltung = id => MOEBEL.find(m => m.id === id).foyer.haltung;   // Zahlen aus den Inhaltsdateien (25.11.): ändern sie sich dort, stimmen die Hinweise mit
 const zahl = n => n.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+// Zusatz bei Möbeln und Musikern auf der Bühne (27.11., von Lukas freigegeben)
+const aufBuehne = ` (auf der Bühne ×${BUEHNE.bonus.toLocaleString('de-DE')})`;
 const geld = (n, stellen = 2) => n.toLocaleString('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: 2 }) + ' €';
 export const TEXTE = {
   // Zeitanzeige oben
@@ -183,22 +185,25 @@ export const TEXTE = {
       hauptamtJugend: b => ({ name: 'Hauptamtlicher (Pflicht)', besucher: `Jugendliche ${b.jugendProzent} %, Erwachsene ${b.erwachseneProzent} %`,
         haltung: `+${b.gottesdienst} Gottesdienst, +${b.platz} Platz, erfüllt Spaß (Jugendliche) und Lobpreis`, geld: `${geld(b.kollekte)} je Besucher` }),
       pflichtMoebel: b => ({ name: `${b.name} (Pflicht)` }),
-      moebel: b => ({ name: b.max > 1 ? `${b.name} (${b.anzahl} von ${b.max})` : b.name,
+      moebel: b => ({ name: (b.max > 1 ? `${b.name} (${b.anzahl} von ${b.max})` : b.name) + (b.aufBuehne ? aufBuehne : ''),   // Bühne (27.11.)
         haltung: b.haltung ? (b.max > 1 ? `+${b.haltung} je Stück` : `+${b.haltung}`) : null,
         geld: b.kollekte ? `Kollekte ×${zahl(b.kollekte)}${b.max > 1 ? ' je Stück' : ''}` : null }),
       fenster: b => ({ name: `Fenster (${b.anzahl})`, haltung: `+${b.haltung} je Fenster` }),
+      // Bühne (27.11.): Entwurf von Claude, von Lukas freigegeben („Entwürfe übernehmen“)
+      buehne: b => ({ name: `Bühne (${b.anzahl} ${b.anzahl === 1 ? 'Kachel' : 'Kacheln'})`, geld: `Kollekte +${geld(b.proKachel)} pro Besucher je Kachel` }),
       multiplikator: b => ({ name: 'Haltungs-Multiplikator', haltung: `alles ×${zahl(b.faktor)} (nur Pluswerte)` }),   // freigegeben 25.11. abends   // ENTWURF von Claude (25.11.)
       besserStuhl: b => ({ name: 'Bessere Stühle', haltung: '+ Stufe des Stuhls', geld: b.kollekte ? 'Kollekte × Stufe' : null }),
       instrumentOhne: b => ({ name: `${b.name} ohne Ehrenamtlichen` }),
       musiker: b => ({
         name: (b.nr === 1 ? '1 Ehrenamtlicher' : `${b.nr}. Ehrenamtlicher`) + (b.pflicht ? ' (Pflicht)' : '')
           + (b.brauchtInstrument ? ` (braucht ${b.nr === 1 ? 'ein' : b.nr + '.'} Instrument)` : ' am Instrument')
-          + (b.level !== null ? ` (Level ${b.level})` : ''),
+          + (b.level !== null ? ` (Level ${b.level})` : '')
+          + (b.aufBuehne ? aufBuehne : ''),   // Bühne (27.11.)
         besucher: b.besucher ? `×${zahl(b.besucher.min)} bis ×${zahl(b.besucher.max)} je nach Lobpreis-Vorliebe` : null,
-        haltung: b.nr === 1 ? (b.imRaum ? `+${b.bonus} % je nach Lobpreis-Vorliebe` : `+${b.bonusMin} % oder mehr je nach Lobpreis-Vorliebe`)
-          : (b.imRaum ? `weitere +${b.bonus} %` : `weitere +${b.bonusMin} % oder mehr (je nach Level)`),
-        geld: b.nr === 1 ? (b.imRaum ? `Kollekte +${b.bonus} %` : `Kollekte +${b.bonusMin} % oder mehr`)
-          : (b.imRaum ? `weitere +${b.bonus} %` : `weitere +${b.bonusMin} % oder mehr`) }),
+        haltung: b.nr === 1 ? (b.imRaum ? `+${zahl(b.bonus)} % je nach Lobpreis-Vorliebe` : `+${zahl(b.bonusMin)} % oder mehr je nach Lobpreis-Vorliebe`)
+          : (b.imRaum ? `weitere +${zahl(b.bonus)} %` : `weitere +${zahl(b.bonusMin)} % oder mehr (je nach Level)`),
+        geld: b.nr === 1 ? (b.imRaum ? `Kollekte +${zahl(b.bonus)} %` : `Kollekte +${zahl(b.bonusMin)} % oder mehr`)
+          : (b.imRaum ? `weitere +${zahl(b.bonus)} %` : `weitere +${zahl(b.bonusMin)} % oder mehr`) }),
       // Ton-Technik (27.11.) – Texte von Claude (Lukas: „texte können von dir sein“)
       lautsprecher: b => ({ name: `Lautsprecher (${b.anzahl} von ${b.max})`, besucher: b.imRaum ? `reicht für ${b.plaetze} Personen` : `je Stück für ${b.jeStueck} Personen` }),
       tonpult: () => ({ name: 'Tontechnikpult' }),
@@ -232,9 +237,9 @@ export const TEXTE = {
         : s.besucher.art === 'plaetze' ? `${s.art === 'konfi' ? 'nur Jugendliche' : 'normal'}, ${s.besucher.plaetze} ${s.besucher.plaetze === 1 ? 'Platz' : 'Plätze'}${s.art === 'spiele' ? ' am Tisch' : ''}`
         : s.besucher.art === 'egal' ? 'normal, Stühle egal' : 'normal',
       haltung: (s.haltung.vorliebeMax !== null
-        ? `+${s.haltung.fest}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` : '') + ' je nach Lobpreis-Vorliebe'
-        : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' || s.art === 'jugend' ? ' je nach Lobpreis-Vorliebe' : '') : ''))
-        + (s.haltung.ton ? `, +${s.haltung.ton} % Ton-Technik` : '')   // Ton-Technik (27.11.), Text von Claude
+        ? `+${zahl(s.haltung.fest)}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${zahl(s.haltung.prozent)} %` : '') + ' je nach Lobpreis-Vorliebe'
+        : `+${zahl(s.haltung.fest)}` + (s.haltung.prozent ? ` und +${zahl(s.haltung.prozent)} %` + (s.art === 'gottesdienst' || s.art === 'jugend' ? ' je nach Lobpreis-Vorliebe' : '') : ''))
+        + (s.haltung.ton ? `, +${zahl(s.haltung.ton)} % Ton-Technik` : '')   // Ton-Technik (27.11.), Text von Claude
         + (s.haltung.faktor > 1 ? `, dann alles ×${zahl(s.haltung.faktor)}` : ''),   // Multiplikator, freigegeben 25.11. abends
       geld: s.geld.keins ? null : s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher`
         : `${geld(s.geld.jeBesucher)} je Besucher` + (s.tonPlaetze ? ` (Ton-Technik voll bis ${s.tonPlaetze} Besucher)` : ''),
@@ -571,6 +576,7 @@ export const TEXTE = {
     wand: 'Zieh ein Rechteck, um Wände zu bauen.',
     tuer: 'Klicke auf eine Wand, um eine Tür zu setzen oder zu entfernen.',   // TODO Lukas: Preis dazuschreiben? (Vorschlag vorgelegt 26.11.)
     abriss: 'Zieh über den Bereich, der abgerissen werden soll.',
+    buehne: `Bühne: ${BUEHNE.kosten} € pro Kachel. Möbel auf der Bühne wirken ${BUEHNE.bonus.toLocaleString('de-DE')}-fach, jede Kachel bringt +${BUEHNE.kollekteProKachel.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € Kollekte pro Besucher.`,   // 27.11., von Lukas freigegeben
     keinWerkzeug: 'Wähle unten aus, was du bauen möchtest.',   // nach Rechtsklick: nichts gewählt (Entwurf von Claude, von Lukas freigegeben 25.11.)
     stuhl: 'Klicke, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
     kaffeemaschine: 'Klicke, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
@@ -704,13 +710,14 @@ export const TEXTE = {
     ohneGitarre: 'ohne Instrument keine Musik'
   },
   nichtGenugGeld: (name, preis) => `Nicht genug Geld für ${name} (${preis}).`,
+  buehne: { nurGottesdienstraum: 'Eine Bühne geht nur im Gottesdienstraum.' },   // 27.11., von Lukas freigegeben
 
   // ---- Bauleiste unten (25.11.; Reiter von Lukas freigegeben, übrige Texte ENTWÜRFE von Claude) ----
   // Spicker rechts im Bau-Modus: Mindestgröße je Raum. ENTWURF von Claude (27.11.) – Lukas formuliert selbst
   raumSpicker: { titel: 'Mindestgröße', groesse: (b, h) => `${b} × ${h}` },
   bauleiste: {
     kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', lager: 'Lager', buero: 'Büro', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“, „Büro“: ENTWURF
-    werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF
+    werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle', buehne: 'Bühne' },   // „Bühne“: 27.11., von Lukas freigegeben   // „Fenster“: ENTWURF
     jeStueck: preis => `${preis} je Stück`,   // Preis der Wand (ENTWURF von Claude, 25.11.)
     abBekanntheit: n => `ab Bekanntheit ${n}`,
     drehen: 'Drehen (R)'

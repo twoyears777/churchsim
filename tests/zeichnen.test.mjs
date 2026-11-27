@@ -3,7 +3,7 @@
 // Starten mit: node tests/zeichnen.test.mjs
 import assert from 'node:assert';
 import { spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottesdienst (26.11.)
-import { zeichne, evangelisationsStandTrifft } from '../src/ansicht/zeichnen.js';
+import { zeichne, evangelisationsStandTrifft, symbolZeichnen } from '../src/ansicht/zeichnen.js';
 
 // Schein-Zeichenfläche: jede Methode tut nichts, measureText liefert eine Breite, Farbverläufe geben sich selbst zurück
 function scheinCtx() {
@@ -24,6 +24,9 @@ const voll = { ...karte, evangelisation: karte.evangelisation || { x: 1, y: 1, w
 assert.doesNotThrow(() => zeichne(scheinCtx(), voll, ansicht, { raster: true }), 'Karte mit Evangelisation, Plakat und Bus lässt sich zeichnen');
 // WC-Symbol über dem Kopf (27.11.): Erwachsene und Jugendliche mit wc: true
 assert.doesNotThrow(() => zeichne(scheinCtx(), { ...karte, besucher: [{ id: 'a', x: 3, y: 3, wc: true, jugend: false, name: 'A' }, { id: 'b', x: 4, y: 3, wc: true, jugend: true, sitzt: true }] }, ansicht, {}), 'WC-Symbol lässt sich zeichnen');
+// Bühne (27.11.): Kacheln, Vorschau beim Ziehen und Bild in der Bauleiste
+assert.doesNotThrow(() => zeichne(scheinCtx(), { ...karte, buehne: [{ x: 3, y: 3 }, { x: 4, y: 3 }] }, ansicht, { vorschau: { art: 'buehne', x0: 1, y0: 1, x1: 3, y1: 2 } }), 'Bühne lässt sich zeichnen');
+assert.doesNotThrow(() => symbolZeichnen(scheinCtx(), 'buehne', 56), 'Bühnen-Bild lässt sich zeichnen');
 // Klick-Box des Stands „Evangelisation!“ (27.11.): deutlich größer als ein Kästchen, das Schild gehört dazu
 { const f = karte.evangelisation, { k, ox, oy } = ansicht, P = (x, y) => evangelisationsStandTrifft(ox + x * k, oy + y * k, ansicht, f);
   assert.ok(P(f.x + 0.5, f.y + 0.5), 'Mitte des Felds trifft');

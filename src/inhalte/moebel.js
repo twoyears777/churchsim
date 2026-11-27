@@ -86,6 +86,12 @@ export const STUHL_STUFEN = [
 // Kollekte + Summe und Haltung + Summe (vom aktuellen Wert jedes Besuchers). Beispiel: Level 0, 1, 2 → +5 % +6 % +7 % = +18 %.
 // start: Bonus bei Musik-Level 0 (0.05 = 5 %); proLevel: dazu je Level; maxLevel: höchstes Level.
 // Erfahrung gibt es nur durchs Musikmachen in einer Veranstaltung: erfahrungProAuftritt, erfahrungProLevel → ca. 1 Level je 50 Auftritte.
+// Bühne (Lukas, 27.11.): Bodentyp nur im Gottesdienstraum, als Fläche aufgezogen. kosten: € pro Kachel.
+// bonus: Möbel auf der Bühne (Kanzel, Altar, Blumen, Grünpflanze, Instrumente) bringen ihren Bonus × diesen Wert –
+// nur der Bonus-Anteil (Altar ×1,2 → ×1,3; Kanzel +2 → +3; Musiker +5 % → +7,5 %). Stühle zählen nicht.
+// kollekteProKachel: + € Kollekte pro Besucher und Kachel; Sonntag, Kirchenjahr und Jugendgottesdienst vervielfachen sie mit.
+export const BUEHNE = { kosten: 25, bonus: 1.5, kollekteProKachel: 0.05, raumtyp: 'gottesdienst' };
+
 export const MUSIK = { start: 0.05, proLevel: 0.01, maxLevel: 10, erfahrungProAuftritt: 2, erfahrungProLevel: 100 };
 
 // Ton-Technik (Lukas, 27.11.): Bonus nur mit Tontechnikpult + mind. einem Lautsprecher + eingeteiltem Tontechniker (Ehrenamtlicher).

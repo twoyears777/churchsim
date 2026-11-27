@@ -11,7 +11,7 @@ export const FARBEN = {
   gruenstreifen: '#9dbb7c', nachbarRasen: '#91b26f', hecke: '#5f8a45', rasen: '#86bf5f', rasenFleck: 'rgba(40,90,20,0.10)',
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
-  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', automat: '#2f5d8a', automatGlas: '#cfe3f2', automatFlasche: ['#d9483b', '#3f9b4f', '#f0b429'], besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
+  raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', automat: '#2f5d8a', automatGlas: '#cfe3f2', automatFlasche: ['#d9483b', '#3f9b4f', '#f0b429'], besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8', buehne: '#c9a06a', buehneFuge: 'rgba(110,75,40,0.28)',   // Bühne (27.11., von Lukas freigegeben: helles Holz)
   wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878', glas: '#a9d3ea', glasHell: '#dff0f9', garderobe: '#6b4f36', jacke1: '#8a3b3b', jacke2: '#3b5f8a', infotisch: '#7c6a54', infoBlatt: '#f4f0e4', wcWand: '#9fb3bd', wcSchuessel: '#f7f9fa', wcDeckel: '#c9d6dc', becken: '#e9eef0', hahn: '#8c979c', regal: '#7a5432', regalBrett: '#a37548', kiste1: '#d9b26f', kiste2: '#c8d3d9', tischplatte: '#9c6b3f', tischKante: '#6f4a2a', papier: '#f6f2e8', bildschirm: '#3d4a5c', bildschirmHell: '#8fb3d9',   // Fenster, Garderobe, Infotisch: PLATZHALTER
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
@@ -44,6 +44,13 @@ function raumUntertitel(r) {
   return null;
 }
 
+// Eine Bühnenkachel: helles Holz, zwei waagerechte Dielen-Fugen
+function buehneKachel(ctx, x, y, k) {
+  ctx.fillStyle = FARBEN.buehne; ctx.fillRect(x, y, k, k);
+  ctx.fillStyle = FARBEN.buehneFuge;
+  ctx.fillRect(x, y + k / 3, k, Math.max(1, k * 0.04)); ctx.fillRect(x, y + 2 * k / 3, k, Math.max(1, k * 0.04));
+}
+
 export function zeichne(ctx, z, ansicht, extra = {}) {
   const { k, ox, oy } = ansicht; // k = Kästchengröße in Pixeln, ox/oy = Versatz
   const liste = z.raeume;        // z = Karte vom Spiel: w, h, zellen, raeume, moebel, personen, besucher
@@ -54,6 +61,8 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     ctx.fillStyle = r.typ ? r.typ.farbe : FARBEN.boden;
     for (const c of r.zellen) ctx.fillRect(ox + (c % z.w) * k, oy + ((c / z.w) | 0) * k, k, k);
   }
+  // Bühne (27.11.): Holzboden mit Dielen-Fugen, unter Möbeln und Figuren
+  for (const b of z.buehne || []) buehneKachel(ctx, ox + b.x * k, oy + b.y * k, k);
 
   // Feine Bauhilfe, nur auf dem eigenen Grundstück
   const g = GRUNDSTUECK;
@@ -253,6 +262,9 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
         ctx.font = `500 ${schrift}px system-ui, sans-serif`; ctx.fillStyle = v.leistbar ? FARBEN.auswahl : '#c8281e';
         ctx.fillText(TEXTE.bauGeld.vorschau(v.stuecke, `${v.kosten.toLocaleString('de-DE')} €`), ox + (ax + bx + 1) / 2 * k, oy + ay * k - schrift * 0.8);
       }
+    } else if (v.art === 'buehne') {
+      ctx.fillStyle = 'rgba(201,160,106,0.6)';
+      ctx.fillRect(ox + ax * k, oy + ay * k, (bx - ax + 1) * k, (by - ay + 1) * k);
     } else if (v.art === 'strasse' || v.art === 'weg') {
       ctx.fillStyle = v.art === 'weg' ? 'rgba(216,200,164,0.7)' : 'rgba(90,93,98,0.55)';
       ctx.fillRect(ox + ax * k, oy + ay * k, (bx - ax + 1) * k, (by - ay + 1) * k);
@@ -738,6 +750,7 @@ export function symbolZeichnen(ctx, id, g) {
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
   if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();
   if (id === 'weg') return weg(ctx, p, p, k);
+  if (id === 'buehne') { for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) buehneKachel(ctx, p + i * k / 2, p + j * k / 2, k / 2); return; }
   if (id === 'baum') return AUSSENDEKO.baum(ctx, p, p, k / 2);
   if (AUSSENDEKO[id]) return AUSSENDEKO[id](ctx, p, p, k);
   if (moebel[id]) return moebel[id](ctx, p, p, k);

@@ -12,6 +12,7 @@ import { BAUKOSTEN, STARTGELD_AUSGLEICH, FENSTER as FENSTER_WERT, FOYER } from '
 import { foyerWert } from './foyer.js';
 import { abrissAnlegen, abrissWert } from './abriss.js';
 import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
+import { buehneAnlegen, buehneBauen, buehneAbreissen, buehnePruefen, sichtbareBuehne } from './buehne.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
   alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, instrumenteImRaum, istHindernis } from './moebel.js';
@@ -70,7 +71,7 @@ import { BEKANNTHEIT } from '../inhalte/besucher.js';
 import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
-import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
+import { MOEBEL, STUHL_STUFEN, BUEHNE } from '../inhalte/moebel.js';
 import { istAutomat, lagerVon, automatInfo } from './automaten.js';
 import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
@@ -96,6 +97,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   bueroAnlegen(z);   // Büro und Orga-Tokens (27.11.)
   wochenberichtAnlegen(z);   // Wochenzusammenfassung (27.11.): erstes „Foto“ der Gemeinde (nach Dauerspendern und Mitgliedern)
   jugendpastorAnlegen(z);   // Jugendpastor (27.11.): kommt am Montag 8:00 der 3. Woche
+  buehneAnlegen(z);   // Bühne im Gottesdienstraum (27.11.)
   dienstAnlegen(z);   // Dienstplan der Ehrenamtlichen (27.11.): Schichtbetrieb für neue und alte Spielstände
   return z;
 }
@@ -229,12 +231,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
 
   // Bauen mit Rückgängig. Gemerkt wird nur das Gebaute (Wände, Räume, Möbel, wo Mitarbeiter stehen) und das Geld dafür –
   // die Zeit, die Besucher und das Kaffeegeld laufen beim Rückgängigmachen nicht zurück.
-  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende', 'gratisTueren', 'bauzeit', 'zusatzzeit', 'lagerZeiten'];
+  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende', 'gratisTueren', 'bauzeit', 'zusatzzeit', 'lagerZeiten', 'buehne'];
   function aendern(fn) {
     const vorher = JSON.stringify(BAU.map(k => z[k])), kontoVor = z.konto;
     const alteBuchungen = new Set(z.wochenbuch ? z.wochenbuch.buchungen : []);
     const ergebnis = fn();
-    moebelPruefen(z); personenPruefen(z);
+    moebelPruefen(z); buehnePruefen(z); personenPruefen(z);
     // Gemerkt werden auch die Buchungen dieses Schritts, damit „Rückgängig“ sie wieder herausnimmt (finanzen.js → stornieren)
     const buchungen = (z.wochenbuch ? z.wochenbuch.buchungen : []).filter(b => !alteBuchungen.has(b));
     verlauf.push({ bau: vorher, geld: z.konto - kontoVor, buchungen, woche: z.buchWoche });
@@ -318,6 +320,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         for (const i of [...weg.wandBei, ...weg.fensterBei, ...weg.tuerBei]) { delete z.bauzeit[i]; delete z.zusatzzeit[i]; }
         if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag, { was: 'abriss', stuecke: weg.waende, fenster: weg.fenster, tueren: weg.tueren });
         moebelAbreissen(z, x0, y0, x1, y1);
+        buehneAbreissen(z, x0, y0, x1, y1);   // Bühne (27.11.): Abriss-Wert wie bei Möbeln
       });
     },
     // Tür (26.11.): auf eine Wand setzen (kostet BAUKOSTEN.tuer) oder wieder zur Wand machen (Geld zurück,
@@ -379,6 +382,13 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // → { gebaut, ergebnis: 'ok' | 'geld' (nicht alles bezahlbar) | 'platz' (nichts frei) }
     strasseBauen(x0, y0, x1, y1) { return flaecheBauen('strasse', x0, y0, x1, y1); },
     wegBauen(x0, y0, x1, y1) { return flaecheBauen('weg', x0, y0, x1, y1); },
+    // Bühne (27.11.): Fläche aufziehen, nur im Gottesdienstraum, BUEHNE.kosten je neue Kachel
+    // → { gebaut, ergebnis: 'ok' | 'geld' (nicht alles bezahlbar) | 'raum' (nicht im Gottesdienstraum) | 'platz' (schon Bühne) }
+    buehneBauen(x0, y0, x1, y1) {
+      const r = aendern(() => buehneBauen(z, raeume, x0, y0, x1, y1));
+      if (!r.gebaut) verlauf.pop();                          // nichts gebaut: kein leerer Rückgängig-Schritt
+      return r;
+    },
     // Bushaltestelle kaufen bzw. ausbauen → 'ok' | 'max' | 'bekanntheit' | 'geld'
     busAusbauen() { return busAusbauen(z); },
     // Überregionale Werbekampagne → 'ok' | 'gekauft' | 'bekanntheit' | 'geld'
@@ -488,12 +498,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     rueckgaengig() {
       const e = verlauf.pop();
       if (!e) return false;
-      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende, gratisTueren, bauzeit, zusatzzeit, lagerZeiten] = JSON.parse(e.bau);
+      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende, gratisTueren, bauzeit, zusatzzeit, lagerZeiten, buehne] = JSON.parse(e.bau);
       for (const m of moebel) { const jetzt = moebelAuf(z, m.x, m.y); if (jetzt && jetzt.art === m.art && 'fuellung' in jetzt) m.fuellung = jetzt.fuellung; }
       Object.assign(z, { zellen, raumTyp, veranstaltung, moebel, kaffeeZeiten: kaffeeZeiten || {}, lagerZeiten: lagerZeiten || {} });
       if (gratisWaende) z.gratisWaende = gratisWaende; else delete z.gratisWaende;
       if (gratisTueren) z.gratisTueren = gratisTueren; else delete z.gratisTueren;
-      z.bauzeit = bauzeit || {}; z.zusatzzeit = zusatzzeit || {};
+      z.bauzeit = bauzeit || {}; z.zusatzzeit = zusatzzeit || {}; z.buehne = buehne || {};
       for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt && !p.daheim && !alt.daheim) { p.x = alt.x; p.y = alt.y; } }   // daheim (27.11.): bleibt daheim
       stornieren(z, e.buchungen, e.woche);   // Buchungen des Schritts zurücknehmen (dieselbe Woche: ganz weg, sonst Gegenbuchung)
       personenPruefen(z); raeume = raeumeAuswerten(z);
@@ -553,6 +563,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       }));
       return {
         w: z.w, h: z.h, zellen: z.zellen.slice(),
+        buehne: sichtbareBuehne(z, raeume),   // Bühnenkacheln in Gottesdiensträumen (27.11.)
         raeume: raeume.liste.map(r => {
           const moeglich = moeglicheVeranstaltungen(r.typ).length > 0;
           const namen = moeglich ? programmVon(z, r).map(e => (VERANSTALTUNGEN.find(v => v.id === e.art) || {}).name).filter(Boolean) : [];
@@ -726,7 +737,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     raumNrBei: raumNr,
     foyerBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && r.typ && r.typ.id === 'foyer' ? nr : null; },
     // Baukosten für die Bauleiste und die Vorschau (25.11.)
-    baukosten() { return { wand: BAUKOSTEN.wand, tuer: BAUKOSTEN.tuer, fenster: BAUKOSTEN.fenster, konto: z.konto,
+    baukosten() { return { wand: BAUKOSTEN.wand, tuer: BAUKOSTEN.tuer, fenster: BAUKOSTEN.fenster, buehne: BUEHNE.kosten, buehneLeistbar: kannBezahlen(z, BUEHNE.kosten), konto: z.konto,
       wandLeistbar: kannBezahlen(z, BAUKOSTEN.wand), tuerLeistbar: kannBezahlen(z, BAUKOSTEN.tuer), fensterLeistbar: kannBezahlen(z, BAUKOSTEN.fenster) }; },
     // Foyer-Fenster in der Spielansicht: was das Foyer jedem bringt, der hindurchläuft
     foyerInfo(nr) {

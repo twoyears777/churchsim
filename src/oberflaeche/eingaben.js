@@ -12,7 +12,7 @@ const HINWEISE = {
 };
 const hinweisFuer = id => HINWEISE[id || 'keinWerkzeug'];   // ohne gewähltes Werkzeug: eigener Hinweis
 const leinwand = $('karte');
-const ZIEH_WERKZEUGE = ['wand', 'abriss', 'strasse', 'weg'];   // Rechteck ziehen
+const ZIEH_WERKZEUGE = ['wand', 'abriss', 'strasse', 'weg', 'buehne'];   // Rechteck ziehen
 const istMoebelWerkzeug = () => !ZIEH_WERKZEUGE.includes(ui.werkzeug) && ui.spiel.moebelArten().some(m => m.id === ui.werkzeug);
 
 // ---- Pixel → Kästchen, und was liegt dort? ----
@@ -191,6 +191,11 @@ function loslassen(e) {
       const r = spiel.wegBauen(v.x0, v.y0, v.x1, v.y1), typ = spiel.moebelArten().find(m => m.id === 'weg');
       if (r.ergebnis === 'geld') kurzerHinweis(r.gebaut ? TEXTE.aussenMeldung.wegGeld : TEXTE.nichtGenugGeld(typ.name, euro(typ.kosten)));
       else if (r.ergebnis === 'platz' && spiel.raumNrBei(v.x0, v.y0) >= 0) kurzerHinweis(TEXTE.aussenMeldung.innenDeko);
+    }
+    else if (v.art === 'buehne') {   // Bühne (27.11.): nur im Gottesdienstraum
+      const r = spiel.buehneBauen(v.x0, v.y0, v.x1, v.y1);
+      if (r.ergebnis === 'geld') kurzerHinweis(TEXTE.nichtGenugGeld(TEXTE.bauleiste.werkzeuge.buehne, euro(spiel.baukosten().buehne)));
+      else if (r.ergebnis === 'raum') kurzerHinweis(TEXTE.buehne.nurGottesdienstraum);
     }
     else spiel.abreissen(v.x0, v.y0, v.x1, v.y1);
     return fertig();

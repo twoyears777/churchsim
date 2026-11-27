@@ -1,7 +1,8 @@
 // Spiellogik der Möbel. Möbel stehen auf freiem Boden des Grundstücks, ein Möbel pro Kästchen.
 import { LEER, idx, aufGrundstueck, fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
-import { MOEBEL, STUHL_STUFEN, MUSIK, TON } from '../inhalte/moebel.js';
+import { MOEBEL, STUHL_STUFEN, MUSIK, TON, BUEHNE } from '../inhalte/moebel.js';
+import { istBuehne, buehneImRaum } from './buehne.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 import { musikBonus } from './skills.js';
 import { AUTOMATEN } from '../inhalte/automaten.js';
@@ -142,25 +143,42 @@ export function instrumenteImRaum(z, raum) {
 // haltung: + pro Besucher und Gottesdienst; faktor: Kollekte × (Altar, Grünpflanzen, Lobpreisteam)
 // musikBonus: Summe der Boni aller Musiker; Lobpreisteam bringt Kollekte × (1 + musikBonus) und Haltung + musikBonus × aktuelle Haltung
 export function raumAusstattung(z, raum, musikerLevels = null) {
-  let haltung = 0, faktor = 1, instrumente = 0;
+  let haltung = 0, faktor = 1;
   const teile = [];
-  for (const typ of MOEBEL.filter(m => m.wirkung)) {
-    const anzahl = Math.min(typ.max || Infinity, moebelImRaum(z, raum, typ.id).length);
-    if (!anzahl) continue;
-    if (typ.wirkung.haltung) haltung += typ.wirkung.haltung * anzahl;
-    if (typ.wirkung.kollekte) faktor *= typ.wirkung.kollekte ** anzahl;
-    if (typ.wirkung.musik) instrumente += anzahl;
-    teile.push({ id: typ.id, name: typ.name, anzahl, max: typ.max || null,
-      haltung: (typ.wirkung.haltung || 0) * anzahl, kollekte: typ.wirkung.kollekte ? typ.wirkung.kollekte ** anzahl : null });
+  for (const typ of MOEBEL.filter(m => m.wirkung && !m.wirkung.musik)) {
+    const w = moebelWirkung(z, raum, typ);
+    if (!w.anzahl) continue;
+    haltung += w.haltung; faktor *= w.kollekte;
+    teile.push({ id: typ.id, name: typ.name, anzahl: w.anzahl, max: typ.max || null, aufBuehne: w.aufBuehne,
+      haltung: w.haltung, kollekte: typ.wirkung.kollekte ? w.kollekte : null });
   }
   // Fenster (25.11.): + Haltung je Fenster in den Wänden des Raums, ohne Obergrenze
   const fenster = raum && raum.zellen ? fensterAnRaum(z, raum) : 0;
   if (fenster) { haltung += FENSTER.haltung * fenster; teile.push({ id: 'fenster', name: FENSTER.name, anzahl: fenster, max: null, haltung: FENSTER.haltung * fenster, kollekte: null }); }
-  const levels = (musikerLevels === null || musikerLevels === false ? [] : [].concat(musikerLevels)).slice(0, instrumente);
+  // Lobpreisteam: höchstes Musik-Level ans erste Instrument der Reihe (wie musiker.js); steht es auf der Bühne, Bonus × BUEHNE.bonus
+  const reihe = instrumenteReihe(z, raum);
+  const levels = (musikerLevels === null || musikerLevels === false ? [] : [].concat(musikerLevels)).slice().sort((a, b) => b - a).slice(0, reihe.length);
   const musik = levels.length > 0;
-  const bonus = Math.round(levels.reduce((s, l) => s + musikBonus(l), 0) * 100) / 100;
+  const bonus = Math.round(levels.reduce((s, l, i) => s + musikBonus(l) * (reihe[i] ? BUEHNE.bonus : 1), 0) * 10000) / 10000;
   if (musik) faktor *= 1 + bonus;
-  return { haltung, faktor, instrument: instrumente > 0, instrumente, musik, musiker: levels.length, musikBonus: bonus, teile };
+  // Bühne (27.11.): + Kollekte pro Besucher je Kachel, fest dazu (nicht × Altar usw.)
+  const buehne = buehneImRaum(z, raum);
+  return { haltung, faktor, instrument: reihe.length > 0, instrumente: reihe.length, musik, musiker: levels.length, musikBonus: bonus, teile,
+    buehne, buehneGeld: Math.round(buehne * BUEHNE.kollekteProKachel * 100) / 100 };
+}
+// Was ein Möbeltyp in diesem Raum bringt (höchstens typ.max Stück). Auf der Bühne zählt der Bonus × BUEHNE.bonus:
+// Haltung +2 → +3, Kollekte ×1,2 → ×1,3. → { anzahl, aufBuehne, haltung (Summe), kollekte (Faktor zusammen) }
+export function moebelWirkung(z, raum, typ) {
+  const stuecke = moebelImRaum(z, raum, typ.id).slice(0, typ.max || Infinity);
+  const auf = stuecke.filter(m => istBuehne(z, m.x, m.y)).length, normal = stuecke.length - auf;
+  const h = typ.wirkung.haltung || 0, k = typ.wirkung.kollekte || 1;
+  return { anzahl: stuecke.length, aufBuehne: auf,
+    haltung: h * normal + h * BUEHNE.bonus * auf,
+    kollekte: k ** normal * (1 + (k - 1) * BUEHNE.bonus) ** auf };
+}
+// Instrumente des Raums in der festen Reihenfolge der Möbelliste (wie musiker.js): true = steht auf der Bühne
+export function instrumenteReihe(z, raum) {
+  return MOEBEL.filter(m => m.wirkung && m.wirkung.musik).flatMap(m => moebelImRaum(z, raum, m.id).slice(0, m.max || Infinity)).map(m => istBuehne(z, m.x, m.y));
 }
 
 // ---- Ton-Technik (Lukas, 27.11.; Spielprinzip claude/spielprinzip-tontechnik.md) ----
