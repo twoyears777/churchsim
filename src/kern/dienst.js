@@ -72,7 +72,25 @@ const ehrenamtliche = z => z.personen.filter(p => { const d = daten(p); return d
 // Alle Mitarbeiter im Dienstplan: Ehrenamtliche und Hauptamtliche
 const mitarbeiter = z => z.personen.filter(p => { const d = daten(p); return d && (d.art === 'ehrenamt' || d.art === 'hauptamt'); });
 const istHA = p => { const d = daten(p); return !!d && d.art === 'hauptamt'; };
-const darf = (s, p) => { const d = daten(p); return !!d && (s.wer === 'alle' ? d.art === 'ehrenamt' || d.art === 'hauptamt' : d.art === s.wer); };
+const darf = (s, p) => { const d = daten(p); return !!d && (s.wer === 'alle' ? d.art === 'ehrenamt' || d.art === 'hauptamt' : d.art === s.wer) && leitetErlaubt(d, s); };
+// Jugendpastor (27.11.): wer eine Liste `leitet` hat, darf die Stelle „Leitung“ nur bei diesen Veranstaltungen übernehmen
+const leitetErlaubt = (d, s) => !(s.code === 'leitungHA' && s.veranstaltung && Array.isArray(d.leitet) && !d.leitet.includes(s.veranstaltung));
+export const darfLeiten = (p, veranstaltung) => { const d = daten(p); return !!d && d.art === 'hauptamt' && (!Array.isArray(d.leitet) || d.leitet.includes(veranstaltung)); };
+// Anwesenheit (Jugendpastor, 27.11.): nur von … bis … Uhr in der Gemeinde (ohne Angabe: immer)
+const STUNDE = 60;
+export function anwesend(p, t) {
+  const a = (daten(p) || {}).anwesend;
+  if (!a) return true;
+  const h = ((t % (24 * STUNDE)) + 24 * STUNDE) % (24 * STUNDE) / STUNDE;
+  return h >= a.von - EPS && h < a.bis - EPS;
+}
+// Nächster Wechsel der Anwesenheit nach t (absolute Minuten) oder null
+function anwesendWechsel(p, t) {
+  const a = (daten(p) || {}).anwesend;
+  if (!a) return null;
+  const tag = Math.floor(t / (24 * STUNDE)) * 24 * STUNDE;
+  return [0, 1].flatMap(d => [a.von, a.bis].map(h => tag + d * 24 * STUNDE + h * STUNDE)).filter(x => x > t + EPS).sort((x, y) => x - y)[0];
+}
 // Schichten pro Woche: aus den Daten der Person (Frau des Pastors 5), sonst DIENST.schichten bzw. DIENST.schichtenHauptamt.
 // Alte Spielstände: die Frau des Pastors wurde dort ohne `schichten` angelegt – sie erkennt man an `start`.
 // Schulungen (27.11.): dazu kommen die Schichten aus Schulungen (p.schichtenDazu, z. B. Worshipkonferenz).
@@ -97,7 +115,7 @@ function veranstaltungStellen(z, r, v, foyerListe) {
   if (r.typ.einsatzBraucht && r.typ.einsatzBraucht.ehrenamt === 'instrument')
     instrumente(z, r).forEach((m, i) => s.push({ id: `musik${i}`, code: 'musik', wer: 'ehrenamt', ding: m.art, ort: { x: m.x, y: m.y }, raum: r.nr }));
   // Leitung durch einen Hauptamtlichen (Gottesdienste, Konfi, Seniorennachmittag): eigene Stelle, steht vorne
-  if (!v.leitungOder && [].concat(v.leitung || []).includes('hauptamt')) s.unshift({ id: 'hauptamt', code: 'leitungHA', wer: 'hauptamt', ding: null, ort: null, raum: r.nr });
+  if (!v.leitungOder && [].concat(v.leitung || []).includes('hauptamt')) s.unshift({ id: 'hauptamt', code: 'leitungHA', wer: 'hauptamt', veranstaltung: v.id, ding: null, ort: null, raum: r.nr });
   const leitet = v.leitungOder || [].concat(v.leitung || []).includes('ehrenamt');
   if (leitet) {
     const klavier = (v.braucht || []).includes('klavier') ? moebelImRaum(z, r, 'klavier')[0] : null;
@@ -208,7 +226,9 @@ export function stelleSetzen(z, raeume, key, stelleId, personId) {
     return 'ok';
   }
   const p = z.personen.find(x => x.id === personId);
-  if (!p || !darf(s, p)) return 'person';
+  if (!p) return 'person';
+  if (!leitetErlaubt(daten(p) || {}, s)) return 'leitet';   // Jugendpastor: diese Veranstaltung leitet er nicht
+  if (!darf(s, p)) return 'person';
   if (personAuf(z, t, stelleId) === p) return 'ok';
   if (p.schulung) return 'schulung';   // Schulungen (27.11.): während der Schulung keine Schichten
   const eigene = termineVon(z, raeume, p);
@@ -382,6 +402,19 @@ function aufbrechen(z, raeume, p, m, t) {
   return true;
 }
 
+// Wo wartet ein Hauptamtlicher ohne Schicht? (Lukas, 27.11.: Jugendpastor im Kirchkaffee; gibt es keins oder ist kein
+// Kästchen frei: Startplatz wie Pastor Harder)
+function wartePlatz(z, raeume, p) {
+  const typ = (daten(p) || {}).wartet;
+  if (typ) for (const r of raeume.liste.filter(r => fertig(r, typ))) { const o = platzImRaum(z, r, null, p); if (o) return o; }
+  return startPlatz();
+}
+// Seelsorge (27.11.): Ist ein Hauptamtlicher frei für ein Gespräch? = in der Gemeinde und gerade ohne Schicht
+export function freiFuerGespraech(z, raeume, p, t = z.minuten) {
+  if (p.daheim || !anwesend(p, t)) return false;
+  return !schichtbetrieb(z) || !raeume || !aktiveSchicht(z, raeume, p, t);
+}
+
 // ---- Alles bis jetzt Fällige: Ehrenamtliche kommen zu ihrer Schicht oder gehen heim ----
 export function dienstAktualisieren(z, raeume) {
   if (!schichtbetrieb(z)) return false;
@@ -405,12 +438,17 @@ export function dienstAktualisieren(z, raeume) {
       m.bew = gehen(z, start, ziel, t); m.hin = null;
       p.x = ziel.x; p.y = ziel.y; p.daheim = false;
       geaendert = true;
-    } else if (ha) {
-      // Hauptamtliche gehen nicht heim (Lukas, 27.11.): nach der Schicht zurück zu ihrem Startplatz auf dem Gelände
-      if (p.daheim) { const s = startPlatz(); p.x = s.x; p.y = s.y; p.daheim = false; m.bew = null; geaendert = true; }
-      else if (m.ruhe === undefined || m.ruhe === null) {
+    } else if (ha && anwesend(p, t)) {
+      // Hauptamtliche gehen nicht heim (Lukas, 27.11.): nach der Schicht zurück zu ihrem Wartplatz auf dem Gelände
+      // (Pastor Harder: Startplatz; Jugendpastor: im Kirchkaffee, sonst Startplatz). Wer daheim war (Jugendpastor
+      // morgens), kommt sichtbar vom Tor.
+      if (p.daheim) {
+        const s = wartePlatz(z, raeume, p);
+        if (daten(p).anwesend) m.bew = gehen(z, TOR(), s, t); else m.bew = null;
+        p.x = s.x; p.y = s.y; p.daheim = false; m.ruhe = true; geaendert = true;
+      } else if (m.ruhe === undefined || m.ruhe === null) {
         if (kaffeeBeschaeftigt(z, p.id)) continue;
-        const s = startPlatz();
+        const s = wartePlatz(z, raeume, p);
         if (p.x !== s.x || p.y !== s.y) { evangelisationVerlassen(z, p); m.bew = gehen(z, { x: p.x, y: p.y }, s, t); p.x = s.x; p.y = s.y; geaendert = true; }
         m.ruhe = true;
       }
@@ -418,7 +456,7 @@ export function dienstAktualisieren(z, raeume) {
       if (kaffeeBeschaeftigt(z, p.id)) continue;   // Schlange fertig bedienen bzw. Einkauf zu Ende bringen
       evangelisationVerlassen(z, p);
       m.bew = gehen(z, { x: p.x, y: p.y }, TOR(), t);
-      p.x = WEG; p.y = WEG; p.daheim = true;
+      p.x = WEG; p.y = WEG; p.daheim = true; m.ruhe = null;   // Jugendpastor nach 23 Uhr: daheim
       geaendert = true;
     }
     if ((p.daheim || ha) && !jetzt && aufbrechen(z, raeume, p, m, t)) geaendert = true;
@@ -432,7 +470,9 @@ export function dienstSchritt(z, raeume) {
   const t = z.minuten, w = zeitpunkt(t).woche, zeiten = [];
   const benutzt = new Set(Object.values(z.dienst.plan).flatMap(o => Object.values(o)));
   const feste = mitarbeiter(z).filter(istHA).flatMap(p => festeVon(z, raeume, p, w));
-  if (!benutzt.size && !feste.length && ehrenamtliche(z).every(p => p.daheim) && mitarbeiter(z).filter(istHA).every(p => { const m = z.dienst.ma[p.id]; return m && m.ruhe; })) return null;
+  const wechsel = mitarbeiter(z).filter(istHA).map(p => anwesendWechsel(p, t)).filter(x => x !== null && x !== undefined);
+  if (!benutzt.size && !feste.length && !wechsel.length && ehrenamtliche(z).every(p => p.daheim) && mitarbeiter(z).filter(istHA).every(p => { const m = z.dienst.ma[p.id]; return m && m.ruhe; })) return null;
+  zeiten.push(...wechsel);   // Jugendpastor: kommt um 7 Uhr, geht um 23 Uhr heim
   for (const x of dienstTermine(z, raeume)) {
     if (!x.stellen.some(s => personAuf(z, x, s.id))) continue;
     for (const woche of [w, w + 1]) for (const g of [x.von, x.bis]) { const a = woche * WOCHE_MIN + g; if (a > t + EPS) zeiten.push(a); }
@@ -445,7 +485,7 @@ export function dienstSchritt(z, raeume) {
     else if ((p.daheim || istHA(p)) && !(m && m.hin)) { const n = naechsteSchicht(z, raeume, p, t); if (n && n.von - VORAUS > t + EPS) zeiten.push(n.von - VORAUS); }
   }
   // Wer ohne Schicht noch da ist (z. B. Schlange bedient), wird beim nächsten Schritt heimgeschickt (Hauptamtliche: zum Startplatz)
-  if (mitarbeiter(z).some(p => !aktiveSchicht(z, raeume, p, t) && !kaffeeBeschaeftigt(z, p.id) && (istHA(p) ? !(z.dienst.ma[p.id] && z.dienst.ma[p.id].ruhe) : !p.daheim))) zeiten.push(t + 1);
+  if (mitarbeiter(z).some(p => !aktiveSchicht(z, raeume, p, t) && !kaffeeBeschaeftigt(z, p.id) && (istHA(p) && anwesend(p, t) ? !(z.dienst.ma[p.id] && z.dienst.ma[p.id].ruhe) : !p.daheim))) zeiten.push(t + 1);
   const n = Math.min(...zeiten);
   return Number.isFinite(n) ? { zeit: n, tun: (zz, rr) => dienstAktualisieren(zz, rr) } : null;
 }
@@ -481,7 +521,7 @@ export function dienstplanInfo(z, raeume) {
   const raumInfo = nr => { const r = nr === null || nr === undefined ? null : raeume.liste[nr]; return r && r.typ ? { nr, typ: r.typ.id, name: r.typ.name, nummer: nummer(nr) } : null; };
   return {
     personen: mitarbeiter(z).map(p => { const d = daten(p); return { id: p.id, art: d.art, name: d.name, kuerzel: d.kuerzel, belegt: schichtenBelegt(z, raeume, p), max: schichtenMax(p),
-      jugend: !!(d.herkunft && d.herkunft.jugend), daheim: !!p.daheim, schulung: !!p.schulung }; }),
+      jugend: !!(d.herkunft && d.herkunft.jugend), daheim: !!p.daheim, schulung: !!p.schulung, leitet: Array.isArray(d.leitet) ? [...d.leitet] : null }; }),
     termine: termine.map(x => ({ key: x.key, art: x.art, tag: x.tag, slot: x.slot, veranstaltung: x.veranstaltung || null,
       veranstaltungName: ((x.veranstaltung && VERANSTALTUNGEN.find(v => v.id === x.veranstaltung)) || {}).name || null,
       raum: raumInfo(x.raum), nachRaum: raumInfo(x.nachRaum),

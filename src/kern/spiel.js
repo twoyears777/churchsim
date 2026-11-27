@@ -46,6 +46,7 @@ import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
 import { DAUERSPENDE, MITGLIED } from '../inhalte/finanzen.js';
 import { mitgliederAnlegen, mitgliederListe, beitragSetzen, beitragHaltung, mitgliederKurz, mitgliederVerlauf } from './mitglieder.js';
 import { zeitungOffen, zeitungSchliessen } from './erster.js';
+import { jugendpastorAnlegen, jugendpastorOffen, jugendpastorSchliessen } from './jugendpastor.js';
 import { wochenberichtAnlegen, wochenberichtOffen, wochenberichtSchliessen, wochenberichtVon } from './wochenbericht.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
@@ -74,7 +75,7 @@ import { istAutomat, lagerVon, automatInfo } from './automaten.js';
 import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
 import { lagerZeitenVon, lagerZeitHinzufuegen, lagerZeitEntfernen, lagerUmstellen } from './lager.js';
-import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax, dienstMerken, dienstVergessen } from './dienst.js';
+import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax, dienstMerken, dienstVergessen, darfLeiten } from './dienst.js';
 import { imDurchgang } from './durchgang.js';
 import { schulungStarten, schulungAbbrechen, schulungenInfo } from './schulungen.js';
 const forschungName = id => (FORSCHUNGEN.find(f => f.id === id) || {}).name || null;
@@ -94,6 +95,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   abrissAnlegen(z);   // Abriss-Wert (27.11.): schon Gebautes zählt wie heute gebaut
   bueroAnlegen(z);   // Büro und Orga-Tokens (27.11.)
   wochenberichtAnlegen(z);   // Wochenzusammenfassung (27.11.): erstes „Foto“ der Gemeinde (nach Dauerspendern und Mitgliedern)
+  jugendpastorAnlegen(z);   // Jugendpastor (27.11.): kommt am Montag 8:00 der 3. Woche
   dienstAnlegen(z);   // Dienstplan der Ehrenamtlichen (27.11.): Schichtbetrieb für neue und alte Spielstände
   return z;
 }
@@ -271,10 +273,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // ---------- Befehle ----------
     // Tick-System: echte Sekunden seit dem letzten Bild → Spielzeit rückt vor. Im Editor und bei Pause steht die Zeit.
     tick(sekunden) {
-      if (z.tempo <= 0 || bauModus || anfrageOffen(z) || festAnfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) return false;   // offene Seelsorge-Anfrage / Fest-Menü / Zeitung / Wochenzusammenfassung: Zeit steht
+      if (z.tempo <= 0 || bauModus || anfrageOffen(z) || festAnfrageOffen(z) || zeitungOffen(z) || berichtPause(z) || jugendpastorOffen(z)) return false;   // offene Seelsorge-Anfrage / Fest-Menü / Zeitung / Wochenzusammenfassung: Zeit steht
       const vorher = z.personen.length;
       zeitVorruecken(z, raeume, spielMinuten(Math.min(0.25, sekunden), z.tempo), zufall);
-      if (z.personen.length !== vorher) raeume = raeumeAuswerten(z);   // neue Ehrenamtliche
+      if (z.personen.length !== vorher) raeume = raeumeAuswerten(z);   // neue Ehrenamtliche / Jugendpastor
       if (!z.laeufe.length) wegSpeicher.clear();
       return true;
     },
@@ -282,6 +284,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     zeitungWeiter() { return zeitungSchliessen(z); },
     // Wochenzusammenfassung (27.11.) geschlossen: die Zeit läuft weiter
     wochenberichtWeiter() { return wochenberichtSchliessen(z); },
+    // Pop-up „Jugendpastor ist da“ (27.11.) geschlossen: die Zeit läuft weiter
+    jugendpastorWeiter() { return jugendpastorSchliessen(z); },
     tempoSetzen(t) { if (TEMPI.includes(t)) z.tempo = t; },
     bauModus(an) { bauModus = !!an; },
     zuruecksetzen() { z = neuesSpiel(zufall); raeume = raeumeAuswerten(z); verlauf.length = 0; wegSpeicher.clear(); },
@@ -502,7 +506,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (!r || !moeglicheVeranstaltungen(r.typ).length) return 'raum';
       if (!moeglicheVeranstaltungen(r.typ).some(v => v.id === a.art)) return 'art';
       const p = z.personen.find(x => x.id === a.leitung), d = p && daten(p);
-      if (!d || d.art !== 'hauptamt') return 'leitung';
+      if (!d || d.art !== 'hauptamt' || !darfLeiten(p, a.art)) return 'leitung';   // Jugendpastor: nur seine Veranstaltungsarten
       const ea = (a.ehrenamt || []).filter(id => { const q = z.personen.find(x => x.id === id); return q && daten(q) && daten(q).art === 'ehrenamt'; });
       return festPlanSetzen(z, schluessel, { slot: a.slot, raum: Math.min(...r.zellen), leitung: p.id, art: a.art, ehrenamt: ea });
     },
@@ -610,6 +614,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         festAnfrage: z.feste ? z.feste.anfrage : null,   // Fest-Menü steht an (Schlüssel des Fests; Zeit steht, bis beantwortet)
         zeitung: zeitungOffen(z),   // Zeitungsartikel vor dem ersten Gottesdienst ist offen (Zeit steht, bis weitergeklickt)
         wochenbericht: wochenberichtOffen(z),   // Wochenzusammenfassung ist offen (Zeit steht, bis sie geschlossen wird)
+        jugendpastor: jugendpastorOffen(z),   // Pop-up „Jugendpastor ist da“ ist offen (Zeit steht, bis weitergeklickt)
         meldung: neuesteMeldung(z)   // z. B. jemand ist neugierig am Tor stehen geblieben, zu wenig Geld für den Kaffee-Einkauf
       };
     },
@@ -986,7 +991,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const p = z.personen.find(x => x.id === id), d = p && daten(p);
       if (!d) return null;
       const r = eingesetztIn(z, raeume, p);
-      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: hatSkill(p, 'seelsorge') ? stufeInfo(z) : null,
+      return { id, name: d.name, art: d.art, einsatz: r ? r.typ.name : null, seelsorge: hatSkill(p, 'seelsorge') ? stufeInfo(z, p) : null,
         musik: d.art === 'ehrenamt' ? musikStand(p) : null, evangelisation: d.art === 'ehrenamt' ? evangelisationStand(p) : null, multiplikator: multiplikatorInfo(z, p), heiligkeit: Math.floor(z.heiligkeit || 0) };
     }
   };

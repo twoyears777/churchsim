@@ -20,6 +20,7 @@ function schliessbar(f) {
   if (f.art === 'seelsorge' && ui.spiel.seelsorgeOffen()) return false;   // Seelsorge erst beantworten
   if (f.art === 'fest' && ui.spiel.lage().festAnfrage === f.schluessel) return false;   // Fest-Menü erst beantworten
   if (f.art === 'zeitung') return false;   // Zeitung: nur über „Weiter“
+  if (f.art === 'jugendpastor') return false;   // Jugendpastor ist da: nur über „Weiter“
   if (f.art === 'wochenbericht' && ui.spiel.lage().wochenbericht) return false;   // Wochenzusammenfassung: nur über „Weiter“
   return true;
 }
@@ -32,7 +33,7 @@ export function fensterOffen() { return !maske().hidden; }
 function fensterInhalt(f) {
   return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, lager: lagerFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster, mitglieder: mitgliederFenster, buero: bueroFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, jugendpastor: jugendpastorFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster, mitglieder: mitgliederFenster, buero: bueroFenster }[f.art](f);
 }
 // Wird bei jeder Anzeige-Aktualisierung aufgerufen; baut das Fenster nur neu, wenn sich der Inhalt geändert hat.
 export function fensterAktualisieren() {
@@ -745,7 +746,7 @@ function seelsorgeFenster(f) {
   };
   let inhalt;
   if (a.phase === 'frage' && !f.angenommen) {
-    inhalt = `<p class="unter staerker">${T.anfrage(esc(a.voll))}</p>${wer}<p>${sit.anfrage(name)}</p>
+    inhalt = `<p class="unter staerker">${T.anfrage(esc(a.voll), esc(a.seelsorger ? a.seelsorger.name : ''))}</p>${wer}<p>${sit.anfrage(name)}</p>
       <div class="zeile"><button data-ablehnen>${T.ablehnen}</button><button class="haupt" data-annehmen>${T.annehmen}</button></div>`;
   } else if (a.phase === 'frage') {
     inhalt = `${wer}<p>${sit.anfrage(name)}</p><div class="typen">${sit.raete.map((r, i) => {
@@ -762,7 +763,7 @@ function seelsorgeFenster(f) {
     inhalt = `<p class="unter">„${rat.text}“</p>
       <p class="${e.gut ? 'ok' : 'fehlt'}">${(e.gut ? rat.gut : rat.schlecht)(name)}</p>
       <p class="unter">${folgen.join(' · ')}</p>
-      ${e.neueStufe ? `<p class="unter staerker">${T.neueStufe(e.neueStufe)}</p>
+      ${e.neueStufe ? `<p class="unter staerker">${T.neueStufe(e.neueStufe, esc(a.seelsorger ? a.seelsorger.name : ''))}</p>
         <p class="unter">${T.stufeBonus(e.stufeBonus)}${e.freischaltung && T.karte.kann[e.freischaltung] ? ' ' + T.neuFreigeschaltet(T.karte.kann[e.freischaltung]) : ''}</p>` : ''}
       <div class="zeile"><button class="haupt" data-seelsorge-zu>${T.weiter}</button></div>`;
   }
@@ -836,6 +837,13 @@ function kalenderFenster(f) {
     ${k.termine.length || k.kaffee.length ? '' : `<p class="unter">${k.versatz === -1 ? T.leerVorher : T.leer}</p>`}`;
 }
 // Zeitungsartikel vor dem ersten Gottesdienst (Text von Lukas, 26.11.): Schlagzeile, Text, „Weiter“
+// Pop-up „Jugendpastor ist da“ (27.11.): Zeit steht, bis man „Weiter“ klickt
+function jugendpastorFenster() {
+  if (!ui.spiel.lage().jugendpastor) return null;
+  const T = TEXTE.jugendpastor;
+  return `<h2>${T.titel}</h2><p>${T.text}</p>
+    <div class="zeile"><button class="haupt" data-jugendpastor-weiter>${T.weiter}</button></div>`;
+}
 function zeitungFenster() {
   if (!ui.spiel.lage().zeitung) return null;
   const T = TEXTE.zeitung;
@@ -929,6 +937,7 @@ export function fensterEinrichten() {
     if (b.hasAttribute('data-zu')) return fensterSchliessen();
     if (b.hasAttribute('data-wochenbericht-weiter')) { spiel.wochenberichtWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
     if (dienstplanKlick(b, f)) { ui.speichern(); ui.anzeigeErzwingen(); return ui.malen(); }   // Menü „Mitarbeiter“ (27.11.)
+    if (b.hasAttribute('data-jugendpastor-weiter')) { spiel.jugendpastorWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
     if (b.hasAttribute('data-zeitung-weiter')) { spiel.zeitungWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
     if (b.dataset.gruppe) { const o = f.offen || []; f.offen = o.includes(b.dataset.gruppe) ? o.filter(x => x !== b.dataset.gruppe) : [...o, b.dataset.gruppe]; }
     else if (b.dataset.sort) { const s = f.sort || { spalte: 'name', ab: false }; f.sort = { spalte: b.dataset.sort, ab: s.spalte === b.dataset.sort ? !s.ab : true }; }

@@ -32,6 +32,13 @@ export const TEXTE = {
     weiter: 'Weiter'
   },
 
+  // Pop-up „Jugendpastor ist da“ (27.11.2026) – ENTWURF von Claude, Lukas formuliert selbst
+  jugendpastor: {
+    titel: 'Verstärkung für die Gemeinde!',
+    text: 'Ab heute ist Jugendpastor Jimmy bei euch. Er kann Jugendgottesdienste, Lobpreisgottesdienste und den Konfirmandenunterricht leiten. Teile ihn im Menü „Mitarbeiter“ unter „Hauptamt“ ein.',
+    weiter: 'Weiter'
+  },
+
   // Intro beim Öffnen der App (Text von Lukas, 26.11.2026)
   intro: 'twoyears 2026',
 
@@ -457,7 +464,7 @@ export const TEXTE = {
   // Seelsorge-Fenster
   seelsorge: {
     titel: 'Seelsorge',
-    anfrage: voll => `${voll} möchte mit Pastor Harder sprechen.`,
+    anfrage: (voll, name) => `${voll} möchte mit ${name} sprechen.`,   // 27.11.: Name des gefragten Hauptamtlichen (von Lukas so gewünscht)
     annehmen: 'Gespräch annehmen',
     ablehnen: 'Ablehnen',
     abgelehnt: name => `${name} ist enttäuscht.`,
@@ -471,7 +478,7 @@ export const TEXTE = {
       kosten: euro => `Kosten −${euro}`,
       neugierig: 'jetzt neugierig auf die Gemeinde'
     },
-    neueStufe: n => `Pastor Harder ist jetzt Seelsorger Stufe ${n}.`,
+    neueStufe: (n, name) => `${name} ist jetzt Seelsorger Stufe ${n}.`,   // 27.11.: Name des Hauptamtlichen (von Lukas so gewünscht)
     // Von Lukas freigegeben (25.11. abends): Aufstieg zwischen den Freischaltungen und auf einer Freischaltung
     stufeBonus: n => `Seine Ratschläge gelingen jetzt ${zahl(n)} % öfter.`,
     neuFreigeschaltet: t => `Neu: ${t}`,
@@ -1033,6 +1040,7 @@ export const TEXTE = {
       voll: name => `${name} hat schon alle Schichten dieser Woche.`,
       zeit: name => `${name} arbeitet zu dieser Zeit schon bei einem anderen Termin.`,
       person: (_, art) => art === 'hauptamt' ? 'Diese Stelle ist nur für Ehrenamtliche.' : 'Diese Stelle ist nur für Hauptamtliche.',   // ENTWURF 27.11.
+      leitet: name => `${name} kann diese Veranstaltung nicht leiten.`,   // Jugendpastor – ENTWURF von Claude, 27.11.
       keine: () => 'Diese Stelle gibt es nicht mehr.',
       auswahl: tab => tab === 'hauptamt' ? 'Wähle zuerst einen Hauptamtlichen aus.' : 'Wähle zuerst einen Ehrenamtlichen aus.',   // HA: ENTWURF 27.11.
       schulung: name => `${name} ist gerade auf Schulung.`   // Schulungen (27.11.): Text von Claude

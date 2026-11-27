@@ -13,13 +13,25 @@ import { weg, glaetten } from './wege.js';
 import { strasse, punktAufWeg, strecke } from './bewegung.js';
 import { gangOrt } from './toiletten.js';
 import { automatGangSeelsorge, nachherBesuch } from './automaten.js';
-import { seelsorgeStufe, seelsorgePunkteDazu, seelsorgerVon } from './skills.js';
+import { seelsorgeStufe, seelsorgePunkteDazu, seelsorgerVon, alleSeelsorger } from './skills.js';
+import { freiFuerGespraech } from './dienst.js';
+import { daten } from './personen.js';
+
+// Mehrere Hauptamtliche (Jugendpastor, 27.11.): Jeder hat seine eigene Seelsorge-Stufe. Eine Anfrage geht an einen
+// freien Hauptamtlichen (in der Gemeinde und gerade ohne Schicht), bei mehreren freien per Zufall. Ist keiner frei,
+// wartet die Anfrage (S.wartet) und wird alle WARTEN Spielminuten neu versucht. Wer gefragt wird, steht in gang.bei
+// bzw. anfrage.bei (ältere Spielstände ohne bei: der erste Seelsorger, Pastor Harder).
+const WARTEN = 15;
+const seelsorgerDer = (z, A) => (A && A.bei && z.personen.find(p => p.id === A.bei)) || seelsorgerVon(z);
+// gesperrt(z, p): leitet p gerade eine Veranstaltung (oder gleich)? (aus ablauf.js; in Tests oft () => false)
+const freieSeelsorger = (z, raeume, gesperrt) => alleSeelsorger(z).filter(p => freiFuerGespraech(z, raeume, p) && !gesperrt(z, p));
 
 export function seelsorgeAnlegen(z) {
   if (!z.seelsorge) z.seelsorge = { anfrage: null, tag: -1, pruefungen: [], letzte: null };
   const S = z.seelsorge;
   if (typeof S.anzahl !== 'number') S.anzahl = 0;      // so viele Anfragen gab es schon (für den Anfangsschub)
   if (!S.gang) S.gang = null;                           // wer gerade zum Pastor (oder wieder heim) läuft
+  if (!S.wartet) S.wartet = null;                       // Anfrage, die wartet, bis ein Hauptamtlicher frei ist (27.11.)
 }
 
 // Anfangsschub: die ersten Anfragen kommen öfter; der Schub wird mit jeder Anfrage kleiner.
@@ -29,8 +41,7 @@ export function schub(anzahl) {
 }
 
 // Weg vom Tor bis neben den Pastor (null, wenn er nicht erreichbar ist)
-function wegZumPastor(z, zufall) {
-  const pastor = seelsorgerVon(z);
+function wegZumPastor(z, zufall, pastor = seelsorgerVon(z)) {
   if (!pastor) return null;
   const blockiert = (x, y) => hindernisBei(z, x, y) || z.personen.some(p => p.x === x && p.y === y);
   const start = strasse(Math.floor(zufall() * 4));
@@ -57,7 +68,7 @@ function planen(z, tag, zufall) {
 }
 function pruefen(z, gesperrt, zufall, raeume) {
   const S = z.seelsorge;
-  if (S.anfrage || S.gang || gesperrt(z)) return;
+  if (S.anfrage || S.gang || S.wartet || gesperrt(z)) return;
   const stunden = 7 * (SEELSORGE.bis - SEELSORGE.von);
   if (zufall() >= SEELSORGE.anfragenProWoche[seelsorgeStufe(z) - 1] * schub(S.anzahl) / stunden) return;
   const besucher = z.besucher, ort = z.ort ? z.ort.leute : [];
@@ -67,14 +78,30 @@ function pruefen(z, gesperrt, zufall, raeume) {
   const auswahl = SITUATIONEN.filter(s => s.id !== S.letzte);           // nicht zweimal hintereinander dasselbe
   const sit = auswahl[Math.floor(zufall() * auswahl.length)];
   S.letzte = sit.id; S.anzahl++;
-  const hin = wegZumPastor(z, zufall);
+  zuEinemSeelsorger(z, zufall, raeume, p.id, sit.id, gesperrt);
+}
+// Anfrage an einen freien Hauptamtlichen schicken – ist keiner frei, wartet sie
+function zuEinemSeelsorger(z, zufall, raeume, id, situation, gesperrt = () => false) {
+  const S = z.seelsorge, frei = freieSeelsorger(z, raeume, gesperrt);
+  if (!frei.length) { S.wartet = { id, situation }; return; }
+  S.wartet = null;
+  const pastor = frei.length > 1 ? frei[Math.floor(zufall() * frei.length)] : frei[0];
+  const hin = wegZumPastor(z, zufall, pastor);
   if (hin) {
-    S.gang = { id: p.id, situation: sit.id, t0: z.minuten, hin, da: false, zurueck: null };   // erst hinlaufen
+    S.gang = { id, situation, bei: pastor.id, t0: z.minuten, hin, da: false, zurueck: null };   // erst hinlaufen
     // Getränkeautomat (Lukas, 27.11.): vielleicht erst über den Automaten zum Pastor
-    const v = raeume && automatGangSeelsorge(z, raeume, besuchVon(S.gang), p.id, hin.pfad[0], hin.pfad[hin.pfad.length - 1], z.minuten);
+    const v = raeume && automatGangSeelsorge(z, raeume, besuchVon(S.gang), id, hin.pfad[0], hin.pfad[hin.pfad.length - 1], z.minuten);
     if (v) S.gang.vor = v;
   }
-  else S.anfrage = { id: p.id, situation: sit.id, phase: 'frage', ergebnis: null };              // kein Weg: gleich fragen
+  else S.anfrage = { id, situation, bei: pastor.id, phase: 'frage', ergebnis: null };              // kein Weg: gleich fragen
+}
+// Wartende Anfrage: ist jetzt jemand frei? (Person gibt es nicht mehr: Anfrage fällt weg)
+function warteVersuch(z, gesperrt, zufall, raeume) {
+  const W = z.seelsorge.wartet;
+  if (!W) return;
+  if (!mensch(z, W.id)) { z.seelsorge.wartet = null; return; }
+  if (gesperrt(z)) return;
+  zuEinemSeelsorger(z, zufall, raeume, W.id, W.situation, gesperrt);
 }
 // Kennung des Besuchs (für den Automaten) und wann man beim Pastor ankommt bzw. wieder vom Gelände ist
 const besuchVon = G => `ss:${G.t0}:${G.id}`;
@@ -89,7 +116,7 @@ function rueckwegPlanen(z, raeume) {
 function ankommen(z) {
   const G = z.seelsorge.gang;
   G.da = true;
-  z.seelsorge.anfrage = { id: G.id, situation: G.situation, phase: 'frage', ergebnis: null };
+  z.seelsorge.anfrage = { id: G.id, situation: G.situation, bei: G.bei || null, phase: 'frage', ergebnis: null };
 }
 
 // Nächster Schritt (für das Tick-System). gesperrt(z) sagt, ob gerade keine Anfrage kommen darf (Gottesdienst).
@@ -104,6 +131,7 @@ export function seelsorgeSchritt(z, gesperrt, zufall, raeume = null) {
     const weg = wegVon(G);
     if (weg < morgen) return { zeit: Math.max(z.minuten, weg), tun: () => { S.gang = null; } };
   }
+  if (S.wartet && !G && !S.anfrage) return { zeit: z.minuten + WARTEN, tun: () => warteVersuch(z, gesperrt, zufall, raeume) };
   if (S.pruefungen.length && S.pruefungen[0] < morgen) return { zeit: S.pruefungen[0], tun: () => { S.pruefungen.shift(); pruefen(z, gesperrt, zufall, raeume); } };
   return { zeit: morgen, tun: () => planen(z, tag + 1, zufall) };
 }
@@ -123,7 +151,7 @@ export function raten(z, nr, zufall = Math.random) {
   const S = z.seelsorge, A = S.anfrage, sit = situation(z), rat = sit && sit.raete[nr];
   if (!A || A.phase !== 'frage' || !rat) return 'keine';
   if (rat.kosten && !kannBezahlen(z, rat.kosten)) return 'geld';
-  const p = mensch(z, A.id), vorher = seelsorgeStufe(z);
+  const p = mensch(z, A.id), wer = seelsorgerDer(z, A), vorher = seelsorgeStufe(z, wer);
   const gut = zufall() < chanceVon(rat, vorher);
   const e = {
     rat: nr, gut, haltungVorher: p ? p.zufriedenheit : null, haltungNachher: null, kommChance: null,
@@ -140,8 +168,8 @@ export function raten(z, nr, zufall = Math.random) {
   if (gut && passant && !p.neugierig) { p.neugierig = true; e.neugierig = true; }
   // Vorher → nachher, und bei Besuchern: mit welcher Chance sie jetzt zur nächsten Veranstaltung kommen
   if (p) { e.haltungNachher = p.zufriedenheit; if (!passant) e.kommChance = Math.round(kommChance(p) * 100); }
-  seelsorgePunkteDazu(z, SEELSORGE.erfahrung.gespraech + (gut ? SEELSORGE.erfahrung.gutExtra : 0));
-  const nachher = seelsorgeStufe(z);
+  seelsorgePunkteDazu(z, SEELSORGE.erfahrung.gespraech + (gut ? SEELSORGE.erfahrung.gutExtra : 0), wer);
+  const nachher = seelsorgeStufe(z, wer);
   if (nachher > vorher) {
     e.neueStufe = nachher;
     e.stufeBonus = Math.round(SEELSORGE.bonusProStufe * (nachher - vorher) * 1000) / 10;   // so viel % mehr Erfolgschance
@@ -167,10 +195,11 @@ export function anfrageInfo(z) {
   if (!A) return null;
   const p = mensch(z, A.id), sit = situation(z);
   if (!p || !sit) { z.seelsorge.anfrage = null; z.seelsorge.gang = null; return null; }              // Person gibt es nicht mehr
-  const st = seelsorgeStufe(z), E = SEELSORGE.einschaetzung;
+  const wer = seelsorgerDer(z, A), st = seelsorgeStufe(z, wer), E = SEELSORGE.einschaetzung, wd = wer && daten(wer);
   const chancen = sit.raete.map(r => chanceVon(r, st)), beste = chancen.indexOf(Math.max(...chancen));
   return { id: p.id, voll: p.voll, vorname: p.vorname, situation: sit.id, phase: A.phase, ergebnis: A.ergebnis,
     besuche: p.besuche || 0, haltung: p.zufriedenheit,
+    seelsorger: wd ? { id: wer.id, name: wd.name } : null,   // mit wem die Person spricht (27.11.)
     raete: sit.raete.map((r, i) => ({ kosten: r.kosten || 0, leistbar: !r.kosten || kannBezahlen(z, r.kosten),
       // Was der Pastor auf seiner Stufe erkennt: beste (Stufe 5–9), Einschätzung (ab 10), genaue Chance in % (ab 15)
       beste: st >= E.besteAb && st < E.alleAb && i === beste,

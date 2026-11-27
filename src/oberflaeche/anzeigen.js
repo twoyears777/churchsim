@@ -98,6 +98,8 @@ export function anzeigenAktualisieren() {
   else if (l.zeitung && (!ui.fenster || ui.fenster.art !== 'zeitung')) ui.fenster = { art: 'zeitung' };
   // Wochenzusammenfassung (27.11.): montags 8:00 nach vorn holen (die Zeit steht, bis man „Weiter“ klickt); Bereiche starten zugeklappt
   else if (l.wochenbericht && (!ui.fenster || ui.fenster.art !== 'wochenbericht')) ui.fenster = { art: 'wochenbericht', offen: [] };
+  // Jugendpastor ist da (27.11.): nach der Wochenzusammenfassung nach vorn holen (die Zeit steht, bis man „Weiter“ klickt)
+  else if (l.jugendpastor && (!ui.fenster || ui.fenster.art !== 'jugendpastor')) ui.fenster = { art: 'jugendpastor' };
   fensterAktualisieren();
 }
 

@@ -18,7 +18,7 @@ import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
 import { imDurchgang } from './durchgang.js';
 import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum, hindernisBei } from './moebel.js';
-import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill } from './skills.js';
+import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill, alleSeelsorger } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { bueroSchritt, konfiBriefVerbraucht, bueroAnlegen } from './buero.js';
@@ -48,9 +48,10 @@ import { evangelisationSchritt } from './evangelisation.js';
 import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen, unfallSchritt, wegInfo } from './toiletten.js';
 import { wiesenKarte } from './wege.js';
 import { ERSTER_GOTTESDIENST } from '../inhalte/besucher.js';
+import { jugendpastorSchritt, jugendpastorOffen } from './jugendpastor.js';
 import { ersterAnlegen, ersterOffen, zeitungOffen, zeitungSchritt, zusatzLeute, ehrenamtSicher } from './erster.js';
 import { automatenBeimAnreisen, automatenBeimHeimgehen, automatenSchritt } from './automaten.js';
-import { dienstAnlegen, dienstMerken, dienstVergessen, dienstAktualisieren, dienstSchritt, veranstaltungDienst, begruessungDienst, kaffeeNachBesetzt, naechsteKaffeeSchicht, besuchendeEhrenamtliche } from './dienst.js';
+import { dienstAnlegen, dienstMerken, dienstVergessen, dienstAktualisieren, dienstSchritt, veranstaltungDienst, begruessungDienst, kaffeeNachBesetzt, naechsteKaffeeSchicht, besuchendeEhrenamtliche , darfLeiten } from './dienst.js';
 export { kirchkaffeeZustand, kirchkaffeeOffen };
 
 // Kollekte-Faktor für den Termin: am Sonntag doppelt, egal ob vormittags, nachmittags oder abends (Lukas, 26.11.)
@@ -181,7 +182,7 @@ function voraussetzungen(z, r, v, hauptamt, ehrenamtliche, spieler = []) {
     leitung = hauptamt[0] || ehrenamtliche[0] || null;
     if (!leitung) return { leitung: null, fehlt: 'mitarbeiter' };
   } else for (const art of [].concat(v.leitung)) {
-    let kandidaten = art === 'ehrenamt' ? ehrenamtliche : art === 'hauptamt' ? hauptamt : [];
+    let kandidaten = art === 'ehrenamt' ? ehrenamtliche : art === 'hauptamt' ? hauptamt.filter(p => darfLeiten(p, v.id)) : [];   // Jugendpastor: nur seine Veranstaltungen
     if (art === 'ehrenamt' && v.musikLevelMin) {
       kandidaten = kandidaten.filter(p => musikLevel(p) >= v.musikLevelMin).sort((a, b) => musikLevel(b) - musikLevel(a));
       if (!kandidaten.length) return { leitung: null, fehlt: ehrenamtliche.length ? 'musikLevel' : 'ehrenamt' };
@@ -304,24 +305,24 @@ export const berichtPause = z => WOCHENBERICHT.pause && wochenberichtOffen(z);
 export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) { imDurchgang(() => zeitVorrueckenInnen(z, raeume, minuten, zufall)); }
 function zeitVorrueckenInnen(z, raeume, minuten, zufall) {
   ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z); dienstAnlegen(z); bueroAnlegen(z);
-  if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) return;
+  if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z) || jugendpastorOffen(z)) return;
   dienstMerken(z, raeume);   // Dienstplan-Termine für diesen Durchgang nur einmal ausrechnen
   try {
-  const ziel = z.minuten + minuten, gesperrt = zz => seelsorgeGesperrt(zz, raeume);
+  const ziel = z.minuten + minuten, gesperrt = (zz, p = null) => seelsorgeGesperrt(zz, raeume, p);
   // Dienstplan (27.11.): vor jedem Schritt kommen bzw. gehen die Ehrenamtlichen, deren Schicht gerade beginnt bzw. endet
   const aktuell = () => { dienstAktualisieren(z, raeume); kaffeeAktualisieren(z, raeume, zufall); };
   aktuell();
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), dienstSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), bueroSchritt(z, raeume), wochenberichtSchritt(z), forschungSchritt(z), schulungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), dienstSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), bueroSchritt(z, raeume), wochenberichtSchritt(z), jugendpastorSchritt(z), forschungSchritt(z), schulungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
     if (z.schichtbetrieb) dienstAktualisieren(z, raeume);   // z. B. Kirchkaffee-Schicht beginnt genau am Ende des Gottesdienstes
     s.tun(z, raeume, zufall);
     aktuell();   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
-    if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) { wochenbuchPruefen(z); return; }   // Seelsorge-Anfrage / Zeitung / Wochenzusammenfassung: Zeit steht genau hier
+    if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z) || jugendpastorOffen(z)) { wochenbuchPruefen(z); return; }   // Seelsorge-Anfrage / Zeitung / Wochenzusammenfassung: Zeit steht genau hier
   }
   z.minuten = ziel;
   aktuell();
@@ -339,14 +340,24 @@ export function ablaufAnlegen(z) {
 }
 // Seelsorge (Lukas, 25.11.): Anfragen kommen immer, wenn der Pastor gerade keine Veranstaltung leitet – auch während
 // des Kirchkaffees. Gesperrt nur während einer Veranstaltung, die der Pastor leitet, und in den 3 Stunden davor.
-function leitetPastor(z, raeume, termin) {
+// Mehrere Hauptamtliche (Jugendpastor, 27.11.): gesperrt ist nur, wer gerade leitet bzw. in 3 Stunden leitet.
+// seelsorgeGesperrt(z, raeume) = alle Seelsorger gesperrt (dann kommt gar keine Anfrage), mit person: ist diese gesperrt?
+function leitungVon(z, raeume, termin) {
   const info = terminInfo(z, raeume, termin);
-  return !!(info && info.p.leitung && hatSkill(info.p.leitung, 'seelsorge'));
+  return info && info.p.leitung && hatSkill(info.p.leitung, 'seelsorge') ? info.p.leitung : null;
 }
-export function seelsorgeGesperrt(z, raeume = raeumeVon(z)) {
-  if ((z.laeufe || []).some(L => (L.phase === 'anreise' || L.phase === 'gottesdienst') && !L.ausgefallen && leitetPastor(z, raeume, L))) return true;
+function gesperrteSeelsorger(z, raeume) {
+  const ids = new Set();
+  for (const L of z.laeufe || []) if ((L.phase === 'anreise' || L.phase === 'gottesdienst') && !L.ausgefallen) { const p = leitungVon(z, raeume, L); if (p) ids.add(p.id); }
   const t = naechsterTermin(z, raeume);
-  return !!t && z.minuten >= t.beginn - SEELSORGE.sperreVorGottesdienst && leitetPastor(z, raeume, t);
+  if (t && z.minuten >= t.beginn - SEELSORGE.sperreVorGottesdienst) { const p = leitungVon(z, raeume, t); if (p) ids.add(p.id); }
+  return ids;
+}
+export function seelsorgeGesperrt(z, raeume = raeumeVon(z), person = null) {
+  const ids = gesperrteSeelsorger(z, raeume);
+  if (person) return ids.has(person.id);
+  const alle = alleSeelsorger(z);
+  return alle.length ? alle.every(p => ids.has(p.id)) : ids.size > 0;
 }
 // Neue Woche (Montag 0:00): alte Woche in den Finanz-Verlauf, Wochenbuch leeren
 function wochenbuchPruefen(z) {
@@ -417,11 +428,12 @@ export function terminStand(z, raeume, t) {
 function festProgramm(z, g, L) {
   const plan = z.feste && z.feste.plaene[L.fest], v = VERANSTALTUNGEN.find(x => x.id === (plan ? plan.art : L.art)) || null;
   // Schichtbetrieb (27.11.): die im Fest-Menü gewählte Leitung kommt zur Festzeit von selbst (dienst.js) – zählt schon vorher
-  const leitung = !plan ? null : z.schichtbetrieb ? z.personen.find(p => p.id === plan.leitung && daten(p) && daten(p).art === 'hauptamt') || null
-    : g.imRaum.find(p => p.id === plan.leitung && daten(p).art === 'hauptamt') || null;
-  const fehlt = !v || !plan || v.fest === false ? 'keine' : !leitung ? 'leitung' : v.braucht.some(a => !moebelImRaum(z, g.raum, a).length) ? 'gitarre'
+  const leitung = (!plan ? null : z.schichtbetrieb ? z.personen.find(p => p.id === plan.leitung && daten(p) && daten(p).art === 'hauptamt') || null
+    : g.imRaum.find(p => p.id === plan.leitung && daten(p).art === 'hauptamt') || null);
+  const leitungOk = leitung && v && darfLeiten(leitung, v.id) ? leitung : null;   // Jugendpastor: Feste nur in seinen Veranstaltungsarten
+  const fehlt = !v || !plan || v.fest === false ? 'keine' : !leitungOk ? 'leitung' : v.braucht.some(a => !moebelImRaum(z, g.raum, a).length) ? 'gitarre'
     : v.gitarrist && !g.spieler.length ? 'gitarrist' : null;
-  return { platz: 'fest', art: v ? v.id : null, tag: L.plan.tag, slot: L.plan.slot, veranstaltung: v, frei: true, leitung, fehlt, bereit: !fehlt };
+  return { platz: 'fest', art: v ? v.id : null, tag: L.plan.tag, slot: L.plan.slot, veranstaltung: v, frei: true, leitung: leitungOk, fehlt, bereit: !fehlt };
 }
 // Wird dieser (normale) Termin von einem Sonderevent verdrängt? Gleiche Zeit und gleicher Raum oder dieselbe Leitung.
 // → Schlüssel des Fests oder null

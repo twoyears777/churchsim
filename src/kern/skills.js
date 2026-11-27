@@ -54,24 +54,26 @@ export function skillsAnlegen(z) {
 }
 
 // ── Seelsorge: Erfahrungspunkte → Stufe 1–20 ──
-// Wer Seelsorge macht, steht in src/inhalte/skills.js (bisher nur Pastor Harder). Gesucht wird über den Skill,
-// nicht über die feste Kennung 'pastor' – so muss später nur die Inhaltsdatei geändert werden.
+// Wer Seelsorge macht, steht in src/inhalte/skills.js (seit 27.11.: alle Hauptamtlichen, jeder mit eigener Stufe).
+// Gesucht wird über den Skill, nicht über die feste Kennung 'pastor'. Ohne Angabe einer Person gilt der erste
+// Seelsorger (Pastor Harder) – so bleiben ältere Aufrufe gültig.
 export const seelsorgerVon = z => (z.personen || []).find(p => hatSkill(p, 'seelsorge')) || null;
-const pastorVon = seelsorgerVon;
-export function seelsorgePunkte(z) { const p = pastorVon(z); return p ? skillsVon(p).seelsorge || 0 : 0; }
-export function seelsorgePunkteDazu(z, n) { const p = pastorVon(z); if (p) skillsVon(p).seelsorge = seelsorgePunkte(z) + n; }
+export const alleSeelsorger = z => (z.personen || []).filter(p => hatSkill(p, 'seelsorge'));
+const wer = (z, p) => (p && hatSkill(p, 'seelsorge') ? p : seelsorgerVon(z));
+export function seelsorgePunkte(z, p) { const q = wer(z, p); return q ? skillsVon(q).seelsorge || 0 : 0; }
+export function seelsorgePunkteDazu(z, n, p) { const q = wer(z, p); if (q) skillsVon(q).seelsorge = seelsorgePunkte(z, q) + n; }
 // Stufe aus den Erfahrungspunkten
 export function stufe(punkte) {
   let s = 1;
   SEELSORGE.stufeAb.forEach((ab, i) => { if (punkte >= ab) s = i + 1; });
   return s;
 }
-export const seelsorgeStufe = z => stufe(seelsorgePunkte(z));
+export const seelsorgeStufe = (z, p) => stufe(seelsorgePunkte(z, p));
 // Bonus auf die Erfolgschance in Prozentpunkten (z. B. Stufe 3 → 3)
 export const bonusProzent = st => Math.round(SEELSORGE.bonusProStufe * (st - 1) * 1000) / 10;
 // Für die Charakter-Karte: Stufe, Punkte, Bonus auf die Erfolgschance (in %), letzte und nächste Freischaltung
-export function stufeInfo(z) {
-  const p = seelsorgePunkte(z), s = stufe(p), F = SEELSORGE.freischaltungen;
+export function stufeInfo(z, person) {
+  const p = seelsorgePunkte(z, person), s = stufe(p), F = SEELSORGE.freischaltungen;
   return { stufe: s, maxStufe: SEELSORGE.stufeAb.length, punkte: p, von: SEELSORGE.stufeAb[s - 1],
     bis: s < SEELSORGE.stufeAb.length ? SEELSORGE.stufeAb[s] : null, bonus: bonusProzent(s),
     freigeschaltet: [...F].reverse().find(n => n <= s) || null, naechsteFreischaltung: F.find(n => n > s) || null };

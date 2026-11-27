@@ -21,8 +21,8 @@ export function personenAnlegen(z) {
 export function daten(person) { return START_MITARBEITER.find(m => m.id === person.id) || person.daten; }
 
 // Neue Person (z. B. Ehrenamtlicher aus einem Besucher) am Tor aufstellen, auf dem nächsten freien Platz.
-export function personHinzufuegen(z, daten) {
-  const s = startPlatz(), id = `ea${(z.naechsteId = (z.naechsteId || 0) + 1)}`;
+export function personHinzufuegen(z, daten, festeId = null) {
+  const s = startPlatz(), id = festeId || `ea${(z.naechsteId = (z.naechsteId || 0) + 1)}`;
   let platz = s;
   for (let r = 0; r < 12 && !platzFrei(z, platz.x, platz.y); r++) {
     const kandidaten = [];

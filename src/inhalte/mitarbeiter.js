@@ -4,6 +4,21 @@
 export const START_MITARBEITER = [
   { id: 'pastor', name: 'Pastor Harder', kuerzel: 'P', art: 'hauptamt', ausbildung: null, skill: null, charakter: null }
 ];
+// Jugendpastor (Lukas, 27.11.2026: claude/spielprinzip-jugendpastor.md): zweiter Hauptamtlicher, kommt im Spiel dazu.
+//   ankunft:  Montag 8:00 der 3. Woche (woche 2 = nach 2 Wochen), gleich nach der Wochenzusammenfassung, mit Pop-up.
+//             Alte Spielstände, die schon weiter sind, bekommen ihn am nächsten Montag 8:00.
+//   leitet:   nur diese Veranstaltungen darf er leiten (Stelle „Leitung“ im Dienstplan); Feste leitet er nicht.
+//             Alle anderen Stellen für Hauptamtliche (Begrüßung, Kirchkaffee, Logistik, Evangelisation) darf er wie Pastor Harder.
+//             Später kommt der Jugendkreis dazu (eigenes Spielprinzip).
+//   anwesend: nur von … bis … Uhr in der Gemeinde, sonst daheim (außer in einer Schicht).
+//   wartet:   ohne Schicht wartet er in diesem Raum (Kirchkaffee); gibt es keinen, am Startplatz wie Pastor Harder.
+//   kosten:   erstmal keine.
+export const JUGENDPASTOR = {
+  daten: { name: 'Jugendpastor Jimmy', kuerzel: 'J', art: 'hauptamt', ausbildung: null, skill: null, charakter: null,
+    leitet: ['jugend', 'lobpreis', 'konfi'], anwesend: { von: 7, bis: 23 }, wartet: 'kirchkaffee', jugendpastor: true },
+  ankunft: { woche: 2, tag: 0, stunde: 8 }
+};
+
 // Ehrenamtliche, mit denen ein neues Spiel zusätzlich startet (Lukas, 25.11.: „Frau des Pastors“).
 // Nur bei neuen Spielen – alte Spielstände bekommen niemanden dazu. Sie zählen nicht zum Einzugsgebiet (Lukas, 25.11.).
 export const START_EHRENAMTLICHE = [

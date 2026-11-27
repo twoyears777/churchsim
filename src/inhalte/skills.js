@@ -3,7 +3,7 @@
 //   fuer:  { id: 'pastor' } = nur diese Person, { art: 'hauptamt' | 'ehrenamt' } = alle Mitarbeiter dieser Art
 //   start: Startwert im Skill-Fach
 export const SKILLS = {
-  seelsorge: { fuer: { id: 'pastor' }, start: 0 },                              // Erfahrungspunkte → Stufe 1–20 (Zahlen: seelsorge.js)
+  seelsorge: { fuer: { art: 'hauptamt' }, start: 0 },                          // Erfahrungspunkte → Stufe 1–20 (Zahlen: seelsorge.js); 27.11.: alle Hauptamtlichen, jeder eigene Stufe
   musik: { fuer: { art: 'ehrenamt' }, start: 0 },                               // Erfahrung → Musik-Level (Zahlen: MUSIK in moebel.js)
   multiplikator: { fuer: { art: 'hauptamt' }, start: { stufe: 0, geleitet: 0 } }, // Haltungs-Multiplikator (Zahlen: forschung.js)
   evangelisation: { fuer: { art: 'ehrenamt' }, start: 0 }                       // Erfahrung → Evangelisation-Level (Zahlen: EVANGELISATION.skill in evangelisation.js)
