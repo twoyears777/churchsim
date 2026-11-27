@@ -967,6 +967,9 @@ export const TEXTE = {
     frei: n => `${n} frei`,
     voll: 'voll',
     keinTermin: 'Kein Termin',
+    // ENTWÜRFE von Claude (27.11.) – Lukas formuliert sie noch
+    meineDienste: name => `Dienste von ${name}:`,
+    keineDienste: name => `${name} hat diese Woche noch keinen Dienst.`,
     daheim: 'daheim',
     termin: { kaffeeNach: 'Kirchkaffee danach', kaffee: 'Kirchkaffee-Schicht', logistik: 'Logistik · Lager', evangelisation: 'Evangelisation' },
     stelle: {

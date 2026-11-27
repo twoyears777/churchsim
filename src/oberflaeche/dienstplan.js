@@ -30,8 +30,17 @@ export function dienstplanFenster(f) {
     const st = d.termine.filter(t => t.tag === tag && ZAEHLT.includes(t.art)).flatMap(t => t.stellen);
     const frei = st.filter(s => !s.person).length;
     const unter = !st.length ? '–' : frei ? T.frei(frei) : T.voll;
-    return `<button class="dp-tag${tag === f.tag ? ' offen' : ''}${tag === l.tag ? ' heute' : ''}" data-dp-tag="${tag}"><b>${name}</b><small class="${frei ? 'frei' : ''}">${unter}</small></button>`;
+    const zustand = !st.length ? '' : frei ? 'frei' : 'voll';   // rot = unbesetzte Stellen, grün = alles besetzt
+    return `<button class="dp-tag${tag === f.tag ? ' offen' : ''}${tag === l.tag ? ' heute' : ''}${zustand ? ' ' + zustand : ''}" data-dp-tag="${tag}"><b>${name}</b><small class="${zustand}">${unter}</small></button>`;
   }).join('');
+  // Alle Dienste der ausgewählten Person auf einen Blick, nach Tag und Zeitblock sortiert; Klick öffnet den Tag
+  const slots = Object.keys(TEXTE.kaffeeFenster.slot), gewaehlt = d.personen.find(p => p.id === f.auswahl);
+  const dienste = gewaehlt ? d.termine.flatMap(t => t.stellen.filter(s => s.person && s.person.id === gewaehlt.id).map(s => ({ t, s })))
+    .sort((a, b) => a.t.tag - b.t.tag || slots.indexOf(a.t.slot) - slots.indexOf(b.t.slot)) : [];
+  const meine = !gewaehlt ? '' : `<div class="dp-meine"><b>${esc(T.meineDienste(gewaehlt.name))}</b>${dienste.length
+    ? dienste.map(({ t, s }) => `<button class="dp-dienst${t.tag === f.tag ? ' offen' : ''}" data-dp-tag="${t.tag}">
+        <small>${TEXTE.tageKurz[t.tag]} · ${TEXTE.kaffeeFenster.slot[t.slot]}</small><b>${esc(terminName(t))}</b><span>${esc(stelleName(s, t.stellen))}</span></button>`).join('')
+    : `<span class="unter">${esc(T.keineDienste(gewaehlt.name))}</span>`}</div>`;
   const bloecke = Object.keys(TEXTE.kaffeeFenster.slot).map(slot => {
     const hier = d.termine.filter(t => t.tag === f.tag && t.slot === slot);
     const termine = hier.length ? hier.map(t => `<div class="dp-termin ${t.art}"><b>${esc(terminName(t))}</b>
@@ -45,6 +54,7 @@ export function dienstplanFenster(f) {
   return `<h2>${T.titel}</h2>
     <p class="unter">${T.schritt1}</p>
     <div class="dp-leute">${leute}</div>
+    ${meine}
     <div class="dp-tage">${tage}</div>
     <p class="unter">${T.schritt2}</p>
     <div class="dp-bloecke">${bloecke}</div>
