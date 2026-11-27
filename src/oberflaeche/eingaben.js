@@ -1,6 +1,7 @@
 // Eingaben: Maus, Finger und Tastatur → Befehle ans Spiel. Rechnet nur aus, welches Kästchen gemeint ist.
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, $, euro } from './ui.js';
+import { evangelisationsStandTrifft } from '../ansicht/zeichnen.js';
 import { fensterOeffnen, fensterSchliessen, fensterOffen } from './fenster.js';
 import { bauleisteEinrichten, werkzeugWaehlen, imUntermenue, hauptmenueZeigen } from './bauleiste.js';
 import { hauptmenueEinrichten, menueOeffnen, menueEscape } from './hauptmenue.js';
@@ -30,9 +31,10 @@ function naechste(e, liste, radius) {
   }
   return beste;
 }
-// Auf dem Feld „Evangelisation!“ selbst gewinnt immer das Feld – sonst schnappt sich ein Ehrenamtlicher, der direkt daneben steht,
+// Auf dem Stand „Evangelisation!“ gewinnt immer der Stand – sonst schnappt sich ein Ehrenamtlicher, der direkt daneben steht,
 // oder ein vorbeilaufender Passant den Klick und das Menü lässt sich nicht öffnen (Fehler, Lukas 26.11.).
-const aufEvangelisationsFeld = e => { const f = feldAus(e); return ui.spiel.evangelisationBei(f.x, f.y); };
+// Klick-Box = der ganze gezeichnete Stand mit Rand und Schild, nicht mehr nur ein Kästchen (Lukas, 27.11.).
+const aufEvangelisationsFeld = e => { const { px, py } = punktAus(e); return evangelisationsStandTrifft(px, py, ui.ansicht, ui.spiel.karte().evangelisation); };
 const figurBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().personen.map(p => ({ id: p.id, x: p.x, y: p.y })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
   Math.max(22, ui.ansicht.k * 1.1));
 const besucherBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
@@ -68,7 +70,7 @@ function mauszeiger(e) {
   let c = 'default';
   if (ui.tragen) c = 'grabbing';
   else if (!ui.editorOffen) { const f = feldAus(e); c = figurBei(e) ? 'grab' : besucherBei(e) || maschineBei(f) || automatBei(f) || stuhlBei(f) || schaukastenBei(f) || ui.spiel.veranstaltungsraumBei(f.x, f.y) !== null
-      || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) || ui.spiel.evangelisationBei(f.x, f.y) ? 'pointer' : 'default'; }
+      || ui.spiel.kirchkaffeeBei(f.x, f.y) !== null || ui.spiel.torBei(f.x, f.y) || ui.spiel.busBei(f.x, f.y) || aufEvangelisationsFeld(e) ? 'pointer' : 'default'; }
   else if (!ui.werkzeug) { const f = feldAus(e); c = ui.spiel.raumNrBei(f.x, f.y) >= 0 ? 'pointer' : 'default'; }   // nichts gewählt: Raum anklickbar (Raumfunktion)
   else if (ui.werkzeug === 'stuhl' && stuhlBei(feldAus(e))) c = 'pointer';
   else if (istMoebelWerkzeug()) c = 'crosshair';
@@ -81,7 +83,7 @@ function druecken(e) {
   if (!ui.editorOffen) {
     const p = figurBei(e);
     if (p) { leinwand.setPointerCapture(e.pointerId); const a = punktAus(e); ui.tragen = { id: p.id, ...a, start: a, bewegt: false }; ui.malen(); }
-    else ui.klickStart = { feld: feldAus(e), besucher: besucherBei(e) };
+    else ui.klickStart = { feld: feldAus(e), besucher: besucherBei(e), stand: aufEvangelisationsFeld(e) };
     return;
   }
   const f = feldAus(e);
@@ -119,6 +121,7 @@ function loslassen(e) {
     // Spielansicht: Besucher → Kärtchen, Kaffeemaschine → Menü, Stuhl → Verbessern, Raum mit Veranstaltungen → Raum-Fenster,
     // Kirchkaffee → Öffnungszeiten, Tor → Pforte (Plakat), Feld vor dem Laden → Evangelisation
     const f = feldAus(e), s = ui.klickStart; ui.klickStart = null;
+    if (s && s.stand && aufEvangelisationsFeld(e)) return fensterOeffnen({ art: 'evangelisation' });   // Stand vor dem Laden → Menü (große Klick-Box)
     if (!s || s.feld.x !== f.x || s.feld.y !== f.y) return;
     if (s.besucher) return fensterOeffnen({ art: 'besucher', id: s.besucher.id });
     const m = maschineBei(f);
@@ -136,7 +139,6 @@ function loslassen(e) {
     const kk = spiel.kirchkaffeeBei(f.x, f.y);
     if (kk !== null) return fensterOeffnen({ art: 'kaffee', nr: kk });   // Kirchkaffee → Öffnungszeiten
     if (spiel.torBei(f.x, f.y)) return fensterOeffnen({ art: 'tor' });
-    if (spiel.evangelisationBei(f.x, f.y)) return fensterOeffnen({ art: 'evangelisation' });   // Feld vor dem Laden → Menü
     if (spiel.busBei(f.x, f.y)) fensterOeffnen({ art: 'bus' });
     return;
   }

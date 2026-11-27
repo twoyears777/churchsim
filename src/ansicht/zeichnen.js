@@ -20,7 +20,7 @@ export const FARBEN = {
   gitarre: '#c07a32', gitarreHals: '#4a3220',
   // Weitere Instrumente (25.11.) – PLATZHALTER von Claude, Lukas legt Aussehen fest
   keyTasten: '#f4f1ea', keySchwarz: '#2a2a2e', trommel: '#b8433a', trommelFell: '#ece6da', becken: '#d9b54a',
-  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', plakat: '#fff6d6', plakatRand: '#c23b2e', evangelisation: '#fff6d6', evangelisationRand: '#2d69be',
+  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', plakat: '#fff6d6', plakatRand: '#c23b2e', evangelisation: '#fff6d6', evangelisationRand: '#2d69be', standHolz: '#b98a55', standHolzDunkel: '#7a5632',
   // Außen (Einzugsgebiet) – Platzhalter
   strasse: '#6a6d72', strasseRand: '#55585c', parkLinie: '#f2efe6', nichtAngeschlossen: 'rgba(200,55,45,0.45)',
   busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
@@ -178,11 +178,18 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     }
   }
 
-  // Mitarbeiter-Figuren
-  for (const f of z.personen) {
-    if (f.id === extra.getragen) continue;
+  // Mitarbeiter-Figuren – mit dem Stand „Evangelisation!“ vor dem Laden in der richtigen Reihenfolge (Lukas, 27.11.):
+  // erst alle, die weiter hinten (oben) stehen, dann der Stand, dann alle davor. So liegt der Stand nie hinter
+  // Namensschildern, wer oben steht, schaut hinter dem Stand hervor, und wer unten steht, steht davor.
+  const standY = z.evangelisation ? z.evangelisation.y + 0.5 : Infinity;
+  const mitarbeiter = hinten => { for (const f of z.personen) {
+    if (f.id === extra.getragen || (f.y < standY) !== hinten) continue;
     figur(ctx, ox + (f.x + 0.5) * k, oy + (f.y + 0.5) * k, k, f, false, schrift);
-  }
+  } };
+  mitarbeiter(true);
+  if (z.evangelisation) evangelisationsStand(ctx, ansicht, z.evangelisation);
+  mitarbeiter(false);
+
   if (extra.tragen) {
     const t = extra.tragen, f = z.personen.find(p => p.id === extra.getragen);
     const fx = Math.floor((t.px - ox) / k), fy = Math.floor((t.py - oy) / k);
@@ -311,10 +318,6 @@ function umgebungZeichnen(ctx, z, ansicht) {
     ctx.fillStyle = FARBEN.asphalt; ctx.fillRect(...P(b.x, a.y, b.w, a.h));
   }
 
-  // Feld „Evangelisation!“ vor dem Laden (26.11.): kleiner Stand mit Schild – Aussehen ist ein Platzhalter von Claude.
-  // Erst nach Gehwegen und Straßen malen, sonst schneiden sie das Schild ab (Fehler, Lukas 27.11.).
-  if (z.evangelisation) evangelisationsFeld(ctx, ansicht, z.evangelisation);
-
   // Eigenes Grundstück: Rasen und Einfahrt zum Tor
   const g = GRUNDSTUECK;
   ctx.fillStyle = FARBEN.rasen; ctx.fillRect(...P(g.x, g.y, g.w, g.h));
@@ -425,17 +428,62 @@ function klavier(ctx, px, py, k) {
 }
 const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon, klavier };
 // Plakat am Zaun links neben dem Tor (solange es hängt)
-function evangelisationsFeld(ctx, { k, ox, oy }, f) {
+// Stand „Evangelisation!“ (Lukas, 27.11.: „lieber so einen kleinen gebauten Stand“): Marktstand von vorn – zwei Pfosten,
+// gestreifte Markise, Holztheke mit Tuch, Heften und Kreuz; das Schild hängt rechts daneben an einem Pfosten.
+// Maße in Kästchen, vom Feld aus gerechnet. Dieselben Maße nutzt die Klick-Box (evangelisationsStandTrifft).
+const STAND = { links: -0.45, rechts: 1.45, oben: -0.6, unten: 1.1, rand: 0.3 };
+let schildBreite = 0;   // zuletzt gemessene Breite des Schilds in Kästchen (für die Klick-Box)
+function evangelisationsSchild(k, px, py, breite) {
+  const h = Math.max(16, k * 0.95), x = px + STAND.rechts * k + k * 0.35;
+  return { x, y: py + k * 0.25 - h / 2, b: breite, h };
+}
+function evangelisationsStand(ctx, { k, ox, oy }, f) {
   const px = ox + f.x * k, py = oy + f.y * k;
-  ctx.fillStyle = FARBEN.evangelisation; ctx.fillRect(px + k * 0.08, py + k * 0.08, k * 0.84, k * 0.84);
-  ctx.strokeStyle = FARBEN.evangelisationRand; ctx.lineWidth = Math.max(1.5, k * 0.1); ctx.strokeRect(px + k * 0.08, py + k * 0.08, k * 0.84, k * 0.84);
-  // Schild so groß wie das Schild „Laden“ (27.11., vorher kleiner)
+  const x0 = px + STAND.links * k, x1 = px + STAND.rechts * k, y0 = py + STAND.oben * k, y1 = py + STAND.unten * k, b = x1 - x0;
+  const blau = FARBEN.evangelisationRand, hell = FARBEN.evangelisation;
+  // Schatten am Boden
+  ctx.fillStyle = FARBEN.schatten; ctx.beginPath(); ctx.ellipse((x0 + x1) / 2, y1, b * 0.56, k * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+  // Rückwand (heller Stoff) und Pfosten
+  ctx.fillStyle = '#eef1f6'; ctx.fillRect(x0 + k * 0.08, y0 + k * 0.4, b - k * 0.16, py + k * 0.45 - y0 - k * 0.4);
+  ctx.fillStyle = FARBEN.standHolzDunkel;
+  ctx.fillRect(x0, y0 + k * 0.3, k * 0.1, y1 - y0 - k * 0.3); ctx.fillRect(x1 - k * 0.1, y0 + k * 0.3, k * 0.1, y1 - y0 - k * 0.3);
+  // Theke: Holzplatte, darunter ein Tuch mit Kreuz
+  const ty = py + k * 0.42;
+  ctx.fillStyle = hell; ctx.fillRect(x0 + k * 0.04, ty + k * 0.12, b - k * 0.08, y1 - ty - k * 0.14);
+  ctx.strokeStyle = blau; ctx.lineWidth = Math.max(1, k * 0.05); ctx.strokeRect(x0 + k * 0.04, ty + k * 0.12, b - k * 0.08, y1 - ty - k * 0.14);
+  const kx = (x0 + x1) / 2, ky = ty + k * 0.36, arm = k * 0.13, dick = Math.max(1.5, k * 0.07);
+  ctx.fillStyle = blau; ctx.fillRect(kx - dick / 2, ky - arm * 1.1, dick, arm * 2.4); ctx.fillRect(kx - arm, ky - arm * 0.45, arm * 2, dick);
+  ctx.fillStyle = FARBEN.standHolz; ctx.fillRect(x0 - k * 0.04, ty, b + k * 0.08, k * 0.14);
+  // Hefte und Bücher auf der Theke
+  const heft = [['#ffffff', 0.12], [blau, 0.3], ['#e9c46a', 0.62], ['#ffffff', 0.8]];
+  for (const [farbe, t] of heft) { ctx.fillStyle = farbe; ctx.fillRect(x0 + b * t, ty - k * 0.09, k * 0.2, k * 0.1); ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.strokeRect(x0 + b * t, ty - k * 0.09, k * 0.2, k * 0.1); }
+  // Markise: blau-weiß gestreift, unten mit Zacken
+  const my = y0, mh = k * 0.5, n = 8, sb = (b + k * 0.2) / n, mx = x0 - k * 0.1;
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = i % 2 ? '#ffffff' : blau;
+    ctx.beginPath(); ctx.moveTo(mx + i * sb, my); ctx.lineTo(mx + (i + 1) * sb, my); ctx.lineTo(mx + (i + 1) * sb, my + mh);
+    ctx.lineTo(mx + (i + 0.5) * sb, my + mh + k * 0.1); ctx.lineTo(mx + i * sb, my + mh); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(mx, my + mh * 0.62, b + k * 0.2, mh * 0.38);   // untere Kante im Schatten
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.strokeRect(mx, my, b + k * 0.2, mh);
+  // Schild rechts neben dem Stand, so groß wie das Schild „Laden“, an einem kurzen Pfosten
   ctx.font = `600 ${Math.max(11, k * 0.7)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const text = TEXTE.evangelisation.feld, b = ctx.measureText(text).width + 12, h = Math.max(16, k * 0.95);
-  const cx = px + k / 2, cy = py - h / 2 - k * 0.1;
-  ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(cx - b / 2, cy - h / 2, b, h);
-  ctx.strokeStyle = FARBEN.evangelisationRand; ctx.lineWidth = 1; ctx.strokeRect(cx - b / 2, cy - h / 2, b, h);
-  ctx.fillStyle = FARBEN.evangelisationRand; ctx.fillText(text, cx, cy + 1);
+  const text = TEXTE.evangelisation.feld, breite = ctx.measureText(text).width + 12;
+  schildBreite = breite / k;
+  const s = evangelisationsSchild(k, px, py, breite);
+  ctx.fillStyle = FARBEN.standHolzDunkel; ctx.fillRect(x1, s.y + s.h / 2 - k * 0.04, s.x - x1, k * 0.08);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(s.x, s.y, s.b, s.h);
+  ctx.strokeStyle = blau; ctx.lineWidth = Math.max(1.5, k * 0.08); ctx.strokeRect(s.x, s.y, s.b, s.h);
+  ctx.fillStyle = blau; ctx.fillText(text, s.x + s.b / 2, s.y + s.h / 2 + 1);
+}
+// Klick-Box des Stands (Lukas, 27.11.: „deutlich größer“): der ganze Stand samt Markise mit etwas Rand, dazu das Schild.
+// (px, py) = Punkt auf der Zeichenfläche. Rechnet nur mit dem, was gezeichnet wird – keine Spielregel.
+export function evangelisationsStandTrifft(px, py, { k, ox, oy }, f) {
+  if (!f) return false;
+  const fx = ox + f.x * k, fy = oy + f.y * k, r = STAND.rand * k;
+  if (px >= fx + STAND.links * k - r && px <= fx + STAND.rechts * k + r && py >= fy + STAND.oben * k - r && py <= fy + STAND.unten * k + r) return true;
+  const s = evangelisationsSchild(k, fx, fy, (schildBreite || 6) * k);
+  return px >= fx + STAND.rechts * k && px <= s.x + s.b + r / 2 && py >= s.y - r / 2 && py <= s.y + s.h + r / 2;
 }
 function plakat(ctx, { k, ox, oy }) {
   const g = GRUNDSTUECK, x = ox + (g.tor.x - 1.6) * k, y = oy + (g.y + g.h - 0.55) * k;
