@@ -3,6 +3,31 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.23
+
+**Mitarbeiter**
+- Neu: Ab der 3. Woche kommt Jugendpastor Jimmy als zweiter Hauptamtlicher dazu – er leitet Jugendgottesdienst, Lobpreisgottesdienst und Konfirmandenunterricht
+- Seelsorge machen jetzt alle Hauptamtlichen, jeder mit eigener Stufe
+- Neu: Schulungen für Ehrenamtliche im Menü „Mitarbeiter“ – Musik-Kurs, Evangelisations-Kurs und Worshipkonferenz; Stufe 2 über die Forschung „Schulungen 2“
+
+**Gottesdienstraum**
+- Neu: Bodentyp „Bühne“ – Möbel und Musiker auf der Bühne wirken 1,5-fach, jede Kachel bringt etwas mehr Kollekte
+- Neu: Ton-Technik mit Lautsprechern, Subwoofer und Tontechnikpult, dazu die Stelle „Tontechnik“ im Dienstplan und der Skill „Tontechnik“
+- Neu: Tontechnikrack (Forschung) mit In-Ear, Systemcontroller und Plugins
+
+**Verbessern**
+- Kaffeemaschine, Automaten, Ton-Technik und Instrumente lassen sich in Stufen verbessern – auch alle im Raum auf einmal
+
+**Kirchkaffee**
+- Neu: Snackautomat und Sandwichmaker (Forschung „Sandwiches“)
+- Gäste setzen sich öfter hin; wer steht, geht nach 20 Minuten
+
+**Besucher**
+- Besucher kommen pünktlich und sitzen genau zum Beginn auf ihrem Platz; Getränk und Toilette erledigen sie auf dem Weg
+
+**Mitglieder**
+- Ein Klick auf ein Mitglied öffnet seine Karte
+
 ## 0.1.22
 
 **Mitarbeiter**
