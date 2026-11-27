@@ -4,9 +4,9 @@ export const STARTGELD = 1000;              // Kontostand zu Spielbeginn (€) �
 export const KOLLEKTE_PRO_BESUCHER = 1;     // € pro Besucher im Gottesdienst
 
 // Kategorien
-export const EINNAHMEN = { kollekte: 'Kollekte', kirchkaffee: 'Kirchkaffee', rueckerstattung: 'Rückerstattung', spende: 'Spende', dauerspende: 'Dauerspenden', mitglied: 'Mitgliedsbeiträge', ausgleich: 'Startgeld-Ausgleich',
+export const EINNAHMEN = { kollekte: 'Kollekte', kirchkaffee: 'Kirchkaffee', rueckerstattung: 'Rückerstattung', spende: 'Spende', dauerspende: 'Dauerspenden', mitglied: 'Mitgliedsbeiträge', ausgleich: 'Startgeld-Ausgleich', sandwich: 'Sandwiches',
   ...Object.fromEntries(AUTOMATEN.map(a => [a.id, a.name])) };   // Automaten (26.11.): Verkauf je Automat eine eigene Zeile (ENTWURF)   // Startgeld-Ausgleich: ENTWURF von Claude
-export const AUSGABEN = { moebel: 'Möbel', kaffee: 'Kaffee', seelsorge: 'Seelsorge', plakat: 'Plakat', einzugsgebiet: 'Einzugsgebiet', forschung: 'Forschung', schulung: 'Schulungen', bau: 'Bau',
+export const AUSGABEN = { moebel: 'Möbel', kaffee: 'Kaffee', seelsorge: 'Seelsorge', plakat: 'Plakat', einzugsgebiet: 'Einzugsgebiet', forschung: 'Forschung', schulung: 'Schulungen', bau: 'Bau', sandwich: 'Sandwiches', tonrack: 'Tontechnikrack',
   ...Object.fromEntries(AUTOMATEN.map(a => [a.id, a.name])) };   // Automaten (26.11.): Einkauf im Laden je Automat eine eigene Zeile (ENTWURF)   // Forschung, Bau: ENTWURF von Claude
 
 // Finanzübersicht (Spielprinzip vom 25.11.2026: Fenster mit dieser Woche, Kassenbuch und Verlauf)

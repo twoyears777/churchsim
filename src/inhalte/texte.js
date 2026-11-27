@@ -206,12 +206,15 @@ export const TEXTE = {
           : (b.imRaum ? `weitere +${zahl(b.bonus)} %` : `weitere +${zahl(b.bonusMin)} % oder mehr`) }),
       // Ton-Technik (27.11.) – Texte von Claude (Lukas: „texte können von dir sein“)
       lautsprecher: b => ({ name: `Lautsprecher (${b.anzahl} von ${b.max})`, besucher: b.imRaum ? `reicht für ${b.plaetze} Personen` : `je Stück für ${b.jeStueck} Personen` }),
-      tonpult: () => ({ name: 'Tontechnikpult' }),
+      tonpult: b => ({ name: 'Tontechnikpult' + (b.stufe > 1 ? ` (Stufe ${b.stufe})` : ''), haltung: b.bonus ? `+${b.bonus} %` : null, geld: b.bonus ? `Kollekte +${b.bonus} %` : null }),   // Stufe: ENTWURF von Claude (27.11.)
+      // Tontechnikrack (27.11.) – ENTWURF von Claude
+      tonrack: b => ({ name: 'Tontechnikrack', besucher: b.abdeckung ? `Lautsprecher reichen für +${b.abdeckung} % mehr Personen` : null,
+        haltung: `+${zahl(b.inear + b.plugins)} % (In-Ear ${zahl(b.inear)} %, Plugins ${zahl(b.plugins)} %)`, geld: `Kollekte +${zahl(b.inear + b.plugins)} %` }),
       tontechniker: b => ({ name: 'Ehrenamtlicher am Tontechnikpult' + (b.level !== null ? ` (Level ${b.level})` : '')
           + (b.braucht === 'pult' ? ' (braucht ein Tontechnikpult)' : b.braucht === 'lautsprecher' ? ' (braucht Lautsprecher)' : ''),
         haltung: b.aktiv ? `+${b.bonus} %` : `+${b.bonusMin} % oder mehr (je nach Level)`,
         geld: b.aktiv ? `Kollekte +${b.bonus} %` : `Kollekte +${b.bonusMin} % oder mehr` }),
-      subwoofer: b => ({ name: `Subwoofer (${b.anzahl} von ${b.max})`, haltung: `+${b.bonus} % je Stück`, geld: `Kollekte +${b.bonus} % je Stück` }),
+      subwoofer: b => ({ name: `Subwoofer (${b.anzahl} von ${b.max})`, haltung: b.imRaum ? `+${zahl(b.bonus)} %` : `+${zahl(b.bonus)} % je Stück`, geld: b.imRaum ? `Kollekte +${zahl(b.bonus)} %` : `Kollekte +${zahl(b.bonus)} % je Stück` }),   // 27.11.: mit Stufen die Summe
       leitungSenioren: b => ({ name: 'Hauptamtlicher + Ehrenamtlicher (Pflicht)', besucher: 'normal',
         haltung: `+${b.veranstaltung} Event, +${b.platz} Platz`, geld: `Spende ca. ${geld(b.spende)} je Besucher` }),
       tischStuehle: b => ({ name: `Tisch, mind. ${b.stuehleMin} Stühle (Pflicht)` }),
@@ -265,7 +268,83 @@ export const TEXTE = {
     getraenkeautomat: {
       fuellstand: (n, max) => `Getränke: ${n} / ${max}`,
       erklaerung: (preis, einkauf) => `Besucher kaufen hier Getränke für ${geld(preis, preis % 1 ? 2 : 0)}. Der Ehrenamtliche füllt den Automaten auf, wenn das Kirchkaffee zu hat (${geld(einkauf, einkauf % 1 ? 2 : 0)} pro Getränk).`
+    },
+    // Snackautomat (27.11.) – ENTWURF von Claude nach dem Muster des Getränkeautomaten
+    snackautomat: {
+      fuellstand: (n, max) => `Snacks: ${n} / ${max}`,
+      erklaerung: (preis, einkauf) => `Besucher kaufen hier Snacks für ${geld(preis, preis % 1 ? 2 : 0)}. Aufgefüllt wird wie beim Getränkeautomaten (${geld(einkauf, einkauf % 1 ? 2 : 0)} pro Snack).`
     }
+  },
+  // Sandwichmaker (27.11.) – ENTWURF von Claude
+  sandwichmaker: {
+    titel: 'Sandwichmaker',
+    fuellstand: (n, max) => `Sandwiches: ${n} von ${max}`,
+    leer: 'Leer – es gibt nur Kaffee.',
+    nichtImKaffee: 'Steht nicht im Kirchkaffee – hier werden keine Sandwiches verkauft.',
+    erklaerung: (preis, chance, minuten, einkauf) => `Wer Kaffee bestellt, nimmt mit ${chance} % ein Sandwich für ${preis} dazu. Der Ehrenamtliche macht es nach dem Kaffee (${minuten} Min.). Nachgekauft wird wie Kaffee (${einkauf} pro Sandwich).`
+  },
+  // Stufen (27.11.): Fenster „Verbessern“ für Kaffeemaschine, Automaten, Ton-Technik und Instrumente – ENTWURF von Claude
+  verbessern: {
+    titel: 'Verbessern',
+    stufe: (name, n, max) => `${name} · Stufe ${n} von ${max}`,
+    naechste: name => `Nächste Stufe: ${name}`,
+    knopf: preis => `Verbessern (${preis})`,
+    alle: (name, n, preis) => `Alle (${n}) ${name} in diesem Raum verbessern (${preis})`,
+    alleHoechste: 'Alle in diesem Raum sind auf der höchsten Stufe.',
+    hoechste: 'Höchste Stufe erreicht.',
+    keinGeld: 'Nicht genug Geld.',
+    forschungNoetig: (name, forschung) => `${name} braucht erst die Forschung „${forschung}“.`,
+    // Werte einer Stufe (je nach Möbel nur die, die etwas bewirken)
+    wert: {
+      fassung: (n, art) => art === 'sandwichmaker' ? `${n} Sandwiches` : `${n} Tassen`,
+      laden: n => `${zahl(n)} Min. pro Tasse`,
+      lager: n => `Platz für ${n}`,
+      chance: c => `Kaufchance ${zahl(Math.round(c * 100))} %`,
+      plaetze: n => `reicht für ${n} Personen`,
+      bonus: b => `Ton-Technik +${zahl(Math.round(b * 1000) / 10)} %`,
+      musik: b => b ? `Musiker hier +${zahl(Math.round(b * 1000) / 10)} %` : 'Musiker hier ohne Extra'
+    }
+  },
+  // Tontechnikrack (27.11.) – ENTWURF von Claude (Lukas: „spar dir ausschweifende Texte“)
+  tonrack: {
+    titel: 'Tontechnikrack',
+    nichtImRaum: 'Steht nicht in einem fertigen Gottesdienstraum – hier wirkt nichts.',
+    verbautTitel: 'Verbaut',
+    leistungTitel: 'Leistung (Kollekte und Haltung)',
+    lautsprecher: (n, max) => `Lautsprecher (${n} von ${max})`,
+    personen: n => `${n} Pers.`,
+    abdeckung: 'Reicht für',
+    abdeckungWert: (ls, plus, plaetze, stuehle) => `${ls} Personen${plus ? ` +${plus} % Controller = ${plaetze}` : ''} · ${stuehle} Stühle im Raum`,
+    subwoofer: (n, max) => `Subwoofer (${n} von ${max})`,
+    pult: 'Tontechnikpult',
+    stufe: (n, max) => `Stufe ${n} von ${max}`,
+    techniker: 'Tontechniker (Veranstaltung 1)',
+    technikerWert: (name, level) => `${name} · Level ${level}`,
+    keinTechniker: 'nicht eingeteilt',
+    musiker: 'Musiker (Veranstaltung 1)',
+    musikerWert: (n, mikro) => `${n}${mikro ? ' · Mikrofon im Raum' : ''}`,
+    keine: '–',
+    jetzt: 'Jetzt',
+    hoechstens: 'Höchstens',
+    teile: { grund: 'Grundwert', level: 'Tontechnik-Level', subwoofer: 'Subwoofer', pult: 'Pult', inear: 'In-Ear', plugins: 'Plugins' },
+    zusammen: 'Zusammen',
+    plaetze: 'Reicht für Personen',
+    laeuft: p => `Die Ton-Technik läuft: +${p} % auf Kollekte und Haltung (anteilig, wenn mehr Besucher sitzen, als die Lautsprecher abdecken).`,
+    fehlt: { raum: 'Kein Gottesdienstraum.', pult: 'Es fehlt ein Tontechnikpult.', lautsprecher: 'Es fehlen Lautsprecher.', techniker: 'Es ist kein Tontechniker eingeteilt.' },
+    modul: { inear: 'In-Ear-Monitoring', controller: 'Systemcontroller', plugins: 'Effekt-Plugins' },
+    modulInfo: {
+      inear: 'Die Musiker hören sich selbst sauber im Ohr und spielen besser.',
+      controller: 'Lautsprecher werden eingemessen und reichen für mehr Personen.',
+      plugins: pult => `Laufen auf dem Digitalpult (ab Pult-Stufe ${pult}). Jedes Plugin einmal.`
+    },
+    nichtEingebaut: 'Noch nicht eingebaut.',
+    einbauen: (name, preis) => `${name} einbauen (${preis})`,
+    voll: 'Voll ausgebaut.',
+    eingebaut: 'eingebaut',
+    brauchtPult: n => `braucht Pult-Stufe ${n}`,
+    mitMikrofon: 'nur mit Mikrofon',
+    inearWert: (musiker, plus) => `${musiker} Musiker, je +${plus} %`,
+    controllerWert: plus => `Lautsprecher reichen für +${plus} %`
   },
   // Kirchkaffee-Raum: Zustand unter dem Raumnamen
   kirchkaffee: {
@@ -466,6 +545,8 @@ export const TEXTE = {
     keinGeldKaffee: name => `Nicht genug Geld – ${name} konnte keinen Kaffee einkaufen.`,   // Lukas, 25.11.
     // Automaten (26.11., ENTWURF von Claude): ware = id des Automaten
     keinGeldAutomat: (name, ware) => ware === 'getraenkeautomat' ? `Nicht genug Geld – ${name} konnte keine Getränke einkaufen.`
+      : ware === 'snackautomat' ? `Nicht genug Geld – ${name} konnte keine Snacks einkaufen.`   // 27.11., ENTWURF von Claude
+      : ware === 'sandwich' ? `Nicht genug Geld – ${name} konnte keine Sandwiches einkaufen.`   // 27.11., ENTWURF von Claude
       : `Nicht genug Geld – ${name} konnte den Automaten nicht auffüllen.`,
     // Konfirmandenunterricht (von Lukas freigegeben, 25.11.; Einzahl bei „konfirmiert“ von Claude ergänzt)
     konfirmand: name => `${name} war 7-mal im Konfirmandenunterricht und wird bei der nächsten Konfirmation konfirmiert.`,
@@ -579,8 +660,11 @@ export const TEXTE = {
     buehne: `Bühne: ${BUEHNE.kosten} € pro Kachel. Möbel auf der Bühne wirken ${BUEHNE.bonus.toLocaleString('de-DE')}-fach, jede Kachel bringt +${BUEHNE.kollekteProKachel.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € Kollekte pro Besucher.`,   // 27.11., von Lukas freigegeben
     keinWerkzeug: 'Wähle unten aus, was du bauen möchtest.',   // nach Rechtsklick: nichts gewählt (Entwurf von Claude, von Lukas freigegeben 25.11.)
     stuhl: 'Klicke, um einen Stuhl aufzustellen – oder auf einen Stuhl, um ihn zu verbessern.',
-    kaffeemaschine: 'Klicke, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee).',
-    getraenkeautomat: 'Klicke, um einen Getränkeautomaten aufzustellen (fürs Kirchkaffee).',   // ENTWURF von Claude (26.11.)
+    kaffeemaschine: 'Klicke, um eine Kaffeemaschine aufzustellen (fürs Kirchkaffee) – oder auf eine, um sie zu verbessern.',   // 27.11.: Verbessern (ENTWURF)
+    getraenkeautomat: 'Klicke, um einen Getränkeautomaten aufzustellen (fürs Kirchkaffee) – oder auf einen, um ihn zu verbessern.',   // ENTWURF von Claude (26.11.; 27.11. Verbessern)
+    snackautomat: 'Klicke, um einen Snackautomaten aufzustellen (fürs Kirchkaffee) – oder auf einen, um ihn zu verbessern.',   // ENTWURF von Claude (27.11.)
+    sandwichmaker: 'Klicke, um einen Sandwichmaker aufzustellen (fürs Kirchkaffee). Wer Kaffee bestellt, nimmt oft ein Sandwich dazu.',   // ENTWURF von Claude (27.11.)
+    tonrack: 'Klicke, um ein Tontechnikrack aufzustellen (Gottesdienstraum, 1 pro Raum) – oder auf das Rack für Übersicht und Ausbau.',   // ENTWURF von Claude (27.11.)
     theke: 'Klicke, um ein Thekenteil aufzustellen (fürs Kirchkaffee).',
     tisch: 'Stühle direkt daneben bringen mehr Trinkgeld (×1,2).',   // Lukas, 25.11.
     // ---- Ausstattung des Gottesdienstraums (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
@@ -637,6 +721,7 @@ export const TEXTE = {
     lautsprecher: 'In diesem Raum stehen schon 8 Lautsprecher.',   // Ton-Technik (27.11.): Texte von Claude
     subwoofer: 'In diesem Raum stehen schon 2 Subwoofer.',
     tonpult: 'In diesem Raum steht schon ein Tontechnikpult.',
+    tonrack: 'In diesem Raum steht schon ein Tontechnikrack.',   // 27.11., ENTWURF von Claude
     // ENTWÜRFE von Claude nach demselben Muster (25.11.)
     keyboard: 'In diesem Raum steht schon ein Keyboard.',
     schlagzeug: 'In diesem Raum steht schon ein Schlagzeug.',
@@ -720,6 +805,7 @@ export const TEXTE = {
     werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle', buehne: 'Bühne' },   // „Bühne“: 27.11., von Lukas freigegeben   // „Fenster“: ENTWURF
     jeStueck: preis => `${preis} je Stück`,   // Preis der Wand (ENTWURF von Claude, 25.11.)
     abBekanntheit: n => `ab Bekanntheit ${n}`,
+    forschung: name => `Forschung: ${name}`,   // 27.11.: gesperrt, bis die Forschung fertig ist (ENTWURF von Claude)
     drehen: 'Drehen (R)'
   },
   hinweiseAussen: {
@@ -908,7 +994,10 @@ export const TEXTE = {
       schulungen2: 'Schaltet Stufe 2 aller Schulungen frei.',   // ENTWURF von Claude (27.11.), Texte darf Claude festlegen
       // ENTWÜRFE von Claude (26.11.) – Lukas formuliert selbst
       slot3gottesdienst: 'Schaltet in jedem Gottesdienstraum eine 3. Veranstaltung frei.',
-      slot3saal: 'Schaltet in jedem Gemeindesaal eine 3. Veranstaltung frei.' },
+      slot3saal: 'Schaltet in jedem Gemeindesaal eine 3. Veranstaltung frei.',
+      // 27.11. – ENTWÜRFE von Claude
+      sandwiches: 'Schaltet den Sandwichmaker fürs Kirchkaffee frei.',
+      tontechnikrack: 'Schaltet das Tontechnikrack frei: In-Ear, Systemcontroller und Effekt-Plugins.' },
     erforscht: 'Erforscht',
     starten: 'Forschen',
     abbrechen: 'Abbrechen',

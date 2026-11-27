@@ -164,7 +164,7 @@ export function gottesdienstRaeume(z, raeume) {
       return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, sperre, leitung: pruefung.leitung, fehlt, bereit: !fehlt,
         musikBonus: pruefung.musikBonus || 0, ehrenamtBonus: v ? ehrenamtBonus(v, ehrenamtliche) : 0,
         dienst: { ehrenamtliche, spieler, musiker: spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)), hauptamt: haupt, leitung: haupt[0] || null,
-          techniker, ton: tonWirkung(z, r, techniker, techniker ? tontechnikLevel(techniker) : 0) } };
+          techniker, ton: tonWirkung(z, r, techniker, techniker ? tontechnikLevel(techniker) : 0, spieler.length) } };
     });
     // Für den Raum als Ganzes (Raum-Fenster, Übersichten) gelten die Ehrenamtlichen von Veranstaltung 1
     const d0 = programm[0].dienst;
@@ -752,7 +752,7 @@ function prognoseFuer(z, raeume, g0, p, termin, platz) {
   // Schichtbetrieb (27.11.): so viele Stationen, wie im Kirchkaffee nach dieser Veranstaltung Ehrenamtliche eingeteilt sind
   const stationen = z.schichtbetrieb ? (platz === 'fest' ? 0 : kaffeeNachBesetzt(z, raeume, raumSchluessel(g.raum), platz))
     : kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen).length;
-  const tassen = Math.min(kaffeeWunsch, stationen * fassung('kaffeemaschine'));
+  const tassen = Math.min(kaffeeWunsch, stationen * fassung('kaffeemaschine'));   // Prognose: Grundfassung (Stufen der Maschinen nicht mitgerechnet)
   return { ...grund, sitzend, geld: kollekteSumme + tassen * PREIS_TASSE, kollekte: kollekteSumme, ehrenamt, tassen };
 }
 // Der anstehende (oder gerade in der Anreise befindliche) Termin dieser Veranstaltung, sonst null

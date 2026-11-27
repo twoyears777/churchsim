@@ -16,6 +16,9 @@ export const FORSCHUNGEN = [
   // 3. Veranstaltungsslot (Lukas, 26.11.): je Raumtyp eine eigene Forschung, Kosten und Dauer wie Schulungen 1, noch ohne Voraussetzung.
   // Freigeschaltet wird der Platz mit „forschung: …“ in PLAETZE (veranstaltungen.js) bzw. plaetze (raumtypen.js).
   { id: 'slot3gottesdienst', name: '3. Veranstaltung im Gottesdienstraum', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'platz' },
+  // Lukas, 27.11.: Sandwichmaker und Tontechnikrack brauchen je eine Forschung. Kosten und Dauer PLATZHALTER von Claude.
+  { id: 'sandwiches', name: 'Sandwiches', kosten: { geld: 200, heiligkeit: 100 }, dauer: 120, braucht: [], schaltetFrei: 'moebel' },
+  { id: 'tontechnikrack', name: 'Tontechnikrack', kosten: { geld: 400, heiligkeit: 250 }, dauer: 180, braucht: [], schaltetFrei: 'moebel' },
   { id: 'slot3saal', name: '3. Veranstaltung im Gemeindesaal', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'platz' }
 ];
 

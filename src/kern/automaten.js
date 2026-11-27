@@ -11,7 +11,7 @@
 //     zurück an den Platz. Bezahlt wird am Ende der Zeit am Automaten: Ware da → Preis als Einnahme, + Haltung;
 //     Automat leer → − Haltung.
 //   • Aufgefüllt wird vom Kirchkaffee-Ehrenamtlichen, wenn das Kirchkaffee zu hat (kirchkaffee.js → Einkauf im Laden).
-//   • Verbesserungen (stufen) sind vorbereitet: Lager und Wert hängen schon an der Stufe des Automaten (m.stufe).
+//   • Verbesserungen (stufen, seit 27.11. im Spiel): Lager, Wert und Kaufchance hängen an der Stufe des Automaten (m.stufe).
 import { AUTOMATEN, AUTOMAT } from '../inhalte/automaten.js';
 import { ABSTAND } from '../inhalte/zeit.js';
 import { idx, LEER } from './karte.js';
@@ -41,7 +41,11 @@ function fest(schluessel) {
   return ((h >>> 0) % 10000) / 10000;
 }
 // Will diese Person bei diesem Besuch etwas aus diesem Automaten? (besuch: Kennung des Besuchs)
-export function willKaufen(a, besuch, personId) { return fest(`${a.id}:${besuch}:${personId}`) < a.chance; }
+// chance: Kaufchance (Stufen, 27.11.: der beste Automat dieser Art, der verkauft – chanceVon); ohne Angabe die Grundchance
+export function willKaufen(a, besuch, personId, chance = a.chance) { return fest(`${a.id}:${besuch}:${personId}`) < chance; }
+export function chanceVon(z, raeume, a) {
+  return automatenImBetrieb(z, raeume, a.id).reduce((c, x) => Math.max(c, automatStufe(x.m).chance || a.chance), a.chance);
+}
 // Zweite Chance nach der Veranstaltung bzw. dem Gespräch (Lukas, 27.11.): eigener Besuchs-Schlüssel „…:nachher“
 export const nachherBesuch = besuch => `${besuch}:nachher`;
 const zeitpunktAnteil = (a, besuch, personId) => fest(`${a.id}:${besuch}:${personId}:wann`);
@@ -84,12 +88,12 @@ export function automatenBeimAnreisen(z, raeume, L, start, beginn) {
   const arten = AUTOMATEN.filter(a => ziele(z, raeume, a.id).length);
   if (!arten.length || !L.gaeste) return;
   automatenAnlegen(z); aufraeumen(z);
-  const wiese = wiesenKarte(z);
+  const wiese = wiesenKarte(z), chancen = new Map(arten.map(a => [a.id, chanceVon(z, raeume, a)]));
   L.gaeste.forEach((g, i) => {
     if (!g.sitz) return;
     let unterwegs = (g.gaenge || []).some(s => s.art === 'vorher');   // geht schon über die Toilette
     for (const a of arten) {
-      if (!willKaufen(a, L.id, g.id)) continue;
+      if (!willKaufen(a, L.id, g.id, chancen.get(a.id))) continue;
       const gang = unterwegs ? null : gangAufDemWeg(z, ziele(z, raeume, a.id), 'vorher', start(i), g.sitz, beginn, L.ankunft,
         { belegt: z.automaten.belegt, dauer: AUTOMAT.kaufMinuten, wiese });
       if (!gang) { (g.automatOffen = g.automatOffen || []).push(a.id); continue; }   // danach (Kirchkaffee oder Heimweg)
@@ -100,7 +104,7 @@ export function automatenBeimAnreisen(z, raeume, L, start, beginn) {
     }
     // Zweite Chance nachher (Lukas, 27.11.): wer nachher will, kauft im Kirchkaffee oder auf dem Heimweg (einmal je Automat)
     for (const a of arten) {
-      if (willKaufen(a, nachherBesuch(L.id), g.id) && !(g.automatOffen || []).includes(a.id)) (g.automatOffen = g.automatOffen || []).push(a.id);
+      if (willKaufen(a, nachherBesuch(L.id), g.id, chancen.get(a.id)) && !(g.automatOffen || []).includes(a.id)) (g.automatOffen = g.automatOffen || []).push(a.id);
     }
   });
 }
@@ -128,7 +132,7 @@ export function automatenBeimHeimgehen(z, raeume, L, start) {
 // arten: schon entschieden (Gottesdienst-Gast, der vorher keine Zeit hatte) – sonst wird jetzt „gewürfelt“.
 // → [{ art, ab }] für jeden Automaten, aus dem er etwas will
 export function kaufzeitenImKirchkaffee(z, raeume, besuch, personId, von, bis, arten = null) {
-  return AUTOMATEN.filter(a => ziele(z, raeume, a.id).length && (arten ? arten.includes(a.id) : willKaufen(a, besuch, personId)))
+  return AUTOMATEN.filter(a => ziele(z, raeume, a.id).length && (arten ? arten.includes(a.id) : willKaufen(a, besuch, personId, chanceVon(z, raeume, a))))
     .map(a => ({ art: a.id, ab: von + zeitpunktAnteil(a, besuch, personId) * Math.max(0, bis - von - AUTOMAT.kaufMinuten - 10) }));
 }
 // Gang jetzt planen (Kunde im Kirchkaffee, steht/sitzt an platz) → Gang oder null
@@ -138,7 +142,7 @@ export function gangJetztZumAutomaten(z, raeume, art, platz, t) { return gangPla
 // Besuch etwas will (besuch: Kennung, für nachher mit nachherBesuch). Nur ein Automat pro Gang. → Gang oder null
 export function automatGangSeelsorge(z, raeume, besuch, personId, von, nach, ab) {
   for (const a of AUTOMATEN) {
-    if (!willKaufen(a, besuch, personId) || !ziele(z, raeume, a.id).length) continue;
+    if (!ziele(z, raeume, a.id).length || !willKaufen(a, besuch, personId, chanceVon(z, raeume, a))) continue;
     const gang = gangPlanen(z, raeume, a.id, von, nach, ab);
     if (gang) return gang;
   }

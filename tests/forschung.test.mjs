@@ -13,7 +13,7 @@ import { SEKUNDEN_PRO_STUNDE } from '../src/inhalte/zeit.js';
 const S1 = FORSCHUNGEN.find(f => f.id === 'schulungen1');
 assert.deepEqual(S1.kosten, { geld: 100, heiligkeit: 100 });
 assert.equal(S1.dauer, 60);
-assert.deepEqual(FORSCHUNGEN.map(f => f.id), ['schulungen1', 'schulungen2', 'slot3gottesdienst', 'slot3saal']);   // 26.11.: dazu der 3. Slot je Raumtyp; 27.11.: Schulungen 2
+assert.deepEqual(FORSCHUNGEN.map(f => f.id), ['schulungen1', 'schulungen2', 'slot3gottesdienst', 'sandwiches', 'tontechnikrack', 'slot3saal']);   // 27.11.: Sandwiches, Tontechnikrack   // 26.11.: dazu der 3. Slot je Raumtyp; 27.11.: Schulungen 2
 assert.equal(HEILIGKEIT.proBesucher, 1);
 assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minute bei x1 = 150 Spielminuten (27.11.: vorher 300)
 

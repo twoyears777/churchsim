@@ -183,6 +183,31 @@ function oeffnen(f, name) {
   assert.ok(!dienstplanFenster(f).includes(TEXTE.dienstplan.schulung.laeuft('Musik-Kurs', 1)), 'abgebrochen');
 
 }
+// Stufen und Tontechnikrack (27.11.): Verbessern-Fenster, Kaffeemaschine/Automat/Sandwichmaker mit Stufen, Rack voll und leer
+{
+  const z = neuesSpiel(() => 0.5);
+  wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
+  typZuweisen(z, raumBei(z), 'gottesdienst');
+  moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 3);
+  versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+  z.konto = 9000; z.forschung = { laeuft: null, fertig: ['sandwiches', 'tontechnikrack'] };
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  const s = ui.spiel;
+  for (const [art, x] of [['tonrack', 14], ['lautsprecher', 16], ['lautsprecher', 17], ['subwoofer', 13], ['gitarre', 12], ['kaffeemaschine', 10], ['snackautomat', 9], ['sandwichmaker', 8]])
+    assert.equal(s.moebelKaufen(art, G.x + x, G.y + 7), 'ok', art);
+  oeffnen({ art: 'rack', x: G.x + 14, y: G.y + 7 }, 'Rack ohne Pult');
+  assert.equal(s.moebelKaufen('tonpult', G.x + 15, G.y + 7), 'ok');
+  s.moebelVerbessern(G.x + 15, G.y + 7); s.moebelVerbessern(G.x + 15, G.y + 7);
+  for (const m of ['inear', 'inear', 'inear', 'controller']) assert.equal(s.rackEinbauen(G.x + 14, G.y + 7, m), 'ok', m);
+  assert.equal(s.rackEinbauen(G.x + 14, G.y + 7, 'plugin', 'hall'), 'ok');
+  oeffnen({ art: 'rack', x: G.x + 14, y: G.y + 7 }, 'Rack ausgebaut');
+  for (const x of [16, 13, 12, 15]) oeffnen({ art: 'verbessern', x: G.x + x, y: G.y + 7 }, 'Verbessern ' + x);
+  oeffnen({ art: 'maschine', x: G.x + 10, y: G.y + 7 }, 'Kaffeemaschine mit Stufen');
+  oeffnen({ art: 'maschine', x: G.x + 8, y: G.y + 7 }, 'Sandwichmaker');
+  oeffnen({ art: 'automat', x: G.x + 9, y: G.y + 7 }, 'Snackautomat mit Stufen');
+  ui.fenster = { art: 'rack', x: G.x + 14, y: G.y + 7 }; fensterAktualisieren();
+  oeffnen({ art: 'raum', nr: s.veranstaltungsraumBei(G.x + 5, G.y + 5), platz: 0 }, 'Bausteintabelle mit Rack');
+}
 // Sicherung: Stürzt ein Fenster beim Aufbau ab, geht es nur zu – kein Fehler nach außen (sonst bleibt die Uhr stehen)
 {
   const echt = console.error; console.error = () => {};

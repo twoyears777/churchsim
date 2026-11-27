@@ -7,7 +7,7 @@ import { VERANSTALTUNGEN, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js'
 import { AENDERUNG, LOBPREIS_MUSIK, JUGEND } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { MOEBEL, TON, BUEHNE } from '../inhalte/moebel.js';
-import { moebelImRaum, stuhlStufe, instrumenteImRaum, tonImRaum, moebelWirkung, instrumenteReihe } from './moebel.js';
+import { moebelImRaum, stuhlStufe, instrumenteImRaum, tonImRaum, tonWirkung, moebelWirkung, instrumenteReihe, musikerBonus, musikerBonusSumme } from './moebel.js';
 import { buehneImRaum } from './buehne.js';
 import { daten } from './personen.js';
 import { fensterAnRaum } from './karte.js';
@@ -85,32 +85,37 @@ function gottesdienstraum(z, raum, info, v) {
   const musikWirktAufBesucher = !lobpreis && !jugend;
   const reihe = instrumenteReihe(z, raum);   // Instrument des n. Musikers auf der Bühne? (27.11.)
   for (let nr = 1; nr <= Math.min(MAX_MUSIKER, Math.max(v.musikerMin || (v.gitarrist ? 1 : 0), levels.length + 1)); nr++) {
-    const da = nr <= levels.length, level = da ? levels[nr - 1] : null, aufBuehne = da && !!reihe[nr - 1];
+    const da = nr <= levels.length, level = da ? levels[nr - 1] : null, aufBuehne = da && !!(reihe[nr - 1] && reihe[nr - 1].buehne), platz = da ? reihe[nr - 1] : null;
     zeilen.push({ id: 'musiker', nr, imRaum: da, pflicht: nr <= (v.musikerMin || (v.gitarrist ? 1 : 0)), level, aufBuehne,
-      bonus: da ? prozent(musikBonus(level) * (aufBuehne ? BUEHNE.bonus : 1)) : null, bonusMin: prozent(musikBonus(0)),
+      bonus: da ? prozent(musikerBonus(level, platz)) : null, instrumentPlus: platz && platz.plus ? prozent(platz.plus) : null, bonusMin: prozent(musikBonus(0)),
       brauchtInstrument: !da && instrumente < nr,
       besucher: nr === 1 && musikWirktAufBesucher ? { min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : null });
   }
 
-  // Ton-Technik (27.11.): Lautsprecher, Tontechnikpult, Tontechniker, Subwoofer. Bonus nur, wenn alle drei ersten da sind.
-  const ton = tonImRaum(z, raum), techniker = info ? info.techniker || null : null;
+  // Ton-Technik (27.11.): Lautsprecher, Tontechnikpult, Tontechniker, Subwoofer, Tontechnikrack. Bonus nur, wenn die ersten drei da sind.
+  // Seit den Stufen (27.11.) rechnet tonWirkung alles (Stufen, Rack) – hier nur noch die Zeilen dazu.
+  const techniker = info ? info.techniker || null : null;
   const tonLevel = techniker ? tontechnikLevel(techniker) : null;
-  const subJe = MOEBEL.find(m => m.id === 'subwoofer').ton.subwoofer, lsMax = MOEBEL.find(m => m.id === 'lautsprecher').max;
-  const tonAktiv = !!(ton.pult && ton.lautsprecher && techniker);
+  const ton = tonWirkung(z, raum, techniker, tonLevel || 0, levels.length);
+  const lsTyp = MOEBEL.find(m => m.id === 'lautsprecher'), swTyp = MOEBEL.find(m => m.id === 'subwoofer');
+  const tonAktiv = ton.aktiv;
   const tonGrund = prozent(TON.start + TON.proLevel * (tonLevel || 0));
-  zeilen.push({ id: 'lautsprecher', imRaum: ton.lautsprecher > 0, anzahl: ton.lautsprecher, max: lsMax, plaetze: ton.plaetze,
-    jeStueck: MOEBEL.find(m => m.id === 'lautsprecher').ton.plaetze });
-  zeilen.push({ id: 'tonpult', imRaum: ton.pult });
+  zeilen.push({ id: 'lautsprecher', imRaum: ton.lautsprecher > 0, anzahl: ton.lautsprecher, max: lsTyp.max, plaetze: ton.plaetze,
+    jeStueck: lsTyp.stufen[0].plaetze });
+  zeilen.push({ id: 'tonpult', imRaum: ton.pult, stufe: ton.pultStufe, bonus: ton.pult && ton.pultBonus ? prozent(ton.pultBonus) : null });
   zeilen.push({ id: 'tontechniker', imRaum: !!techniker, level: tonLevel, bonus: tonGrund, bonusMin: prozent(TON.start), aktiv: tonAktiv, braucht: !ton.pult ? 'pult' : !ton.lautsprecher ? 'lautsprecher' : null });
-  zeilen.push({ id: 'subwoofer', imRaum: ton.subwoofer > 0, anzahl: ton.subwoofer, max: MOEBEL.find(m => m.id === 'subwoofer').max, bonus: prozent(subJe) });
-  const tonBonus = tonAktiv ? Math.round((TON.start + TON.proLevel * tonLevel + subJe * ton.subwoofer) * 100) / 100 : 0;
+  zeilen.push({ id: 'subwoofer', imRaum: ton.subwoofer > 0, anzahl: ton.subwoofer, max: swTyp.max,
+    bonus: prozent(ton.subwoofer ? ton.subwooferBonus : swTyp.stufen[0].bonus) });
+  if (ton.rack) zeilen.push({ id: 'tonrack', imRaum: true, inear: prozent(ton.teile.inear), plugins: prozent(ton.teile.plugins),
+    abdeckung: ton.abdeckung > 1 ? prozent(ton.abdeckung - 1) : null });
+  const tonBonus = tonAktiv ? ton.bonus : 0;
 
   // Haltungs-Multiplikator der Leitung (Skill des Hauptamtlichen): erst ab Stufe 1 eine Zeile
   const mult = multiplikatorFaktor(info ? info.leitung : null, v.id);
   if (mult > 1) zeilen.push({ id: 'multiplikator', imRaum: true, faktor: mult });
 
   // Zusammen: so wie der Raum jetzt ist
-  const bonus = Math.round(levels.reduce((s, l, i) => s + musikBonus(l) * (reihe[i] ? BUEHNE.bonus : 1), 0) * 10000) / 10000;
+  const bonus = musikerBonusSumme(levels, reihe);
   const pflichtDa = zeilen.filter(x => x.pflicht).every(x => x.imRaum);
   const summe = {
     art: jugend ? 'jugend' : lobpreis ? 'lobpreis' : 'gottesdienst', bereit: pflichtDa,

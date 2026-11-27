@@ -300,7 +300,7 @@ console.log('Prognose-Tests bestanden.');
   assert.ok(spiel.rueckgaengig()); assert.equal(spiel.kaffeeRaumInfo(nr).schichten.length, 0);   // Rückgängig geht auch hier
   assert.equal(spiel.schichtEntfernen(nr, 0), 'keine');
   const m = spiel.maschineInfo(G.x + 20, G.y + 3);
-  assert.deepEqual(Object.keys(m).sort(), ['einkaufPreis', 'fassung', 'fuellung', 'imKirchkaffee']);
+  assert.deepEqual(Object.keys(m).sort(), ['art', 'chance', 'einkaufPreis', 'fassung', 'fuellung', 'imKirchkaffee', 'laden', 'preis']);   // 27.11.: + art, chance, laden, preis (Sandwichmaker, Stufen)
   assert.equal(m.einkaufPreis, EINKAUF.preisTasse);
   assert.equal(typeof spiel.kaffeeNachkaufen, 'undefined');           // der Spieler kauft nicht mehr selbst
   assert.equal(typeof spiel.besucherInfo(spiel.menschen()[0].id).kaffee, 'number');
@@ -310,7 +310,7 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
 
 // Sitzplätze (Spielprinzip 25.11.): Stühle + Tische im Kirchkaffee, 50 % setzen sich, Trinkgeld beim Gehen
 {
-  assert.equal(STEHEN_PASSANT, 60); assert.equal(SITZEN.chance, 0.5); assert.equal(SITZEN.trinkgeld, 1); assert.equal(SITZEN.tisch, 1.2);
+  assert.equal(STEHEN_PASSANT, 20); assert.equal(SITZEN.chance, 0.65);   // 27.11.: vorher 60 und 0,5 assert.equal(SITZEN.trinkgeld, 1); assert.equal(SITZEN.tisch, 1.2);
   const aufbau = () => {
     const g = gemeinde();
     const { z } = g;
@@ -407,7 +407,7 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
     const { z } = aufbau();
     const spiel = spielStarten(JSON.stringify({ version: 3, zustand: z }), () => 0.9);
     const info = spiel.kaffeeRaumInfo(spiel.kirchkaffeeBei(G.x + 20, G.y + 5));
-    assert.deepEqual(info.sitzplaetze, { anzahl: 2, amTisch: 1 }); assert.equal(info.sitzChance, 50);
+    assert.deepEqual(info.sitzplaetze, { anzahl: 2, amTisch: 1 }); assert.equal(info.sitzChance, 65);
     assert.equal(spiel.stuhlInfo(G.x + 20, G.y + 8).trinkgeld, 1.3);
     assert.equal(spiel.stuhlInfo(G.x + 22, G.y + 8).naechste.trinkgeld, 1.1);
     const arten = spiel.moebelArten();

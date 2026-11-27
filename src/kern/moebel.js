@@ -1,7 +1,7 @@
 // Spiellogik der Möbel. Möbel stehen auf freiem Boden des Grundstücks, ein Möbel pro Kästchen.
 import { LEER, idx, aufGrundstueck, fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
-import { MOEBEL, STUHL_STUFEN, MUSIK, TON, BUEHNE } from '../inhalte/moebel.js';
+import { MOEBEL, STUHL_STUFEN, MUSIK, TON, BUEHNE, TONRACK } from '../inhalte/moebel.js';
 import { istBuehne, buehneImRaum } from './buehne.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 import { musikBonus } from './skills.js';
@@ -68,13 +68,81 @@ export function moebelKaufen(z, art, x, y, istBesetzt = () => false, dreh = fals
   if (preis) buchen(z, 'ausgaben', 'moebel', preis, { moebel: art });
   return 'ok';
 }
-// Was ein Möbel gekostet hat: Kaufpreis, bei Stühlen plus alle Verbesserungen
+// Was ein Möbel gekostet hat: Kaufpreis plus alle Verbesserungen (Stufen) plus, beim Tontechnikrack, alles darin Eingebaute
 export function moebelWert(m) {
   const kauf = (MOEBEL.find(x => x.id === m.art) || {}).kosten || 0;
-  const automat = AUTOMATEN.find(a => a.id === m.art);   // Automaten: später verbesserbar wie Stühle
-  if (automat) return kauf + automat.stufen.filter(s => s.stufe <= (m.stufe || 1)).reduce((a, s) => a + s.upgrade, 0);
-  if (m.art !== 'stuhl') return kauf;
-  return kauf + STUHL_STUFEN.filter(s => s.stufe <= (m.stufe || 1)).reduce((a, s) => a + s.upgrade, 0);
+  const stufen = stufenVon(m.art) || [];
+  return kauf + stufen.filter(s => s.stufe <= (m.stufe || 1)).reduce((a, s) => a + s.upgrade, 0) + rackWert(m);
+}
+
+// ---- Stufen aller Möbel (27.11.: Stühle, Automaten, Kaffeemaschine, Ton-Technik, Instrumente) ----
+// Die Stufen stehen beim Möbel (inhalte/moebel.js → stufen, Automaten in inhalte/automaten.js, Stühle STUHL_STUFEN).
+// Gespeichert wird nur m.stufe (fehlt = Stufe 1).
+export function stufenVon(art) {
+  if (art === 'stuhl') return STUHL_STUFEN;
+  const a = AUTOMATEN.find(x => x.id === art);
+  if (a) return a.stufen;
+  return typVon(art).stufen || null;
+}
+export const istVerbesserbar = art => (stufenVon(art) || []).length > 1;
+export function stufeVon(m) { const s = stufenVon(m.art); return s ? s[Math.min(s.length, m.stufe || 1) - 1] : null; }
+export function naechsteStufeVon(m) { const s = stufenVon(m.art); return s && s.length > (m.stufe || 1) ? s[m.stufe || 1] : null; }
+// Ein Möbel eine Stufe höher: 'ok', 'max' oder 'geld'
+export function moebelVerbessern(z, m) {
+  const n = naechsteStufeVon(m);
+  if (!n) return 'max';
+  if (!kannBezahlen(z, n.upgrade)) return 'geld';
+  m.stufe = n.stufe;
+  buchen(z, 'ausgaben', 'moebel', n.upgrade, { moebel: m.art, was: 'verbessern' });
+  return 'ok';
+}
+// Alle Möbel dieser Art im Raum, die noch höher können, und was es zusammen kostet
+export const verbesserbareImRaum = (z, raum, art) => moebelImRaum(z, raum, art).filter(m => naechsteStufeVon(m));
+export const alleVerbessernPreisArt = (z, raum, art) => verbesserbareImRaum(z, raum, art).reduce((a, m) => a + naechsteStufeVon(m).upgrade, 0);
+export function alleArtVerbessern(z, raum, art) {
+  const liste = verbesserbareImRaum(z, raum, art);
+  if (!liste.length) return 'max';
+  if (!kannBezahlen(z, alleVerbessernPreisArt(z, raum, art))) return 'geld';
+  for (const m of liste) moebelVerbessern(z, m);
+  return 'ok';
+}
+// Fassung einer Maschine (Kaffeemaschine je Stufe, Sandwichmaker fest) und wie lange sie für eine Tasse braucht
+export function fassungVon(m) { const st = stufeVon(m); return st && typeof st.fassung === 'number' ? st.fassung : fassung(m.art); }
+export function ladenVon(m, grund) { const st = stufeVon(m); return st && typeof st.laden === 'number' ? st.laden : grund; }
+
+// ---- Tontechnikrack (27.11.): m.rack = { inear: Stufe (0 = keins), controller: Stufe, plugins: [ids] } ----
+export function rackVon(m) {
+  const r = m && m.rack || {};
+  return { inear: r.inear || 0, controller: r.controller || 0, plugins: Array.isArray(r.plugins) ? r.plugins.filter(id => TONRACK.plugins.some(p => p.id === id)) : [] };
+}
+function rackWert(m) {
+  if (m.art !== 'tonrack' || !m.rack) return 0;
+  const r = rackVon(m);
+  return TONRACK.inear.slice(0, r.inear).reduce((a, s) => a + s.preis, 0) + TONRACK.controller.slice(0, r.controller).reduce((a, s) => a + s.preis, 0)
+    + TONRACK.plugins.filter(p => r.plugins.includes(p.id)).reduce((a, p) => a + p.preis, 0);
+}
+// Etwas ins Rack einbauen. modul: 'inear' | 'controller' (nächste Stufe) | 'plugin' (id) → 'ok' | 'max' | 'pult' | 'geld' | 'keine'
+// pultStufe: Stufe des Tontechnikpults im Raum (0 = keins)
+export function rackEinbauen(z, m, modul, id, pultStufe) {
+  if (!m || m.art !== 'tonrack') return 'keine';
+  const r = rackVon(m);
+  let preis, tun;
+  if (modul === 'inear' || modul === 'controller') {
+    const n = TONRACK[modul][r[modul]];
+    if (!n) return 'max';
+    if (n.pult && pultStufe < n.pult) return 'pult';
+    preis = n.preis; tun = () => { r[modul] = n.stufe; };
+  } else if (modul === 'plugin') {
+    const p = TONRACK.plugins.find(x => x.id === id);
+    if (!p) return 'keine';
+    if (r.plugins.includes(p.id)) return 'max';
+    if (pultStufe < TONRACK.pluginsAbPult) return 'pult';
+    preis = p.preis; tun = () => { r.plugins.push(p.id); };
+  } else return 'keine';
+  if (!kannBezahlen(z, preis)) return 'geld';
+  tun(); m.rack = r;
+  buchen(z, 'ausgaben', 'tonrack', preis, { moebel: 'tonrack', modul, id: id || null });
+  return 'ok';
 }
 // Abriss (27.11.): zurück gibt es den Abriss-Wert von Kauf + Verbesserungen – anfangs die Hälfte, jede Woche weniger (abriss.js).
 // Verbesserungen zählen mit dem Alter des Möbels.
@@ -159,7 +227,7 @@ export function raumAusstattung(z, raum, musikerLevels = null) {
   const reihe = instrumenteReihe(z, raum);
   const levels = (musikerLevels === null || musikerLevels === false ? [] : [].concat(musikerLevels)).slice().sort((a, b) => b - a).slice(0, reihe.length);
   const musik = levels.length > 0;
-  const bonus = Math.round(levels.reduce((s, l, i) => s + musikBonus(l) * (reihe[i] ? BUEHNE.bonus : 1), 0) * 10000) / 10000;
+  const bonus = musikerBonusSumme(levels, reihe);
   if (musik) faktor *= 1 + bonus;
   // Bühne (27.11.): + Kollekte pro Besucher je Kachel, fest dazu (nicht × Altar usw.)
   const buehne = buehneImRaum(z, raum);
@@ -176,25 +244,51 @@ export function moebelWirkung(z, raum, typ) {
     haltung: h * normal + h * BUEHNE.bonus * auf,
     kollekte: k ** normal * (1 + (k - 1) * BUEHNE.bonus) ** auf };
 }
-// Instrumente des Raums in der festen Reihenfolge der Möbelliste (wie musiker.js): true = steht auf der Bühne
+// Instrumente des Raums in der festen Reihenfolge der Möbelliste (wie musiker.js):
+// { buehne: steht auf der Bühne, plus: Bonus aus der Stufe des Instruments (27.11.), art }
 export function instrumenteReihe(z, raum) {
-  return MOEBEL.filter(m => m.wirkung && m.wirkung.musik).flatMap(m => moebelImRaum(z, raum, m.id).slice(0, m.max || Infinity)).map(m => istBuehne(z, m.x, m.y));
+  return MOEBEL.filter(m => m.wirkung && m.wirkung.musik).flatMap(m => moebelImRaum(z, raum, m.id).slice(0, m.max || Infinity))
+    .map(m => ({ buehne: istBuehne(z, m.x, m.y), plus: (stufeVon(m) || {}).musik || 0, art: m.art }));
 }
+// Bonus eines Musikers mit diesem Level an diesem Instrument: (Musik-Bonus + Instrument-Stufe) × Bühne
+export const musikerBonus = (level, platz) => (musikBonus(level) + (platz ? platz.plus : 0)) * (platz && platz.buehne ? BUEHNE.bonus : 1);
+// Summe aller Musiker: höchstes Level ans erste Instrument der Reihe
+export const musikerBonusSumme = (levels, reihe) => Math.round(levels.reduce((s, l, i) => s + musikerBonus(l, reihe[i]), 0) * 10000) / 10000;
 
 // ---- Ton-Technik (Lukas, 27.11.; Spielprinzip claude/spielprinzip-tontechnik.md) ----
-// Was an Ton-Technik im Raum steht: Lautsprecher (ihre Plätze zählen zusammen, egal wo sie stehen), Subwoofer, Pult.
+// Was an Ton-Technik im Raum steht: Lautsprecher (ihre Plätze zählen zusammen, egal wo sie stehen), Subwoofer, Pult, Rack.
+// Seit den Stufen (27.11.) zählt jedes Stück mit den Werten seiner Stufe; das Rack kann die Lautsprecher weiter reichen lassen.
+const tonStuecke = (z, raum, id) => { const t = typVon(id); return moebelImRaum(z, raum, id).slice(0, t.max || Infinity); };
 export function tonImRaum(z, raum) {
-  const n = id => { const t = MOEBEL.find(m => m.id === id); return Math.min(t.max || Infinity, moebelImRaum(z, raum, id).length); };
-  const lautsprecher = n('lautsprecher'), subwoofer = n('subwoofer');
-  return { lautsprecher, plaetze: lautsprecher * MOEBEL.find(m => m.id === 'lautsprecher').ton.plaetze, subwoofer, pult: n('tonpult') > 0 };
+  const ls = tonStuecke(z, raum, 'lautsprecher'), sw = tonStuecke(z, raum, 'subwoofer'), pult = tonStuecke(z, raum, 'tonpult')[0] || null;
+  const rackM = tonStuecke(z, raum, 'tonrack')[0] || null, rack = rackM ? rackVon(rackM) : null;
+  const lsPlaetze = ls.reduce((a, m) => a + stufeVon(m).plaetze, 0);
+  const abdeckung = rack && rack.controller ? TONRACK.controller[rack.controller - 1].abdeckung : 1;
+  return { lautsprecher: ls.length, lautsprecherPlaetze: lsPlaetze, plaetze: Math.floor(lsPlaetze * abdeckung), abdeckung,
+    subwoofer: sw.length, subwooferBonus: Math.round(sw.reduce((a, m) => a + stufeVon(m).bonus, 0) * 1000) / 1000,
+    pult: !!pult, pultStufe: pult ? stufeVon(pult).stufe : 0, pultBonus: pult ? stufeVon(pult).bonus : 0,
+    rack: !!rackM, rackStufen: rack, mikrofon: moebelImRaum(z, raum, 'mikrofon').length > 0 };
 }
-// Ton-Technik einer Veranstaltung. techniker = eingeteilter Tontechniker (oder null), level = sein Tontechnik-Level.
+// Was das Rack zum Bonus beiträgt, bei so vielen spielenden Musikern → { inear, plugins }
+export function rackBonus(t, musiker) {
+  const r = t.rackStufen;
+  if (!r) return { inear: 0, plugins: 0 };
+  const ie = r.inear ? TONRACK.inear[r.inear - 1] : null;
+  const inear = ie ? ie.plus * Math.min(ie.musiker, musiker) : 0;
+  const plugins = t.pultStufe >= TONRACK.pluginsAbPult ? TONRACK.plugins.filter(p => r.plugins.includes(p.id) && (!p.mikrofon || (t.mikrofon && musiker > 0)))
+    .reduce((a, p) => a + p.bonus, 0) : 0;
+  return { inear: Math.round(inear * 1000) / 1000, plugins: Math.round(plugins * 1000) / 1000 };
+}
+// Ton-Technik einer Veranstaltung. techniker = eingeteilter Tontechniker (oder null), level = sein Tontechnik-Level,
+// musiker = so viele Musiker spielen (für In-Ear und Auto-Tune im Rack).
 // aktiv nur mit Pult + Lautsprecher + Tontechniker. bonus = voller Bonus (0.05 = 5 %), bevor die Abdeckung (plaetze) eingerechnet wird.
-export function tonWirkung(z, raum, techniker, level) {
+// teile: woraus der Bonus besteht (für Rack-Fenster und Bausteintabelle).
+export function tonWirkung(z, raum, techniker, level, musiker = 0) {
   const t = tonImRaum(z, raum), aktiv = !!(t.pult && t.lautsprecher && techniker);
-  const sub = MOEBEL.find(m => m.id === 'subwoofer').ton.subwoofer;
-  const bonus = aktiv ? Math.round((TON.start + TON.proLevel * level + sub * t.subwoofer) * 100) / 100 : 0;
-  return { ...t, aktiv, techniker: techniker ? techniker.id : null, level: techniker ? level : null, bonus };
+  const rb = rackBonus(t, musiker);
+  const teile = { grund: TON.start, level: TON.proLevel * (techniker ? level : 0), subwoofer: t.subwooferBonus, pult: t.pultBonus, inear: rb.inear, plugins: rb.plugins };
+  const bonus = aktiv ? Math.round(Object.values(teile).reduce((a, b) => a + b, 0) * 1000) / 1000 : 0;
+  return { ...t, aktiv, techniker: techniker ? techniker.id : null, level: techniker ? level : null, bonus, teile };
 }
 // Anteil des Bonus bei so vielen Besuchern: 1, wenn die Lautsprecher alle abdecken, sonst Plätze / Besucher
 export const tonAnteil = (ton, besucher) => !ton || !ton.aktiv ? 0 : besucher <= ton.plaetze ? 1 : ton.plaetze / besucher;

@@ -11,11 +11,15 @@
 //   • Hat das Kirchkaffee zu und ist die Maschine nicht voll, geht der Ehrenamtliche in den Laden und kauft nach.
 //     Danach füllt er genauso die Automaten in seinem Raum auf (automaten.js, Lukas 26.11.).
 //   • Kunden zu den Öffnungszeiten gehen evtl. einmal zum Automaten, während sie stehen oder sitzen (automaten.js).
+//   • Sandwiches (27.11.): Steht ein Sandwichmaker im Raum, will ein Kunde mit SANDWICH.chance auch ein Sandwich. Der Mitarbeiter
+//     macht erst den Kaffee, geht dann zum Sandwichmaker (lädt SANDWICH.laden), dann zurück – beides wird zusammen übergeben.
+//     Aufgefüllt wird der Sandwichmaker wie die Kaffeemaschine (Einkauf im Laden).
+//   • Stufen (27.11.): Fassung und Ladezeit der Kaffeemaschine hängen an ihrer Stufe (fassungVon/ladenVon in moebel.js).
 //
 // Jede Figur hat eine „Bewegung“ { pfad, laenge, t0 }: Ab Zeit t0 läuft sie den Pfad entlang. Die Spiellogik wartet
 // immer, bis sie wirklich angekommen ist – so stimmen Geld und Haltung mit dem überein, was man sieht.
 import { LEER, idx } from './karte.js';
-import { moebelImRaum, moebelBei, hindernisBei, fassung, stuhlStufe } from './moebel.js';
+import { moebelImRaum, moebelBei, hindernisBei, fassung, fassungVon, ladenVon, stuhlStufe } from './moebel.js';
 import { eingesetztIn, daten } from './personen.js';
 import { buchen, kannBezahlen } from './finanzen.js';
 import { zufriedenheitAendern, beduerfnisErfuellt } from './besucher.js';
@@ -26,7 +30,7 @@ import { umherPosition } from './umherlaufen.js';
 import { slotBeginn, zeitpunkt } from './zeit.js';
 import { LAUFTEMPO, SLOTS, DAUER, MELDUNG_DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
-import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN, MINDESTGAESTE } from '../inhalte/kirchkaffee.js';
+import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, STEHEN_GAST, SITZEN, MINDESTGAESTE, SANDWICH } from '../inhalte/kirchkaffee.js';
 import { ORT } from '../inhalte/ort.js';
 import { neuePerson } from './besucher.js';
 import { platzImGebiet } from './einzugsgebiet.js';
@@ -110,6 +114,12 @@ export function kirchkaffeeZustand(z, raeume) {
       const standTheke = thekenPlatz(z, r, beste.t, m, standMaschine, stehen) || { x: ea.x, y: ea.y };
       stehen.add(idx(z, standTheke.x, standTheke.y));
       stationen.push({ maschine: m, theke: beste.t, gruppe: beste.g, ea, raum: r, standMaschine, standTheke });
+    }
+    // Sandwichmaker (27.11.): jede Station nimmt den nächsten zur Theke; mehrere Stationen dürfen sich einen teilen
+    const sandwichmaker = moebelImRaum(z, r, 'sandwichmaker');
+    for (const st of stationen) {
+      const sw = sandwichmaker.slice().sort((a, b) => Math.hypot(a.x - st.theke.x, a.y - st.theke.y) - Math.hypot(b.x - st.theke.x, b.y - st.theke.y))[0];
+      if (sw) { st.sandwich = sw; st.standSandwich = standplatz(z, r, sw, st.standTheke) || { x: st.standMaschine.x, y: st.standMaschine.y }; }
     }
     // Für die Schlange: die Thekenteile der eigenen Theke, die keine andere Station benutzt
     for (const st of stationen) { st.thekeTeile = st.gruppe.filter(t => t === st.theke || !genutzt.has(t)); delete st.gruppe; }
@@ -331,14 +341,21 @@ function ohneKaffee(z, k, t) {
   heimSchicken(z, k, t);
 }
 // Kaffee übergeben: 2 €, +5 Haltung, dann auf einen Sitz- oder Stehplatz (Gottesdienst-Gäste bis zum Ende, Passanten eine Weile)
-function uebergeben(z, stationen, s, k, t, zufall) {
+function uebergeben(z, stationen, s, k, t, zufall, a = {}) {
   buchen(z, 'einnahmen', 'kirchkaffee', PREIS_TASSE, { tassen: 1, anlass: k.lauf ? 'gottesdienst' : 'oeffnungszeit' });
-  zahlZeigen(z, posBei(k.bew, t), PREIS_TASSE);
   const m = menschVon(z, k.id);
+  // Sandwich (27.11.): zusammen mit dem Kaffee; die Zahl über dem Kopf zeigt beides zusammen
+  if (a.sandwich) {
+    buchen(z, 'einnahmen', 'sandwich', SANDWICH.preis, { stueck: 1, anlass: k.lauf ? 'gottesdienst' : 'oeffnungszeit' });
+    if (m) zufriedenheitAendern(m, SANDWICH.haltung.ja);
+  } else if (a.sandwichLeer && m) zufriedenheitAendern(m, SANDWICH.haltung.leer);
+  zahlZeigen(z, posBei(k.bew, t), PREIS_TASSE + (a.sandwich ? SANDWICH.preis : 0));
   if (m) { zufriedenheitAendern(m, AENDERUNG.kaffeeJa); beduerfnisErfuellt(z, m, 'kaffee'); }   // Bedürfnis Kaffee (25.11.)
   ergebnisEintragen(z, k, 'ja');
   const L = k.lauf && (z.laeufe || []).find(l => l.id === k.lauf);
-  const bis = k.lauf ? (L && L.phase === 'kirchkaffee' ? L.beginn + DAUER.gottesdienst + DAUER.kirchkaffee : t) : t + STEHEN_PASSANT;
+  // Sitzen: Gottesdienst-Gäste bis zum Schluss. Stehen (27.11.): alle nur noch eine kurze Weile (STEHEN_GAST / STEHEN_PASSANT).
+  const schluss = k.lauf ? (L && L.phase === 'kirchkaffee' ? L.beginn + DAUER.gottesdienst + DAUER.kirchkaffee : t) : t + STEHEN_PASSANT;
+  const bis = schluss, stehenBis = k.lauf ? Math.min(schluss, t + STEHEN_GAST) : schluss;
   // Hinsetzen: ab Ankunft am Stuhl mindestens SITZEN.mindestens Minuten, auch wenn das Kirchkaffee schon zu ist
   const stuhl = freierStuhl(z, s);
   if (stuhl && zufall() < SITZEN.chance) {
@@ -348,10 +365,10 @@ function uebergeben(z, stationen, s, k, t, zufall) {
     automatEinplanen(z, k);
     return;
   }
-  if (bis <= t + EPS) return heimSchicken(z, k, t);
+  if (stehenBis <= t + EPS) return heimSchicken(z, k, t);
   const platz = stehplatz(z, stationen, s);
   if (!platz) return heimSchicken(z, k, t);
-  k.phase = 'steht'; k.stehBis = bis;
+  k.phase = 'steht'; k.stehBis = stehenBis;
   k.bew = gehen(z, posBei(k.bew, t), platz, t);
   automatEinplanen(z, k);
 }
@@ -477,12 +494,14 @@ function abbrechen(z, id) {
   const maschine = a.maschine && moebelBei(z, a.maschine.x, a.maschine.y);
   if (a.art === 'bedienen') {
     if (maschine && maschine.art === 'kaffeemaschine') maschine.fuellung = (maschine.fuellung || 0) + 1;
+    const sw = a.sandwich && moebelBei(z, a.sandwich.x, a.sandwich.y);   // reserviertes Sandwich zurück (27.11.)
+    if (sw && sw.art === 'sandwichmaker') sw.fuellung = (sw.fuellung || 0) + 1;
     const k = K.kunden.find(x => x.id === a.kunde);
     if (k && k.phase === 'bestellt') k.phase = 'schlange';
   }
   if (a.art === 'einkauf' && a.phase === 'zurueck' && a.automat) auffuellen(z, a.automat, a.menge);   // schon bezahlt: Ware kommt trotzdem an
-  else if (a.art === 'einkauf' && a.phase === 'zurueck' && maschine && maschine.art === 'kaffeemaschine')   // schon bezahlt: Kaffee kommt trotzdem an
-    maschine.fuellung = Math.min(fassung('kaffeemaschine'), (maschine.fuellung || 0) + a.menge);
+  else if (a.art === 'einkauf' && a.phase === 'zurueck' && maschine && istMaschine(maschine))   // schon bezahlt: Kaffee/Sandwiches kommen trotzdem an
+    maschine.fuellung = Math.min(fassungVon(maschine), (maschine.fuellung || 0) + a.menge);
 }
 
 // Vom Spieler versetzt (27.11.): Aufgabe sofort abbrechen (wie sonst bei der nächsten Kontrolle), damit die Figur
@@ -492,6 +511,27 @@ export function kaffeeVersetzt(z, id) {
   abbrechen(z, id);
   delete z.kaffee.ma[id];
 }
+
+// Maschinen, die im Laden nachgekauft werden: Kaffeemaschine (Tassen) und Sandwichmaker (Sandwiches, 27.11.)
+const istMaschine = m => m.art === 'kaffeemaschine' || m.art === 'sandwichmaker';
+const einkaufPreis = m => m.art === 'sandwichmaker' ? SANDWICH.einkauf : EINKAUF.preisTasse;
+const tragenVon = m => m.art === 'sandwichmaker' ? SANDWICH.tragen : EINKAUF.tragen;
+function einkaufBuchen(z, a) {
+  if (a.automat) buchen(z, 'ausgaben', a.ware, a.preis, { automat: a.ware, stueck: a.menge, was: 'einkauf' });
+  else if (a.ware === 'sandwich') buchen(z, 'ausgaben', 'sandwich', a.preis, { stueck: a.menge, anlass: 'einkauf' });
+  else buchen(z, 'ausgaben', 'kaffee', a.preis, { tassen: a.menge, anlass: 'einkauf' });
+}
+function maschineFuellen(z, pos, menge) {
+  const mm = moebelBei(z, pos.x, pos.y);
+  if (mm && istMaschine(mm)) mm.fuellung = Math.min(fassungVon(mm), (mm.fuellung || 0) + menge);
+}
+// „Würfel“ 0–1, fest aus einem Schlüssel gerechnet (wie beim Automaten) – will dieser Kunde ein Sandwich? (27.11.)
+function fest(schluessel) {
+  let h = 2166136261;
+  for (const c of schluessel) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return ((h >>> 0) % 10000) / 10000;
+}
+export const willSandwich = k => fest(`sandwich:${k.lauf || k.besuch || ''}:${k.id}`) < SANDWICH.chance;
 
 // Ein Schritt für eine Station → true, wenn sich etwas geändert hat
 function stationSchritt(z, stationen, s, t, zufall) {
@@ -504,11 +544,16 @@ function stationSchritt(z, stationen, s, t, zufall) {
 
   if (a && a.art === 'bedienen') {
     const k = K.kunden.find(x => x.id === a.kunde);
-    if (a.phase === 'hin' && da) { a.phase = 'laden'; a.bis = t + LADEN_MINUTEN; return true; }
-    if (a.phase === 'laden' && t >= a.bis - EPS) { a.phase = 'zurueck'; geh(s.standTheke, true); return true; }
+    if (a.phase === 'hin' && da) { a.phase = 'laden'; a.dauer = ladenVon(maschine, LADEN_MINUTEN); a.bis = t + a.dauer; return true; }
+    if (a.phase === 'laden' && t >= a.bis - EPS) {
+      if (a.sandwich && s.standSandwich) { a.phase = 'zumSandwich'; geh(s.standSandwich); return true; }   // Sandwich (27.11.)
+      a.phase = 'zurueck'; geh(s.standTheke, true); return true;
+    }
+    if (a.phase === 'zumSandwich' && da) { a.phase = 'sandwichLaden'; a.dauer = SANDWICH.laden; a.bis = t + a.dauer; return true; }
+    if (a.phase === 'sandwichLaden' && t >= a.bis - EPS) { a.phase = 'zurueck'; geh(s.standTheke); return true; }
     if (a.phase === 'zurueck' && da) {
       m.aufgabe = null;
-      if (k) { uebergeben(z, stationen, s, k, t, zufall); nachruecken(z, stationen, s, t); }
+      if (k) { uebergeben(z, stationen, s, k, t, zufall, a); nachruecken(z, stationen, s, t); }
       return true;
     }
     return false;
@@ -516,16 +561,15 @@ function stationSchritt(z, stationen, s, t, zufall) {
   if (a && a.art === 'einkauf') {
     if (a.phase === 'hin' && da) {
       if (kannBezahlen(z, a.preis)) {
-        if (a.automat) buchen(z, 'ausgaben', a.ware, a.preis, { automat: a.ware, stueck: a.menge, was: 'einkauf' });
-        else buchen(z, 'ausgaben', 'kaffee', a.preis, { tassen: a.menge, anlass: 'einkauf' });
+        einkaufBuchen(z, a);
         zahlZeigen(z, hier, -a.preis); delete K.gemeldet[id];
       }
-      else { a.menge = 0; keinGeld(z, p, t, a.automat ? a.ware : null); }
-      a.phase = 'zurueck'; geh(a.automat ? a.platz : s.standMaschine); return true;
+      else { a.menge = 0; keinGeld(z, p, t, a.automat ? a.ware : a.ware === 'sandwich' ? 'sandwich' : null); }
+      a.phase = 'zurueck'; geh(a.automat ? a.platz : a.ware === 'sandwich' ? s.standSandwich || s.standMaschine : s.standMaschine); return true;
     }
     if (a.phase === 'zurueck' && da) {
       if (a.automat) auffuellen(z, a.automat, a.menge);
-      else maschine.fuellung = Math.min(fassung('kaffeemaschine'), (maschine.fuellung || 0) + a.menge);
+      else maschineFuellen(z, a.maschine, a.menge);
       m.aufgabe = null; return true;
     }
     return false;
@@ -544,6 +588,11 @@ function stationSchritt(z, stationen, s, t, zufall) {
         maschine.fuellung--;   // die Tasse ist für ihn reserviert
         vorne.phase = 'bestellt';
         m.aufgabe = { art: 'bedienen', phase: 'hin', kunde: vorne.id, maschine: { x: maschine.x, y: maschine.y } };
+        // Sandwich (27.11.): nur, wenn ein Sandwichmaker da ist und er eins will; ist er leer, gibt es nur den Kaffee
+        if (s.sandwich && willSandwich(vorne)) {
+          if ((s.sandwich.fuellung || 0) > 0) { s.sandwich.fuellung--; m.aufgabe.sandwich = { x: s.sandwich.x, y: s.sandwich.y }; }
+          else m.aufgabe.sandwichLeer = true;
+        }
         geh(s.standMaschine, true);
       } else { ohneKaffee(z, vorne, t); nachruecken(z, stationen, s, t); }
       return true;
@@ -551,11 +600,16 @@ function stationSchritt(z, stationen, s, t, zufall) {
     return false;
   }
   // Schichtbetrieb (27.11.): Einkaufen und Auffüllen macht nur noch die Logistik aus dem Lager (logistikSchritt)
-  const fehlt = z.schichtbetrieb ? 0 : fassung('kaffeemaschine') - (maschine.fuellung || 0);
-  if (fehlt > 0 && !(K.gesperrt[id] > t)) {
-    const menge = Math.min(EINKAUF.tragen, fehlt), preis = Math.round(menge * EINKAUF.preisTasse * 100) / 100;
-    if (!kannBezahlen(z, preis)) { keinGeld(z, p, t); return true; }
-    m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, maschine: { x: maschine.x, y: maschine.y } };
+  // Erst Kaffee, dann Sandwiches (27.11.) – der Sandwichmaker gehört der Station, die am nächsten ist; geteilt füllt ihn der erste
+  const schonSw = new Set(Object.values(K.ma).filter(x => x !== m && x.aufgabe && x.aufgabe.ware === 'sandwich').map(x => idx(z, x.aufgabe.maschine.x, x.aufgabe.maschine.y)));
+  for (const ma of [maschine, s.sandwich].filter(Boolean)) {
+    if (z.schichtbetrieb || K.gesperrt[id] > t) break;
+    const fehlt = fassungVon(ma) - (ma.fuellung || 0);
+    if (fehlt <= 0 || (ma !== maschine && schonSw.has(idx(z, ma.x, ma.y)))) continue;
+    const menge = Math.min(tragenVon(ma), fehlt), preis = Math.round(menge * einkaufPreis(ma) * 100) / 100;
+    const sw = ma.art === 'sandwichmaker';
+    if (!kannBezahlen(z, preis)) { keinGeld(z, p, t, sw ? 'sandwich' : null); return true; }
+    m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, maschine: { x: ma.x, y: ma.y }, ware: sw ? 'sandwich' : null };
     geh(LADEN.eingang); return true;
   }
   // Automaten im Raum auffüllen (26.11.): wie beim Kaffee. 27.11.: erst ab auffuellenAb fehlenden, dann alles bis voll
@@ -595,16 +649,15 @@ function logistikSchritt(z, raeume, p, raum, t, aktiv = true) {
   if (a && a.art === 'einkauf') {
     if (a.phase === 'hin' && da) {
       if (kannBezahlen(z, a.preis)) {
-        if (a.automat) buchen(z, 'ausgaben', a.ware, a.preis, { automat: a.ware, stueck: a.menge, was: 'einkauf' });
-        else buchen(z, 'ausgaben', 'kaffee', a.preis, { tassen: a.menge, anlass: 'einkauf' });
+        einkaufBuchen(z, a);
         zahlZeigen(z, hier, -a.preis); delete K.gemeldet[id];
       }
-      else { a.menge = 0; keinGeld(z, p, t, a.automat ? a.ware : null); }
+      else { a.menge = 0; keinGeld(z, p, t, a.automat ? a.ware : a.ware === 'sandwich' ? 'sandwich' : null); }
       a.phase = 'zurueck'; geh(a.platz); return true;
     }
     if (a.phase === 'zurueck' && da) {
       if (a.automat) auffuellen(z, a.automat, a.menge);
-      else { const mm = moebelBei(z, a.maschine.x, a.maschine.y); if (mm && mm.art === 'kaffeemaschine') mm.fuellung = Math.min(fassung('kaffeemaschine'), (mm.fuellung || 0) + a.menge); }
+      else maschineFuellen(z, a.maschine, a.menge);
       m.aufgabe = null; return true;
     }
     return false;
@@ -616,13 +669,15 @@ function logistikSchritt(z, raeume, p, raum, t, aktiv = true) {
     const schonMaschine = new Set(andere.filter(x => x.aufgabe.maschine && !x.aufgabe.automat).map(x => idx(z, x.aufgabe.maschine.x, x.aufgabe.maschine.y)));
     const schonAutomat = new Set(andere.filter(x => x.aufgabe.automat).map(x => idx(z, x.aufgabe.automat.x, x.aufgabe.automat.y)));
     for (const kr of raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee' && !r.probleme.length)) {
-      for (const ma of moebelImRaum(z, kr, 'kaffeemaschine')) {
-        const fehlt = fassung('kaffeemaschine') - (ma.fuellung || 0);
+      // erst alle Kaffeemaschinen, dann die Sandwichmaker (27.11.)
+      for (const ma of [...moebelImRaum(z, kr, 'kaffeemaschine'), ...moebelImRaum(z, kr, 'sandwichmaker')]) {
+        const fehlt = fassungVon(ma) - (ma.fuellung || 0);
         if (fehlt <= 0 || schonMaschine.has(idx(z, ma.x, ma.y))) continue;
-        const menge = Math.min(EINKAUF.tragen, fehlt), preis = Math.round(menge * EINKAUF.preisTasse * 100) / 100;
-        if (!kannBezahlen(z, preis)) { keinGeld(z, p, t); return true; }
+        const menge = Math.min(tragenVon(ma), fehlt), preis = Math.round(menge * einkaufPreis(ma) * 100) / 100;
+        const sw = ma.art === 'sandwichmaker';
+        if (!kannBezahlen(z, preis)) { keinGeld(z, p, t, sw ? 'sandwich' : null); return true; }
         const platz = standplatz(z, kr, ma, ma) || { x: ma.x, y: ma.y + 1 };
-        m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, maschine: { x: ma.x, y: ma.y }, platz };
+        m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, maschine: { x: ma.x, y: ma.y }, platz, ware: sw ? 'sandwich' : null };
         geh(LADEN.eingang); return true;
       }
     }
@@ -775,8 +830,9 @@ export function kaffeeMitarbeiterPosition(z, p) {
 // Maschinen, die gerade laden: Position und Fortschritt 0–1
 export function kaffeeLaden(z) {
   if (!z.kaffee) return [];
-  return Object.values(z.kaffee.ma).filter(m => m.aufgabe && m.aufgabe.art === 'bedienen' && m.aufgabe.phase === 'laden')
-    .map(m => ({ x: m.aufgabe.maschine.x, y: m.aufgabe.maschine.y, anteil: Math.max(0, Math.min(1, 1 - (m.aufgabe.bis - z.minuten) / LADEN_MINUTEN)) }));
+  return Object.values(z.kaffee.ma).filter(m => m.aufgabe && m.aufgabe.art === 'bedienen' && (m.aufgabe.phase === 'laden' || m.aufgabe.phase === 'sandwichLaden'))
+    .map(m => { const a = m.aufgabe, pos = a.phase === 'sandwichLaden' ? a.sandwich : a.maschine;
+      return { x: pos.x, y: pos.y, anteil: Math.max(0, Math.min(1, 1 - (a.bis - z.minuten) / (a.dauer || LADEN_MINUTEN))) }; });
 }
 export function kaffeeZahlen(z) { return z.kaffee ? z.kaffee.zahlen.map(e => ({ nr: e.nr, x: e.x, y: e.y, betrag: e.betrag, art: e.art || null })) : []; }
 export function kaffeeMeldung(z) {

@@ -32,7 +32,7 @@ export function fensterOffen() { return !maske().hidden; }
 
 function fensterInhalt(f) {
   return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, lager: lagerFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, verbessern: verbessernFenster, rack: rackFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
     kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, jugendpastor: jugendpastorFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster, mitglieder: mitgliederFenster, buero: bueroFenster }[f.art](f);
 }
 // Wird bei jeder Anzeige-Aktualisierung aufgerufen; baut das Fenster nur neu, wenn sich der Inhalt geändert hat.
@@ -51,7 +51,7 @@ export function fensterAktualisieren() {
   m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen' || f.art === 'dienstplan');
   m.classList.toggle('wochenbericht', f.art === 'wochenbericht');   // Wochenzusammenfassung (27.11.): in der Mitte wie die Zeitung
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
-  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'lager' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender' || f.art === 'dienstplan' || f.art === 'mitglieder');
+  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'lager' || f.art === 'rack' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender' || f.art === 'dienstplan' || f.art === 'mitglieder');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
   amZeiger(m, f.zeiger);
@@ -231,12 +231,89 @@ const faktorWorte = (b, k) => [TEXTE.besucherWort(b), TEXTE.kollekteWort(k)].fil
 function maschinenFenster(f) {
   const m = ui.spiel.maschineInfo(f.x, f.y);
   if (!m) return null;
+  if (m.art === 'sandwichmaker') {   // Sandwichmaker (27.11.)
+    const S = TEXTE.sandwichmaker;
+    return `<h2>${S.titel}</h2>
+      <div class="balken"><span style="width:${Math.round(m.fuellung / m.fassung * 100)}%"></span></div>
+      <p class="unter">${S.fuellstand(m.fuellung, m.fassung)}</p>
+      ${m.fuellung === 0 ? `<p class="warnung">${S.leer}</p>` : ''}
+      ${m.imKirchkaffee ? `<p class="unter">${S.erklaerung(euro(m.preis), m.chance, zahl1(m.laden), euro(m.einkaufPreis))}</p>` : `<p class="warnung">${S.nichtImKaffee}</p>`}`;
+  }
   const T = TEXTE.maschine;
   return `<h2>${T.titel}</h2>
     <div class="balken"><span style="width:${Math.round(m.fuellung / m.fassung * 100)}%"></span></div>
     <p class="unter">${T.fuellstand(m.fuellung, m.fassung)}</p>
     ${m.fuellung === 0 ? `<p class="warnung">${T.leer}</p>` : ''}
-    ${m.imKirchkaffee ? `<p class="unter">${T.auffuellen}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}`;
+    ${m.imKirchkaffee ? `<p class="unter">${T.auffuellen}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}
+    ${verbessernTeil(f)}`;
+}
+
+// ---- Stufen (27.11.): Teil „Verbessern“ – im eigenen Fenster und unter Kaffeemaschine/Automat ----
+function werteText(art, w) {
+  const W = TEXTE.verbessern.wert;
+  return Object.entries(w).map(([k, v]) => W[k] ? W[k](v, art) : '').filter(Boolean).join(' · ');
+}
+function verbessernTeil(f, mitKopf = false) {
+  const v = ui.spiel.moebelStufeInfo(f.x, f.y);
+  if (!v) return '';
+  const T = TEXTE.verbessern, n = v.naechste, a = v.alle;
+  const naechste = n
+    ? `<h3>${T.naechste(esc(n.name))}</h3><p class="unter">${werteText(v.art, n.werte)}</p>
+       <div class="typen"><button data-moebel-verbessern ${n.leistbar ? '' : 'disabled'}>${T.knopf(euro(n.preis))}</button></div>
+       ${n.leistbar ? '' : `<p class="unter">${T.keinGeld}</p>`}`
+    : `<p class="unter">${T.hoechste}</p>`;
+  const alle = !a ? '' : a.anzahl
+    ? `<div class="typen"><button data-moebel-alle ${a.leistbar ? '' : 'disabled'}>${T.alle(esc(v.name), a.anzahl, euro(a.preis))}</button></div>`
+    : `<p class="unter">${T.alleHoechste}</p>`;
+  return `${mitKopf ? '' : `<h3>${T.titel}</h3>`}
+    <p class="unter staerker">${T.stufe(esc(v.stufenName), v.stufe, v.maxStufe)}</p>
+    <p class="unter">${werteText(v.art, v.werte)}</p>
+    ${naechste}${alle}`;
+}
+function verbessernFenster(f) {
+  const v = ui.spiel.moebelStufeInfo(f.x, f.y);
+  if (!v) return null;
+  return `<h2>${esc(v.name)}</h2>${verbessernTeil(f, true)}`;
+}
+
+// ---- Tontechnikrack (27.11.): verbaute Ton-Technik, Leistung jetzt / höchstens, Ausbau ----
+const pz = v => (Math.round(v * 1000) / 10).toLocaleString('de-DE', { maximumFractionDigits: 1 });   // 0.045 → „4,5“
+function rackFenster(f) {
+  const r = ui.spiel.rackInfo(f.x, f.y);
+  if (!r) return null;
+  const T = TEXTE.tonrack, V = r.verbaut, L = r.leistung, M = r.module;
+  const zeile = (name, wert) => `<tr><td>${name}</td><td>${wert}</td></tr>`;
+  const gruppen = (liste, fmt) => liste.length ? liste.map(g => `${g.anzahl} × ${esc(g.name)} (${fmt(g.wert)})`).join('<br>') : T.keine;
+  const verbaut = `<table class="baustein rack">
+    ${zeile(T.lautsprecher(V.lautsprecherAnzahl, V.lautsprecherMax), gruppen(V.lautsprecher, n => T.personen(n)))}
+    ${zeile(T.abdeckung, T.abdeckungWert(V.lautsprecherPlaetze, V.abdeckung > 1 ? pz(V.abdeckung - 1) : null, V.plaetze, r.sitzplaetze))}
+    ${zeile(T.subwoofer(V.subwoofer.reduce((a, g) => a + g.anzahl, 0), V.subwooferMax), gruppen(V.subwoofer, b => `+${pz(b)} %`))}
+    ${zeile(T.pult, V.pult ? `${esc(V.pult.name)} · ${T.stufe(V.pult.stufe, V.pult.maxStufe)}` : T.keine)}
+    ${zeile(T.techniker, V.techniker ? T.technikerWert(esc(V.techniker.name), V.techniker.level) : T.keinTechniker)}
+    ${zeile(T.musiker, T.musikerWert(V.musiker, V.mikrofon))}
+  </table>`;
+  const teil = k => L.teile ? `+${pz(L.teile[k])} %` : '–';
+  const leistung = `<table class="baustein rack"><tr><th></th><th>${T.jetzt}</th><th>${T.hoechstens}</th></tr>
+    ${['grund', 'level', 'subwoofer', 'pult', 'inear', 'plugins'].map(k => `<tr><td>${T.teile[k]}</td><td>${teil(k)}</td><td>+${pz(L.maxTeile[k])} %</td></tr>`).join('')}
+    <tr class="summe"><td>${T.zusammen}</td><td>+${pz(L.moeglichJetzt)} %</td><td>+${pz(L.maxBonus)} %</td></tr>
+    <tr><td>${T.plaetze}</td><td>${L.plaetze}</td><td>${L.maxPlaetze}</td></tr></table>
+    <p class="${L.aktiv ? 'unter' : 'warnung'}">${L.aktiv ? T.laeuft(pz(L.bonus)) : T.fehlt[L.fehlt] || ''}</p>`;
+  const stufenModul = (art, wert) => {
+    const m = M[art], n = m.naechste;
+    const jetzt = m.stufe ? `${esc(m.name)} · ${T.stufe(m.stufe, m.maxStufe)} · ${wert(m.werte)}` : T.nichtEingebaut;
+    const knopf = n ? `<div class="typen"><button data-rack="${art}" ${n.leistbar && !n.fehltPult ? '' : 'disabled'}>${T.einbauen(esc(n.name), euro(n.preis))}</button></div>
+      <p class="unter">${wert(n)}${n.fehltPult ? ' · ' + T.brauchtPult(n.pult) : !n.leistbar ? ' · ' + TEXTE.verbessern.keinGeld : ''}</p>` : `<p class="unter">${T.voll}</p>`;
+    return `<h3>${T.modul[art]}</h3><p class="unter">${T.modulInfo[art]}</p><p class="unter staerker">${jetzt}</p>${knopf}`;
+  };
+  const plugins = `<h3>${T.modul.plugins}</h3><p class="unter">${T.modulInfo.plugins(M.pluginsAbPult)}</p>
+    ${M.pultStufe < M.pluginsAbPult ? `<p class="warnung">${T.brauchtPult(M.pluginsAbPult)}</p>` : ''}
+    <div class="typen rack-plugins">${M.plugins.map(p => `<button data-rack="plugin" data-rack-id="${p.id}" ${p.gekauft || !p.leistbar || p.fehltPult ? 'disabled' : ''}>${esc(p.name)}<br><small>${p.gekauft ? T.eingebaut : euro(p.preis)} · +${pz(p.bonus)} %${p.mikrofon ? ' · ' + T.mitMikrofon : ''}</small></button>`).join('')}</div>`;
+  return `<h2>${T.titel}</h2>${r.imRaum ? '' : `<p class="warnung">${T.nichtImRaum}</p>`}
+    <h3>${T.verbautTitel}</h3>${verbaut}
+    <h3>${T.leistungTitel}</h3>${leistung}
+    ${stufenModul('inear', w => T.inearWert(w.musiker, pz(w.plus)))}
+    ${stufenModul('controller', w => T.controllerWert(pz(w.abdeckung - 1)))}
+    ${plugins}`;
 }
 
 // Automat (26.11.): Füllstand (aufgefüllt wird vom Kirchkaffee-Ehrenamtlichen im Laden). Texte je Automat in TEXTE.automat.
@@ -248,7 +325,8 @@ function automatFenster(f) {
     <div class="balken"><span style="width:${Math.round(a.fuellung / a.lager * 100)}%"></span></div>
     <p class="unter">${(eigen.fuellstand || T.fuellstand)(a.fuellung, a.lager)}</p>
     ${a.fuellung === 0 ? `<p class="warnung">${T.leer}</p>` : ''}
-    ${a.imRaum ? `<p class="unter">${(eigen.erklaerung || (() => ''))(a.preis, a.einkauf)}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}`;
+    ${a.imRaum ? `<p class="unter">${(eigen.erklaerung || (() => ''))(a.preis, a.einkauf)}</p>` : `<p class="warnung">${T.nichtImKaffee}</p>`}
+    ${verbessernTeil(f)}`;
 }
 
 // Kirchkaffee: Zustand und eigene Öffnungszeiten (höchstens 3 Schichten pro Woche).
@@ -975,6 +1053,9 @@ export function fensterEinrichten() {
     else if (b.dataset.plan) { const [tag, slot] = b.dataset.plan.split(':'); spiel.terminSetzen(f.nr, f.platz ?? 0, Number(tag), slot); }
     else if (b.hasAttribute('data-verbessern')) spiel.stuhlVerbessern(f.x, f.y);
     else if (b.hasAttribute('data-alle-verbessern')) spiel.alleStuehleVerbessern(f.x, f.y);
+    else if (b.hasAttribute('data-moebel-verbessern')) spiel.moebelVerbessern(f.x, f.y);   // Stufen (27.11.)
+    else if (b.hasAttribute('data-moebel-alle')) spiel.alleMoebelVerbessern(f.x, f.y);
+    else if (b.dataset.rack) spiel.rackEinbauen(f.x, f.y, b.dataset.rack, b.dataset.rackId || null);   // Tontechnikrack (27.11.)
     else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();
     else if (b.dataset.aushang) { const [nr, platz] = b.dataset.aushang.split(':').map(Number); spiel.aushangSetzen(f.x, f.y, nr, platz); }
     else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);

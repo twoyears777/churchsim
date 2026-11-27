@@ -410,3 +410,9 @@ table.menschen .zahl { text-align: right; font-variant-numeric: tabular-nums; }
 .inhalt .dp-stelle.besetzt span:nth-of-type(1) { margin-left: auto; opacity: .8; }
 .dp-fehler { min-height: 18px; margin-top: 8px; }
 .inhalt .dp-ea, .inhalt .dp-tag, .inhalt .dp-stelle { min-height: 0; }
+
+/* Tontechnikrack (27.11.) – Aussehen ENTWURF von Claude */
+table.baustein.rack { table-layout: auto; margin-bottom: 8px; }
+table.baustein.rack td:first-child { color: #4d493f; width: 40%; }
+.typen.rack-plugins { grid-template-columns: repeat(3, 1fr); }
+.typen.rack-plugins small { font-weight: 400; color: #6b665b; }

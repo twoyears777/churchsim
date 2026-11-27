@@ -20,7 +20,8 @@ export const FARBEN = {
   gitarre: '#c07a32', gitarreHals: '#4a3220',
   // Weitere Instrumente (25.11.) – PLATZHALTER von Claude, Lukas legt Aussehen fest
   keyTasten: '#f4f1ea', keySchwarz: '#2a2a2e', trommel: '#b8433a', trommelFell: '#ece6da', becken: '#d9b54a',
-  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', tonGehaeuse: '#2f3238', tonMembran: '#5b6068', tonPult: '#3a3f47', tonRegler: '#e0b84a', plakat: '#fff6d6', plakatRand: '#c23b2e', evangelisation: '#fff6d6', evangelisationRand: '#2d69be', standHolz: '#b98a55', standHolzDunkel: '#7a5632',
+  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', tonGehaeuse: '#2f3238', tonMembran: '#5b6068', tonPult: '#3a3f47', tonRegler: '#e0b84a', rackLed: '#5fd16a', sandwichmaker: '#b0b3b8', sandwichBrot: '#e2b56f', snackautomat: '#8a3b2f', snackTuete: ['#f0b429', '#d9483b', '#5aa0d6'],   // 27.11.: Platzhalter-Farben von Claude
+  plakat: '#fff6d6', plakatRand: '#c23b2e', evangelisation: '#fff6d6', evangelisationRand: '#2d69be', standHolz: '#b98a55', standHolzDunkel: '#7a5632',
   // Außen (Einzugsgebiet) – Platzhalter
   strasse: '#6a6d72', strasseRand: '#55585c', parkLinie: '#f2efe6', nichtAngeschlossen: 'rgba(200,55,45,0.45)',
   busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
@@ -139,6 +140,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     else if (m.art === 'gitarre') gitarre(ctx, px, py, k);
     else if (INSTRUMENT_BILD[m.art]) INSTRUMENT_BILD[m.art](ctx, px, py, k);
     else if (m.art === 'kaffeemaschine') kaffeemaschine(ctx, px, py, k, m.anteil || 0);
+    else if (m.art === 'sandwichmaker') sandwichmaker(ctx, px, py, k, m.anteil || 0);
     else if (m.automat) (AUTOMAT_BILD[m.art] || getraenkeautomat)(ctx, px, py, k, m.anteil || 0);
   }
   // Kaffeemaschine lädt: kleiner Balken über der Maschine
@@ -481,7 +483,15 @@ function tonpult(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.tonRegler;
   for (let i = 0; i < 5; i++) ctx.fillRect(px + k * (0.16 + i * 0.15), py + k * (0.32 + (i % 3) * 0.12), k * 0.07, k * 0.1);
 }
-const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon, klavier, lautsprecher, subwoofer, tonpult };
+// Tontechnikrack (27.11., Platzhalter-Grafik): schwarzer Schrank mit Einschüben und grünen Lämpchen
+function tonrack(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.tonGehaeuse; ctx.fillRect(px + k * 0.16, py + k * 0.06, k * 0.68, k * 0.88);
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = FARBEN.tonPult; ctx.fillRect(px + k * 0.22, py + k * (0.13 + i * 0.2), k * 0.56, k * 0.14);
+    ctx.fillStyle = FARBEN.rackLed; ctx.fillRect(px + k * 0.66, py + k * (0.17 + i * 0.2), k * 0.06, k * 0.05);
+  }
+}
+const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon, klavier, lautsprecher, subwoofer, tonpult, tonrack };
 // Plakat am Zaun links neben dem Tor (solange es hängt)
 // Stand „Evangelisation!“ (Lukas, 27.11.: „lieber so einen kleinen gebauten Stand“): Marktstand von vorn – zwei Pfosten,
 // gestreifte Markise, Holztheke mit Tuch, Heften und Kreuz; das Schild hängt rechts daneben an einem Pfosten.
@@ -645,8 +655,31 @@ function getraenkeautomat(ctx, px, py, k, anteil) {
   ctx.fillStyle = anteil > 0 ? FARBEN.automatGlas : '#b3261e';
   ctx.fillRect(px + k * 0.2, py + k * 0.72, k * 0.6 * (anteil > 0 ? Math.min(1, anteil) : 1), k * 0.1);
 }
+// Snackautomat (27.11., Platzhalter-Grafik): wie der Getränkeautomat, rot, mit bunten Tüten in Spiralen
+function snackautomat(ctx, px, py, k, anteil) {
+  const r = k * 0.1;
+  ctx.fillStyle = FARBEN.snackautomat; ctx.fillRect(px + r, py + r * 0.5, k - 2 * r, k - r);
+  ctx.fillStyle = FARBEN.automatGlas; ctx.fillRect(px + k * 0.2, py + k * 0.14, k * 0.42, k * 0.5);
+  const sichtbar = Math.ceil(Math.max(0, Math.min(1, anteil)) * 6);
+  for (let i = 0; i < sichtbar; i++) {
+    ctx.fillStyle = FARBEN.snackTuete[i % 3];
+    ctx.fillRect(px + k * (0.23 + (i % 3) * 0.13), py + k * (0.22 + Math.floor(i / 3) * 0.22), k * 0.1, k * 0.12);
+  }
+  ctx.fillStyle = '#d9d9d9'; ctx.fillRect(px + k * 0.68, py + k * 0.2, k * 0.12, k * 0.2);
+  ctx.fillStyle = anteil > 0 ? FARBEN.automatGlas : '#b3261e';
+  ctx.fillRect(px + k * 0.2, py + k * 0.72, k * 0.6 * (anteil > 0 ? Math.min(1, anteil) : 1), k * 0.1);
+}
+// Sandwichmaker (27.11., Platzhalter-Grafik): silbernes Kontaktgrill mit Sandwich; unten Füllstand-Streifen wie bei der Kaffeemaschine
+function sandwichmaker(ctx, px, py, k, anteil) {
+  ctx.fillStyle = FARBEN.sandwichmaker; ctx.fillRect(px + k * 0.12, py + k * 0.22, k * 0.76, k * 0.5);
+  ctx.fillStyle = FARBEN.tonGehaeuse; ctx.fillRect(px + k * 0.12, py + k * 0.2, k * 0.76, k * 0.07);
+  ctx.fillStyle = FARBEN.sandwichBrot;
+  ctx.beginPath(); ctx.moveTo(px + k * 0.3, py + k * 0.62); ctx.lineTo(px + k * 0.7, py + k * 0.62); ctx.lineTo(px + k * 0.5, py + k * 0.34); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = anteil > 0 ? FARBEN.maschineKaffee : '#b3261e';
+  ctx.fillRect(px + k * 0.2, py + k * 0.76, k * 0.6 * (anteil > 0 ? Math.min(1, anteil) : 1), k * 0.1);
+}
 // Weitere Automaten bekommen hier ihr eigenes Bild (sonst wird der Getränkeautomat gezeichnet)
-const AUTOMAT_BILD = { getraenkeautomat };
+const AUTOMAT_BILD = { getraenkeautomat, snackautomat };
 
 // ---- Außen: Straße, Parkplatz, Bushaltestelle (Platzhalter-Grafik) ----
 function strasse(ctx, px, py, k) {
@@ -745,10 +778,10 @@ export function symbolZeichnen(ctx, id, g) {
   ctx.clearRect(0, 0, g, g);
   const k = g * 0.72, p = (g - k) / 2;
   const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, garderobe, infotisch, wc, waschbecken, regal, schreibtisch, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
-    kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
+    kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), sandwichmaker: () => sandwichmaker(ctx, p, p, k, 0.7), strasse };
   if (AUTOMAT_BILD[id]) return AUTOMAT_BILD[id](ctx, p, p, k, 0.8);
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }
-  if (id === 'stuhl' || id === 'kaffeemaschine') return moebel[id]();
+  if (id === 'stuhl' || id === 'kaffeemaschine' || id === 'sandwichmaker') return moebel[id]();
   if (id === 'weg') return weg(ctx, p, p, k);
   if (id === 'buehne') { for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) buehneKachel(ctx, p + i * k / 2, p + j * k / 2, k / 2); return; }
   if (id === 'baum') return AUSSENDEKO.baum(ctx, p, p, k / 2);

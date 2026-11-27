@@ -118,14 +118,14 @@ const ohne = (() => { const zf = saat(3), z = gemeinde(zf); bisNachGottesdienst(
 }
 // Anteilig: Lautsprecher reichen nur für 5 von 10 → halber Bonus: +9,5 % → 21,9 → 22 €
 {
-  const typ = MOEBEL.find(m => m.id === 'lautsprecher'), alt = typ.ton.plaetze;
-  typ.ton.plaetze = 5;
+  const typ = MOEBEL.find(m => m.id === 'lautsprecher'), alt = typ.stufen[0].plaetze;   // 27.11.: Plätze stehen in den Stufen
+  typ.stufen[0].plaetze = 5;
   try {
     const zf = saat(3), z = gemeinde(zf);
     ton(z, { subwoofer: 2, lv: 10 });
     bisNachGottesdienst(z, zf);
     assert.strictEqual(kollekte(z), 22);
-  } finally { typ.ton.plaetze = alt; }
+  } finally { typ.stufen[0].plaetze = alt; }
 }
 // Bausteintabelle: Zeilen für Lautsprecher, Pult, Tontechniker, Subwoofer; „Zusammen“ mit Ton-Bonus
 {

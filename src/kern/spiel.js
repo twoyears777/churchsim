@@ -15,7 +15,9 @@ import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfueg
 import { buehneAnlegen, buehneBauen, buehneAbreissen, buehnePruefen, sichtbareBuehne } from './buehne.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
-  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, instrumenteImRaum, istHindernis } from './moebel.js';
+  alleVerbessern, alleVerbessernPreis, stuehleImRaum, moebelImRaum, felder, felderVon, instrumenteImRaum, istHindernis,
+  stufenVon, stufeVon, naechsteStufeVon, istVerbesserbar, moebelVerbessern, verbesserbareImRaum, alleVerbessernPreisArt, alleArtVerbessern,
+  fassungVon, ladenVon, rackVon, rackEinbauen, tonImRaum, tonWirkung } from './moebel.js';
 import { einzugsgebietAnlegen, einzugsgebiet, parkplaetzeAuswerten, busAusbauen, werbekampagneKaufen } from './einzugsgebiet.js';
 import { PARKPLATZ, BUSHALTESTELLE, BUSHALTESTELLE_ORT, WERBEKAMPAGNE } from '../inhalte/einzugsgebiet.js';
 import { finanzenAnlegen, kannBezahlen, buchen, finanzUebersicht, stornieren } from './finanzen.js';
@@ -41,7 +43,7 @@ import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag
 import { dauerspenderAnlegen, dauerspenderListe, dauerspenderMeldung } from './dauerspender.js';
 import { bueroAnlegen, bonusFreischalten, boniListe, bueroTokens, bueroMeldung } from './buero.js';
 import { BUERO } from '../inhalte/buero.js';
-import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
+import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe, istErforscht } from './forschung.js';
 import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, tontechnikStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo, hatSkill } from './skills.js';
 import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
 import { DAUERSPENDE, MITGLIED } from '../inhalte/finanzen.js';
@@ -71,9 +73,10 @@ import { BEKANNTHEIT } from '../inhalte/besucher.js';
 import { SEELSORGE } from '../inhalte/seelsorge.js';
 import { GRUNDSTUECK } from '../inhalte/umgebung.js';
 import { RAUMTYPEN } from '../inhalte/raumtypen.js';
-import { MOEBEL, STUHL_STUFEN, BUEHNE } from '../inhalte/moebel.js';
+import { MOEBEL, STUHL_STUFEN, BUEHNE, TON, TONRACK } from '../inhalte/moebel.js';
+import { AUTOMATEN } from '../inhalte/automaten.js';
 import { istAutomat, lagerVon, automatInfo } from './automaten.js';
-import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
+import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN, SANDWICH, LADEN_MINUTEN, PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
 import { lagerZeitenVon, lagerZeitHinzufuegen, lagerZeitEntfernen, lagerUmstellen } from './lager.js';
 import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax, dienstMerken, dienstVergessen, darfLeiten } from './dienst.js';
@@ -373,6 +376,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (f.some(c => moebelAuf(z, c.x, c.y))) return 'belegt';
       if (typ.aussen && f.some(c => raumNr(c.x, c.y) >= 0)) return 'innen';
       if (abBekanntheit(typ) && z.bekanntheit < abBekanntheit(typ)) return 'bekanntheit';
+      if (typ.forschung && !istErforscht(z, typ.forschung)) return 'forschung';   // Sandwichmaker, Tontechnikrack (27.11.)
       if (istHindernis(art) && typ.aussen && f.some(c => vorDemTor(c.x, c.y))) return 'tor';
       if (grenzeErreicht(z, raeume.liste[raumNr(x, y)], art)) return 'grenze';
       if (!kannBezahlen(z, typ.kosten)) return 'geld';
@@ -571,9 +575,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
             typ: r.typ ? { id: r.typ.id, name: r.typ.name, farbe: r.typ.farbe, minGroesse: [...r.typ.minGroesse] } : null,
             veranstaltungsraum: moeglich, veranstaltung: namen.length ? namen.join(' · ') : null, kirchkaffee: kk.get(r) || null };
         }),
-        moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung, anteil: m.art === 'kaffeemaschine' ? (m.fuellung || 0) / fassung(m.art) : istAutomat(m.art) ? (m.fuellung || 0) / lagerVon(m) : null,
+        moebel: z.moebel.map(m => ({ art: m.art, x: m.x, y: m.y, fuellung: m.fuellung,
+          anteil: m.art === 'kaffeemaschine' || m.art === 'sandwichmaker' ? (m.fuellung || 0) / fassungVon(m) : istAutomat(m.art) ? (m.fuellung || 0) / lagerVon(m) : null,
           automat: istAutomat(m.art),   // Automaten (26.11.): Füllstand-Streifen wie bei der Kaffeemaschine
-          stufe: m.art === 'stuhl' ? stuhlStufe(m).stufe : null, dreh: !!m.dreh, felder: felder(m),
+          stufe: stufenVon(m.art) ? stufeVon(m).stufe : null,   // Stufe (27.11.: alle verbesserbaren Möbel) dreh: !!m.dreh, felder: felder(m),
           // Straße/Parkplatz: führt es bis zum Tor? (sonst zählt der Parkplatz nicht)
           angeschlossen: m.art === 'strasse' || m.art === 'parkplatz' ? park.angeschlossen.has(`${m.x},${m.y}`) : null,
           aushang: m.art === 'schaukasten' ? aushangGilt(z, m.aushang) : null })),   // Schaukasten: hängt ein Aushang?
@@ -768,7 +773,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return MOEBEL.map(m => ({ id: m.id, name: m.name, kosten: m.kosten, max: m.max || null, leistbar: kannBezahlen(z, m.kosten),
         kategorie: m.kategorie || null, auchIn: m.auchIn ? [...m.auchIn] : [], groesse: m.groesse ? [...m.groesse] : null, aussen: !!m.aussen,
         drehbar: !!(m.groesse && m.groesse[0] !== m.groesse[1]), gelaende: m.gelaende || null,
-        abBekanntheit: abBekanntheit(m), gesperrt: !!abBekanntheit(m) && z.bekanntheit < abBekanntheit(m) }));
+        abBekanntheit: abBekanntheit(m),
+        // Forschung nötig (27.11.): forschung = Name der Forschung, solange sie nicht fertig ist
+        forschung: m.forschung && !istErforscht(z, m.forschung) ? (FORSCHUNGEN.find(f => f.id === m.forschung) || {}).name || m.forschung : null,
+        gesperrt: (!!abBekanntheit(m) && z.bekanntheit < abBekanntheit(m)) || !!(m.forschung && !istErforscht(z, m.forschung)) }));
     },
     // Welche Kästchen würde dieses Möbel hier belegen, und ginge das? (Vorschau beim Bauen)
     moebelVorschau(art, x, y, dreh = false) {
@@ -933,11 +941,96 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       };
     },
     // Menü der Kaffeemaschine (nachgefüllt wird vom Ehrenamtlichen im Laden)
+    // 27.11.: auch der Sandwichmaker; fassung und laden je nach Stufe der Kaffeemaschine
     maschineInfo(x, y) {
       const m = moebelAuf(z, x, y);
-      if (!m || m.art !== 'kaffeemaschine') return null;
-      const r = raeume.liste[raumNr(x, y)];
-      return { fuellung: m.fuellung || 0, fassung: fassung(m.art), imKirchkaffee: !!(r && r.typ && r.typ.id === 'kirchkaffee'), einkaufPreis: EINKAUF.preisTasse };
+      if (!m || (m.art !== 'kaffeemaschine' && m.art !== 'sandwichmaker')) return null;
+      const r = raeume.liste[raumNr(x, y)], sw = m.art === 'sandwichmaker';
+      return { art: m.art, fuellung: m.fuellung || 0, fassung: fassungVon(m), laden: sw ? SANDWICH.laden : ladenVon(m, LADEN_MINUTEN),
+        imKirchkaffee: !!(r && r.typ && r.typ.id === 'kirchkaffee'), einkaufPreis: sw ? SANDWICH.einkauf : EINKAUF.preisTasse,
+        preis: sw ? SANDWICH.preis : PREIS_TASSE, chance: sw ? Math.round(SANDWICH.chance * 100) : null };
+    },
+    // ---- Stufen aller verbesserbaren Möbel (27.11.) ----
+    // Menü „Verbessern“: Stufe, Werte dieser und der nächsten Stufe, alle dieser Art im Raum → null, wenn nicht verbesserbar.
+    // werte: nur die Zahlen, die bei dieser Art etwas bewirken (fassung, laden, lager, chance, plaetze, bonus, musik)
+    moebelStufeInfo(x, y) {
+      const m = moebelAuf(z, x, y);
+      if (!m || m.art === 'stuhl' || !istVerbesserbar(m.art)) return null;
+      const typ = MOEBEL.find(t => t.id === m.art) || {}, st = stufeVon(m), n = naechsteStufeVon(m), r = raeume.liste[raumNr(x, y)];
+      const automat = AUTOMATEN.find(a => a.id === m.art);
+      const werte = s => { const w = {};
+        for (const k of ['fassung', 'laden', 'lager', 'plaetze', 'bonus', 'musik']) if (typeof s[k] === 'number') w[k] = s[k];
+        if (automat) w.chance = s.chance || automat.chance;
+        return w; };
+      const alle = r ? verbesserbareImRaum(z, r, m.art) : [], preisAlle = r ? alleVerbessernPreisArt(z, r, m.art) : 0;
+      return { x, y, art: m.art, name: typ.name, stufe: st.stufe, maxStufe: stufenVon(m.art).length, stufenName: st.name, werte: werte(st),
+        naechste: n ? { stufe: n.stufe, name: n.name, preis: n.upgrade, werte: werte(n), leistbar: kannBezahlen(z, n.upgrade) } : null,
+        alle: r && moebelImRaum(z, r, m.art).length > 1 ? { anzahl: alle.length, preis: preisAlle, leistbar: kannBezahlen(z, preisAlle) } : null };
+    },
+    // → 'ok' | 'max' | 'geld' | 'keine'
+    moebelVerbessern(x, y) {
+      const m = moebelAuf(z, x, y);
+      if (!m || m.art === 'stuhl' || !istVerbesserbar(m.art)) return 'keine';
+      const n = naechsteStufeVon(m);
+      if (!n) return 'max';
+      if (!kannBezahlen(z, n.upgrade)) return 'geld';
+      return aendern(() => moebelVerbessern(z, m));
+    },
+    // Alle Möbel dieser Art im selben Raum je eine Stufe höher → 'ok' | 'max' | 'geld' | 'keine'
+    alleMoebelVerbessern(x, y) {
+      const m = moebelAuf(z, x, y), r = raeume.liste[raumNr(x, y)];
+      if (!m || m.art === 'stuhl' || !istVerbesserbar(m.art) || !r) return 'keine';
+      if (!verbesserbareImRaum(z, r, m.art).length) return 'max';
+      if (!kannBezahlen(z, alleVerbessernPreisArt(z, r, m.art))) return 'geld';
+      return aendern(() => alleArtVerbessern(z, r, m.art));
+    },
+    // ---- Tontechnikrack (27.11.) ----
+    // Übersicht: was verbaut ist, was es jetzt bringt, was höchstens ginge, und was man ins Rack einbauen kann
+    rackInfo(x, y) {
+      const m = moebelAuf(z, x, y);
+      if (!m || m.art !== 'tonrack') return null;
+      const r = raeume.liste[raumNr(x, y)], imRaum = !!(r && r.typ && r.typ.id === 'gottesdienst' && !r.probleme.length);
+      const info = r ? gottesdienstRaeume(z, raeume).find(g => g.raum === r) : null;
+      const t = r ? tonImRaum(z, r) : null;
+      const tw = info && info.ton ? info.ton : r ? tonWirkung(z, r, null, 0, 0) : null;
+      const tech = info && info.techniker ? info.techniker : null;
+      const lsTyp = MOEBEL.find(q => q.id === 'lautsprecher'), swTyp = MOEBEL.find(q => q.id === 'subwoofer'), pultTyp = MOEBEL.find(q => q.id === 'tonpult');
+      const gruppen = (id, wert) => { const typ = MOEBEL.find(q => q.id === id), st = r ? moebelImRaum(z, r, id).slice(0, typ.max || Infinity) : [];
+        return typ.stufen.map(s => ({ stufe: s.stufe, name: s.name, anzahl: st.filter(q => stufeVon(q).stufe === s.stufe).length, wert: s[wert] })).filter(g => g.anzahl); };
+      const pult = r ? moebelImRaum(z, r, 'tonpult')[0] : null;
+      const letzte = l => l[l.length - 1];
+      const maxTeile = { grund: TON.start, level: TON.proLevel * TON.maxLevel, subwoofer: swTyp.max * letzte(swTyp.stufen).bonus, pult: letzte(pultTyp.stufen).bonus,
+        inear: letzte(TONRACK.inear).plus * letzte(TONRACK.inear).musiker, plugins: TONRACK.plugins.reduce((a, p) => a + p.bonus, 0) };
+      const rund = v => Math.round(v * 1000) / 1000, summe = o => rund(Object.values(o).reduce((a, b) => a + b, 0));
+      const rk = rackVon(m), pultStufe = t ? t.pultStufe : 0;
+      const modul = art => { const n = TONRACK[art][rk[art]];
+        return { stufe: rk[art], maxStufe: TONRACK[art].length, name: rk[art] ? TONRACK[art][rk[art] - 1].name : null, werte: rk[art] ? { ...TONRACK[art][rk[art] - 1] } : null,
+          naechste: n ? { ...n, leistbar: kannBezahlen(z, n.preis), fehltPult: !!(n.pult && pultStufe < n.pult) } : null }; };
+      const sitze = r ? moebelImRaum(z, r, 'stuhl').length : 0;
+      return { x, y, imRaum, sitzplaetze: sitze,
+        verbaut: { lautsprecher: gruppen('lautsprecher', 'plaetze'), lautsprecherAnzahl: t ? t.lautsprecher : 0, lautsprecherMax: lsTyp.max,
+          lautsprecherPlaetze: t ? t.lautsprecherPlaetze : 0, abdeckung: t ? t.abdeckung : 1, plaetze: t ? t.plaetze : 0,
+          subwoofer: gruppen('subwoofer', 'bonus'), subwooferMax: swTyp.max,
+          pult: pult ? { name: stufeVon(pult).name, stufe: stufeVon(pult).stufe, maxStufe: pultTyp.stufen.length, bonus: stufeVon(pult).bonus } : null,
+          techniker: tech ? { name: (daten(tech) || {}).name || '', level: tw.level } : null, musiker: info ? info.spieler.length : 0, mikrofon: t ? t.mikrofon : false },
+        leistung: { aktiv: !!(tw && tw.aktiv), bonus: tw ? tw.bonus : 0, moeglichJetzt: tw ? summe(tw.teile) : 0, teile: tw ? { ...tw.teile } : null,
+          maxTeile, maxBonus: summe(maxTeile), plaetze: t ? t.plaetze : 0,
+          maxPlaetze: Math.floor(lsTyp.max * letzte(lsTyp.stufen).plaetze * letzte(TONRACK.controller).abdeckung),
+          fehlt: !t ? 'raum' : !t.pult ? 'pult' : !t.lautsprecher ? 'lautsprecher' : !tech ? 'techniker' : null },
+        module: { inear: modul('inear'), controller: modul('controller'), pultStufe, pluginsAbPult: TONRACK.pluginsAbPult,
+          plugins: TONRACK.plugins.map(p => ({ id: p.id, name: p.name, preis: p.preis, bonus: p.bonus, mikrofon: !!p.mikrofon,
+            gekauft: rk.plugins.includes(p.id), leistbar: kannBezahlen(z, p.preis), fehltPult: pultStufe < TONRACK.pluginsAbPult })) } };
+    },
+    // Etwas ins Rack einbauen: modul 'inear' | 'controller' | 'plugin' (mit id) → 'ok' | 'max' | 'pult' | 'geld' | 'keine'
+    rackEinbauen(x, y, modul, id = null) {
+      const m = moebelAuf(z, x, y);
+      if (!m || m.art !== 'tonrack') return 'keine';
+      const r = raeume.liste[raumNr(x, y)], ps = r ? tonImRaum(z, r).pultStufe : 0;
+      let e = 'keine';
+      const probe = JSON.stringify(m.rack || null);
+      aendern(() => { e = rackEinbauen(z, m, modul, id, ps); });
+      if (e !== 'ok' && JSON.stringify(m.rack || null) === probe) verlauf.pop();   // nichts eingebaut: kein leerer Rückgängig-Schritt
+      return e;
     },
     // Menü eines Automaten (26.11.): Füllstand, Lager, Preise; aufgefüllt wird vom Kirchkaffee-Ehrenamtlichen
     automatInfo(x, y) {
@@ -1013,7 +1106,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     spiel[name] = (...a) => imDurchgang(() => { dienstMerken(z, raeume); try { return f(...a); } finally { dienstVergessen(); } });
   }
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'kalenderInfo', 'wochenberichtInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'automatInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
+  for (const name of ['lage', 'kalenderInfo', 'wochenberichtInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'automatInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau', 'moebelStufeInfo', 'rackInfo']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

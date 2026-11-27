@@ -3,9 +3,29 @@
 // Namen sind Platzhalter – Lukas legt sie fest.
 import { AUTOMATEN } from './automaten.js';
 // kategorie: unter welchem Reiter der Bauleiste es steht (Namen der Reiter in texte.js → bauleiste).
+// stufen (27.11.): Verbesserungen wie bei den Stühlen – Stufe 1 ist das gekaufte Möbel, upgrade = Preis für den Schritt auf diese Stufe.
+// forschung (27.11.): erst kaufbar, wenn diese Forschung fertig ist (inhalte/forschung.js).
+
+// Instrumente (Lukas, 27.11.): alle mit denselben Stufen. musik = so viel mehr Bonus bringt der Musiker an diesem Instrument
+// (0.01 = +1 %, zählt zu seinem Musik-Bonus, auf der Bühne × 1,5). Namen, Preise, Werte PLATZHALTER von Claude.
+export const INSTRUMENT_STUFEN = [
+  { stufe: 1, name: 'Einsteiger', upgrade: 0, musik: 0 },
+  { stufe: 2, name: 'Mittelklasse', upgrade: 40, musik: 0.01 },
+  { stufe: 3, name: 'Profi', upgrade: 120, musik: 0.02 }
+];
 export const MOEBEL = [
   { id: 'stuhl', name: 'Stuhl', kosten: 5, kategorie: 'gottesdienst', auchIn: ['kirchkaffee', 'gemeindesaal'] },   // auchIn: steht zusätzlich unter diesem Reiter
-  { id: 'kaffeemaschine', name: 'Kaffeemaschine', kosten: 50, fassung: 30, startFuellung: 0, kategorie: 'kirchkaffee' },  // für das Kirchkaffee
+  // Stufen (Lukas, 27.11.: „wie die Stühle“) – Namen, Preise und Werte PLATZHALTER von Claude. fassung: Tassen, laden: Spielminuten je Tasse.
+  { id: 'kaffeemaschine', name: 'Kaffeemaschine', kosten: 50, fassung: 30, startFuellung: 0, kategorie: 'kirchkaffee',
+    stufen: [
+      { stufe: 1, name: 'Filterkaffeemaschine', upgrade: 0, fassung: 30, laden: 2.5 },
+      { stufe: 2, name: 'Siebträgermaschine', upgrade: 80, fassung: 45, laden: 2 },
+      { stufe: 3, name: 'Kaffeevollautomat', upgrade: 200, fassung: 60, laden: 1.5 },
+      { stufe: 4, name: 'Gastro-Vollautomat', upgrade: 400, fassung: 90, laden: 1 }
+    ] },
+  // Sandwichmaker (Lukas, 27.11.): wie die Kaffeemaschine, braucht die Forschung „Sandwiches“. Zahlen zum Verkauf in SANDWICH (kirchkaffee.js).
+  // fassung: so viele Sandwiches hat er vorrätig (PLATZHALTER von Claude), Preis PLATZHALTER von Claude.
+  { id: 'sandwichmaker', name: 'Sandwichmaker', kosten: 60, fassung: 20, startFuellung: 0, kategorie: 'kirchkaffee', forschung: 'sandwiches' },  // für das Kirchkaffee
   { id: 'theke', name: 'Theke', kosten: 20, kategorie: 'kirchkaffee' },  // für das Kirchkaffee; mehrere Thekenteile nebeneinander = eine Theke
   { id: 'tisch', name: 'Tisch', kosten: 15, kategorie: 'kirchkaffee', auchIn: ['gemeindesaal'] },  // Kirchkaffee: Stühle direkt daneben bringen mehr Trinkgeld (SITZEN.tisch)
   // Automaten (26.11.): kommen aus inhalte/automaten.js – dort stehen Preis, Lager und Stufen
@@ -22,18 +42,37 @@ export const MOEBEL = [
   { id: 'gruenpflanze', kategorie: 'deko', name: 'Grünpflanze', kosten: 10, max: 4, wirkung: { kollekte: 1.05 } },
   // Instrumente (Lukas, 25.11.): jedes 1× pro Raum, jedes braucht einen eigenen Ehrenamtlichen, alle bringen gleich viel.
   // Preise der neuen Instrumente sind PLATZHALTER von Claude (wie die Gitarre 25 €) – Lukas legt sie fest.
-  { id: 'gitarre', kategorie: 'gottesdienst', name: 'Gitarre', kosten: 25, max: 1, wirkung: { musik: true } },
-  { id: 'keyboard', kategorie: 'gottesdienst', name: 'Keyboard', kosten: 25, max: 1, wirkung: { musik: true } },
-  { id: 'schlagzeug', kategorie: 'gottesdienst', name: 'Schlagzeug', kosten: 25, max: 1, wirkung: { musik: true } },
-  { id: 'bass', kategorie: 'gottesdienst', name: 'Bass', kosten: 25, max: 1, wirkung: { musik: true } },
-  { id: 'egitarre', kategorie: 'gottesdienst', name: 'E-Gitarre', kosten: 25, max: 1, wirkung: { musik: true } },
-  { id: 'mikrofon', kategorie: 'gottesdienst', name: 'Mikrofon', kosten: 25, max: 1, wirkung: { musik: true } },
+  // Stufen (27.11.): INSTRUMENT_STUFEN unten – der Musiker an diesem Instrument bringt + musik mehr.
+  { id: 'gitarre', kategorie: 'gottesdienst', name: 'Gitarre', kosten: 25, max: 1, wirkung: { musik: true }, stufen: INSTRUMENT_STUFEN },
+  { id: 'keyboard', kategorie: 'gottesdienst', name: 'Keyboard', kosten: 25, max: 1, wirkung: { musik: true }, stufen: INSTRUMENT_STUFEN },
+  { id: 'schlagzeug', kategorie: 'gottesdienst', name: 'Schlagzeug', kosten: 25, max: 1, wirkung: { musik: true }, stufen: INSTRUMENT_STUFEN },
+  { id: 'bass', kategorie: 'gottesdienst', name: 'Bass', kosten: 25, max: 1, wirkung: { musik: true }, stufen: INSTRUMENT_STUFEN },
+  { id: 'egitarre', kategorie: 'gottesdienst', name: 'E-Gitarre', kosten: 25, max: 1, wirkung: { musik: true }, stufen: INSTRUMENT_STUFEN },
+  { id: 'mikrofon', kategorie: 'gottesdienst', name: 'Mikrofon', kosten: 25, max: 1, wirkung: { musik: true }, stufen: INSTRUMENT_STUFEN },
   // Ton-Technik (Lukas, 27.11.; Spielprinzip claude/spielprinzip-tontechnik.md). Wirkt nur im Gottesdienstraum, Zahlen in TON unten.
   // ton.plaetze: so viele Personen deckt ein Lautsprecher ab – alle Lautsprecher im Raum zählen zusammen, egal wo sie stehen.
   // ton.subwoofer: Extra-Bonus je Subwoofer. ton.pult: Platz des Tontechnikers. Preise/Grenzen von Lukas freigegeben, Namen von Claude.
-  { id: 'lautsprecher', kategorie: 'gottesdienst', name: 'Lautsprecher', kosten: 40, max: 8, ton: { plaetze: 15 } },
-  { id: 'subwoofer', kategorie: 'gottesdienst', name: 'Subwoofer', kosten: 60, max: 2, ton: { subwoofer: 0.02 } },
-  { id: 'tonpult', kategorie: 'gottesdienst', name: 'Tontechnikpult', kosten: 80, max: 1, ton: { pult: true } },
+  // Stufen (Lukas, 27.11.) – Namen, Preise und Werte PLATZHALTER von Claude: plaetze je Lautsprecher, bonus je Subwoofer bzw. vom Pult.
+  { id: 'lautsprecher', kategorie: 'gottesdienst', name: 'Lautsprecher', kosten: 40, max: 8, ton: { plaetze: 15 },
+    stufen: [
+      { stufe: 1, name: 'Passivbox', upgrade: 0, plaetze: 15 },
+      { stufe: 2, name: 'Aktive PA-Box', upgrade: 60, plaetze: 25 },
+      { stufe: 3, name: 'Line-Array-Element', upgrade: 150, plaetze: 40 }
+    ] },
+  { id: 'subwoofer', kategorie: 'gottesdienst', name: 'Subwoofer', kosten: 60, max: 2, ton: { subwoofer: 0.02 },
+    stufen: [
+      { stufe: 1, name: '12-Zoll-Subwoofer', upgrade: 0, bonus: 0.02 },
+      { stufe: 2, name: '15-Zoll-Subwoofer', upgrade: 80, bonus: 0.03 },
+      { stufe: 3, name: 'Doppel-18-Zoll-Subwoofer', upgrade: 180, bonus: 0.04 }
+    ] },
+  { id: 'tonpult', kategorie: 'gottesdienst', name: 'Tontechnikpult', kosten: 80, max: 1, ton: { pult: true },
+    stufen: [
+      { stufe: 1, name: 'Analogpult (12 Kanäle)', upgrade: 0, bonus: 0 },
+      { stufe: 2, name: 'Digitalpult (16 Kanäle)', upgrade: 150, bonus: 0.02 },
+      { stufe: 3, name: 'Digitalpult mit Stagebox (32 Kanäle)', upgrade: 400, bonus: 0.04 }
+    ] },
+  // Tontechnikrack (Lukas, 27.11.): 1 pro Gottesdienstraum, braucht die Forschung „Tontechnikrack“. Ausbau im Fenster des Racks (TONRACK unten).
+  { id: 'tonrack', kategorie: 'gottesdienst', name: 'Tontechnikrack', kosten: 150, max: 1, forschung: 'tontechnikrack', ton: { rack: true } },
 
   // Gemeindesaal (Lukas, 25.11.): Klavier für die Kirchenchorprobe, 1× pro Raum. Kein Instrument fürs Lobpreisteam.
   { id: 'klavier', kategorie: 'gemeindesaal', name: 'Klavier', kosten: 100, max: 1 },
@@ -99,3 +138,31 @@ export const MUSIK = { start: 0.05, proLevel: 0.01, maxLevel: 10, erfahrungProAu
 // Decken die Lautsprecher weniger Personen ab, als Besucher sitzen, gibt es den Bonus anteilig (z. B. 30 von 40 → 75 %).
 // Skill „Tontechnik“ wie Musik: Erfahrung nur durch Einsätze am Pult → ca. 1 Level je 50 Einsätze.
 export const TON = { start: 0.05, proLevel: 0.01, maxLevel: 10, erfahrungProEinsatz: 2, erfahrungProLevel: 100 };
+
+// Tontechnikrack (Lukas, 27.11.: „Zugang zu größerem Ausbau der Technik“). Alles wirkt nur, wenn die Ton-Technik läuft
+// (Pult + Lautsprecher + Tontechniker) und das Rack im selben Gottesdienstraum steht. Namen, Preise, Werte PLATZHALTER von Claude.
+//   inear:      In-Ear-Monitoring in Stufen. musiker: so viele Musiker hören sich darüber; plus: + Ton-Bonus je Musiker, der spielt
+//               (höchstens musiker). pult: braucht mindestens diese Pult-Stufe.
+//   controller: Systemcontroller / Einmessung. abdeckung: die Lautsprecher reichen für × so viele Personen.
+//   plugins:    Effekt-Plugins, je einmal kaufbar. bonus: + Ton-Bonus. Alle brauchen mindestens die Pult-Stufe pluginsAbPult (Digitalpult).
+//               mikrofon: wirkt nur, wenn ein Mikrofon im Raum steht und jemand spielt (Auto-Tune).
+export const TONRACK = {
+  inear: [
+    { stufe: 1, name: 'Kabel-In-Ear (2 Wege)', preis: 100, musiker: 2, plus: 0.01 },
+    { stufe: 2, name: 'Funk-In-Ear (4 Strecken)', preis: 250, musiker: 4, plus: 0.015 },
+    { stufe: 3, name: 'Funk-In-Ear mit Personal-Mixern (6 Strecken)', preis: 500, musiker: 6, plus: 0.02, pult: 3 }
+  ],
+  controller: [
+    { stufe: 1, name: 'Systemcontroller', preis: 150, abdeckung: 1.2 },
+    { stufe: 2, name: 'Einmessung mit Messmikrofon', preis: 300, abdeckung: 1.4 }
+  ],
+  plugins: [
+    { id: 'eq', name: 'Parametrischer EQ', preis: 60, bonus: 0.01 },
+    { id: 'kompressor', name: 'Kompressor', preis: 80, bonus: 0.01 },
+    { id: 'deesser', name: 'De-Esser', preis: 50, bonus: 0.005 },
+    { id: 'hall', name: 'Hall (Reverb)', preis: 90, bonus: 0.01 },
+    { id: 'delay', name: 'Delay', preis: 70, bonus: 0.005 },
+    { id: 'autotune', name: 'Auto-Tune', preis: 150, bonus: 0.02, mikrofon: true }
+  ],
+  pluginsAbPult: 2
+};

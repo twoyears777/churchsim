@@ -64,7 +64,10 @@ function naechsteFigur(e, liste, art) {
 const figurBei = e => aufEvangelisationsFeld(e) ? null : naechsteFigur(e, ui.spiel.karte().personen.filter(p => !p.daheim).map(p => ({ id: p.id, x: p.x, y: p.y, art: p.art })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
   'mitarbeiter');
 const besucherBei = e => aufEvangelisationsFeld(e) ? null : naechsteFigur(e, ui.spiel.karte().besucher, 'besucher');
-const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
+const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && (m.art === 'kaffeemaschine' || m.art === 'sandwichmaker') ? m : null; };   // 27.11.: auch Sandwichmaker
+// Stufen (27.11.): Lautsprecher, Subwoofer, Pult, Instrumente … → Fenster „Verbessern“; Tontechnikrack → eigenes Fenster
+const verbesserbarBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && ui.spiel.moebelStufeInfo(m.x, m.y) ? m : null; };
+const rackBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'tonrack' ? m : null; };
 const automatBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && ui.spiel.automatInfo(m.x, m.y) ? m : null; };   // Automaten (26.11.)
 const stuhlBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'stuhl' ? m : null; };
 const schaukastenBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'schaukasten' ? m : null; };
@@ -157,6 +160,10 @@ function loslassen(e) {
     if (m) return fensterOeffnen({ art: 'maschine', x: m.x, y: m.y });
     const au = automatBei(f);                                        // Automat → Füllstand
     if (au) return fensterOeffnen({ art: 'automat', x: au.x, y: au.y });
+    const rk = rackBei(f);                                           // Tontechnikrack → Übersicht und Ausbau (27.11.)
+    if (rk) return fensterOeffnen({ art: 'rack', x: rk.x, y: rk.y });
+    const vb = verbesserbarBei(f);                                   // Ton-Technik, Instrumente → Verbessern (27.11.)
+    if (vb) return fensterOeffnen({ art: 'verbessern', x: vb.x, y: vb.y });
     const st = stuhlBei(f);                                          // Stuhl → Verbessern-Menü (statt Raum-Fenster)
     if (st) return fensterOeffnen({ art: 'stuhl', x: st.x, y: st.y });
     const sk = schaukastenBei(f);                                    // Schaukasten → Aushang wählen
@@ -204,6 +211,12 @@ function loslassen(e) {
     const s = ui.moebelStart;
     if (!s || s.x !== f.x || s.y !== f.y) return;                    // nur Tippen, kein Ziehen
     if (ui.werkzeug === 'stuhl' && stuhlBei(f)) return fensterOeffnen({ art: 'stuhl', x: f.x, y: f.y });   // Stuhl verbessern
+    // 27.11.: gleiches Möbel angetippt → verbessern (Kaffeemaschine, Automaten, Ton-Technik, Instrumente) bzw. Rack öffnen
+    { const da = ui.spiel.moebelBei(f.x, f.y);
+      if (da && da.art === ui.werkzeug) {
+        if (da.art === 'tonrack') return fensterOeffnen({ art: 'rack', x: da.x, y: da.y });
+        if (ui.spiel.moebelStufeInfo(da.x, da.y)) return fensterOeffnen({ art: 'verbessern', x: da.x, y: da.y });
+      } }
     const ergebnis = spiel.moebelKaufen(ui.werkzeug, f.x, f.y, ui.dreh);      // entfernen nur per Abriss
     const typ = spiel.moebelArten().find(m => m.id === ui.werkzeug);
     if (ergebnis === 'geld') {
@@ -212,6 +225,7 @@ function loslassen(e) {
     else if (ergebnis === 'innen') kurzerHinweis(typ.gelaende ? TEXTE.aussenMeldung.innenDeko : TEXTE.aussenMeldung.innen);
     else if (ergebnis === 'bekanntheit') kurzerHinweis(typ.id === 'parkplatz' ? TEXTE.aussenMeldung.bekanntheit(typ.abBekanntheit) : TEXTE.aussenMeldung.bekanntheitTeil(typ.name, typ.abBekanntheit));
     else if (ergebnis === 'tor') kurzerHinweis(TEXTE.aussenMeldung.tor);
+    else if (ergebnis === 'forschung') kurzerHinweis(TEXTE.verbessern.forschungNoetig(typ.name, typ.forschung));   // 27.11.
     return fertig();
   }
   if (ui.werkzeug === 'tuer') {

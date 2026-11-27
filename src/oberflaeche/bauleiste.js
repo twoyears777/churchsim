@@ -76,7 +76,7 @@ export function werkzeugWaehlen(id) {
 let letzterStand = '';
 export function bauleisteAktualisieren() {
   const arten = ui.spiel.moebelArten(), bk = ui.spiel.baukosten();
-  const stand = JSON.stringify([kategorie, ui.werkzeug, arten.map(m => [m.leistbar, m.gesperrt]), bk.wandLeistbar, bk.tuerLeistbar, bk.fensterLeistbar, bk.buehneLeistbar]);
+  const stand = JSON.stringify([kategorie, ui.werkzeug, arten.map(m => [m.leistbar, m.gesperrt, m.forschung]), bk.wandLeistbar, bk.tuerLeistbar, bk.fensterLeistbar, bk.buehneLeistbar]);
   if (stand === letzterStand) return;
   letzterStand = stand;
   for (const el of document.querySelectorAll('.bauleiste [data-preis]')) {
@@ -88,7 +88,7 @@ export function bauleisteAktualisieren() {
       continue;
     }
     if (!m) { el.textContent = ''; continue; }
-    el.textContent = m.gesperrt ? T.abBekanntheit(m.abBekanntheit) : euro(m.kosten) + (m.gelaende ? ' · ' + TEXTE.gelaendeKarte(m.gelaende) : '');   // Außendeko: + Gelände-Punkte
+    el.textContent = m.gesperrt ? (m.forschung ? T.forschung(m.forschung) : T.abBekanntheit(m.abBekanntheit)) : euro(m.kosten) + (m.gelaende ? ' · ' + TEXTE.gelaendeKarte(m.gelaende) : '');   // Außendeko: + Gelände-Punkte
     karte.classList.toggle('zu-teuer', !m.leistbar);
     karte.classList.toggle('gesperrt', !!m.gesperrt);
   }

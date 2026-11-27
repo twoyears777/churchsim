@@ -24,7 +24,7 @@ import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { daten, eingesetztIn } from './personen.js';
 import { evangelisationLevel, evangelisationErfahrungDazu, evangelisationStand } from './skills.js';
 import { zaehlen, statistik } from './evangelisationStatistik.js';
-import { hindernisBei, fassung } from './moebel.js';
+import { hindernisBei, fassung, fassungVon } from './moebel.js';
 import { weg, glaetten } from './wege.js';
 import { punktAufWeg } from './bewegung.js';
 import { TAG_MIN, zeitpunkt } from './zeit.js';
@@ -71,7 +71,7 @@ function dienst(z, raeume, p, termine) {
     const K = z.kaffee, m = K && K.ma[p.id];
     if (offenBei(z, r) || (m && m.aufgabe) || (K && K.kunden.some(k => k.ea === p.id))) return { jetzt: true };
     const s = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen).find(x => x.ea.id === p.id);
-    if (s && (s.maschine.fuellung || 0) < fassung('kaffeemaschine')) return { jetzt: true };   // muss gleich einkaufen
+    if (s && (s.maschine.fuellung || 0) < fassungVon(s.maschine)) return { jetzt: true };   // muss gleich einkaufen
     const n = s ? naechsteKaffeeOeffnung(z, raeume, r) : null;
     return { jetzt: false, ab: n === null ? Infinity : n };
   }
