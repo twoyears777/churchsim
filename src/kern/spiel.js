@@ -71,7 +71,8 @@ import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
 import { istAutomat, lagerVon, automatInfo } from './automaten.js';
 import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
-import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax } from './dienst.js';
+import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax, dienstMerken, dienstVergessen } from './dienst.js';
+import { imDurchgang } from './durchgang.js';
 const forschungName = id => (FORSCHUNGEN.find(f => f.id === id) || {}).name || null;
 
 export const FELD = { LEER, WAND, TUER, FENSTER };   // Inhalt eines Kästchens auf der Karte
@@ -935,6 +936,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         musik: d.art === 'ehrenamt' ? musikStand(p) : null, evangelisation: d.art === 'ehrenamt' ? evangelisationStand(p) : null, multiplikator: multiplikatorInfo(z, p), heiligkeit: Math.floor(z.heiligkeit || 0) };
     }
   };
+  // Leistung (27.11.): Häufige Abfragen (Anzeige oben 10× pro Sekunde, Karte bei jedem Bild) laufen als ein Durchgang –
+  // Dienstplan, Möbel-Verzeichnis und Wiesen-Karte werden darin nur einmal ausgerechnet (durchgang.js). Sie ändern nichts am Spielstand.
+  for (const name of ['lage', 'karte', 'kalenderInfo', 'dienstplan', 'finanzInfo']) {
+    const f = spiel[name];
+    spiel[name] = (...a) => imDurchgang(() => { dienstMerken(z, raeume); try { return f(...a); } finally { dienstVergessen(); } });
+  }
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
   for (const name of ['lage', 'kalenderInfo', 'wochenberichtInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'automatInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };

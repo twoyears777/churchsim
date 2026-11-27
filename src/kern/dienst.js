@@ -41,6 +41,7 @@ import { MOEBEL } from '../inhalte/moebel.js';
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { LEER, idx } from './karte.js';
 import { moebelImRaum, hindernisBei } from './moebel.js';
+import { gemerkt } from './durchgang.js';
 import { daten, startPlatz } from './personen.js';
 import { WOCHE_MIN, slotBeginn, zeitpunkt } from './zeit.js';
 import { programmVon, moeglicheVeranstaltungen, dauerVon, mitKirchkaffee } from './ablauf.js';
@@ -164,8 +165,14 @@ function personAuf(z, termin, stelleId) {
   return s && darf(s, p) ? p : null;
 }
 // Termine einer Person (mit ihrer Stelle)
+// Leistung (27.11.): im Durchgang je Person nur einmal ausgerechnet (der Plan ändert sich nur über stelleSetzen, nie während die Zeit läuft)
 function termineVon(z, raeume, p) {
-  return dienstTermine(z, raeume).flatMap(t => t.stellen.filter(s => personAuf(z, t, s.id) === p).map(s => ({ t, s })));
+  const m = merker && merker.z === z && merker.raeume === raeume ? merker : null;
+  if (m && m.anzahl !== z.personen.length) { m.vonPerson = new Map(); m.anzahl = z.personen.length; }
+  if (m && m.vonPerson.has(p)) return m.vonPerson.get(p);
+  const liste = dienstTermine(z, raeume).flatMap(t => t.stellen.filter(s => personAuf(z, t, s.id) === p).map(s => ({ t, s })));
+  if (m) m.vonPerson.set(p, liste);
+  return liste;
 }
 export function schichtenBelegt(z, raeume, p) { return new Set(termineVon(z, raeume, p).map(x => x.t.key)).size; }
 const ueberschneiden = (a, b) => a.von < b.bis - EPS && b.von < a.bis - EPS;
@@ -276,9 +283,12 @@ const TOR = () => {
   return { x: g.tor.x + Math.floor(g.tor.breite / 2), y: gw ? gw.y : g.y + g.h + 1 };
 };
 function laenge(pfad) { let l = 0; for (let i = 0; i < pfad.length - 1; i++) l += Math.hypot(pfad[i + 1].x - pfad[i].x, pfad[i + 1].y - pfad[i].y); return l; }
+// Leistung (27.11.): Der Weg hängt nur von Wänden und Möbeln ab – innerhalb eines Durchgangs wird er je Start und Ziel
+// nur einmal gesucht (vorher bei jedem Ereignis neu, bis zu 6 Stunden vor jeder Schicht).
 function gehen(z, von, nach, t) {
   const a = { x: Math.round(von.x), y: Math.round(von.y) }, blockiert = (x, y) => hindernisBei(z, x, y);
-  let pfad = glaetten(z, weg(z, a, nach, blockiert), blockiert) || [a, { x: nach.x, y: nach.y }];
+  const gefunden = gemerkt(z, `dienstWeg:${a.x},${a.y}>${nach.x},${nach.y}`, () => glaetten(z, weg(z, a, nach, blockiert), blockiert) || [a, { x: nach.x, y: nach.y }]);
+  let pfad = gefunden.map(q => ({ ...q }));
   if (pfad[0].x !== von.x || pfad[0].y !== von.y) pfad = [{ x: von.x, y: von.y }, ...pfad];
   return { pfad, laenge: laenge(pfad), t0: t };
 }

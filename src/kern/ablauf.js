@@ -16,6 +16,7 @@ import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT 
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
+import { imDurchgang } from './durchgang.js';
 import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum, hindernisBei } from './moebel.js';
 import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
@@ -296,7 +297,9 @@ export const berichtPause = z => WOCHENBERICHT.pause && wochenberichtOffen(z);
 // ---- Zeit vorrücken ----
 // Prüft, welcher Schritt als Nächstes ansteht (Veranstaltungen, Passanten im Ort, Seelsorge-Anfrage),
 // und führt alle Schritte bis zur Zielzeit aus. Kommt eine Seelsorge-Anfrage, bleibt die Zeit genau dort stehen.
-export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
+// Leistung (27.11.): Ein Aufruf ist ein Durchgang (durchgang.js) – solange die Zeit läuft, wird nicht gebaut.
+export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) { imDurchgang(() => zeitVorrueckenInnen(z, raeume, minuten, zufall)); }
+function zeitVorrueckenInnen(z, raeume, minuten, zufall) {
   ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z); dienstAnlegen(z);
   if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) return;
   dienstMerken(z, raeume);   // Dienstplan-Termine für diesen Durchgang nur einmal ausrechnen

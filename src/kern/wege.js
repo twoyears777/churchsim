@@ -5,9 +5,12 @@ import { WAND, FENSTER, TUER, idx, aufGrundstueck, erkenneRaeume } from './karte
 import { felder } from './moebel.js';
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { WEGFINDUNG } from '../inhalte/gelaende.js';
+import { gemerkt } from './durchgang.js';
 
 // Welche Kästchen sind Wiese? (1 = Wiese, 0 = Weg) – Weg sind Wegteile, Gehweg, Türen und Boden in Räumen.
-export function wiesenKarte(z) {
+// Leistung (27.11.): innerhalb eines Durchgangs nur einmal ausgerechnet (durchgang.js) – die Karte wird nur gelesen.
+export function wiesenKarte(z) { return gemerkt(z, 'wiesenKarte', () => wiesenKarteRechnen(z)); }
+function wiesenKarteRechnen(z) {
   const wiese = new Uint8Array(z.w * z.h).fill(1), gruppe = erkenneRaeume(z).gruppe;
   for (let i = 0; i < wiese.length; i++) if (gruppe[i] >= 0 || z.zellen[i] === TUER) wiese[i] = 0;
   const frei = (x, y) => { if (x >= 0 && y >= 0 && x < z.w && y < z.h) wiese[idx(z, x, y)] = 0; };

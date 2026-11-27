@@ -6,6 +6,7 @@ import { kannBezahlen, buchen } from './finanzen.js';
 import { musikBonus } from './skills.js';
 import { AUTOMATEN } from '../inhalte/automaten.js';
 import { abrissWert } from './abriss.js';
+import { gemerkt } from './durchgang.js';
 
 export function moebelAnlegen(z) { if (!Array.isArray(z.moebel)) z.moebel = []; }
 const typVon = art => MOEBEL.find(t => t.id === art) || {};
@@ -17,7 +18,19 @@ export function felderVon(art, x, y, dreh = false) {
 }
 export const felder = m => felderVon(m.art, m.x, m.y, !!m.dreh);
 export function moebelBei(z, x, y) {
-  return z.moebel.find(m => m.x === x && m.y === y) || z.moebel.find(m => typVon(m.art).groesse && felder(m).some(f => f.x === x && f.y === y)) || null;
+  return gemerkt(z, 'moebelVerzeichnis', () => moebelVerzeichnis(z))(x, y);
+}
+// Verzeichnis „Kästchen → Möbel“ (Leistung, 27.11.): statt bei jeder Frage alle Möbel durchzugehen, einmal pro Durchgang
+// aufschreiben. Ergebnis wie bisher: zuerst ein Möbel, das genau auf dem Kästchen steht, sonst ein großes, das es mit belegt.
+const fach = (x, y) => `${x},${y}`;
+function moebelVerzeichnis(z) {
+  const genau = new Map(), gross = new Map();
+  for (const m of z.moebel) {
+    const k = fach(m.x, m.y);
+    if (!genau.has(k)) genau.set(k, m);
+    if (typVon(m.art).groesse) for (const f of felder(m)) { const kf = fach(f.x, f.y); if (!gross.has(kf)) gross.set(kf, m); }
+  }
+  return (x, y) => { const k = fach(x, y); return genau.get(k) || gross.get(k) || null; };
 }
 // Steht hier etwas, um das Figuren herumlaufen müssen? (Über Straße und Parkplatz kann man laufen.)
 // Außendeko wie Busch, Baum oder Bank ist ein Hindernis (hindernis: true); über Straße, Parkplatz und Weg läuft man.
@@ -73,8 +86,15 @@ export function moebelAbreissen(z, x0, y0, x1, y1) {
 // Nach dem Bauen: Möbel, über die eine Wand gebaut wurde, verschwinden.
 export function moebelPruefen(z) { z.moebel = z.moebel.filter(m => felder(m).every(f => z.zellen[idx(z, f.x, f.y)] === LEER)); }
 
+// Kästchen eines Raums als schnelle Nachschlage-Liste, einmal je Raum gemerkt (Leistung, 27.11.)
+const raumZellen = new WeakMap();
+function zellenVon(raum) {
+  let s = raumZellen.get(raum.zellen);
+  if (!s) raumZellen.set(raum.zellen, s = new Set(raum.zellen));
+  return s;
+}
 export function moebelImRaum(z, raum, art) {
-  const zellen = new Set(raum.zellen);
+  const zellen = zellenVon(raum);
   return z.moebel.filter(m => m.art === art && zellen.has(idx(z, m.x, m.y)));
 }
 
