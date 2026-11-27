@@ -30,7 +30,7 @@ export function fensterSchliessen() {
 export function fensterOffen() { return !maske().hidden; }
 
 function fensterInhalt(f) {
-  return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
+  return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, lager: lagerFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
     kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster, mitglieder: mitgliederFenster, buero: bueroFenster }[f.art](f);
 }
@@ -50,7 +50,7 @@ export function fensterAktualisieren() {
   m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen' || f.art === 'dienstplan');
   m.classList.toggle('wochenbericht', f.art === 'wochenbericht');   // Wochenzusammenfassung (27.11.): in der Mitte wie die Zeitung
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
-  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender' || f.art === 'dienstplan' || f.art === 'mitglieder');
+  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'lager' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender' || f.art === 'dienstplan' || f.art === 'mitglieder');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
   amZeiger(m, f.zeiger);
@@ -278,6 +278,30 @@ function kaffeeFenster(f) {
     <p class="unter">${T.sitzInfo(r.sitzChance)}</p>
     <p class="unter staerker">${T.mindestgaeste(r.mindestgaeste.summe)} (${Object.entries(r.mindestgaeste.teile).filter(([k, n]) => n || k === 'grund').map(([k, n]) => T.mindestTeile[k](n)).join(', ')})</p>
     <p class="unter">${T.mindestInfo}</p>`;
+}
+
+// Lager (27.11.): Logistik-Zeiten wie die Öffnungszeiten des Kirchkaffees. f.waehlen gesetzt → Wochenplan zum Hinzufügen.
+function lagerFenster(f) {
+  const r = ui.spiel.lagerInfo(f.nr);
+  if (!r) return null;
+  const T = TEXTE.lagerFenster, slotText = TEXTE.kaffeeFenster.slot;
+  const hinweise = r.regale ? '' : `<p class="warnung">${T.keinRegal}</p>`;
+  if (f.waehlen) {
+    const kopf = TEXTE.tageKurz.map(t => `<th>${t}</th>`).join('');
+    const gesetzt = (tag, slot) => r.zeiten.some(s => s.tag === tag && s.slot === slot);
+    const reihen = r.slots.map(s => `<tr><th class="slot">${slotText[s.id]}</th>${
+      TEXTE.tageKurz.map((t, tag) => `<td><button class="planfeld${gesetzt(tag, s.id) ? ' aktiv' : ''}" data-schicht="${tag}:${s.id}" ${gesetzt(tag, s.id) ? 'disabled' : ''} aria-label="${TEXTE.tage[tag]} ${slotText[s.id]}"></button></td>`).join('')}</tr>`).join('');
+    return `<h2>${T.hinzufuegen}</h2><p class="unter">${esc(r.typName)}</p>
+      <p class="unter">${T.info}</p><table class="wochenplan"><tr><th></th>${kopf}</tr>${reihen}</table>
+      <div class="zeile"><button data-zurueck>${TEXTE.raum.zurueck}</button></div>`;
+  }
+  const liste = r.zeiten.map((s, i) => `<div class="kachel klein-kachel schicht"><b>${TEXTE.tage[s.tag]}</b><small>${slotText[s.slot]}</small>
+      <button class="klein-knopf" data-schicht-weg="${i}">${T.entfernen}</button></div>`).join('');
+  return `<h2>${esc(r.typName)}</h2>${hinweise}
+    <h3>${T.titel}</h3><p class="unter">${T.info}</p>
+    ${liste ? `<div class="kacheln">${liste}</div>` : `<p class="warnung">${T.keineZeiten}</p>`}
+    <div class="typen"><button data-schicht-neu>${T.hinzufuegen}</button></div>
+    ${r.regale ? `<p class="unter staerker">${T.regale(r.regale)}</p>` : ''}`;
 }
 
 // Foyer (25.11.): was es jedem bringt, der hindurchläuft, und wer dort steht
@@ -928,8 +952,11 @@ export function fensterEinrichten() {
     else if (b.dataset.hilfe) f.thema = b.dataset.hilfe;               // Hilfe: Thema öffnen
     else if (b.hasAttribute('data-hilfe-zurueck')) delete f.thema;     // Hilfe: zurück zur Themenliste
     else if (b.hasAttribute('data-schicht-neu')) f.waehlen = true;
-    else if (b.dataset.schichtWeg !== undefined) spiel.schichtEntfernen(f.nr, Number(b.dataset.schichtWeg));
-    else if (b.dataset.schicht) { const [tag, slot] = b.dataset.schicht.split(':'); if (spiel.schichtHinzufuegen(f.nr, Number(tag), slot) === 'ok') delete f.waehlen; }
+    else if (b.dataset.schichtWeg !== undefined) (f.art === 'lager' ? spiel.lagerZeitEntfernen : spiel.schichtEntfernen)(f.nr, Number(b.dataset.schichtWeg));
+    else if (b.dataset.schicht) {   // Öffnungszeit (Kirchkaffee) bzw. Logistik-Zeit (Lager, 27.11.) hinzufügen
+      const [tag, slot] = b.dataset.schicht.split(':');
+      if ((f.art === 'lager' ? spiel.lagerZeitHinzufuegen : spiel.schichtHinzufuegen)(f.nr, Number(tag), slot) === 'ok') delete f.waehlen;
+    }
     else if (b.dataset.veranstaltung !== undefined) spiel.veranstaltungSetzen(f.nr, f.platz ?? 0, b.dataset.veranstaltung);   // Fenster bleibt offen
     else if (b.dataset.plan) { const [tag, slot] = b.dataset.plan.split(':'); spiel.terminSetzen(f.nr, f.platz ?? 0, Number(tag), slot); }
     else if (b.hasAttribute('data-verbessern')) spiel.stuhlVerbessern(f.x, f.y);

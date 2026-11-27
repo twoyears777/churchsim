@@ -177,13 +177,13 @@ export function hatVerbindungZu(z, raum, typId) {
 }
 
 // Nach jeder Baumaßnahme: Raumfunktionen den neu erkannten Räumen zuordnen.
-// Gilt für Raumfunktion, eingestellte Veranstaltungen und Kirchkaffee-Öffnungszeiten gleichermaßen.
+// Gilt für Raumfunktion, eingestellte Veranstaltungen, Kirchkaffee-Öffnungszeiten und Logistik-Zeiten des Lagers gleichermaßen.
 // Die Werte können Listen sein (z. B. Veranstaltung 1 und 2 mit Tag und Uhrzeit): Sie werden darum als Text
 // verglichen und unverändert übernommen – nicht in Text umgewandelt (sonst gingen die Einstellungen verloren).
 function abgleichen(z) {
   const { raeume } = erkenneRaeume(z);
-  for (const feld of ['raumTyp', 'veranstaltung', 'kaffeeZeiten']) {
-    if (!z[feld]) { if (feld === 'kaffeeZeiten') continue; z[feld] = {}; }
+  for (const feld of ['raumTyp', 'veranstaltung', 'kaffeeZeiten', 'lagerZeiten']) {
+    if (!z[feld]) { if (feld === 'kaffeeZeiten' || feld === 'lagerZeiten') continue; z[feld] = {}; }
     const neu = {};
     for (const r of raeume) {
       const zaehler = new Map();

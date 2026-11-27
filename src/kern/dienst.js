@@ -15,7 +15,7 @@
 //         Begrüßung in jedem Foyer),
 //       - Kirchkaffee nach jedem Gottesdienst (je Kirchkaffee so viele Stellen wie Stationen aus Maschine + Theke),
 //       - eigene Öffnungszeiten des Kirchkaffees (gleich viele Stellen),
-//       - Logistik im Lager je Zeitblock (so viele Stellen wie Regale),
+//       - Logistik im Lager zu dessen Logistik-Zeiten (so viele Stellen wie Regale in diesem Lager),
 //       - Evangelisation je Zeitblock (so viele Stellen wie Standplätze),
 //       - Büro je Zeitblock (je Schreibtisch eine Stelle, höchstens BUERO.plaetze; nur Ehrenamtliche – 27.11.).
 //   • Jeder Termin, bei dem ein Ehrenamtlicher eine Stelle hat, ist eine Schicht. Pro Woche höchstens DIENST.schichten
@@ -32,7 +32,7 @@
 //
 // Der Plan wird gespeichert in z.dienst.plan: { [Termin-Schlüssel]: { [Stelle]: Person-id } } – jede Woche gleich.
 // Termin-Schlüssel: v:<Raum>:<Platz> (Veranstaltung), kn:<Kirchkaffee>:<Raum>:<Platz> (Kirchkaffee danach),
-// ko:<Kirchkaffee>:<Tag>:<Slot> (Öffnungszeit), lg:<Tag>:<Slot> (Logistik), ev:<Tag>:<Slot> (Evangelisation),
+// ko:<Kirchkaffee>:<Tag>:<Slot> (Öffnungszeit), lg:<Lager>:<Tag>:<Slot> (Logistik), ev:<Tag>:<Slot> (Evangelisation),
 // bu:<Tag>:<Slot> (Büro).
 // <Raum> ist wie überall das kleinste Kästchen des Raums – so übersteht der Plan Umbauten.
 import { DIENST } from '../inhalte/dienst.js';
@@ -49,6 +49,7 @@ import { daten, startPlatz } from './personen.js';
 import { WOCHE_MIN, slotBeginn, zeitpunkt } from './zeit.js';
 import { programmVon, moeglicheVeranstaltungen, dauerVon, mitKirchkaffee } from './ablauf.js';
 import { schichtenVon, schichtZeit, kaffeeBeschaeftigt } from './kirchkaffee.js';
+import { lagerZeitenVon } from './lager.js';
 import { weg, glaetten } from './wege.js';
 import { punktAufWeg } from './bewegung.js';
 import { musikLevel } from './skills.js';
@@ -147,13 +148,20 @@ export function dienstTermine(z, raeume) {
       liste.push({ key: `ko:${raumKey(k)}:${s.tag}:${s.slot}`, art: 'kaffee', tag: s.tag, slot: s.slot, raum: k.nr, raumKey: raumKey(k), von: f.von, bis: f.bis, stellen });
     }
   }
-  const regale = lager.flatMap(r => moebelImRaum(z, r, 'regal').map(m => ({ m, r })));
+  // Logistik (27.11.): je Lager nur zu seinen Logistik-Zeiten (Klick aufs Lager), eine Stelle je Regal in diesem Lager
+  for (const r of lager) {
+    const regale = moebelImRaum(z, r, 'regal');
+    if (!regale.length) continue;
+    for (const s of lagerZeitenVon(z, r)) {
+      const f = blockZeit(s.tag, s.slot);
+      liste.push({ key: `lg:${raumKey(r)}:${s.tag}:${s.slot}`, art: 'logistik', tag: s.tag, slot: s.slot, raum: r.nr, raumKey: raumKey(r), von: f.von, bis: f.bis,
+        stellen: regale.map((m, i) => ({ id: `regal${i}`, code: 'regal', wer: 'alle', ding: 'regal', ort: { x: m.x, y: m.y }, raum: r.nr })) });
+    }
+  }
   // Büro (27.11.): je Schreibtisch eine Stelle, vorerst höchstens BUERO.plaetze im ganzen Spiel
   const tische = raeume.liste.filter(r => fertig(r, 'buero')).flatMap(r => moebelImRaum(z, r, 'schreibtisch').map(m => ({ m, r }))).slice(0, BUERO.plaetze);
   for (let tag = 0; tag < 7; tag++) for (const sl of SLOTS) {
     const f = blockZeit(tag, sl.id);
-    if (regale.length) liste.push({ key: `lg:${tag}:${sl.id}`, art: 'logistik', tag, slot: sl.id, raum: null, von: f.von, bis: f.bis,
-      stellen: regale.map(({ m, r }, i) => ({ id: `regal${i}`, code: 'regal', wer: 'alle', ding: 'regal', ort: { x: m.x, y: m.y }, raum: r.nr })) });
     if (tische.length) liste.push({ key: `bu:${tag}:${sl.id}`, art: 'buero', tag, slot: sl.id, raum: null, von: f.von, bis: f.bis,
       stellen: tische.map(({ m, r }, i) => ({ id: `tisch${i}`, code: 'schreibtisch', wer: 'ehrenamt', ding: 'schreibtisch', ort: { x: m.x, y: m.y }, raum: r.nr })) });
     liste.push({ key: `ev:${tag}:${sl.id}`, art: 'evangelisation', tag, slot: sl.id, raum: null, von: f.von, bis: f.bis,

@@ -73,6 +73,7 @@ import { MOEBEL, STUHL_STUFEN } from '../inhalte/moebel.js';
 import { istAutomat, lagerVon, automatInfo } from './automaten.js';
 import { EINKAUF, MAX_SCHICHTEN, SCHICHT_ENDE, SITZEN } from '../inhalte/kirchkaffee.js';
 import { SLOTS, TEMPI } from '../inhalte/zeit.js';
+import { lagerZeitenVon, lagerZeitHinzufuegen, lagerZeitEntfernen, lagerUmstellen } from './lager.js';
 import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax, dienstMerken, dienstVergessen } from './dienst.js';
 import { imDurchgang } from './durchgang.js';
 const forschungName = id => (FORSCHUNGEN.find(f => f.id === id) || {}).name || null;
@@ -213,6 +214,7 @@ function seelsorgeLage(z) {
 export function spielStarten(gespeichert = null, zufall = Math.random) {
   let z = (gespeichert && spielstandLesen(gespeichert)) || neuesSpiel(zufall);
   let raeume = raeumeAuswerten(z), bauModus = false;
+  lagerUmstellen(z, raeume);   // alte Spielstände (27.11.): bisherige Logistik-Einteilungen werden zu Logistik-Zeiten der Lager
   const wegSpeicher = new Map(), verlauf = [];
   const kopie = x => JSON.parse(JSON.stringify(x));
   const raumNr = (x, y) => (x >= 0 && y >= 0 && x < z.w && y < z.h ? raeume.gruppe[idx(z, x, y)] : -1);
@@ -224,7 +226,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
 
   // Bauen mit Rückgängig. Gemerkt wird nur das Gebaute (Wände, Räume, Möbel, wo Mitarbeiter stehen) und das Geld dafür –
   // die Zeit, die Besucher und das Kaffeegeld laufen beim Rückgängigmachen nicht zurück.
-  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende', 'gratisTueren', 'bauzeit', 'zusatzzeit'];
+  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende', 'gratisTueren', 'bauzeit', 'zusatzzeit', 'lagerZeiten'];
   function aendern(fn) {
     const vorher = JSON.stringify(BAU.map(k => z[k])), kontoVor = z.konto;
     const alteBuchungen = new Set(z.wochenbuch ? z.wochenbuch.buchungen : []);
@@ -448,6 +450,21 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (!r) return 'keine';
       return aushangSetzen(z, m, Math.min(...r.zellen), platz);
     },
+    // Logistik-Zeiten des Lagers (27.11.): hinzufügen → 'ok' | 'belegt' | 'zeit' | 'keine'; entfernen → 'ok' | 'keine'
+    lagerZeitHinzufuegen(nr, tag, slot) {
+      const r = raeume.liste[nr];
+      if (!r || !r.typ || r.typ.id !== 'lager') return 'keine';
+      let e = 'zeit';
+      aendern(() => { e = lagerZeitHinzufuegen(z, r, tag, slot); });
+      return e;
+    },
+    lagerZeitEntfernen(nr, i) {
+      const r = raeume.liste[nr];
+      if (!r || !r.typ || r.typ.id !== 'lager') return 'keine';
+      let e = 'keine';
+      aendern(() => { e = lagerZeitEntfernen(z, r, i); });
+      return e;
+    },
     // Öffnungszeiten des Kirchkaffees: hinzufügen → 'ok' | 'voll' | 'belegt' | 'zeit' | 'keine'; entfernen → 'ok' | 'keine'
     schichtHinzufuegen(nr, tag, slot) {
       const r = raeume.liste[nr];
@@ -466,9 +483,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     rueckgaengig() {
       const e = verlauf.pop();
       if (!e) return false;
-      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende, gratisTueren, bauzeit, zusatzzeit] = JSON.parse(e.bau);
+      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende, gratisTueren, bauzeit, zusatzzeit, lagerZeiten] = JSON.parse(e.bau);
       for (const m of moebel) { const jetzt = moebelAuf(z, m.x, m.y); if (jetzt && jetzt.art === m.art && 'fuellung' in jetzt) m.fuellung = jetzt.fuellung; }
-      Object.assign(z, { zellen, raumTyp, veranstaltung, moebel, kaffeeZeiten: kaffeeZeiten || {} });
+      Object.assign(z, { zellen, raumTyp, veranstaltung, moebel, kaffeeZeiten: kaffeeZeiten || {}, lagerZeiten: lagerZeiten || {} });
       if (gratisWaende) z.gratisWaende = gratisWaende; else delete z.gratisWaende;
       if (gratisTueren) z.gratisTueren = gratisTueren; else delete z.gratisTueren;
       z.bauzeit = bauzeit || {}; z.zusatzzeit = zusatzzeit || {};
@@ -719,6 +736,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         imRaum: z.personen.filter(p => !p.daheim && raeume.gruppe[idx(z, p.x, p.y)] === nr && daten(p)).map(p => ({ name: daten(p).name, art: daten(p).art })),
         boni: boniListe(z).map(b => ({ ...b, bisTag: b.bis === null ? null : Math.floor(b.bis / TAG_MIN), bisDatum: b.bis === null ? null : tagAnzeige(Math.floor(b.bis / TAG_MIN)).datum })) };
     },
+    lagerBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && r.typ && r.typ.id === 'lager' ? nr : null; },
     kirchkaffeeBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && r.typ && r.typ.id === 'kirchkaffee' ? nr : null; },
     veranstaltungsraumBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && moeglicheVeranstaltungen(r.typ).length ? nr : null; },
     moebelBei(x, y) { const m = moebelAuf(z, x, y); return m ? { art: m.art, x: m.x, y: m.y, dreh: !!m.dreh } : null; },
@@ -902,6 +920,13 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const m = moebelAuf(z, x, y);
       if (!m || !istAutomat(m.art)) return null;
       return automatInfo(z, raeume, m, raeume.liste[raumNr(x, y)]);
+    },
+    // Fenster des Lagers (27.11.): Logistik-Zeiten, Regale, fertig gebaut?
+    lagerInfo(nr) {
+      const r = raeume.liste[nr];
+      if (!r || !r.typ || r.typ.id !== 'lager') return null;
+      return { nr, typName: r.typ.name, fertig: !r.probleme.length, regale: moebelImRaum(z, r, 'regal').length, zeiten: lagerZeitenVon(z, r),
+        slots: SLOTS.map(s => ({ id: s.id, stunde: s.stunde, ende: SCHICHT_ENDE[s.id] })) };
     },
     // Fenster des Kirchkaffees: Zustand, nächste Öffnung, eigene Öffnungszeiten (Schichten)
     kaffeeRaumInfo(nr) {

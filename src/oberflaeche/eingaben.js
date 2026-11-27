@@ -169,6 +169,8 @@ function loslassen(e) {
     if (kk !== null) return fensterOeffnen({ art: 'kaffee', nr: kk });   // Kirchkaffee → Öffnungszeiten
     const bu = spiel.bueroBei(f.x, f.y);
     if (bu !== null) return fensterOeffnen({ art: 'buero', nr: bu });   // Büro → Orga-Tokens und Boni (27.11.)
+    const lg = spiel.lagerBei(f.x, f.y);
+    if (lg !== null) return fensterOeffnen({ art: 'lager', nr: lg });   // Lager → Logistik-Zeiten (27.11.)
     if (spiel.torBei(f.x, f.y)) return fensterOeffnen({ art: 'tor' });
     if (spiel.busBei(f.x, f.y)) fensterOeffnen({ art: 'bus' });
     return;

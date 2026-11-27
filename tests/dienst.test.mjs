@@ -15,12 +15,13 @@ import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
 import { dienstTermine, stelleSetzen, aktiveSchicht, schichtenMax, schichtenBelegt, dienstplanInfo, dienstAnkunft, dienstPosition } from '../src/kern/dienst.js';
 import { vorOrt } from '../src/kern/evangelisation.js';
 import { schichtHinzufuegen, offenBei } from '../src/kern/kirchkaffee.js';
+import { lagerZeitHinzufuegen, lagerZeitEntfernen, lagerZeitenVon, lagerUmstellen } from '../src/kern/lager.js';
 import { evangelisationLevel } from '../src/kern/skills.js';
 import { TAG_MIN, WOCHE_MIN } from '../src/kern/zeit.js';
 
 const SO = 6 * TAG_MIN;
 // Gemeinde: Gottesdienstraum (Pastor, Stühle, Gitarre + Keyboard), Kirchkaffee daneben (1 Station), Lager mit Regal
-function gemeinde({ lager = true, eas = 3, stuehle = 10 } = {}) {
+function gemeinde({ lager = true, eas = 3, stuehle = 10, zeiten = true } = {}) {
   const z = neuesSpielOhne(() => 0.9);
   z.schichtbetrieb = true; z.ortRuhig = true;
   const aus = () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
@@ -40,6 +41,9 @@ function gemeinde({ lager = true, eas = 3, stuehle = 10 } = {}) {
   assert.equal(moebelKaufen(z, 'kaffeemaschine', G.x + 20, G.y + 3), 'ok');
   assert.equal(moebelKaufen(z, 'theke', G.x + 22, G.y + 3), 'ok');
   if (lager) assert.equal(moebelKaufen(z, 'regal', G.x + 3, G.y + 11), 'ok');
+  // Logistik-Zeiten (27.11.): in der Testgemeinde alle 21 Zeitblöcke, damit die Logistik-Tests überall einteilen können
+  const lg = () => raumBei(G.x + 4, G.y + 12);
+  if (lager && zeiten) for (let tag = 0; tag < 7; tag++) for (const slot of ['vormittag', 'nachmittag', 'abend']) lagerZeitHinzufuegen(z, lg(), tag, slot);
   versetzen(z, z.personen[0], G.x + 4, G.y + 5);   // Pastor in den Gottesdienstraum
   const ea = [];
   for (let i = 0; i < eas; i++) ea.push(personHinzufuegen(z, { name: `Helfer ${i + 1}`, kuerzel: 'H', art: 'ehrenamt' }));
@@ -50,7 +54,7 @@ function gemeinde({ lager = true, eas = 3, stuehle = 10 } = {}) {
   assert.equal(stelleSetzen(z, aus(), v0.key, 'hauptamt', z.personen[0].id), 'ok');
   const termin = art => dienstTermine(z, aus()).find(t => t.art === art);
   const block = (art, tag, slot) => dienstTermine(z, aus()).find(t => t.art === art && t.tag === tag && t.slot === slot);
-  return { z, aus, gd, kk, ea, termin, block, raumBei };
+  return { z, aus, gd, kk, lg, ea, termin, block, raumBei };
 }
 const bis = (z, aus, minute, zufall = () => 0.5) => { while (z.minuten < minute) zeitVorruecken(z, aus(), Math.min(5, minute - z.minuten), zufall); };
 const imRaum = (z, aus, p, r) => !p.daheim && aus().gruppe[p.x + p.y * z.w] === r.nr;
@@ -281,4 +285,59 @@ console.log('Schalterwand-Tests bestanden.');
     assert.ok(!p.daheim && aktiveSchicht(z, aus(), p) && !dienstPosition(z, p), `${t.art}: zu Beginn an seiner Stelle`);
   }
 }
+
+// Lager-Fenster (Lukas, 27.11.): Logistik nur zu den Logistik-Zeiten des Lagers, eine Stelle je Regal in diesem Lager
+{
+  const { z, aus, lg, ea, block } = gemeinde({ zeiten: false });
+  assert.equal(dienstTermine(z, aus()).filter(t => t.art === 'logistik').length, 0);   // ohne Zeiten keine Logistik
+  assert.equal(lagerZeitHinzufuegen(z, lg(), 2, 'abend'), 'ok');
+  assert.equal(lagerZeitHinzufuegen(z, lg(), 2, 'abend'), 'belegt');
+  assert.equal(lagerZeitHinzufuegen(z, lg(), 7, 'abend'), 'zeit');
+  assert.equal(lagerZeitHinzufuegen(z, lg(), 0, 'vormittag'), 'ok');
+  assert.deepEqual(lagerZeitenVon(z, lg()), [{ tag: 0, slot: 'vormittag' }, { tag: 2, slot: 'abend' }]);   // sortiert
+  const t = dienstTermine(z, aus()).filter(x => x.art === 'logistik');
+  assert.equal(t.length, 2);
+  assert.equal(t[0].raum, lg().nr);
+  assert.equal(stelleSetzen(z, aus(), block('logistik', 2, 'abend').key, 'regal0', ea[0].id), 'ok');
+  assert.equal(schichtenBelegt(z, aus(), ea[0]), 1);
+  // Entfernen: Termin weg, Schicht frei; wieder hinzufügen → wieder eingeteilt (wie beim Kirchkaffee)
+  assert.equal(lagerZeitEntfernen(z, lg(), 1), 'ok');
+  assert.equal(lagerZeitEntfernen(z, lg(), 5), 'keine');
+  assert.equal(block('logistik', 2, 'abend'), undefined);
+  assert.equal(schichtenBelegt(z, aus(), ea[0]), 0);
+  lagerZeitHinzufuegen(z, lg(), 2, 'abend');
+  assert.equal(schichtenBelegt(z, aus(), ea[0]), 1);
+  // Über das Spiel (Fenster): Info, Hinzufügen, Entfernen
+  const s = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  const nr = s.lagerBei(G.x + 4, G.y + 12);
+  assert.notEqual(nr, null);
+  assert.equal(s.lagerInfo(nr).regale, 1);
+  assert.equal(s.lagerInfo(nr).zeiten.length, 2);
+  assert.equal(s.lagerZeitHinzufuegen(nr, 4, 'nachmittag'), 'ok');
+  assert.equal(s.lagerInfo(nr).zeiten.length, 3);
+  assert.equal(s.lagerZeitEntfernen(nr, 0), 'ok');
+  assert.equal(s.lagerInfo(nr).zeiten.length, 2);
+  assert.equal(s.lagerBei(G.x + 5, G.y + 5), null);   // Gottesdienstraum ist kein Lager
+}
+console.log('Lager-Fenster-Tests bestanden.');
+
+// Alte Spielstände (Lukas, 27.11.: übernehmen): Logistik-Einteilungen lg:<Tag>:<Slot> werden Logistik-Zeiten des Lagers
+{
+  const { z, aus, lg, ea, block } = gemeinde({ zeiten: false });
+  moebelKaufen(z, 'regal', G.x + 5, G.y + 11);
+  z.dienst.plan['lg:1:nachmittag'] = { regal1: ea[0].id };
+  z.dienst.plan['lg:3:abend'] = {};                     // leerer Eintrag: keine Zeit
+  lagerUmstellen(z, aus());
+  assert.deepEqual(lagerZeitenVon(z, lg()), [{ tag: 1, slot: 'nachmittag' }]);
+  assert.equal(z.dienst.plan['lg:1:nachmittag'], undefined);
+  assert.equal(z.dienst.plan['lg:3:abend'], undefined);
+  assert.equal(block('logistik', 1, 'nachmittag').stellen.length, 2);
+  assert.equal(schichtenBelegt(z, aus(), ea[0]), 1);   // Einteilung ist erhalten
+  // Auch beim Laden eines Spielstands
+  const { z: z2, ea: ea2 } = gemeinde({ zeiten: false });
+  z2.dienst.plan['lg:5:vormittag'] = { regal0: ea2[1].id };
+  const s = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z2 }), () => 0.5);
+  assert.deepEqual(s.lagerInfo(s.lagerBei(G.x + 4, G.y + 12)).zeiten, [{ tag: 5, slot: 'vormittag' }]);
+}
+console.log('Umstellungs-Tests (Lager) bestanden.');
 console.log('Alle Dienstplan-Tests bestanden.');

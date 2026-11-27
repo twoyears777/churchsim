@@ -311,6 +311,16 @@ export const TEXTE = {
     mindestInfo: 'Zu jeder Öffnungszeit kommen mindestens so viele Gäste. Mehr Stühle, Tische, Automaten und Theken locken mehr an.',
     sitzInfo: prozent => `Nach dem Kaffee setzen sich Kunden mit ${prozent} % Wahrscheinlichkeit auf einen freien Stuhl. Beim Gehen geben sie Trinkgeld: 1 €, mehr mit besseren Stühlen und einem Tisch daneben.`
   },
+  // ---- Fenster „Lager“ (Klick aufs Lager, 27.11.; Entwürfe von Claude, von Lukas freigegeben 27.11.) ----
+  lagerFenster: {
+    titel: 'Logistik-Zeiten',
+    info: 'Lege hier fest, wann im Lager gearbeitet wird. Zu diesen Zeiten erscheinen im Dienstplan Stellen für die Logistik – eine je Regal. Die Eingeteilten kaufen Kaffee und Ware ein und füllen Maschinen und Automaten auf.',
+    hinzufuegen: 'Logistik-Zeit hinzufügen',
+    entfernen: 'Entfernen',
+    keineZeiten: 'Noch keine Logistik-Zeiten – niemand füllt auf.',
+    regale: n => `Regale: ${n} (bis zu ${n} Ehrenamtliche je Zeit)`,
+    keinRegal: 'Stelle ein Regal auf, damit hier jemand arbeiten kann.'
+  },
   laden: 'Laden',   // Beschriftung des Ladens auf der Karte (Lukas, 25.11.)
 
   // ---- Fenster „Bekanntheit“ (Klick oben auf Bekanntheit; Entwürfe von Claude, von Lukas freigegeben 25.11.) ----
