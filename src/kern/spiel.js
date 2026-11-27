@@ -26,7 +26,7 @@ import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten, TAG_MIN } from '.
 import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, programmVon,
   veranstaltungEinstellen, terminEinstellen, prognose, finanzPrognose, terminDieseWoche, ablaufAnlegen, laufVon,
   naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon, naechstesEvent, plaetzeVon, platzSperre, terminStand, berichtPause } from './ablauf.js';
-import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
+import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, mindestgaesteTeile, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
   schichtHinzufuegen, schichtEntfernen, offenBei, kaffeeVersetzt } from './kirchkaffee.js';
 import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { bausteineVon } from './bausteine.js';
@@ -888,6 +888,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return { nr, typName: r.typ.name, zustand, naechste: zp ? { tag: zp.tag, stunde: zp.stunde, minute: zp.minute } : null, schichtbetrieb: !!z.schichtbetrieb,
         schichten: schichtenVon(z, r), max: z.schichtbetrieb ? 7 * SLOTS.length : MAX_SCHICHTEN, stationen: k ? k.stationen.length : 0,
         sitzplaetze: sitzplaetzeVon(z, r), sitzChance: Math.round(SITZEN.chance * 100),
+        mindestgaeste: mindestgaesteTeile(z, r),   // Mindestgäste je Öffnungszeit (27.11.)
         slots: SLOTS.map(s => ({ id: s.id, stunde: s.stunde, ende: SCHICHT_ENDE[s.id] })) };
     },
     // Besucher-Kärtchen (auch für Passanten). zufriedenheit = Haltung zur Gemeinde.

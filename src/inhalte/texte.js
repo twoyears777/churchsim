@@ -299,6 +299,10 @@ export const TEXTE = {
     voll: 'Höchstens 3 Öffnungszeiten pro Woche.',
     // Sitzplätze (Lukas, 25.11.)
     sitzplaetze: (n, tisch) => `Sitzplätze: ${n} (davon ${tisch} am Tisch)`,
+    // Mindestgäste (27.11.) – ENTWURF von Claude, Lukas formuliert selbst
+    mindestgaeste: n => `Gäste pro Öffnungszeit: mindestens ${n}`,
+    mindestTeile: { grund: n => `Grund ${n}`, sitzplaetze: n => `Sitzplätze +${n}`, tische: n => `Tische +${n}`, automaten: n => `Automaten +${n}`, theken: n => `weitere Theken +${n}` },
+    mindestInfo: 'Zu jeder Öffnungszeit kommen mindestens so viele Gäste. Mehr Stühle, Tische, Automaten und Theken locken mehr an.',
     sitzInfo: prozent => `Nach dem Kaffee setzen sich Kunden mit ${prozent} % Wahrscheinlichkeit auf einen freien Stuhl. Beim Gehen geben sie Trinkgeld: 1 €, mehr mit besseren Stühlen und einem Tisch daneben.`
   },
   laden: 'Laden',   // Beschriftung des Ladens auf der Karte (Lukas, 25.11.)

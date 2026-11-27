@@ -30,3 +30,17 @@ export const SITZEN = {
   tisch: 1.2,        // Stuhl grenzt an einen Tisch (links/rechts/oben/unten); mehrere Tische zählen einmal
   mindestens: 60     // Spielminuten: so lange bleibt ein Gast mindestens sitzen, ab Ankunft am Stuhl – auch nach Schluss (Lukas, 25.11.)
 };
+
+// Mindestgäste (Lukas, 27.11.: „Das Kirchkaffee sollte ein Minimum an Besuchern anlocken, die extra dafür zusätzlich
+// auf die Karte kommen. Am Besten je nach Angebot.“). Gilt nur für die eigenen Öffnungszeiten, nicht nach dem Gottesdienst.
+// Mindestzahl je Öffnungszeit = grund + Angebot. Wer von selbst vom Gehweg hereinkommt, zählt mit; fehlt bis zu einem
+// Zeitpunkt noch jemand, kommt ein Gast extra durchs Tor. Alle Zahlen: Vorschlag von Claude, Lukas legt sie fest.
+export const MINDESTGAESTE = {
+  an: true,            // im Spiel immer an; nur ältere Tests schalten es über tests/hilfen/ohne-erster.mjs ab
+  grund: 2,            // so viele kommen immer
+  jeSitzplaetze: 2,    // +1 Gast je so viele Stühle im Kirchkaffee
+  tisch: 1,            // +1 je Tisch, an dem mindestens ein Stuhl steht
+  automat: 1,          // +1 je Automat (z. B. Getränkeautomat) im Kirchkaffee
+  station: 1,          // +1 je weitere bediente Theke (2. Station, 3. Station …)
+  verteilen: 0.75      // die Gäste kommen gleichmäßig verteilt in den ersten 75 % der Öffnungszeit (damit sie noch bedient werden)
+};

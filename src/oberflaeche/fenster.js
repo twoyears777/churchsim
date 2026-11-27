@@ -274,7 +274,9 @@ function kaffeeFenster(f) {
     <div class="typen"><button data-schicht-neu ${voll ? 'disabled' : ''}>${T.hinzufuegen}</button></div>
     ${voll ? `<p class="unter">${T.voll}</p>` : ''}
     <p class="unter staerker">${T.sitzplaetze(r.sitzplaetze.anzahl, r.sitzplaetze.amTisch)}</p>
-    <p class="unter">${T.sitzInfo(r.sitzChance)}</p>`;
+    <p class="unter">${T.sitzInfo(r.sitzChance)}</p>
+    <p class="unter staerker">${T.mindestgaeste(r.mindestgaeste.summe)} (${Object.entries(r.mindestgaeste.teile).filter(([k, n]) => n || k === 'grund').map(([k, n]) => T.mindestTeile[k](n)).join(', ')})</p>
+    <p class="unter">${T.mindestInfo}</p>`;
 }
 
 // Foyer (25.11.): was es jedem bringt, der hindurchläuft, und wer dort steht

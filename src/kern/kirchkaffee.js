@@ -26,9 +26,12 @@ import { umherPosition } from './umherlaufen.js';
 import { slotBeginn, zeitpunkt } from './zeit.js';
 import { LAUFTEMPO, SLOTS, DAUER, MELDUNG_DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
-import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN } from '../inhalte/kirchkaffee.js';
+import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN, MINDESTGAESTE } from '../inhalte/kirchkaffee.js';
+import { ORT } from '../inhalte/ort.js';
+import { neuePerson } from './besucher.js';
+import { platzImGebiet } from './einzugsgebiet.js';
 import { GRUNDSTUECK, GEHWEGE, LADEN } from '../inhalte/umgebung.js';
-import { AUTOMAT } from '../inhalte/automaten.js';
+import { AUTOMAT, AUTOMATEN } from '../inhalte/automaten.js';
 import { aktiveSchicht } from './dienst.js';
 import { kaufzeitenImKirchkaffee, gangJetztZumAutomaten, automatZumAuffuellen, auffuellen, auffuellPlatz } from './automaten.js';
 
@@ -383,11 +386,84 @@ export function gottesdienstKunden(z, raeume, L, gaeste) {
 export function passantKommt(z, raeume, wer) {
   kaffeeAnlegen(z);
   const stationen = kirchkaffeeZustand(z, raeume).flatMap(k => k.stationen).filter(s => offenBei(z, s.raum));
+  if (!gastHinein(z, stationen, wer)) return false;
+  // Mindestgäste (27.11.): wer von selbst kommt, zählt für die eigene Öffnungszeit mit
+  for (const r of new Set(stationen.map(s => s.raum))) { const st = mindestStandJetzt(z, r); if (st) st.gekommen++; }
+  return true;
+}
+// Gast geht vom Tor hinein und stellt sich an → true, wenn er sich anstellen konnte
+function gastHinein(z, stationen, wer) {
   if (!stationen.length || z.kaffee.kunden.some(k => k.id === wer.id)) return false;
   const tor = TOR();
   if (!kundeAnlegen(z, stationen, wer, tor, z.minuten, null, tor)) return false;
   z.kaffee.kunden[z.kaffee.kunden.length - 1].besuch = `kk:${z.minuten}`;   // für den Automaten: Kennung dieses Besuchs
   return true;
+}
+
+// ---- Mindestgäste (Lukas, 27.11.; Zahlen MINDESTGAESTE in inhalte/kirchkaffee.js) ----
+// Zu jeder eigenen Öffnungszeit kommt eine Mindestzahl an Gästen, je nach Angebot des Kirchkaffees.
+// Die Zahl wird beim Öffnen festgelegt und gleichmäßig auf die Öffnungszeit verteilt („Termine“). Ist zu einem Termin
+// noch nicht genug los (von selbst Hereingekommene zählen mit), kommt ein Gast extra durchs Tor – zuerst Leute,
+// die die Gemeinde schon kennt, sonst ein neuer Mensch, solange im Einzugsgebiet Platz ist. Extra-Gäste wollen sicher Kaffee.
+export function mindestgaesteTeile(z, raum) {
+  const M = MINDESTGAESTE, sitz = sitzplaetzeVon(z, raum);
+  const tische = moebelImRaum(z, raum, 'tisch').filter(m => NACHBARN.some(([dx, dy]) => { const n = moebelBei(z, m.x + dx, m.y + dy); return !!n && n.art === 'stuhl'; })).length;
+  const automaten = AUTOMATEN.reduce((a, t) => a + moebelImRaum(z, raum, t.id).length, 0);
+  // Theken: so viele, wie Maschinen und Thekenteile es zulassen (Ausstattung, unabhängig davon, wer gerade da ist)
+  const theken = Math.min(moebelImRaum(z, raum, 'kaffeemaschine').length, moebelImRaum(z, raum, 'theke').length);
+  const teile = { grund: M.grund, sitzplaetze: Math.floor(sitz.anzahl / M.jeSitzplaetze), tische: tische * M.tisch,
+    automaten: automaten * M.automat, theken: Math.max(0, theken - 1) * M.station };
+  return { teile, summe: Object.values(teile).reduce((a, b) => a + b, 0) };
+}
+function aktivesFenster(z, raum, t = z.minuten) { return schichtFenster(z, raum, t).find(f => t >= f.von - EPS && t < f.bis) || null; }
+const mindestKey = (r, f) => `${r.zellen[0]}:${f.von}`;
+function mindestStandJetzt(z, r) { const f = aktivesFenster(z, r); return f && z.kaffee.mindest ? z.kaffee.mindest[mindestKey(r, f)] || null : null; }
+function mindestTermine(f, soll) {
+  const span = (f.bis - f.von) * MINDESTGAESTE.verteilen;
+  return Array.from({ length: soll }, (_, j) => f.von + span * (j + 0.5) / soll);
+}
+// Wer kommt extra? Nicht, wer schon im Kirchkaffee, bei einer Veranstaltung oder heute noch auf dem Gehweg unterwegs ist.
+function extraGast(z, t, zufall) {
+  const o = z.ort, weg = new Set(z.kaffee.kunden.map(k => k.id));
+  for (const L of z.laeufe || []) for (const g of L.gaeste || []) weg.add(g.id);
+  if (o) for (const g of o.gaenge) if (t < g.tor + 60) weg.add(g.id);
+  const bekannt = [...(o ? o.leute : []), ...z.besucher].filter(p => !weg.has(p.id));
+  if (bekannt.length) return bekannt[Math.floor(zufall() * bekannt.length)];
+  if (o && platzImGebiet(z) > 0) {
+    const [a, b] = ORT.haltung, p = neuePerson(z, a + Math.floor(zufall() * (b - a + 1)), zufall);
+    o.leute.push(p);
+    return p;
+  }
+  return null;
+}
+function mindestSchritt(z, raeume, t, zufall) {
+  const K = z.kaffee;
+  if (!MINDESTGAESTE.an) return;
+  if (!K.mindest) K.mindest = {};
+  for (const [key, st] of Object.entries(K.mindest)) if (st.bis < t - EPS) delete K.mindest[key];
+  for (const k of kirchkaffeeZustand(z, raeume)) {
+    if (!k.stationen.length) continue;
+    const f = aktivesFenster(z, k.raum, t);
+    if (!f) continue;
+    const key = mindestKey(k.raum, f);
+    if (!K.mindest[key]) K.mindest[key] = { bis: f.bis, soll: mindestgaesteTeile(z, k.raum).summe, gekommen: 0, geprueft: 0 };
+    const st = K.mindest[key], termine = mindestTermine(f, st.soll);
+    while (st.geprueft < st.soll && termine[st.geprueft] <= t + EPS) {
+      const j = st.geprueft++;
+      if (st.gekommen > j) continue;
+      const wer = extraGast(z, t, zufall);
+      if (wer && gastHinein(z, k.stationen, { id: wer.id, name: wer.vorname })) st.gekommen++;
+    }
+  }
+}
+function mindestZeiten(z, raeume, t) {
+  const zeiten = [];
+  for (const r of raeume.liste) {
+    if (!r.typ || r.typ.id !== 'kirchkaffee') continue;
+    const f = aktivesFenster(z, r, t), st = f && z.kaffee.mindest && z.kaffee.mindest[mindestKey(r, f)];
+    if (st && st.geprueft < st.soll) zeiten.push(mindestTermine(f, st.soll)[st.geprueft]);
+  }
+  return zeiten;
 }
 export function offenesKirchkaffee(z, raeume) {
   return kirchkaffeeZustand(z, raeume).some(k => k.stationen.length && offenBei(z, k.raum));
@@ -633,6 +709,7 @@ export function kaffeeAktualisieren(z, raeume, zufall = Math.random) {
     const s = kuerzeste(K, stationen);
     if (s) { k.ea = s.ea.id; k.phase = 'schlange'; k.nr = 1e9; } else ohneKaffee(z, k, Math.max(t, k.ab));
   }
+  mindestSchritt(z, raeume, t, zufall);   // Mindestgäste zu den eigenen Öffnungszeiten (27.11.)
   for (const s of stationen) nachruecken(z, stationen, s, t);
   for (let runde = 0; runde < 200; runde++) {
     let geaendert = false;
@@ -666,6 +743,7 @@ export function kaffeeSchritt(z, raeume) {
     }
   }
   for (const r of raeume.liste) if (r.typ && r.typ.id === 'kirchkaffee') for (const f of schichtFenster(z, r, t)) zeiten.push(f.von, f.bis);
+  zeiten.push(...mindestZeiten(z, raeume, t));
   const naechste = Math.min(...zeiten.filter(x => x > t + EPS));
   return Number.isFinite(naechste) ? { zeit: naechste, tun: (zz, rr, zf) => kaffeeAktualisieren(zz, rr, zf) } : null;
 }

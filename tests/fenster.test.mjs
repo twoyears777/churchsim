@@ -49,6 +49,14 @@ function oeffnen(f, name) {
   assert.notStrictEqual(nr, null, 'Foyer wird beim Klick gefunden');
   oeffnen({ art: 'foyer', nr }, 'Foyer-Fenster mit Mitarbeiter');
 }
+// Kirchkaffee-Fenster mit Zeile „Gäste pro Öffnungszeit“ (Mindestgäste, 27.11.)
+{
+  ui.spiel = spielMit('kirchkaffee');
+  const nr = ui.spiel.kirchkaffeeBei(G.x + 5, G.y + 5);
+  assert.notStrictEqual(nr, null, 'Kirchkaffee wird beim Klick gefunden');
+  assert.equal(ui.spiel.kaffeeRaumInfo(nr).mindestgaeste.summe, 2);
+  oeffnen({ art: 'kaffee', nr }, 'Kirchkaffee-Fenster mit Mindestgästen');
+}
 // Gemeindekalender mit Bericht (27.11.): vergangene Veranstaltung, aufgeklappter Bericht und „Vorherige Woche“
 {
   const { zeitVorruecken, veranstaltungEinstellen } = await import('../src/kern/ablauf.js');
