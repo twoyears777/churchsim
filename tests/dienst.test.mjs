@@ -188,6 +188,19 @@ console.log('Öffnungszeiten-Tests bestanden.');
 }
 console.log('Logistik-Tests bestanden.');
 
+// Logistik füllt den Getränkeautomaten mit genug Geld ganz auf (Fehler vom 27.11.: Preis war NaN → „Nicht genug Geld“)
+{
+  const g = gemeinde();
+  assert.equal(moebelKaufen(g.z, 'getraenkeautomat', G.x + 24, G.y + 3), 'ok');
+  g.z.moebel.find(m => m.art === 'kaffeemaschine').fuellung = 1000;   // Kaffee ist voll, nur der Automat fehlt
+  const au = g.z.moebel.find(m => m.art === 'getraenkeautomat'); au.fuellung = 0;
+  stelleSetzen(g.z, g.aus(), g.block('logistik', 0, 'nachmittag').key, 'regal0', g.ea[0].id);
+  bis(g.z, g.aus, 23 * 60 + 30);
+  assert.ok(!(g.z.kaffee.meldung && g.z.kaffee.meldung.code === 'keinGeldAutomat'), 'keine Geld-Meldung bei vollem Konto');
+  assert.equal(au.fuellung, 30, 'alles bis voll (Lukas, 27.11.)');
+}
+console.log('Logistik-Automat-Tests bestanden.');
+
 // Evangelisation: eingeteilt für einen Block, ohne Uhrzeit-Grenze (auch abends), sammelt Erfahrung
 {
   const { z, aus, ea, block } = gemeinde();

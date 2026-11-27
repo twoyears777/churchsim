@@ -573,7 +573,7 @@ function stationSchritt(z, stationen, s, t, zufall) {
 // ---- Logistik (Lukas, 27.11.: claude/spielprinzip-ehrenamt-schichten-lager.md) ----
 // Ehrenamtliche mit einer Logistik-Schicht stehen im Lager. Solange ihre Schicht läuft, kaufen sie im Laden ein, was fehlt –
 // auch wenn das Kirchkaffee offen ist: erst Kaffee für jede Kaffeemaschine, dann Ware für jeden Automaten (je Gang höchstens
-// EINKAUF.tragen bzw. AUTOMAT.tragen). Ohne Logistik füllt niemand auf.
+// EINKAUF.tragen; Automaten ab auffuellenAb fehlenden, dann alles bis voll). Ohne Logistik füllt niemand auf.
 // Wer gerade mit Ware unterwegs ist, bringt sie noch hin, auch wenn die Schicht inzwischen zu Ende ist (kaffeeBeschaeftigt).
 function lagerVonPerson(z, raeume, p) {
   if (p.daheim) return null;
@@ -629,7 +629,8 @@ function logistikSchritt(z, raeume, p, raum, t, aktiv = true) {
     for (const r of raeume.liste.filter(r => r.typ && !r.probleme.length)) {
       const au = automatZumAuffuellen(z, r, schonAutomat);
       if (!au) continue;
-      const menge = Math.min(AUTOMAT.tragen, au.fehlt), preis = Math.round(menge * au.typ.einkauf * 100) / 100;
+      // Lukas, 27.11.: alles bis voll (keine Grenze je Gang mehr – AUTOMAT.tragen gibt es nicht mehr, sonst wäre der Preis NaN)
+      const menge = au.fehlt, preis = Math.round(menge * au.typ.einkauf * 100) / 100;
       if (!kannBezahlen(z, preis)) { keinGeld(z, p, t, au.typ.id); return true; }
       m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, ware: au.typ.id, automat: { x: au.m.x, y: au.m.y }, platz: auffuellPlatz(z, r, au.m) };
       geh(LADEN.eingang); return true;
