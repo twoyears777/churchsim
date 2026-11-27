@@ -114,7 +114,7 @@ function personenListen(personen) {
       const li = document.createElement('li'), n = document.createElement('span'), o = document.createElement('small');
       n.textContent = x.name; li.append(n, o); li.dataset.person = x.id;
       // Hauptamtliche (27.11.) gehen nicht heim: ohne Einsatz „verfügbar“ statt „unterwegs“
-      o.textContent = x.schichten ? TEXTE.schichtbetrieb.seiteEA(x.einsatz || (x.art === 'hauptamt' ? 'verfügbar' : null), x.daheim, x.schichten.belegt, x.schichten.max) : x.einsatz || 'verfügbar';
+      o.textContent = x.schichten ? TEXTE.schichtbetrieb.seiteEA(x.einsatz || (x.art === 'hauptamt' ? 'verfügbar' : null), x.daheim, x.schichten.belegt, x.schichten.max, x.schulung) : x.einsatz || 'verfügbar';
       ul.append(li);
     }
   }

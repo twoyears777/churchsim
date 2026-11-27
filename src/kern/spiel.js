@@ -76,6 +76,7 @@ import { SLOTS, TEMPI } from '../inhalte/zeit.js';
 import { lagerZeitenVon, lagerZeitHinzufuegen, lagerZeitEntfernen, lagerUmstellen } from './lager.js';
 import { dienstAnlegen, stelleSetzen, dienstplanInfo, dienstPosition, kaffeeGeplant, schichtenBelegt, schichtenMax, dienstMerken, dienstVergessen } from './dienst.js';
 import { imDurchgang } from './durchgang.js';
+import { schulungStarten, schulungAbbrechen, schulungenInfo } from './schulungen.js';
 const forschungName = id => (FORSCHUNGEN.find(f => f.id === id) || {}).name || null;
 
 export const FELD = { LEER, WAND, TUER, FENSTER };   // Inhalt eines Kästchens auf der Karte
@@ -513,6 +514,10 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     bonusFreischalten(id) { return bonusFreischalten(z, id); },
     // Laufende Forschung abbrechen (Geld und Heiligkeit sind weg) → 'ok' | 'keine'
     forschungAbbrechen() { return forschungAbbrechen(z); },
+    // Schulungen (27.11.): Ehrenamtlichen auf Schulung schicken → 'ok' | 'keine' | Zustand (siehe schulungZustand in schulungen.js)
+    schulungStarten(personId, id) { return schulungStarten(z, raeume, personId, id); },
+    // Laufende Schulung abbrechen (Geld und Heiligkeit sind weg) → 'ok' | 'keine'
+    schulungAbbrechen(personId) { return schulungAbbrechen(z, personId); },
     // Haltungs-Multiplikator (Skill des Hauptamtlichen): nächste Stufe sofort mit Heiligkeit kaufen
     // → 'ok' | 'person' | 'max' | 'erfahrung' | 'heiligkeit'
     multiplikatorKaufen(personId) { return multiplikatorKaufen(z, personId); },
@@ -586,7 +591,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const zp = zeitpunkt(z.minuten), lg = z.letzterGottesdienst;
       // daheim/schichten (27.11.): im Schichtbetrieb ist ein Ehrenamtlicher ohne Schicht daheim; schichten = belegt/max pro Woche
       const personen = z.personen.map(p => { const d = daten(p), r = eingesetztIn(z, raeume, p); return d && { id: p.id, art: d.art, name: d.name, einsatz: r ? r.typ.name : null,
-        daheim: !!p.daheim, schichten: z.schichtbetrieb && (d.art === 'ehrenamt' || d.art === 'hauptamt') ? { belegt: schichtenBelegt(z, raeume, p), max: schichtenMax(p) } : null }; }).filter(Boolean);
+        daheim: !!p.daheim, schulung: !!p.schulung, schichten: z.schichtbetrieb && (d.art === 'ehrenamt' || d.art === 'hauptamt') ? { belegt: schichtenBelegt(z, raeume, p), max: schichtenMax(p) } : null }; }).filter(Boolean);
       return {
         woche: zp.woche + 1, tag: zp.tag, datum: tagAnzeige(Math.floor(z.minuten / TAG_MIN)).datum, stunde: zp.stunde, minute: zp.minute, tageBisSonntag: tageBisSonntag(z.minuten),
         naechstesEvent: naechstesEvent(z, raeume),   // läuft gerade eins / das nächste mit Minuten bis Beginn / null
@@ -610,6 +615,9 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     },
     // Menü „Mitarbeiter“ (27.11.): Ehrenamtliche mit Schichten, Termine der Woche mit ihren Stellen (dienst.js)
     dienstplan() { return kopie(dienstplanInfo(z, raeume)); },
+    // Schulungen eines Ehrenamtlichen fürs Menü „Mitarbeiter“ (null bei Hauptamtlichen); ende = Spielminute, Text macht die Oberfläche
+    schulungenInfo(personId) { const s = schulungenInfo(z, raeume, personId); return s ? kopie({ ...s, heiligkeit: Math.floor(z.heiligkeit || 0), konto: z.konto,
+      bis: s.laeuft ? zeitpunkt(s.laeuft.ende) : null, jetzt: zeitpunkt(z.minuten) }) : null; },
     // Forschungs-Fenster: Heiligkeit, Kontostand und alle Forschungen mit Zustand, Kosten, Dauer (echte Sekunden bei x1) und Fortschritt
     forschungInfo() { return { heiligkeit: z.heiligkeit, konto: z.konto, forschungen: forschungListe(z) }; },
     // Finanz-Fenster: diese Woche (nach Kategorien, Kirchkaffee im Detail), Kassenbuch der Woche, Verlauf früherer Wochen.

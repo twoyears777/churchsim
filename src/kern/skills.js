@@ -154,3 +154,22 @@ export function evangelisationStand(person) {
   const fortschritt = max ? 1 : (e - level * ES.erfahrungProLevel) / ES.erfahrungProLevel;
   return { level, maxLevel: ES.maxLevel, fortschritt, stundenBisNaechstes: max ? null : Math.ceil(((level + 1) * ES.erfahrungProLevel - e) / ES.erfahrungProStunde - 1e-9) };
 }
+
+// ── Schulungen (27.11.): ein Skill steigt um ganze Level ──
+// Gibt dem Skill genau so viel Erfahrung, wie n Level brauchen (der Fortschritt im angefangenen Level bleibt), höchstens bis zum Höchst-Level.
+const LEVEL_SKILLS = {
+  musik: { proLevel: () => MUSIK.erfahrungProLevel, max: () => MUSIK.maxLevel },
+  evangelisation: { proLevel: () => ES.erfahrungProLevel, max: () => ES.maxLevel }
+};
+export function skillLevelDazu(person, id, n) {
+  const L = LEVEL_SKILLS[id];
+  if (!L || !hatSkill(person, id) || !(n > 0)) return;
+  const s = skillsVon(person);
+  s[id] = Math.min(L.max() * L.proLevel(), (s[id] || 0) + n * L.proLevel());
+}
+// Steht der Skill schon auf dem höchsten Level?
+export function skillAmMax(person, id) {
+  if (id === 'musik') return musikLevel(person) >= MUSIK.maxLevel;
+  if (id === 'evangelisation') return evangelisationLevel(person) >= ES.maxLevel;
+  return false;
+}

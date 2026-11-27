@@ -75,11 +75,13 @@ const istHA = p => { const d = daten(p); return !!d && d.art === 'hauptamt'; };
 const darf = (s, p) => { const d = daten(p); return !!d && (s.wer === 'alle' ? d.art === 'ehrenamt' || d.art === 'hauptamt' : d.art === s.wer); };
 // Schichten pro Woche: aus den Daten der Person (Frau des Pastors 5), sonst DIENST.schichten bzw. DIENST.schichtenHauptamt.
 // Alte Spielstände: die Frau des Pastors wurde dort ohne `schichten` angelegt – sie erkennt man an `start`.
+// Schulungen (27.11.): dazu kommen die Schichten aus Schulungen (p.schichtenDazu, z. B. Worshipkonferenz).
 export function schichtenMax(p) {
   const d = daten(p) || {};
-  if (typeof d.schichten === 'number') return d.schichten;
-  if (d.art === 'hauptamt') return DIENST.schichtenHauptamt;
-  return d.start && d.name === 'Frau des Pastors' ? 5 : DIENST.schichten;
+  const dazu = p.schichtenDazu || 0;
+  if (typeof d.schichten === 'number') return d.schichten + dazu;
+  if (d.art === 'hauptamt') return DIENST.schichtenHauptamt + dazu;
+  return (d.start && d.name === 'Frau des Pastors' ? 5 : DIENST.schichten) + dazu;
 }
 const raumKey = r => Math.min(...r.zellen);
 const fertig = (r, typ) => r.typ && r.typ.id === typ && !r.probleme.length;
@@ -195,6 +197,7 @@ const ueberschneiden = (a, b) => a.von < b.bis - EPS && b.von < a.bis - EPS;
 // ---- Befehl: Stelle besetzen oder frei machen ----
 // → 'ok' | 'keine' (Termin/Stelle gibt es nicht) | 'person' (darf diese Stelle nicht übernehmen) | 'doppelt' (hat bei diesem Termin
 //   schon eine Stelle) | 'voll' (alle Schichten der Woche vergeben) | 'zeit' (überschneidet sich mit einer anderen Schicht)
+//   | 'schulung' (ist gerade auf Schulung, 27.11.)
 export function stelleSetzen(z, raeume, key, stelleId, personId) {
   dienstAnlegen(z);
   const t = dienstTermine(z, raeume).find(x => x.key === key), s = t && t.stellen.find(x => x.id === stelleId);
@@ -207,6 +210,7 @@ export function stelleSetzen(z, raeume, key, stelleId, personId) {
   const p = z.personen.find(x => x.id === personId);
   if (!p || !darf(s, p)) return 'person';
   if (personAuf(z, t, stelleId) === p) return 'ok';
+  if (p.schulung) return 'schulung';   // Schulungen (27.11.): während der Schulung keine Schichten
   const eigene = termineVon(z, raeume, p);
   if (eigene.some(x => x.t.key === key)) return 'doppelt';
   if (new Set(eigene.map(x => x.t.key)).size >= schichtenMax(p)) return 'voll';
@@ -290,6 +294,7 @@ export function besuchendeEhrenamtliche(z, raeume, L, g, zufall = Math.random) {
   if (!schichtbetrieb(z) || !g || g.typ.id !== 'gottesdienst' || L.plan.tag !== DIENST.besuch.tag || L.plan.slot !== DIENST.besuch.slot) return [];
   const bis = L.beginn + dauerVon(L.art), kommen = [];
   for (const p of ehrenamtliche(z)) {
+    if (p.schulung) continue;   // Schulungen (27.11., Lukas): wer auf Schulung ist, kommt nicht in den Gottesdienst
     if (schichtImZeitraum(z, raeume, p, L.beginn, bis)) continue;
     if (zufall() >= DIENST.besuch.chance) continue;
     const name = daten(p).name || '';
@@ -476,7 +481,7 @@ export function dienstplanInfo(z, raeume) {
   const raumInfo = nr => { const r = nr === null || nr === undefined ? null : raeume.liste[nr]; return r && r.typ ? { nr, typ: r.typ.id, name: r.typ.name, nummer: nummer(nr) } : null; };
   return {
     personen: mitarbeiter(z).map(p => { const d = daten(p); return { id: p.id, art: d.art, name: d.name, kuerzel: d.kuerzel, belegt: schichtenBelegt(z, raeume, p), max: schichtenMax(p),
-      jugend: !!(d.herkunft && d.herkunft.jugend), daheim: !!p.daheim }; }),
+      jugend: !!(d.herkunft && d.herkunft.jugend), daheim: !!p.daheim, schulung: !!p.schulung }; }),
     termine: termine.map(x => ({ key: x.key, art: x.art, tag: x.tag, slot: x.slot, veranstaltung: x.veranstaltung || null,
       veranstaltungName: ((x.veranstaltung && VERANSTALTUNGEN.find(v => v.id === x.veranstaltung)) || {}).name || null,
       raum: raumInfo(x.raum), nachRaum: raumInfo(x.nachRaum),

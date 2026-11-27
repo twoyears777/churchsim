@@ -16,6 +16,7 @@ const { neuesSpiel } = await import('./hilfen/ohne-erster.mjs');
 const { moebelSetzen } = await import('../src/kern/moebel.js');
 const { versetzen } = await import('../src/kern/personen.js');
 const { ui } = await import('../src/oberflaeche/ui.js');
+const { TEXTE } = await import('../src/inhalte/texte.js');
 const { fensterAktualisieren } = await import('../src/oberflaeche/fenster.js');
 
 const raumBei = z => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return raeume[gruppe[G.x + 5 + (G.y + 5) * z.w]]; };
@@ -166,6 +167,21 @@ function oeffnen(f, name) {
   dienstplanKlick(knopf({ dpStelle: stelle }), f);
   assert.ok(f.fehler && f.fehler.includes('Anna Test'), 'Hinweis: keine Schichten mehr');
   assert.ok(!dienstplanKlick(knopf({ dpEa: ea.id }), { art: 'raum' }), 'andere Fenster bleiben unberührt');
+  // Schulungen (27.11.): ohne Forschung nur der Hinweis, danach Knopf, Losschicken, Rückfrage beim Abbrechen
+  assert.ok(dienstplanFenster(f).includes(TEXTE.dienstplan.schulung.gesperrt), 'Schulungen gesperrt');
+  f.auswahl = ea.id; f.fehler = '';
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: { ...JSON.parse(JSON.stringify(z)), konto: 5000, heiligkeit: 1000,
+    forschung: { laeuft: null, fertig: ['schulungen1'] } } }), () => 0.5);
+  assert.ok(dienstplanFenster(f).includes('data-dp-schulung="musik"'), 'Knopf für den Musik-Kurs');
+  assert.ok(dienstplanKlick(knopf({ dpSchulung: 'musik' }), f));
+  assert.equal(f.fehler, '');
+  assert.ok(dienstplanFenster(f).includes(TEXTE.dienstplan.schulung.laeuft('Musik-Kurs', 1)), 'läuft');
+  assert.ok(dienstplanFenster(f).includes(TEXTE.dienstplan.aufSchulung), 'in der Leiste: auf Schulung');
+  assert.ok(dienstplanKlick(knopf({ dpSchulungAktion: 'abbrechen' }), f));
+  assert.ok(dienstplanFenster(f).includes(TEXTE.dienstplan.schulung.abbrechenFrage), 'Rückfrage');
+  assert.ok(dienstplanKlick(knopf({ dpSchulungAktion: 'ja' }), f));
+  assert.ok(!dienstplanFenster(f).includes(TEXTE.dienstplan.schulung.laeuft('Musik-Kurs', 1)), 'abgebrochen');
+
 }
 // Sicherung: Stürzt ein Fenster beim Aufbau ab, geht es nur zu – kein Fehler nach außen (sonst bleibt die Uhr stehen)
 {

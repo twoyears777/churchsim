@@ -36,6 +36,30 @@ function skillsZeile(id) {
     : `<span class="unter">${TEXTE.personKarte.skillsSpaeter}</span>`}</div>`;
 }
 
+// Schulungen (27.11.): im Kasten der ausgewählten Ehrenamtlichen – laufende Schulung mit Balken und Abbrechen (mit Rückfrage),
+// darunter jede Schulung mit nächster Stufe, Wirkung, Kosten, Dauer und Knopf. Ob es geht, sagt das Spiel (zustand).
+function schulungenBox(id, f) {
+  const S = TEXTE.dienstplan.schulung, s = ui.spiel.schulungenInfo(id);
+  if (!s) return '';
+  if (!s.freigeschaltet) return `<div class="dp-schulungen"><b>${S.titel}</b><span class="unter">${S.gesperrt}</span></div>`;
+  let lauf = '';
+  if (s.laeuft) {
+    const L = s.laeuft, uhr = `${String(s.bis.stunde).padStart(2, '0')}:${String(s.bis.minute).padStart(2, '0')}`;
+    lauf = `<div class="dp-schulung laeuft"><b>${esc(S.laeuft(L.name, L.stufe))}</b><small>${esc(S.bis(TEXTE.tage[s.bis.tag], uhr))}</small>${balken(L.anteil)}
+      ${f.schulungFrage
+        ? `<p class="warnung">${S.abbrechenFrage}</p><div class="zeile"><button data-dp-schulung-aktion="ja">${S.abbrechenJa}</button><button data-dp-schulung-aktion="nein">${S.abbrechenNein}</button></div>`
+        : `<div class="zeile"><button data-dp-schulung-aktion="abbrechen">${S.abbrechen}</button></div>`}</div>`;
+  }
+  const liste = s.liste.map(k => {
+    const kopf = `<b>${esc(k.name)}</b><small>${esc(S.wirkung(k.wirkung))}</small>`;
+    if (!k.stufe) return `<div class="dp-schulung fertig">${kopf}<small class="unter">${S.zustand.alle}</small></div>`;
+    const knopf = k.zustand === 'bereit' ? `<button data-dp-schulung="${esc(k.id)}">${S.schicken}</button>`
+      : `<button disabled>${S.schicken}</button><small class="unter">${S.zustand[k.zustand] || ''}</small>`;
+    return `<div class="dp-schulung">${kopf}<small>${S.stufe(k.stufe, k.maxStufe)} · ${esc(S.kosten(k.kosten.geld, k.kosten.heiligkeit))} · ${esc(S.dauer(k.tage))}</small>${knopf}</div>`;
+  }).join('');
+  return `<div class="dp-schulungen"><b>${S.titel}</b>${lauf}<div class="dp-schulung-liste">${liste}</div><span class="unter">${S.info}</span></div>`;
+}
+
 export function dienstplanFenster(f) {
   const T = TEXTE.dienstplan, alles = ui.spiel.dienstplan(), l = ui.spiel.lage();
   if (f.tag === undefined) f.tag = l.tag;
@@ -48,7 +72,7 @@ export function dienstplanFenster(f) {
   const punkte = p => Array.from({ length: p.max }, (_, i) => `<span class="dp-punkt${i < p.belegt ? ' an' : ''}"></span>`).join('');
   const leute = d.personen.length
     ? d.personen.map(p => `<button class="dp-ea${p.id === f.auswahl ? ' gewaehlt' : ''}${p.jugend ? ' jugend' : ''}" draggable="true" data-dp-ea="${esc(p.id)}">
-        <span class="dp-griff" aria-hidden="true">⋮⋮</span><b>${esc(p.name)}</b><span class="dp-punkte">${punkte(p)}</span><small>${T.schichten(p.belegt, p.max)}</small></button>`).join('')
+        <span class="dp-griff" aria-hidden="true">⋮⋮</span><b>${esc(p.name)}</b><span class="dp-punkte">${punkte(p)}</span><small>${p.schulung ? T.aufSchulung : T.schichten(p.belegt, p.max)}</small></button>`).join('')
     : `<p class="unter">${ha ? T.keineHA : T.keineEA}</p>`;
   const tage = TEXTE.tageKurz.map((name, tag) => {
     const st = d.termine.filter(t => t.tag === tag && ZAEHLT.includes(t.art)).flatMap(t => t.stellen);
@@ -64,7 +88,7 @@ export function dienstplanFenster(f) {
   const meine = !gewaehlt ? '' : `<div class="dp-meine"><b>${esc(T.meineDienste(gewaehlt.name))}</b>${dienste.length
     ? dienste.map(({ t, s }) => `<button class="dp-dienst${t.tag === f.tag ? ' offen' : ''}" data-dp-tag="${t.tag}">
         <small>${TEXTE.tageKurz[t.tag]} · ${TEXTE.kaffeeFenster.slot[t.slot]}</small><b>${esc(terminName(t))}</b><span>${esc(stelleName(s, t.stellen))}</span></button>`).join('')
-    : `<span class="unter">${esc(T.keineDienste(gewaehlt.name))}</span>`}${skillsZeile(gewaehlt.id)}</div>`;
+    : `<span class="unter">${esc(T.keineDienste(gewaehlt.name))}</span>`}${skillsZeile(gewaehlt.id)}${ha ? '' : schulungenBox(gewaehlt.id, f)}</div>`;
   const bloecke = Object.keys(TEXTE.kaffeeFenster.slot).map(slot => {
     const hier = d.termine.filter(t => t.tag === f.tag && t.slot === slot);
     const termine = hier.length ? hier.map(t => `<div class="dp-termin ${t.art}"><b>${esc(terminName(t))}</b>
@@ -99,8 +123,18 @@ function setzen(f, wert, personId) {
 // Klicks im Fenster (aus fensterEinrichten) → true, wenn es ein Knopf des Dienstplans war
 export function dienstplanKlick(b, f) {
   if (f.art !== 'dienstplan') return false;
-  if (b.dataset.dpTab) { if (f.tab !== b.dataset.dpTab) { f.tab = b.dataset.dpTab; delete f.auswahl; } f.fehler = ''; return true; }
-  if (b.dataset.dpEa) { f.auswahl = b.dataset.dpEa; f.fehler = ''; return true; }
+  if (b.dataset.dpTab) { if (f.tab !== b.dataset.dpTab) { f.tab = b.dataset.dpTab; delete f.auswahl; delete f.schulungFrage; } f.fehler = ''; return true; }
+  if (b.dataset.dpEa) { f.auswahl = b.dataset.dpEa; f.fehler = ''; delete f.schulungFrage; return true; }
+  // Schulungen (27.11.)
+  if (b.dataset.dpSchulung) {
+    const e = ui.spiel.schulungStarten(f.auswahl, b.dataset.dpSchulung);
+    f.fehler = e === 'ok' ? '' : TEXTE.dienstplan.schulung.zustand[e] || TEXTE.dienstplan.schulung.zustand.keine;
+    return true;
+  }
+  const aktion = b.dataset.dpSchulungAktion;
+  if (aktion === 'abbrechen') { f.schulungFrage = true; return true; }
+  if (aktion === 'nein') { delete f.schulungFrage; return true; }
+  if (aktion === 'ja') { ui.spiel.schulungAbbrechen(f.auswahl); delete f.schulungFrage; f.fehler = ''; return true; }
   if (b.dataset.dpTag !== undefined) { f.tag = Number(b.dataset.dpTag); f.fehler = ''; return true; }
   if (b.dataset.dpStelle) { setzen(f, b.dataset.dpStelle, f.auswahl); return true; }
   if (b.dataset.dpWeg) { const [key, stelle] = b.dataset.dpWeg.split('|'); ui.spiel.stelleSetzen(key, stelle, null); f.fehler = ''; return true; }

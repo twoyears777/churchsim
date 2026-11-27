@@ -36,6 +36,7 @@ import { dauerspenderSchritt } from './dauerspender.js';
 import { mitgliederSchritt, mitgliedWerden } from './mitglieder.js';
 import { wochenberichtSchritt, wochenberichtOffen } from './wochenbericht.js';
 import { forschungSchritt, heiligkeitFuerGottesdienst, istErforscht } from './forschung.js';
+import { schulungSchritt } from './schulungen.js';
 import { faktorAmTag } from './kalender.js';
 import { berichtDazu, berichtAblegen, berichteAufraeumen } from './berichte.js';
 import { FESTE, ZEITEN } from '../inhalte/kirchenjahr.js';
@@ -312,7 +313,7 @@ function zeitVorrueckenInnen(z, raeume, minuten, zufall) {
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), dienstSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), bueroSchritt(z, raeume), wochenberichtSchritt(z), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), dienstSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), bueroSchritt(z, raeume), wochenberichtSchritt(z), forschungSchritt(z), schulungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);

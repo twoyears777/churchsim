@@ -873,6 +873,7 @@ export const TEXTE = {
     dauerInfo: 'Gilt bei normaler Geschwindigkeit. Die Forschung läuft nur, wenn die Spielzeit läuft.',
     rest: sek => `noch ${sek >= 60 ? `${Math.floor(sek / 60)}:${String(sek % 60).padStart(2, '0')} Min.` : `${sek} Sek.`}`,
     beschreibung: { schulungen1: 'Schaltet frei, dass du Ehrenamtliche auf Schulungen schicken kannst.',
+      schulungen2: 'Schaltet Stufe 2 aller Schulungen frei.',   // ENTWURF von Claude (27.11.), Texte darf Claude festlegen
       // ENTWÜRFE von Claude (26.11.) – Lukas formuliert selbst
       slot3gottesdienst: 'Schaltet in jedem Gottesdienstraum eine 3. Veranstaltung frei.',
       slot3saal: 'Schaltet in jedem Gemeindesaal eine 3. Veranstaltung frei.' },
@@ -1033,7 +1034,40 @@ export const TEXTE = {
       zeit: name => `${name} arbeitet zu dieser Zeit schon bei einem anderen Termin.`,
       person: (_, art) => art === 'hauptamt' ? 'Diese Stelle ist nur für Ehrenamtliche.' : 'Diese Stelle ist nur für Hauptamtliche.',   // ENTWURF 27.11.
       keine: () => 'Diese Stelle gibt es nicht mehr.',
-      auswahl: tab => tab === 'hauptamt' ? 'Wähle zuerst einen Hauptamtlichen aus.' : 'Wähle zuerst einen Ehrenamtlichen aus.'   // HA: ENTWURF 27.11.
+      auswahl: tab => tab === 'hauptamt' ? 'Wähle zuerst einen Hauptamtlichen aus.' : 'Wähle zuerst einen Ehrenamtlichen aus.',   // HA: ENTWURF 27.11.
+      schulung: name => `${name} ist gerade auf Schulung.`   // Schulungen (27.11.): Text von Claude
+    },
+    // Schulungen (27.11.) – Texte von Claude (Lukas: „texte können von dir sein“)
+    aufSchulung: 'auf Schulung',
+    schulung: {
+      titel: 'Schulungen',
+      gesperrt: 'Schulungen schaltest du über die Forschung „Schulungen 1“ frei.',
+      info: 'Auf Schulung geht nur, wer keine Schicht im Dienstplan hat. Solange die Schulung läuft, ist er weg und kommt auch nicht in den Gottesdienst.',
+      laeuft: (name, stufe) => `Auf Schulung: ${name} (Stufe ${stufe})`,
+      bis: (tag, uhr) => `zurück am ${tag} um ${uhr}`,
+      stufe: (n, max) => `Stufe ${n} von ${max}`,
+      wirkung: w => [w.skill === 'musik' ? `Musik +${w.level} Level` : w.skill === 'evangelisation' ? `Evangelisation +${w.level} Level` : null,
+        w.schichten ? `+${w.schichten} ${w.schichten === 1 ? 'Schicht' : 'Schichten'} pro Woche` : null].filter(Boolean).join(' · '),
+      kosten: (geld, heiligkeit) => heiligkeit ? `${geld} € und ${heiligkeit} Heiligkeit` : `${geld} €`,
+      dauer: tage => tage % 7 === 0 ? `${tage / 7} ${tage === 7 ? 'Woche' : 'Wochen'}` : `${tage} ${tage === 1 ? 'Tag' : 'Tage'}`,
+      schicken: 'Auf Schulung schicken',
+      abbrechen: 'Schulung abbrechen',
+      abbrechenFrage: 'Wirklich abbrechen? Geld und Heiligkeit sind dann weg, die Stufe zählt nicht.',
+      abbrechenJa: 'Ja, abbrechen',
+      abbrechenNein: 'Weiter schulen',
+      zustand: {
+        alle: 'Alle Stufen gemacht',
+        forschung: 'Noch nicht erforscht',
+        max: 'Schon auf dem höchsten Level',
+        schichten: 'Erst alle Schichten austragen',
+        weg: 'Ist gerade auf Schulung',
+        geld: 'Zu wenig Geld',
+        heiligkeit: 'Zu wenig Heiligkeit',
+        beides: 'Zu wenig Geld und Heiligkeit',
+        schichtbetrieb: 'Nur mit Dienstplan',
+        person: 'Nur für Ehrenamtliche',
+        keine: 'Diese Schulung gibt es nicht'
+      }
     }
   },
   // Schichtbetrieb (27.11.) – ENTWÜRFE von Claude: geänderte Texte, wo Ehrenamtliche über den Dienstplan kommen
@@ -1041,6 +1075,6 @@ export const TEXTE = {
     kaffeeInfo: 'Das Kirchkaffee öffnet nach dem Gottesdienst für 2h und zu den Öffnungszeiten, die du hier festlegst. Bedient wird nur, wenn im Dienstplan Ehrenamtliche eingeteilt sind.',
     evangelisationInfo: 'Ehrenamtliche, die im Dienstplan für die Evangelisation eingeteilt sind, stehen hier und sprechen Passanten an. Je höher ihr Evangelisation-Level, desto eher kommen die Leute zum nächsten Gottesdienst.',
     daheim: x => `Gerade daheim: ${x}`,
-    seiteEA: (einsatz, daheim, belegt, max) => `${einsatz || (daheim ? 'daheim' : 'unterwegs')} · ${belegt}/${max} Schichten`
+    seiteEA: (einsatz, daheim, belegt, max, schulung) => `${einsatz || (schulung ? 'auf Schulung' : daheim ? 'daheim' : 'unterwegs')} · ${belegt}/${max} Schichten`   // „auf Schulung“: 27.11.
   }
 };

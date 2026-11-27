@@ -11,6 +11,8 @@ export const HEILIGKEIT = { proBesucher: 1, veranstaltungen: ['gottesdienst', 'l
 //   schaltetFrei: was die Forschung später freischaltet (noch ohne Wirkung, bis das Feature gebaut ist)
 export const FORSCHUNGEN = [
   { id: 'schulungen1', name: 'Schulungen 1', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'schulungen' },
+  // Schulungen 2 (Lukas, 27.11.): schaltet Stufe 2 aller Schulungen frei (src/inhalte/schulungen.js), braucht Schulungen 1
+  { id: 'schulungen2', name: 'Schulungen 2', kosten: { geld: 500, heiligkeit: 300 }, dauer: 180, braucht: ['schulungen1'], schaltetFrei: 'schulungen' },
   // 3. Veranstaltungsslot (Lukas, 26.11.): je Raumtyp eine eigene Forschung, Kosten und Dauer wie Schulungen 1, noch ohne Voraussetzung.
   // Freigeschaltet wird der Platz mit „forschung: …“ in PLAETZE (veranstaltungen.js) bzw. plaetze (raumtypen.js).
   { id: 'slot3gottesdienst', name: '3. Veranstaltung im Gottesdienstraum', kosten: { geld: 100, heiligkeit: 100 }, dauer: 60, braucht: [], schaltetFrei: 'platz' },
