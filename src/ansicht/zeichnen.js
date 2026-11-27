@@ -32,7 +32,7 @@ export const FARBEN = {
   vorschauWand: 'rgba(45,105,190,0.45)', vorschauAbriss: 'rgba(200,55,45,0.30)',
   auswahl: '#2d69be', text: '#2b2a27', fehler: '#b3261e',
   // Kirchkaffee (25.11., Platzhalter): Ladebalken der Maschine, grüne/rote Zahlen
-  ladenBalken: '#f2c94c', plus: '#1f8a3a', minus: '#b3261e'
+  ladenBalken: '#f2c94c', plus: '#1f8a3a', minus: '#b3261e', wcSymbol: '#d32f2f'
 };
 
 // Beschriftung unter dem Raumnamen: eingestellte Veranstaltung bzw. Zustand des Kirchkaffees
@@ -144,6 +144,11 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     menschZeichnen(ctx, ox + (b.x + 0.5) * k, oy + (b.y + 0.5) * k, besucherHoehe,
       { kleidung: b.jugend ? FARBEN.jugend : FARBEN.besucher, id: b.id, jugend: b.jugend, rand: b.id === extra.markiert ? FARBEN.auswahl : null });
   }
+  // Bedürfnis Toilette ab 80 % (Lukas, 27.11.): rotes Toiletten-Piktogramm über dem Kopf – PLATZHALTER-Aussehen von Claude
+  for (const b of z.besucher) if (b.wc) {
+    const u = besucherHoehe / 60, kopfOben = oy + (b.y + 0.5) * k - 30 * u + (b.jugend ? 14 : 0) * u;
+    wcPiktogramm(ctx, ox + (b.x + 0.5) * k, kopfOben - 2 * u, Math.max(10, k * 0.5));
+  }
   // Vornamen klein neben den Besuchern
   ctx.font = `500 11px system-ui, sans-serif`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   for (const b of z.besucher) if (b.name && !b.sitzt) { // beim Hinsetzen verschwindet der Name
@@ -206,8 +211,9 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
   }
 
   // „+1 €“ über Kunden, „−5 €“ über dem Ehrenamtlichen: steigen kurz auf und verblassen (anteil 0 → 1)
+  // Start 27.11. etwas höher (−0,9 statt −0,3), damit sie nicht über das WC-Symbol über dem Kopf laufen
   for (const e of extra.zahlen || []) {
-    const cx = ox + (e.x + 0.5) * k, cy = oy + (e.y - 0.3 - e.anteil * 1.2) * k;
+    const cx = ox + (e.x + 0.5) * k, cy = oy + (e.y - 0.9 - e.anteil * 1.2) * k;
     const betrag = Math.abs(e.betrag).toLocaleString('de-DE', e.art === 'trinkgeld' && !Number.isInteger(e.betrag) ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {});
     const text = `${e.betrag > 0 ? '+' : '−'}${betrag} €${e.art === 'trinkgeld' ? ' ' + TEXTE.kirchkaffee.trinkgeld : ''}`;
     ctx.globalAlpha = Math.max(0, 1 - e.anteil * e.anteil);
@@ -344,6 +350,24 @@ function zaunZeichnen(ctx, { k, ox, oy }) {
   for (let x = g.x; x <= g.x + g.w; x += 2) { pfosten(ox + x * k, y0); if (x <= g.tor.x || x >= g.tor.x + g.tor.breite) pfosten(ox + x * k, y1); }
   for (let y = g.y; y <= g.y + g.h; y += 2) { pfosten(x0, oy + y * k); pfosten(x1, oy + y * k); }
   pfosten(tl, y1); pfosten(tr, y1);
+}
+
+// Rotes Toiletten-Piktogramm (Kloschüssel von der Seite), unten mittig bei (cx, unten), Größe s – PLATZHALTER von Claude
+function wcPiktogramm(ctx, cx, unten, s) {
+  const x = v => cx + v * s, y = v => unten - v * s;
+  const form = () => {
+    ctx.beginPath();
+    ctx.rect(x(-0.45), y(1), s * 0.22, s * 0.5);                 // Spülkasten
+    ctx.moveTo(x(-0.25), y(0.5)); ctx.lineTo(x(0.45), y(0.5));    // Sitz
+    ctx.quadraticCurveTo(x(0.42), y(0.22), x(0.12), y(0.2));     // Schüssel
+    ctx.lineTo(x(0.18), y(0)); ctx.lineTo(x(-0.12), y(0));        // Fuß
+    ctx.lineTo(x(-0.08), y(0.24)); ctx.quadraticCurveTo(x(-0.25), y(0.3), x(-0.25), y(0.5));
+    ctx.closePath();
+  };
+  ctx.save();
+  form(); ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, s * 0.16); ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+  form(); ctx.fillStyle = FARBEN.wcSymbol; ctx.fill();
+  ctx.restore();
 }
 
 function figur(ctx, cx, cy, k, f, angehoben, schrift) {

@@ -22,6 +22,8 @@ assert.doesNotThrow(() => zeichne(scheinCtx(), karte, ansicht, {}), 'Karte läss
 // Alles anschalten, was die Umgebung extra malt (Evangelisation, Plakat, Bushaltestelle), auch wenn das Spiel es noch nicht hat
 const voll = { ...karte, evangelisation: karte.evangelisation || { x: 1, y: 1, w: 2, h: 1, leute: [] }, plakat: karte.plakat || true, bus: karte.bus || { stufe: 1 } };
 assert.doesNotThrow(() => zeichne(scheinCtx(), voll, ansicht, { raster: true }), 'Karte mit Evangelisation, Plakat und Bus lässt sich zeichnen');
+// WC-Symbol über dem Kopf (27.11.): Erwachsene und Jugendliche mit wc: true
+assert.doesNotThrow(() => zeichne(scheinCtx(), { ...karte, besucher: [{ id: 'a', x: 3, y: 3, wc: true, jugend: false, name: 'A' }, { id: 'b', x: 4, y: 3, wc: true, jugend: true, sitzt: true }] }, ansicht, {}), 'WC-Symbol lässt sich zeichnen');
 // Klick-Box des Stands „Evangelisation!“ (27.11.): deutlich größer als ein Kästchen, das Schild gehört dazu
 { const f = karte.evangelisation, { k, ox, oy } = ansicht, P = (x, y) => evangelisationsStandTrifft(ox + x * k, oy + y * k, ansicht, f);
   assert.ok(P(f.x + 0.5, f.y + 0.5), 'Mitte des Felds trifft');

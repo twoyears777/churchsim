@@ -40,7 +40,7 @@ import { festAktiv, konfiTeilnahme, konfirmieren, istJugend } from './konfi.js';
 import { foyers, foyerBonus } from './foyer.js';
 import { strasse } from './bewegung.js';
 import { evangelisationSchritt } from './evangelisation.js';
-import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen } from './toiletten.js';
+import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen, unfallSchritt } from './toiletten.js';
 import { ERSTER_GOTTESDIENST } from '../inhalte/besucher.js';
 import { ersterAnlegen, ersterOffen, zeitungOffen, zeitungSchritt, zusatzLeute, ehrenamtSicher } from './erster.js';
 import { automatenBeimAnreisen, automatenBeimHeimgehen, automatenSchritt } from './automaten.js';
@@ -282,7 +282,7 @@ export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);

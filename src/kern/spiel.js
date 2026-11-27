@@ -48,6 +48,9 @@ import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/ki
 import { besucherPositionen } from './bewegung.js';
 import { menschenStatistik } from './menschenStatistik.js';
 import { toiletteAktuell } from './toiletten.js';
+import { TOILETTE } from '../inhalte/toiletten.js';
+// Bedürfnis Toilette (27.11.): ab 80 % zeigt die Figur ein rotes WC-Symbol über dem Kopf
+const wcSymbol = (z, id) => { const w = toiletteAktuell(z, id); return w !== null && w >= TOILETTE.suchenAb; };
 import { umherPosition } from './umherlaufen.js';
 import { musikerGaenge, musikerPosition } from './musiker.js';
 import { evangelisationAnlegen, evangelisationVersetzt, evangelisationPosition, evangelisationInfo, freieEhrenamtliche } from './evangelisation.js';
@@ -520,7 +523,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         // Gottesdienst-Besucher, Passanten (ohne den, der gerade zum Pastor geht) und wer zur Seelsorge läuft
         // jugend: Jugendliche werden in einem anderen Farbton gezeichnet
         besucher: [...besucherPositionen(z, wegSpeicher), ...passantenPositionen(z).filter(b => b.id !== seelsorgeUnterwegs(z)), ...seelsorgePositionen(z),
-          ...kaffeeKundenPositionen(z)].map(b => ({ ...b, jugend: istJugend(mensch(z, b.id)) })),
+          ...kaffeeKundenPositionen(z)].map(b => ({ ...b, jugend: istJugend(mensch(z, b.id)), wc: wcSymbol(z, b.id) })),   // wc: rotes WC-Symbol ab 80 % (27.11.)
         laden: kaffeeLaden(z),     // Kaffeemaschinen, die gerade laden (Fortschritt 0–1)
         zahlen: kaffeeZahlen(z)    // „+1 €“ über Kunden, „−x €“ über dem Ehrenamtlichen nach dem Einkauf (nr: zum Wiedererkennen)
       };

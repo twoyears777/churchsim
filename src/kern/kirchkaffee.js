@@ -21,7 +21,7 @@ import { buchen, kannBezahlen } from './finanzen.js';
 import { zufriedenheitAendern, beduerfnisErfuellt } from './besucher.js';
 import { weg, glaetten } from './wege.js';
 import { punktAufWeg, strasse, strecke } from './bewegung.js';
-import { gibtToiletten, wertMitnehmen, mussZurToilette, wannZurToilette, gangJetzt, gangOrt } from './toiletten.js';
+import { gibtToiletten, wertMitnehmen, mussZurToilette, wannZurToilette, gangJetzt, gangOrt, naechsteFreieKabine } from './toiletten.js';
 import { umherPosition } from './umherlaufen.js';
 import { slotBeginn, zeitpunkt } from './zeit.js';
 import { LAUFTEMPO, SLOTS, DAUER, MELDUNG_DAUER } from '../inhalte/zeit.js';
@@ -299,6 +299,7 @@ function heimSchicken(z, k, t) {
   k.phase = 'heim';
   // Ab 80 % erst noch zur Toilette, dann heim (Lukas, 26.11.)
   const gang = wcGang(z, k, 'heim', posBei(k.bew, t), k.heimweg, t);
+  k.wcEnde = gang ? gang.zurueckBis : t;   // Toilette (27.11.): ab dem Heimweg kein Unfall mehr
   if (gang) { k.bew = { pfad: [{ ...k.heimweg }], laenge: 0, t0: gang.zurueckBis }; return; }
   k.bew = gehen(z, posBei(k.bew, t), k.heimweg, t);
 }
@@ -368,7 +369,7 @@ export function gottesdienstKunden(z, raeume, L, gaeste) {
     if (kundeAnlegen(z, stationen, { id: g.id, name: g.name }, g.sitz, ab, L.id, strasse(i))) {
       g.kaffee.ab = ab;
       const k = z.kaffee.kunden[z.kaffee.kunden.length - 1], wc0 = wertMitnehmen(g, ab);
-      if (wc0) { k.wc0 = wc0; k.gaenge = []; k.gang = null; }   // Toilettenwert läuft im Kirchkaffee weiter
+      if (wc0) { k.wc0 = wc0; k.gaenge = []; k.gang = null; k.unfaelle = 0; }   // Toilettenwert läuft im Kirchkaffee weiter
       if (g.automatOffen && g.automatOffen.length) { k.besuch = L.id; k.automatArten = g.automatOffen; g.automatOffen = []; }   // Automat: hier nachholen
     }
     else g.kaffee.ergebnis = 'keinPlatz';
@@ -573,7 +574,11 @@ export function kaffeeSchritt(z, raeume) {
     if (k.stehBis !== null) zeiten.push(k.stehBis);
     if (k.gang) zeiten.push(k.gang.zurueckBis);
     if (k.automatPlan && k.automatPlan.length) zeiten.push(Math.max(k.automatPlan[0].ab, ankunft(k.bew)));
-    else if (wc && k.wc0 && (k.phase === 'steht' || k.phase === 'sitzt')) zeiten.push(wannZurToilette(k, Math.max(t, ankunft(k.bew))));
+    else if (wc && k.wc0 && (k.phase === 'steht' || k.phase === 'sitzt')) {
+      zeiten.push(wannZurToilette(k, Math.max(t, ankunft(k.bew))));
+      // Toilette (27.11.): wer schon 80 % hat und auf eine freie Kabine wartet, schaut wieder, sobald eine frei wird
+      if (mussZurToilette(k, t)) { const frei = naechsteFreieKabine(z, t); if (frei !== null) zeiten.push(frei); }
+    }
   }
   for (const r of raeume.liste) if (r.typ && r.typ.id === 'kirchkaffee') for (const f of schichtFenster(z, r, t)) zeiten.push(f.von, f.bis);
   const naechste = Math.min(...zeiten.filter(x => x > t + EPS));

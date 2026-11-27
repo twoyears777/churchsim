@@ -57,7 +57,16 @@ const alleGaenge = z => lauf(z).gaeste.flatMap(g => g.gaenge || []);
   assert.equal(toiletteWert(g, 60), 30);
   assert.equal(toiletteWert(g, 304), 0);
   assert.equal(toiletteWert(g, 368), 10);
-  assert.equal(toiletteWert({ wc0: { t: 0, w: 90 } }, 6000), 100);
+  // Unfall bei 100 % (27.11.): Wert springt auf 50 % und steigt weiter
+  assert.ok(Math.abs(toiletteWert({ wc0: { t: 0, w: 90 } }, 59) - 99.83) < 0.01);
+  assert.equal(toiletteWert({ wc0: { t: 0, w: 90 } }, 60), 50);
+  assert.equal(toiletteWert({ wc0: { t: 0, w: 90 } }, 120), 60);
+  assert.equal(toiletteWert({ wc0: { t: 0, w: 90 } }, 360), 50);   // zweiter Unfall nach weiteren 5 Stunden
+  // Unterwegs zur Kabine: höchstens 100 %, kein Unfall
+  const u = { wc0: { t: 0, w: 90 }, gaenge: [{ hinAb: 30, anWarte: 100, drinAb: 120, drinBis: 124 }] };
+  assert.equal(toiletteWert(u, 110), 100);
+  assert.equal(toiletteWert(u, 122), 0);
+  assert.equal(toiletteWert(u, 184), 10);
   assert.equal(toiletteWert({ wc0: { t: 100, w: 0 } }, 50), null);
 }
 console.log('Grund-Tests bestanden.');
@@ -83,17 +92,25 @@ console.log('Ohne-Toilette-Tests bestanden.');
   assert.equal(kabinen(z, aus(z)).length, 0);
 }
 
-// Über 50 % beim Ankommen: erst zur Toilette, dann zum Platz. Eine Kabine: immer nur einer drin, die anderen warten.
+// Reservierung (27.11.): man kommt an, wenn die Kabine frei ist – nie zwei gleichzeitig drin, keine Schlange
+function keineUeberschneidung(gaenge) {
+  const nachKabine = new Map();
+  for (const s of gaenge.filter(x => !x.ware)) { const k = `${s.kabine.x},${s.kabine.y}`; nachKabine.set(k, [...(nachKabine.get(k) || []), s]); }
+  for (const l of nachKabine.values()) {
+    l.sort((a, b) => a.drinAb - b.drinAb);
+    for (let i = 1; i < l.length; i++) assert.ok(l[i].drinAb >= l[i - 1].drinBis - 1e-6, 'Kabine doppelt belegt');
+  }
+  for (const s of gaenge.filter(x => !x.ware)) assert.ok(s.drinAb - s.anWarte < 3, 'niemand wartet vor der Kabine');
+}
+
+// Über 50 % beim Ankommen: erst zur Toilette, dann zum Platz – aber nur, wenn die Kabine frei ist (sonst direkt zum Platz)
 {
   TOILETTE.startMin = TOILETTE.startMax = 60;
   const z = gemeinde(1);
   zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
-  const g = alleGaenge(z);
-  assert.equal(g.length, 10);
-  assert.ok(g.every(s => s.art === 'vorher'));
-  const zeiten = g.map(s => [s.drinAb, s.drinBis]).sort((a, b) => a[0] - b[0]);
-  for (let i = 1; i < zeiten.length; i++) assert.ok(zeiten[i][0] >= zeiten[i - 1][1] - 1e-6, 'Kabine doppelt belegt');
-  assert.ok(g.some(s => s.drinAb > s.anWarte + 1), 'jemand muss warten');
+  const g = alleGaenge(z).filter(s => s.art === 'vorher');
+  assert.ok(g.length > 0 && g.length < 10, `nicht alle gehen vorher (${g.length})`);
+  keineUeberschneidung(alleGaenge(z));
   assert.ok(g.every(s => s.drinBis - s.drinAb === TOILETTE.dauer));
   // Wer gerade drin ist, steht auf der Kabine; danach geht es zum Platz
   const s0 = g.sort((a, b) => a.drinAb - b.drinAb)[0], gast = lauf(z).gaeste.find(x => (x.gaenge || []).includes(s0));
@@ -125,49 +142,71 @@ console.log('Vorher-Tests bestanden.');
   zuruecksetzen();
 }
 
-// Am Platz vor der Veranstaltung: ab 80 % (hier ohne den Gang vorher).
+// Am Platz (27.11.): ab 80 % losgehen, sobald die Kabine frei ist – vor und während der Veranstaltung, immer vor 100 %
 {
-  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 30; TOILETTE.vorherAb = 100;   // schneller, damit es vor Beginn 80 % erreicht; ohne „vorher“
+  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 30; TOILETTE.vorherAb = 100;   // schneller; ohne „vorher“
   const z = gemeinde(1);
   zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
   const L = lauf(z);
   for (const g of L.gaeste) for (const s of g.gaenge) {
     assert.equal(s.art, 'sitz');
-    // vor Beginn ab 80 % (wer mit mehr ankommt: gleich), während der Veranstaltung erst ab 100 %
-    const w = toiletteWert({ wc0: g.wc0 }, s.hinAb);
-    if (s.hinAb < BEGINN) assert.ok(w >= TOILETTE.suchenAb - 1e-6);
-    else { assert.ok(w >= TOILETTE.waehrendAb - 1e-6); assert.ok(s.hinAb < BEGINN + 60); }
+    const w = toiletteWert({ wc0: g.wc0, gaenge: g.gaenge.filter(x => x.drinBis <= s.hinAb) }, s.hinAb);
+    assert.ok(w >= TOILETTE.suchenAb - 1e-6 && w < 100, `losgegangen bei ${w}`);
     assert.deepEqual(s.nach, g.sitz);
   }
+  keineUeberschneidung(alleGaenge(z));
   assert.ok(L.gaeste.some(g => g.gaenge.some(s => s.hinAb < BEGINN)));
+  zuruecksetzen();
+}
+// … auch während der Veranstaltung (80 % wird erst nach Beginn erreicht)
+{
+  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 24; TOILETTE.vorherAb = 100;
+  const z = gemeinde(1);
+  zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
+  const g = alleGaenge(z);
+  assert.ok(g.length > 0 && g.every(s => s.art === 'sitz' && s.hinAb >= BEGINN && s.hinAb < BEGINN + 60), 'während der Veranstaltung');
+  keineUeberschneidung(g);
   zuruecksetzen();
 }
 console.log('Am-Platz-Tests bestanden.');
 
-// Während der Veranstaltung erst bei 100 %; bei 80 % während der Veranstaltung wartet man bis zum Ende
+// Unfall (27.11.): Kabine zu weit weg (Umkreis) → niemand geht; bei 100 % −10 Haltung, Wert springt auf 50 %
 {
-  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.vorherAb = 100; TOILETTE.suchenAb = 200; TOILETTE.waehrendAb = 200;
-  const z0 = gemeinde(1);
-  zeitVorruecken(z0, aus(z0), BEGINN - 170 - z0.minuten, () => 0);
-  assert.equal(alleGaenge(z0).length, 0);
-  zuruecksetzen();
-
-  // Wert so, dass 100 % mitten in der Veranstaltung erreicht wird
-  TOILETTE.vorherAb = 100; TOILETTE.suchenAb = 100; TOILETTE.proStunde = 25; TOILETTE.startMin = TOILETTE.startMax = 10;
+  TOILETTE.startMin = TOILETTE.startMax = 70; TOILETTE.proStunde = 30; TOILETTE.umkreis = 1;
   const z = gemeinde(1);
   zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
-  const g = alleGaenge(z);
-  assert.ok(g.length > 0);
-  for (const s of g) { assert.equal(s.art, 'sitz'); assert.ok(s.hinAb >= BEGINN && s.hinAb < BEGINN + 60); }
+  const L = lauf(z), g = L.gaeste[0], b = z.besucher.find(x => x.id === g.id);
+  assert.equal(alleGaenge(z).length, 0);
+  zeitVorruecken(z, aus(z), g.wc0.t + 59 - z.minuten, () => 0);
+  assert.equal(b.zufriedenheit, 100);
+  assert.equal(toiletteAktuell(z, g.id), 100);
+  zeitVorruecken(z, aus(z), 2, () => 0);
+  assert.equal(b.zufriedenheit, 90, 'genau einmal −10');
+  assert.equal(toiletteAktuell(z, g.id), 51);
   zuruecksetzen();
 }
-console.log('Während-Tests bestanden.');
-
-// Nach der Veranstaltung: wer ohne Kaffee heimgeht und 80 % hat, geht vorher zur Toilette und dann heim
+// Unfall nur, wer nicht unterwegs ist: mit Kabine in der Nähe geht jeder rechtzeitig, wenn sie frei ist
 {
-  TOILETTE.startMin = TOILETTE.startMax = 40; TOILETTE.vorherAb = 100; TOILETTE.suchenAb = 80; TOILETTE.waehrendAb = 100; TOILETTE.proStunde = 12;
+  TOILETTE.startMin = TOILETTE.startMax = 70; TOILETTE.proStunde = 30; TOILETTE.vorherAb = 100;
+  const z = gemeinde(2);
+  zeitVorruecken(z, aus(z), BEGINN + 30 - z.minuten, () => 0);
+  keineUeberschneidung(alleGaenge(z));
+  assert.ok(alleGaenge(z).length >= 5);
+  for (const g of lauf(z).gaeste) for (const s of g.gaenge)   // losgegangen immer vor 100 %
+    assert.ok(toiletteWert({ wc0: g.wc0, gaenge: g.gaenge.filter(x => x.drinBis <= s.hinAb) }, s.hinAb) < 100);
+  zuruecksetzen();
+}
+console.log('Unfall-Tests bestanden.');
+
+// Nach der Veranstaltung: wer ohne Kaffee heimgeht und 80 % hat, geht vorher zur Toilette (wenn sie frei ist) und dann heim.
+// Dafür kurz vor Ende alle auf knapp 80 % setzen – so erreichen sie die 80 % erst beim Heimgehen.
+{
+  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.vorherAb = 100; TOILETTE.suchenAb = 80; TOILETTE.proStunde = 12;
   const z = gemeinde(1);
-  zeitVorruecken(z, aus(z), BEGINN + 61 - z.minuten, () => 0);
+  zeitVorruecken(z, aus(z), BEGINN + 59 - z.minuten, () => 0);
+  for (const g of lauf(z).gaeste) { g.wc0 = { t: z.minuten, w: 79.9 }; g.gaenge = []; }
+  z.wc.belegt = [];
+  zeitVorruecken(z, aus(z), 2, () => 0);
   const heim = alleGaenge(z).filter(s => s.art === 'heim');
   assert.ok(heim.length > 0);
   for (const s of heim) assert.ok(s.hinAb >= BEGINN + 60);
@@ -183,10 +222,11 @@ console.log('Heimweg-Tests bestanden.');
 
 // Fällt die Veranstaltung aus (Pastor nicht im Raum), fallen noch nicht begonnene Gänge am Platz weg
 {
-  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.vorherAb = 100; TOILETTE.suchenAb = 100; TOILETTE.proStunde = 25; TOILETTE.startMin = TOILETTE.startMax = 10;
+  TOILETTE.vorherAb = 100; TOILETTE.proStunde = 24; TOILETTE.startMin = TOILETTE.startMax = 0;   // alle erst während der Veranstaltung
   const z = gemeinde(1);
   zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
   assert.ok(alleGaenge(z).length > 0);
+  assert.ok(alleGaenge(z).every(s => s.hinAb >= BEGINN), 'noch keiner losgegangen');
   versetzen(z, z.personen[0], G.x + 10, G.y + 12);   // Pastor geht raus
   zeitVorruecken(z, aus(z), BEGINN + 1 - z.minuten, () => 0);
   assert.equal(alleGaenge(z).length, 0);
@@ -219,11 +259,17 @@ function kaffeeGemeinde(mitWc = true) {
 const schritte = (z, bis, jedesMal = () => {}) => { while (z.minuten < bis) { zeitVorruecken(z, aus(z), 1, () => 0); jedesMal(); } };
 {
   // vorher und während der Veranstaltung nie, damit alle mit hohem Wert ins Kirchkaffee kommen
-  TOILETTE.vorherAb = 100; TOILETTE.waehrendAb = 200; TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 25;
+  TOILETTE.vorherAb = 100; TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 25;
+  TOILETTE.umkreis = 100;   // in diesem Aufbau liegt die Toilette weiter als 30 Kästchen vom Kirchkaffee entfernt
   const z = kaffeeGemeinde();
   const gesehen = new Map();   // id → Kunde (mit seinen Gängen), auch nachdem er heimgegangen ist
-  let inKabine = false;
+  let inKabine = false, gesetzt = false;
   schritte(z, BEGINN + 900, () => {
+    // kurz vor Ende des Gottesdienstes alle auf 70 % setzen (27.11.: sonst gehen sie schon während des Gottesdienstes)
+    if (!gesetzt && z.minuten >= BEGINN + 55) {
+      gesetzt = true; z.wc.belegt = [];
+      for (const g of z.laeufe.flatMap(L => L.gaeste || [])) { g.wc0 = { t: z.minuten, w: 70 }; g.gaenge = (g.gaenge || []).filter(s => s.ware); }
+    }
     for (const k of z.kaffee ? z.kaffee.kunden : []) gesehen.set(k.id, k);
     for (const k of z.kaffee ? z.kaffee.kunden : []) {
       if (!k.gang || z.minuten < k.gang.drinAb || z.minuten >= k.gang.drinBis) continue;
@@ -236,7 +282,8 @@ const schritte = (z, bis, jedesMal = () => {}) => { while (z.minuten < bis) { ze
   assert.ok(inKabine);
   assert.equal(gesehen.size, 5);
   const gaenge = [...gesehen.values()].flatMap(k => (k.gaenge || []).map(s => ({ k, s })));
-  assert.ok(gaenge.length >= 5);
+  assert.ok(gaenge.length >= 2);   // 27.11.: ohne Schlange kommt nur dran, wer eine freie Kabine erwischt
+  keineUeberschneidung(gaenge.map(x => x.s));
   for (const { k, s } of gaenge) {
     assert.ok(['kaffee', 'heim'].includes(s.art));
     assert.ok(toiletteWert({ wc0: k.wc0, gaenge: k.gaenge.filter(x => x !== s && x.drinBis <= s.hinAb) }, s.hinAb) >= TOILETTE.suchenAb - 1e-6);
@@ -251,7 +298,7 @@ const schritte = (z, bis, jedesMal = () => {}) => { while (z.minuten < bis) { ze
 }
 {
   // Ohne Toilette: kein Gang, das Kirchkaffee läuft wie bisher
-  TOILETTE.vorherAb = 100; TOILETTE.waehrendAb = 200; TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 25;
+  TOILETTE.vorherAb = 100; TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 25;
   const z = kaffeeGemeinde(false);
   const gesehen = new Map();
   schritte(z, BEGINN + 900, () => { for (const k of z.kaffee ? z.kaffee.kunden : []) gesehen.set(k.id, k); });
