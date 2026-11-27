@@ -28,7 +28,6 @@ import { LAUFTEMPO, SLOTS, DAUER, MELDUNG_DAUER } from '../inhalte/zeit.js';
 import { AENDERUNG } from '../inhalte/besucher.js';
 import { PREIS_TASSE, MAX_SCHICHTEN, SCHICHT_ENDE, LADEN_MINUTEN, EINKAUF, STEHEN_PASSANT, SITZEN } from '../inhalte/kirchkaffee.js';
 import { GRUNDSTUECK, GEHWEGE, LADEN } from '../inhalte/umgebung.js';
-import { AUTOMAT } from '../inhalte/automaten.js';
 import { kaufzeitenImKirchkaffee, gangJetztZumAutomaten, automatZumAuffuellen, auffuellen, auffuellPlatz } from './automaten.js';
 
 const EPS = 1e-6;
@@ -478,11 +477,11 @@ function stationSchritt(z, stationen, s, t, zufall) {
     m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, maschine: { x: maschine.x, y: maschine.y } };
     geh(LADEN.eingang); return true;
   }
-  // Automaten im Raum auffüllen (26.11.): wie beim Kaffee – nur was fehlt, höchstens AUTOMAT.tragen auf einmal
+  // Automaten im Raum auffüllen (26.11.): wie beim Kaffee. 27.11.: erst ab auffuellenAb fehlenden, dann alles bis voll
   const reserviert = new Set(Object.values(K.ma).filter(x => x !== m && x.aufgabe && x.aufgabe.automat).map(x => idx(z, x.aufgabe.automat.x, x.aufgabe.automat.y)));
   const au = !(K.gesperrt[id] > t) && automatZumAuffuellen(z, s.raum, reserviert);
   if (au) {
-    const menge = Math.min(AUTOMAT.tragen, au.fehlt), preis = Math.round(menge * au.typ.einkauf * 100) / 100;
+    const menge = au.fehlt, preis = Math.round(menge * au.typ.einkauf * 100) / 100;
     if (!kannBezahlen(z, preis)) { keinGeld(z, p, t, au.typ.id); return true; }
     m.aufgabe = { art: 'einkauf', phase: 'hin', menge, preis, ware: au.typ.id, automat: { x: au.m.x, y: au.m.y }, platz: auffuellPlatz(z, s.raum, au.m) };
     geh(LADEN.eingang); return true;

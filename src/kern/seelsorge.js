@@ -10,7 +10,9 @@ import { mensch } from './ort.js';
 import { LAUFTEMPO } from '../inhalte/zeit.js';
 import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
-import { strasse, punktAufWeg } from './bewegung.js';
+import { strasse, punktAufWeg, strecke } from './bewegung.js';
+import { gangOrt } from './toiletten.js';
+import { automatGangSeelsorge, nachherBesuch } from './automaten.js';
 import { seelsorgeStufe, seelsorgePunkteDazu, seelsorgerVon } from './skills.js';
 
 export function seelsorgeAnlegen(z) {
@@ -53,7 +55,7 @@ function planen(z, tag, zufall) {
     if (t >= z.minuten) S.pruefungen.push(t);
   }
 }
-function pruefen(z, gesperrt, zufall) {
+function pruefen(z, gesperrt, zufall, raeume) {
   const S = z.seelsorge;
   if (S.anfrage || S.gang || gesperrt(z)) return;
   const stunden = 7 * (SEELSORGE.bis - SEELSORGE.von);
@@ -66,8 +68,22 @@ function pruefen(z, gesperrt, zufall) {
   const sit = auswahl[Math.floor(zufall() * auswahl.length)];
   S.letzte = sit.id; S.anzahl++;
   const hin = wegZumPastor(z, zufall);
-  if (hin) S.gang = { id: p.id, situation: sit.id, t0: z.minuten, hin, da: false, zurueck: null };   // erst hinlaufen
+  if (hin) {
+    S.gang = { id: p.id, situation: sit.id, t0: z.minuten, hin, da: false, zurueck: null };   // erst hinlaufen
+    // Getränkeautomat (Lukas, 27.11.): vielleicht erst über den Automaten zum Pastor
+    const v = raeume && automatGangSeelsorge(z, raeume, besuchVon(S.gang), p.id, hin.pfad[0], hin.pfad[hin.pfad.length - 1], z.minuten);
+    if (v) S.gang.vor = v;
+  }
   else S.anfrage = { id: p.id, situation: sit.id, phase: 'frage', ergebnis: null };              // kein Weg: gleich fragen
+}
+// Kennung des Besuchs (für den Automaten) und wann man beim Pastor ankommt bzw. wieder vom Gelände ist
+const besuchVon = G => `ss:${G.t0}:${G.id}`;
+const ankunftVon = G => G.vor ? G.vor.zurueckBis : G.t0 + G.hin.laenge / LAUFTEMPO;
+const wegVon = G => G.nach ? G.nach.zurueckBis : G.zurueck.t0 + G.hin.laenge / LAUFTEMPO;
+// Nach dem Gespräch (Lukas, 27.11.): vielleicht über den Automaten zurück zum Tor
+function rueckwegPlanen(z, raeume) {
+  const G = z.seelsorge.gang, pfad = G.hin.pfad;
+  G.nach = (raeume && automatGangSeelsorge(z, raeume, nachherBesuch(besuchVon(G)), G.id, pfad[pfad.length - 1], pfad[0], G.zurueck.t0)) || null;
 }
 // Angekommen beim Pastor: jetzt kommt die Anfrage (die Zeit hält an)
 function ankommen(z) {
@@ -77,16 +93,18 @@ function ankommen(z) {
 }
 
 // Nächster Schritt (für das Tick-System). gesperrt(z) sagt, ob gerade keine Anfrage kommen darf (Gottesdienst).
-export function seelsorgeSchritt(z, gesperrt, zufall) {
+// raeume (27.11.): für den Weg über den Getränkeautomaten (ohne raeume: direkt)
+export function seelsorgeSchritt(z, gesperrt, zufall, raeume = null) {
   if (z.ortRuhig) return null;                                           // nur für Tests
   const S = z.seelsorge, tag = Math.floor(z.minuten / TAG_MIN), morgen = (tag + 1) * TAG_MIN, G = S.gang;
   if (S.tag < tag) return { zeit: z.minuten, tun: () => planen(z, tag, zufall) };
-  if (G && !G.da) return { zeit: Math.max(z.minuten, G.t0 + G.hin.laenge / LAUFTEMPO), tun: () => ankommen(z) };
+  if (G && !G.da) return { zeit: Math.max(z.minuten, ankunftVon(G)), tun: () => ankommen(z) };
+  if (G && G.zurueck && !('nach' in G)) return { zeit: z.minuten, tun: () => rueckwegPlanen(z, raeume) };
   if (G && G.zurueck) {                                                   // wieder heim: am Tor verschwinden
-    const weg = G.zurueck.t0 + G.hin.laenge / LAUFTEMPO;
+    const weg = wegVon(G);
     if (weg < morgen) return { zeit: Math.max(z.minuten, weg), tun: () => { S.gang = null; } };
   }
-  if (S.pruefungen.length && S.pruefungen[0] < morgen) return { zeit: S.pruefungen[0], tun: () => { S.pruefungen.shift(); pruefen(z, gesperrt, zufall); } };
+  if (S.pruefungen.length && S.pruefungen[0] < morgen) return { zeit: S.pruefungen[0], tun: () => { S.pruefungen.shift(); pruefen(z, gesperrt, zufall, raeume); } };
   return { zeit: morgen, tun: () => planen(z, tag + 1, zufall) };
 }
 
@@ -171,10 +189,17 @@ export function einschaetzen(chance) {
 }
 
 // Wo läuft die Person gerade, die zum Pastor will (oder wieder heim)? Aus der Spielzeit berechnet.
+const automatWege = new Map();   // Wege über den Automaten (nur für die Anzeige, wird nicht gespeichert)
 export function seelsorgePositionen(z) {
   const G = z.seelsorge && z.seelsorge.gang, p = G && mensch(z, G.id);
   if (!p) return [];
-  const L = G.hin.laenge;
+  const L = G.hin.laenge, t = z.minuten, figur = pos => [{ id: p.id, name: p.vorname, x: pos.x, y: pos.y, sitzt: false, seelsorge: true }];
+  // Über den Getränkeautomaten (27.11.): hin (G.vor) bzw. zurück (G.nach)
+  if (automatWege.size > 40) automatWege.clear();
+  const st = (k, a, b) => strecke(z, automatWege, k, a, b), schl = besuchVon(G);
+  if (G.vor && !G.da) return figur(gangOrt(G.vor, t, st, punktAufWeg, schl + ':v'));
+  if (G.zurueck && G.nach) return t < G.nach.zurueckBis ? figur(gangOrt(G.nach, t, st, punktAufWeg, schl + ':n')) : [];
+  if (G.zurueck && !('nach' in G)) return figur(G.hin.pfad[G.hin.pfad.length - 1]);
   let d = G.zurueck ? L + (z.minuten - G.zurueck.t0) * LAUFTEMPO : G.da ? L : (z.minuten - G.t0) * LAUFTEMPO;
   if (d > 2 * L) return [];
   const pos = d <= L ? punktAufWeg(G.hin, d) : punktAufWeg({ pfad: [...G.hin.pfad].reverse() }, d - L);

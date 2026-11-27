@@ -1,10 +1,11 @@
 // Spiellogik der Automaten (Spielprinzip claude/spielprinzip-getraenkeautomat.md, Lukas 26.11.2026). Kennt keine Grafik.
 //
 // Gilt für jeden Automaten aus inhalte/automaten.js (bisher: Getränkeautomat):
-//   • Wer auf dem Kirchengelände ist, kauft mit `chance` einmal pro Besuch etwas – „gewürfelt“ fest aus Besuch und Person,
-//     damit sich kein anderer Zufall im Spiel verschiebt (wie beim Toilettenwert).
-//       – Gäste einer Veranstaltung: irgendwann zwischen Ankunft am Platz und kurz vor Beginn, wenn dafür Zeit ist.
-//         Sonst danach: im Kirchkaffee (während sie dort sind) oder auf dem Heimweg über den Automaten.
+//   • Wer auf dem Kirchengelände ist, kauft mit `chance` etwas – „gewürfelt“ fest aus Besuch und Person,
+//     damit sich kein anderer Zufall im Spiel verschiebt (wie beim Toilettenwert). 27.11.: je eine Chance vorher und nachher.
+//       – Gäste einer Veranstaltung: vorher irgendwann zwischen Ankunft am Platz und kurz vor Beginn, wenn dafür Zeit ist
+//         (sonst wird der Wunsch nachher erfüllt). Nachher: im Kirchkaffee (während sie dort sind) oder auf dem Heimweg.
+//       – Seelsorge (27.11.): auf dem Weg zum Pastor und auf dem Rückweg zum Tor (seelsorge.js).
 //       – Kunden des Kirchkaffees zu den Öffnungszeiten: irgendwann während sie dort stehen oder sitzen (kirchkaffee.js).
 //   • Der Gang zum Automaten läuft wie ein Toilettengang (toiletten.js → gangZu): hin, evtl. anstehen, kurz am Automaten,
 //     zurück an den Platz. Bezahlt wird am Ende der Zeit am Automaten: Ware da → Preis als Einnahme, + Haltung;
@@ -41,6 +42,8 @@ function fest(schluessel) {
 }
 // Will diese Person bei diesem Besuch etwas aus diesem Automaten? (besuch: Kennung des Besuchs)
 export function willKaufen(a, besuch, personId) { return fest(`${a.id}:${besuch}:${personId}`) < a.chance; }
+// Zweite Chance nach der Veranstaltung bzw. dem Gespräch (Lukas, 27.11.): eigener Besuchs-Schlüssel „…:nachher“
+export const nachherBesuch = besuch => `${besuch}:nachher`;
 const zeitpunktAnteil = (a, besuch, personId) => fest(`${a.id}:${besuch}:${personId}:wann`);
 
 // Alle Automaten dieser Art, an denen verkauft wird (fertiger Raum des richtigen Typs), mit dem Platz davor
@@ -101,6 +104,10 @@ export function automatenBeimAnreisen(z, raeume, L, start, beginn) {
       }
       if (!geplant) (g.automatOffen = g.automatOffen || []).push(a.id);   // keine Zeit vorher: danach (Kirchkaffee oder Heimweg)
     }
+    // Zweite Chance nachher (Lukas, 27.11.): wer nachher will, kauft im Kirchkaffee oder auf dem Heimweg (einmal je Automat)
+    for (const a of arten) {
+      if (willKaufen(a, nachherBesuch(L.id), g.id) && !(g.automatOffen || []).includes(a.id)) (g.automatOffen = g.automatOffen || []).push(a.id);
+    }
   });
 }
 // Nach der Veranstaltung (ablauf.js, nach den Toilettengängen): Wer noch etwas will und gleich heimgeht, geht über den Automaten.
@@ -133,12 +140,25 @@ export function kaufzeitenImKirchkaffee(z, raeume, besuch, personId, von, bis, a
 // Gang jetzt planen (Kunde im Kirchkaffee, steht/sitzt an platz) → Gang oder null
 export function gangJetztZumAutomaten(z, raeume, art, platz, t) { return gangPlanen(z, raeume, art, platz, platz, t); }
 
+// Seelsorge (Lukas, 27.11.): Gang über den Automaten – von → Automat → nach, ab Zeit ab – wenn die Person bei diesem
+// Besuch etwas will (besuch: Kennung, für nachher mit nachherBesuch). Nur ein Automat pro Gang. → Gang oder null
+export function automatGangSeelsorge(z, raeume, besuch, personId, von, nach, ab) {
+  for (const a of AUTOMATEN) {
+    if (!willKaufen(a, besuch, personId) || !ziele(z, raeume, a.id).length) continue;
+    const gang = gangPlanen(z, raeume, a.id, von, nach, ab);
+    if (gang) return gang;
+  }
+  return null;
+}
+
 // ---- Bezahlen ----
 const menschVon = (z, id) => z.besucher.find(b => b.id === id) || (z.ort ? z.ort.leute.find(p => p.id === id) : null) || null;
 function offeneKaeufe(z) {
   const liste = [];
   for (const L of z.laeufe || []) for (const g of L.gaeste || []) for (const s of g.gaenge || []) if (s.ware && !s.ergebnis) liste.push({ s, id: g.id });
   for (const k of (z.kaffee && z.kaffee.kunden) || []) for (const s of k.gaenge || []) if (s.ware && !s.ergebnis) liste.push({ s, id: k.id });
+  const G = z.seelsorge && z.seelsorge.gang;   // Seelsorge (27.11.): auf dem Hin- oder Rückweg
+  if (G) for (const s of [G.vor, G.nach]) if (s && s.ware && !s.ergebnis) liste.push({ s, id: G.id });
   return liste;
 }
 // Am Ende der Zeit am Automaten: Ware da → bezahlen, sonst leer
@@ -167,13 +187,14 @@ export function automatenSchritt(z) {
 }
 
 // ---- Auffüllen (kirchkaffee.js) ----
-// Automat im Raum, der nicht voll ist und den gerade kein anderer Ehrenamtlicher auffüllt → { m, typ, fehlt } oder null
+// Automat im Raum, dem mindestens auffuellenAb Waren fehlen (Lukas, 27.11.) und den gerade kein anderer Ehrenamtlicher
+// auffüllt → { m, typ, fehlt } oder null
 export function automatZumAuffuellen(z, raum, reserviert) {
   for (const a of AUTOMATEN) {
     if (raum.typ && raum.typ.id !== a.raum) continue;
     for (const m of moebelImRaum(z, raum, a.id)) {
       const fehlt = lagerVon(m) - (m.fuellung || 0);
-      if (fehlt > 0 && !reserviert.has(idx(z, m.x, m.y))) return { m, typ: a, fehlt };
+      if (fehlt >= Math.max(1, a.auffuellenAb || 1) && !reserviert.has(idx(z, m.x, m.y))) return { m, typ: a, fehlt };
     }
   }
   return null;
