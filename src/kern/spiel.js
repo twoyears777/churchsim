@@ -27,7 +27,7 @@ import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVerans
   veranstaltungEinstellen, terminEinstellen, prognose, finanzPrognose, terminDieseWoche, ablaufAnlegen, laufVon,
   naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon, naechstesEvent, plaetzeVon, platzSperre, terminStand } from './ablauf.js';
 import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
-  schichtHinzufuegen, schichtEntfernen, offenBei } from './kirchkaffee.js';
+  schichtHinzufuegen, schichtEntfernen, offenBei, kaffeeVersetzt } from './kirchkaffee.js';
 import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { bausteineVon } from './bausteine.js';
 import { lobpreisVorliebe, kaffeeVorliebe } from './besucher.js';
@@ -50,7 +50,7 @@ import { menschenStatistik } from './menschenStatistik.js';
 import { toiletteAktuell } from './toiletten.js';
 import { umherPosition } from './umherlaufen.js';
 import { musikerGaenge, musikerPosition } from './musiker.js';
-import { evangelisationAnlegen, evangelisationPosition, evangelisationInfo, freieEhrenamtliche } from './evangelisation.js';
+import { evangelisationAnlegen, evangelisationVersetzt, evangelisationPosition, evangelisationInfo, freieEhrenamtliche } from './evangelisation.js';
 import { EVANGELISATION } from '../inhalte/evangelisation.js';
 import { ortAnlegen, passantenPositionen, ortMeldung, mensch, neugierChance, neugierTeile } from './ort.js';
 import { gelaende, aushaenge, aushangGilt, aushangSetzen } from './gelaende.js';
@@ -354,7 +354,13 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     personVersetzen(id, x, y) {
       const p = z.personen.find(q => q.id === id);
       if (!p || (p.x === x && p.y === y)) return false;
-      return aendern(() => versetzen(z, p, x, y));
+      // Wer gerade zur Evangelisation oder für das Kirchkaffee unterwegs ist, bricht das sofort ab (27.11.) –
+      // sonst würde er bis zur nächsten Kontrolle noch am alten Ort gezeichnet.
+      return aendern(() => {
+        const ok = versetzen(z, p, x, y);
+        if (ok) { evangelisationVersetzt(z, p); kaffeeVersetzt(z, p.id); }
+        return ok;
+      });
     },
     raumTypSetzen(nr, typId) { const r = raeume.liste[nr]; if (r) aendern(() => typZuweisen(z, r, typId || null)); },
     // Art einer Veranstaltung (platz 0 = Veranstaltung 1) → 'ok' | 'gesperrt' (Platz noch nicht frei) | 'keine'

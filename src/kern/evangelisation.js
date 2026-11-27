@@ -108,6 +108,15 @@ function gutschreiben(m, p, bisT) {
   if (ende > von) { evangelisationErfahrungDazu(p, ende - von); m.gezaehlt = ende; }
 }
 
+// Vom Spieler versetzt (27.11.): Gang zur Evangelisation sofort beenden, damit die Figur gleich am neuen Platz steht.
+// Die Zeit vor Ort wird vorher noch gutgeschrieben – wie sonst bei der nächsten Kontrolle auch.
+export function evangelisationVersetzt(z, p) {
+  const A = z.evangelisation, m = A && A.ma[p.id];
+  if (!m) return;
+  if (m.phase !== 'zurueck') gutschreiben(m, p, z.minuten);
+  delete A.ma[p.id];
+}
+
 // ---- Alles bis jetzt Fällige ausführen ----
 export function evangelisationAktualisieren(z, raeume) {
   evangelisationAnlegen(z);

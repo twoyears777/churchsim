@@ -405,6 +405,14 @@ function abbrechen(z, id) {
     maschine.fuellung = Math.min(fassung('kaffeemaschine'), (maschine.fuellung || 0) + a.menge);
 }
 
+// Vom Spieler versetzt (27.11.): Aufgabe sofort abbrechen (wie sonst bei der nächsten Kontrolle), damit die Figur
+// gleich am neuen Platz steht – auch bei Pause.
+export function kaffeeVersetzt(z, id) {
+  if (!z.kaffee || !z.kaffee.ma[id]) return;
+  abbrechen(z, id);
+  delete z.kaffee.ma[id];
+}
+
 // Ein Schritt für eine Station → true, wenn sich etwas geändert hat
 function stationSchritt(z, stationen, s, t, zufall) {
   const K = z.kaffee, p = s.ea, id = p.id;
