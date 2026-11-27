@@ -26,13 +26,20 @@ export function fensterSchliessen() {
 }
 export function fensterOffen() { return !maske().hidden; }
 
+function fensterInhalt(f) {
+  return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
+    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster }[f.art](f);
+}
 // Wird bei jeder Anzeige-Aktualisierung aufgerufen; baut das Fenster nur neu, wenn sich der Inhalt geändert hat.
 export function fensterAktualisieren() {
   const f = ui.fenster, m = maske();
   if (!f) { m.hidden = true; return; }
-  let inhalt = { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
-    menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster }[f.art](f);
+  // Sicherung (27.11.): Stürzt der Aufbau eines Fensters ab, geht nur dieses Fenster zu – das Spiel läuft weiter.
+  // (In 0.1.17 hielt so ein Fehler die Uhr an, weil er bei jedem Bild erneut auftrat.)
+  let inhalt;
+  try { inhalt = fensterInhalt(f); }
+  catch (fehler) { console.error('Fenster „' + f.art + '“ ließ sich nicht aufbauen:', fehler); inhalt = null; }
   if (inhalt === null) { ui.fenster = null; m.hidden = true; return; }
   // ✕ oben rechts in jedem Fenster, das man schließen darf (bleibt beim Scrollen sichtbar)
   if (schliessbar(f)) inhalt = `<button class="fenster-x" data-zu aria-label="Schließen" title="Schließen">✕</button>` + inhalt;

@@ -49,4 +49,13 @@ function oeffnen(f, name) {
   assert.notStrictEqual(nr, null, 'Foyer wird beim Klick gefunden');
   oeffnen({ art: 'foyer', nr }, 'Foyer-Fenster mit Mitarbeiter');
 }
+// Sicherung: Stürzt ein Fenster beim Aufbau ab, geht es nur zu – kein Fehler nach außen (sonst bleibt die Uhr stehen)
+{
+  const echt = console.error; console.error = () => {};
+  ui.spiel = { raumInfo() { throw new Error('Testfehler'); } };
+  ui.fenster = { art: 'raum', nr: 0 };
+  assert.doesNotThrow(() => fensterAktualisieren(), 'Fehler im Fenster reißt das Spiel nicht mit');
+  assert.strictEqual(ui.fenster, null, 'kaputtes Fenster wird geschlossen');
+  console.error = echt;
+}
 console.log('fenster: alles ok');

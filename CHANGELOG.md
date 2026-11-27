@@ -3,6 +3,12 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.18
+
+**Fehler behoben**
+- Gottesdienstraum und Foyer lassen sich wieder anklicken, wenn ein Mitarbeiter darin steht
+- Das Schild „Evangelisation!“ ist größer und wird nicht mehr abgeschnitten
+
 ## 0.1.17
 
 **Technik**

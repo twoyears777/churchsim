@@ -68,14 +68,17 @@ function schleife(t) {
   letzteZeit = t;
   const hilfeOffen = !!ui.fenster && ui.fenster.art === 'hilfe';   // Hilfe offen: dem Spiel keine Zeit melden → Zeit steht
   if (ui.menueOffen) { requestAnimationFrame(schleife); return; }   // Hauptmenü offen: Zeit steht, keine Dialoge
-  if (!hilfeOffen && ui.spiel.tick(sekunden)) {
-    malen();
-    if (t - letztesSpeichern > 2000) { letztesSpeichern = t; speichern(ui.spiel); }
-  } else if (ui.spiel.seelsorgeOffen() && (!ui.fenster || ui.fenster.art !== 'seelsorge')) {
-    ui.anzeigeErzwingen(); malen();   // Seelsorge-Anfrage ist gekommen: Dialog zeigen
-  } else if (ui.spiel.festOffen() && (!ui.fenster || ui.fenster.art !== 'fest')) {
-    ui.anzeigeErzwingen(); malen();   // Fest-Menü steht an: Fenster zeigen
-  }
+  // Sicherung (27.11.): Ein Fehler in einem einzelnen Bild darf die Uhr nicht für immer anhalten – das nächste Bild kommt trotzdem.
+  try {
+    if (!hilfeOffen && ui.spiel.tick(sekunden)) {
+      malen();
+      if (t - letztesSpeichern > 2000) { letztesSpeichern = t; speichern(ui.spiel); }
+    } else if (ui.spiel.seelsorgeOffen() && (!ui.fenster || ui.fenster.art !== 'seelsorge')) {
+      ui.anzeigeErzwingen(); malen();   // Seelsorge-Anfrage ist gekommen: Dialog zeigen
+    } else if (ui.spiel.festOffen() && (!ui.fenster || ui.fenster.art !== 'fest')) {
+      ui.anzeigeErzwingen(); malen();   // Fest-Menü steht an: Fenster zeigen
+    }
+  } catch (fehler) { console.error('Fehler in der Spiel-Uhr:', fehler); }
   requestAnimationFrame(schleife);
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') speichern(ui.spiel); });
