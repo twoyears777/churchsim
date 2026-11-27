@@ -288,9 +288,6 @@ function umgebungZeichnen(ctx, z, ansicht) {
     ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(cx - b / 2, cy - h / 2, b, h);
     ctx.fillStyle = FARBEN.text; ctx.fillText(TEXTE.laden, cx, cy + 1);
   }
-  // Feld „Evangelisation!“ vor dem Laden (26.11.): kleiner Stand mit Schild – Aussehen ist ein Platzhalter von Claude
-  if (z.evangelisation) evangelisationsFeld(ctx, ansicht, z.evangelisation);
-
   for (const g of GEHWEGE) {
     ctx.fillStyle = FARBEN.gehweg; ctx.fillRect(...P(g.x, g.y, g.w, g.h));
     ctx.strokeStyle = FARBEN.gehwegFuge; ctx.lineWidth = 1; ctx.beginPath();
@@ -313,6 +310,10 @@ function umgebungZeichnen(ctx, z, ansicht) {
     if (a === b || a.richtung !== 'waagrecht' || b.richtung !== 'senkrecht') continue;
     ctx.fillStyle = FARBEN.asphalt; ctx.fillRect(...P(b.x, a.y, b.w, a.h));
   }
+
+  // Feld „Evangelisation!“ vor dem Laden (26.11.): kleiner Stand mit Schild – Aussehen ist ein Platzhalter von Claude.
+  // Erst nach Gehwegen und Straßen malen, sonst schneiden sie das Schild ab (Fehler, Lukas 27.11.).
+  if (z.evangelisation) evangelisationsFeld(ctx, ansicht, z.evangelisation);
 
   // Eigenes Grundstück: Rasen und Einfahrt zum Tor
   const g = GRUNDSTUECK;
@@ -428,8 +429,9 @@ function evangelisationsFeld(ctx, { k, ox, oy }, f) {
   const px = ox + f.x * k, py = oy + f.y * k;
   ctx.fillStyle = FARBEN.evangelisation; ctx.fillRect(px + k * 0.08, py + k * 0.08, k * 0.84, k * 0.84);
   ctx.strokeStyle = FARBEN.evangelisationRand; ctx.lineWidth = Math.max(1.5, k * 0.1); ctx.strokeRect(px + k * 0.08, py + k * 0.08, k * 0.84, k * 0.84);
-  ctx.font = `600 ${Math.max(9, k * 0.5)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const text = TEXTE.evangelisation.feld, b = ctx.measureText(text).width + 8, h = Math.max(13, k * 0.7);
+  // Schild so groß wie das Schild „Laden“ (27.11., vorher kleiner)
+  ctx.font = `600 ${Math.max(11, k * 0.7)}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const text = TEXTE.evangelisation.feld, b = ctx.measureText(text).width + 12, h = Math.max(16, k * 0.95);
   const cx = px + k / 2, cy = py - h / 2 - k * 0.1;
   ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(cx - b / 2, cy - h / 2, b, h);
   ctx.strokeStyle = FARBEN.evangelisationRand; ctx.lineWidth = 1; ctx.strokeRect(cx - b / 2, cy - h / 2, b, h);

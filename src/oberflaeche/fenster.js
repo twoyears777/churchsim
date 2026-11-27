@@ -8,6 +8,7 @@ import { HILFE } from '../inhalte/hilfe.js';
 import { VERSION } from '../version.js';
 
 const maske = () => $('maske');
+const ART_TEXT = TEXTE.personKarte.art;   // „Hauptamtlich“ / „Ehrenamtlich“ für die Mitarbeiter-Kacheln im Raum- und Foyer-Fenster (fehlte in 0.1.17: Raum-Fenster ging nicht mehr auf)
 const faktor = f => f.toLocaleString('de-DE', { maximumFractionDigits: 2 });
 let letzterInhalt = '';
 
