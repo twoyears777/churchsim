@@ -3,6 +3,23 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.20
+
+**Ehrenamtliche**
+- Neu: Dienstplan im Menü „Mitarbeiter“ – teile Ehrenamtliche als Wochenkalender in Schichten ein (3 pro Woche, Frau des Pastors 5); ohne Schicht sind sie daheim
+- Neu: Raum „Lager“ mit Regal – Logistik-Ehrenamtliche kaufen Kaffee und Automaten-Ware ein und füllen auf
+- Evangelisation ist jetzt eine eigene Stelle im Dienstplan
+
+**Veranstaltungen**
+- Der Lobpreisgottesdienst braucht jetzt einen Ehrenamtlichen an der Gitarre, sonst fällt er aus
+
+**Kirchkaffee**
+- Zu jeder Öffnungszeit kommen mindestens ein paar Gäste – mehr Stühle, Tische, Automaten und Theken locken mehr an
+- Getränkeautomat: Besucher kaufen vorher und nachher, auch Seelsorge-Besucher; aufgefüllt wird ab 10 fehlenden Getränken
+
+**Wochenzusammenfassung**
+- Neu: Jeden Montag um 8:00 zeigt das Spiel einen Rückblick auf die letzte Woche mit Vergleich zur Vorwoche, nach einem Monatsersten auch den Monatsblick
+
 ## 0.1.19
 
 **Bauen**
