@@ -18,6 +18,8 @@ import { lagerVon, willKaufen, nachherBesuch, automatenImBetrieb, automatenSchri
 import { seelsorgeSchritt, seelsorgePositionen, ablehnen, schliessen } from '../src/kern/seelsorge.js';
 import { toiletteWert } from '../src/kern/toiletten.js';
 import { TAG_MIN } from '../src/kern/zeit.js';
+import { ANKUNFT_SPIELRAUM } from '../src/inhalte/zeit.js';
+import { strasse } from '../src/kern/bewegung.js';
 
 const SO = 6 * TAG_MIN;
 const GA = AUTOMATEN.find(a => a.id === 'getraenkeautomat');
@@ -47,7 +49,7 @@ function gemeinde({ stuehle = 20, besucher = 20 } = {}) {
   return { z, aus, ea, automat, kk };
 }
 const bis = (z, aus, minute) => { while (z.minuten < minute) zeitVorruecken(z, aus(), Math.min(5, minute - z.minuten), () => 0); };
-const automatGaenge = L => L.gaeste.flatMap(g => (g.gaenge || []).filter(s => s.art === 'automat').map(s => ({ g, s })));
+const automatGaenge = L => L.gaeste.flatMap(g => (g.gaenge || []).filter(s => s.ware && s.art === 'vorher').map(s => ({ g, s })));   // 27.11.: auf dem Weg zum Platz
 
 // Steckbrief, Bauleiste, Finanzen: alles kommt aus inhalte/automaten.js
 {
@@ -112,11 +114,12 @@ console.log('Steckbrief-Tests bestanden.');
 console.log('Auffüll-Tests bestanden.');
 
 // Gottesdienst-Gäste: je 50 % vorher und nachher (fest „gewürfelt“, 27.11.), 3 €, +5 Haltung je Kauf.
-// Ist vor Beginn Zeit, gehen sie vorher hin und zurück an den Platz – sonst wird der Wunsch nachher erfüllt (Heimweg über den Automaten).
+// 27.11.: Vorher gehen sie auf dem Weg vom Tor zum Platz über den Automaten und sitzen trotzdem genau zum Beginn (höchstens
+// ANKUNFT_SPIELRAUM zu früh) – geht das nicht, wird der Wunsch nachher erfüllt (Heimweg über den Automaten).
 // Wer vorher und nachher will, kauft zwei Getränke; wer vorher keine Zeit hatte, nachher aber auch will, kauft eins.
 const erwartet = (L, g) => {
   const v = willKaufen(GA, L.id, g.id), n = willKaufen(GA, nachherBesuch(L.id), g.id);
-  const vorherGekauft = (g.gaenge || []).some(s => s.art === 'automat');
+  const vorherGekauft = (g.gaenge || []).some(s => s.ware && s.art === 'vorher');
   return (vorherGekauft ? 1 : 0) + ((v && !vorherGekauft) || n ? 1 : 0);
 };
 {
@@ -131,7 +134,10 @@ const erwartet = (L, g) => {
   assert.ok(nachher.length > 3 && nachher.length < L.gaeste.length - 3, `etwa die Hälfte will nachher etwas (${nachher.length})`);
   assert.ok(L.gaeste.some(g => wollen.includes(g) && nachher.includes(g)) && L.gaeste.some(g => wollen.includes(g) !== nachher.includes(g)));   // unabhängig
   const vorherGaenge = automatGaenge(L);
-  assert.ok(vorherGaenge.every(({ g, s }) => s.zurueckBis <= L.beginn - AUTOMAT.vorlauf && s.nach.x === g.sitz.x && s.nach.y === g.sitz.y));
+  assert.ok(vorherGaenge.length > 3, `einige kaufen auf dem Weg (${vorherGaenge.length})`);
+  assert.ok(vorherGaenge.every(({ g, s }) => s.zurueckBis <= L.beginn + 1e-6 && s.zurueckBis >= L.beginn - ANKUNFT_SPIELRAUM - 1e-6
+    && s.nach.x === g.sitz.x && s.nach.y === g.sitz.y && s.von.y === strasse(0).y && g.los === s.hinAb), 'auf dem Weg, pünktlich zum Beginn');
+  assert.ok(vorherGaenge.every(({ s }) => s.drinAb - s.anWarte < 1.5), 'niemand steht am Automaten an');
   assert.ok(vorherGaenge.every(({ g }) => wollen.includes(g)));
   assert.ok(wollen.every(g => (g.gaenge || []).some(s => s.ware) || (g.automatOffen || []).includes('getraenkeautomat')));   // vorher – oder danach
   assert.ok(nachher.every(g => (g.automatOffen || []).includes('getraenkeautomat')));

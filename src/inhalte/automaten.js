@@ -33,6 +33,6 @@ export const AUTOMATEN = [
 
 // Für alle Automaten gleich
 export const AUTOMAT = {
-  kaufMinuten: 2.5, // PLATZHALTER von Claude: so lange steht ein Kunde am Automaten (wie die Kaffeemaschine lädt; bei x1 = 1 Sekunde; 27.11.: vorher 5)
-  vorlauf: 10       // Gäste einer Veranstaltung sind spätestens so viele Spielminuten vor Beginn vom Automaten zurück
+  kaufMinuten: 2.5  // PLATZHALTER von Claude: so lange steht ein Kunde am Automaten (wie die Kaffeemaschine lädt; bei x1 = 1 Sekunde; 27.11.: vorher 5)
+  // (27.11.: „vorlauf“ entfällt – Gäste gehen jetzt auf dem Weg zum Platz zum Automaten und sitzen genau zum Beginn)
 };

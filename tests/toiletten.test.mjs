@@ -144,7 +144,7 @@ console.log('Vorher-Tests bestanden.');
 
 // Am Platz (27.11.): ab 80 % losgehen, sobald die Kabine frei ist – vor und während der Veranstaltung, immer vor 100 %
 {
-  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 30; TOILETTE.vorherAb = 100;   // schneller; ohne „vorher“
+  TOILETTE.startMin = TOILETTE.startMax = 60; TOILETTE.proStunde = 30; TOILETTE.vorherAb = 100;   // schneller; ohne „vorher“
   const z = gemeinde(1);
   zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
   const L = lauf(z);
@@ -155,12 +155,13 @@ console.log('Vorher-Tests bestanden.');
     assert.deepEqual(s.nach, g.sitz);
   }
   keineUeberschneidung(alleGaenge(z));
-  assert.ok(L.gaeste.some(g => g.gaenge.some(s => s.hinAb < BEGINN)));
+  // 27.11.: Sie sitzen erst ab Beginn – der Gang vom Platz aus beginnt also frühestens dann
+  assert.ok(L.gaeste.some(g => g.gaenge.length) && L.gaeste.every(g => g.gaenge.every(s => s.hinAb >= BEGINN - 1e-6)));
   zuruecksetzen();
 }
 // … auch während der Veranstaltung (80 % wird erst nach Beginn erreicht)
 {
-  TOILETTE.startMin = TOILETTE.startMax = 0; TOILETTE.proStunde = 24; TOILETTE.vorherAb = 100;
+  TOILETTE.startMin = TOILETTE.startMax = 70; TOILETTE.proStunde = 24; TOILETTE.vorherAb = 100;   // 27.11.: man läuft erst kurz vor Beginn los
   const z = gemeinde(1);
   zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
   const g = alleGaenge(z);
@@ -222,7 +223,7 @@ console.log('Heimweg-Tests bestanden.');
 
 // Fällt die Veranstaltung aus (Pastor nicht im Raum), fallen noch nicht begonnene Gänge am Platz weg
 {
-  TOILETTE.vorherAb = 100; TOILETTE.proStunde = 24; TOILETTE.startMin = TOILETTE.startMax = 0;   // alle erst während der Veranstaltung
+  TOILETTE.vorherAb = 100; TOILETTE.proStunde = 24; TOILETTE.startMin = TOILETTE.startMax = 70;   // alle erst während der Veranstaltung (27.11.: Losgehen kurz vor Beginn)
   const z = gemeinde(1);
   zeitVorruecken(z, aus(z), BEGINN - 170 - z.minuten, () => 0);
   assert.ok(alleGaenge(z).length > 0);

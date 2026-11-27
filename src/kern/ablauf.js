@@ -3,7 +3,7 @@
 // Mehrere Abläufe können gleichzeitig laufen (z. B. Heimweg vom Vormittag, während die Besucher für den Nachmittag kommen): z.laeufe.
 //
 // Ablauf eines Termins (Zeiten in Spielminuten):
-//   Beginn − 180 Anreise: Es wird ausgelost, wer kommt; die Besucher laufen los.
+//   Beginn − 180 Anreise: Es wird ausgelost, wer kommt. Jeder läuft so los, dass er genau zum Beginn sitzt (27.11.).
 //   Beginn       Veranstaltung beginnt – nur, wenn ein Hauptamtlicher im Raum ist (und was sie sonst braucht). Sonst fällt sie aus.
 //   Beginn + 60  Gottesdienst zu Ende: Kollekte (Stuhl, Altar, Grünpflanzen, Musik), Bekanntheit; wer Kaffee will
 //                (Chance = Kaffee-Wert), stellt sich im Kirchkaffee an (Bedienung: kirchkaffee.js).
@@ -11,7 +11,7 @@
 //   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche.
 //                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
 import { VERANSTALTUNGEN, SONNTAG, PLAETZE, ZWEITER_PLATZ_STANDARD, DRITTER_PLATZ_STANDARD, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
-import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN, HEIMWEG, WOCHENBERICHT } from '../inhalte/zeit.js';
+import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN, HEIMWEG, WOCHENBERICHT, LAUFTEMPO } from '../inhalte/zeit.js';
 import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
@@ -45,7 +45,8 @@ import { festAktiv, konfiTeilnahme, konfirmieren, istJugend } from './konfi.js';
 import { foyers, foyerBonus } from './foyer.js';
 import { strasse } from './bewegung.js';
 import { evangelisationSchritt } from './evangelisation.js';
-import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen, unfallSchritt } from './toiletten.js';
+import { gaengeBeimAnreisen, gaengeBeimHeimgehen, gaengeAbsagen, unfallSchritt, wegInfo } from './toiletten.js';
+import { wiesenKarte } from './wege.js';
 import { ERSTER_GOTTESDIENST } from '../inhalte/besucher.js';
 import { ersterAnlegen, ersterOffen, zeitungOffen, zeitungSchritt, zusatzLeute, ehrenamtSicher } from './erster.js';
 import { automatenBeimAnreisen, automatenBeimHeimgehen, automatenSchritt } from './automaten.js';
@@ -469,9 +470,16 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
   L.ankunft = z.minuten;
   const platz = i => frei ? (sitze.length ? { ...sitze[i % sitze.length] } : { ...tuer }) : i < sitze.length ? sitze[i] : null;
   L.gaeste = kommen.map((b, i) => ({ id: b.id, name: b.vorname, voll: b.voll, sitz: platz(i), tuer, kaffee: null }));
+  // Pünktlich (Lukas, 27.11.): Jeder läuft so los, dass er genau zum Beginn an seinem Platz sitzt (bzw. an der Tür steht,
+  // wenn kein Platz frei ist). Wer unterwegs noch zur Toilette oder zum Automaten geht, läuft entsprechend früher los (unten).
+  const wiese = wiesenKarte(z);
+  L.gaeste.forEach((g, i) => {
+    const w = wegInfo(z, strasse(i), g.sitz || g.tuer, wiese);
+    g.los = Math.max(L.ankunft, L.beginn - (w ? w.laenge : 0) / LAUFTEMPO);
+  });
   // Bedürfnis Toilette (26.11.): Startwerte und geplante Toilettengänge (toiletten.js)
   gaengeBeimAnreisen(z, raeume, L, strasse, L.beginn, L.beginn + dauerVon(L.art));
-  // Automaten (26.11.): Wer etwas kauft, geht vor Beginn einmal hin und zurück an seinen Platz (automaten.js)
+  // Automaten (26.11.; 27.11.: auf dem Weg zum Platz, pünktlich zum Beginn): Wer etwas kauft, geht vorher über den Automaten (automaten.js)
   automatenBeimAnreisen(z, raeume, L, strasse, L.beginn);
 }
 // Freie Kästchen im Raum (ohne Möbel)

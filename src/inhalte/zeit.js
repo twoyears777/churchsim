@@ -13,10 +13,14 @@ export const STANDARD_PLAN = { tag: 6, slot: 'vormittag' };  // bei Spielbeginn:
 export const DAUER = { gottesdienst: 60, kirchkaffee: 120 };  // Spielminuten; Kirchkaffee nach dem Gottesdienst 2 Stunden (Lukas, 25.11.)
 
 // Laufen der Besucher (in Spielminuten, damit es mit den Zeit-Knöpfen schneller und langsamer wird)
-export const ANREISE_VORLAUF = 180;   // so viele Minuten vor Beginn machen sich die Besucher auf den Weg
+export const ANREISE_VORLAUF = 180;   // so viele Minuten vor Beginn wird ausgelost, wer kommt (27.11.: losgelaufen wird erst so, dass man pünktlich sitzt)
 // Lukas, 27.11.: Die Spielstunde dauert doppelt so lange, die Figuren bleiben auf dem Bildschirm so schnell wie bisher –
 // deshalb sind alle Figuren-Zeiten in Spielminuten halbiert (Laufen, Abstand, Kaffeemaschine, Automat, Toilette, Halt am Tor, Umherlaufen).
 export const LAUFTEMPO = 0.85;        // Kästchen pro Spielminute (27.11.: verdoppelt, siehe oben; danach Lukas, 27.11.: alle Figuren 1,7-mal so schnell)
+// Pünktlich (Lukas, 27.11.): Besucher laufen so los, dass sie genau zum Beginn sitzen. Wer unterwegs zur Toilette oder zum
+// Automaten geht und dort nicht genau dann drankäme, darf höchstens so viele Spielminuten zu früh sitzen – sonst geht er direkt
+// zum Platz (Toilette) bzw. kauft nachher (Automat). PLATZHALTER von Claude (bei x1 = 4 Sekunden).
+export const ANKUNFT_SPIELRAUM = 10;
 export const ABSTAND = 1;             // Spielminuten zwischen zwei Besuchern (27.11.: vorher 2)
 export const HEIMWEG = 120;           // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause (stand bis 26.11. in kern/ablauf.js)
 

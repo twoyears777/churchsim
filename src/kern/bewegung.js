@@ -4,7 +4,7 @@ import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { LAUFTEMPO, ABSTAND, DAUER } from '../inhalte/zeit.js';
 import { hindernisBei } from './moebel.js';
 import { weg, glaetten } from './wege.js';
-import { gangBei, gangOrt } from './toiletten.js';
+import { gangBei, gangOrt, losZeit } from './toiletten.js';
 
 // Wegstücke werden einmal berechnet und gemerkt (Schlüssel → Pfad und Länge)
 export function strecke(z, speicher, schluessel, von, nach) {
@@ -47,7 +47,7 @@ function laufPositionen(z, speicher, L) {
   if (!L.gaeste) return [];
   const st = (s, a, b) => strecke(z, speicher, s, a, b);
   return L.gaeste.map((g, i) => {
-    const s = `${L.id}:${i}:`, start = strasse(i), t0 = L.ankunft + i * ABSTAND;
+    const s = `${L.id}:${i}:`, start = strasse(i), t0 = losZeit(L, g, i);
     if (t < t0) return null;
     const hin = st(s + 'hin', start, g.sitz || g.tuer);
     let ort = punktAufWeg(hin, (t - t0) * LAUFTEMPO), sitzt = !!g.sitz && !ort.unterwegs, ziel = g.sitz;

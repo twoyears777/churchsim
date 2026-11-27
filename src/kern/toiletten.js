@@ -11,7 +11,7 @@
 // auf 50 % und steigt weiter (unfallSchritt). Ab 80 % zeigt die Figur ein rotes WC-Symbol (spiel.js → karte).
 // Ein Gang: { art, von, kabine, warte (Platz davor), nach, hinAb, anWarte, drinAb, drinBis, zurueckBis, lHin, lZurueck }.
 import { TOILETTE } from '../inhalte/toiletten.js';
-import { LAUFTEMPO, ABSTAND } from '../inhalte/zeit.js';
+import { LAUFTEMPO, ABSTAND, ANKUNFT_SPIELRAUM } from '../inhalte/zeit.js';
 import { moebelImRaum, hindernisBei } from './moebel.js';
 import { weg, glaetten, wiesenKarte } from './wege.js';
 import { zufriedenheitAendern } from './besucher.js';
@@ -144,12 +144,49 @@ function toilettenGang(z, liste, art, von, nach, hinAb, wiese, { nah = von, bis 
   belegungMerken(belegt, gang);
   return gang;
 }
+// Rückwärts suchen: spätester Beginn ≤ s, zu dem das Ziel für die Dauer frei ist
+function freiBis(belegt, k, s, dauer) {
+  const liste = belegt.filter(b => b.x === k.x && b.y === k.y);
+  for (let n = 0; n <= liste.length; n++) {
+    const b = liste.find(b => s + dauer > b.von + EPS && s < b.bis - EPS);
+    if (!b) return s;
+    s = b.von - dauer;
+  }
+  return -Infinity;
+}
+// Gang auf dem Weg (Lukas, 27.11.: „Besucher sitzen genau zum Beginn“): von → Ziel (Toilette oder Automat) → nach, so spät
+// losgehen, dass man genau zur Zeit ankunft an „nach“ ist. Das Ziel ist genau dann frei, wenn man dort ankommt (keine Schlange).
+// Gewählt wird das Ziel, mit dem man am pünktlichsten ankommt (bei Gleichstand der kürzere Weg).
+// frueh: frühestens losgehen. nah/umkreis: nur Ziele höchstens umkreis Kästchen Laufweg von nah.
+// Ist das Ziel genau dann belegt, darf man höchstens ANKUNFT_SPIELRAUM Minuten zu früh ankommen – sonst null. → Gang oder null
+export function gangAufDemWeg(z, ziele, art, von, nach, ankunft, frueh, { belegt, dauer, nah = null, umkreis = Infinity, wiese = wiesenKarte(z) }) {
+  let best = null;
+  for (const k of ziele) {
+    if (nah) { const n = wegInfo(z, nah, k, wiese); if (!n || n.laenge > umkreis + EPS) continue; }
+    const hin = wegInfo(z, von, k, wiese), zurueck = hin && wegInfo(z, k, nach, wiese);
+    if (!hin || !zurueck) continue;
+    const drinAb = freiBis(belegt, k, ankunft - zurueck.laenge / LAUFTEMPO - dauer, dauer), los = drinAb - hin.laenge / LAUFTEMPO;
+    if (los < frueh - EPS) continue;   // ginge nur, wenn man schon früher losgelaufen wäre
+    const an = drinAb + dauer + zurueck.laenge / LAUFTEMPO;
+    if (an < ankunft - ANKUNFT_SPIELRAUM - EPS) continue;   // wäre zu früh da
+    if (!best || an > best.an + EPS || (Math.abs(an - best.an) < EPS && los > best.los + EPS)) best = { k, hin, zurueck, drinAb, los, an };
+  }
+  if (!best) return null;
+  const { k, hin, zurueck, drinAb, los, an } = best;
+  const lWarte = Math.hypot(hin.vorZiel.x - k.x, hin.vorZiel.y - k.y), lHin = Math.max(0, hin.laenge - lWarte);
+  const gang = { art, von: { ...von }, kabine: { ...k }, warte: { x: hin.vorZiel.x, y: hin.vorZiel.y }, nach: { ...nach }, hinAb: los,
+    anWarte: los + lHin / LAUFTEMPO, drinAb, drinBis: drinAb + dauer, zurueckBis: an, lHin, lZurueck: zurueck.laenge };
+  belegungMerken(belegt, gang);
+  return gang;
+}
 // Allgemeiner Gang zu einem von mehreren Zielen (z. B. Platz vor einem Automaten). ziele: [{ x, y, … }] – weitere Felder
 // (etwa die Lage des Automaten) landen im Gang unter „kabine“. → Gang oder null
 export function gangZu(z, ziele, art, von, nach, hinAb, { belegt, dauer, merken = true }) {
   if (!ziele.length) return null;
   return gangPlanen(z, ziele, art, { x: Math.round(von.x), y: Math.round(von.y) }, nach, hinAb, wiesenKarte(z), belegt, dauer, merken);
 }
+// Wann läuft Gast i los? (27.11.: eigene Zeit je Gast, g.los – alte Spielstände: alle kurz nacheinander ab Beginn der Anreise)
+export const losZeit = (L, g, i) => typeof g.los === 'number' ? g.los : L.ankunft + i * ABSTAND;
 const gangDazu = (L, g, gang) => { if (!gang) return; (g.gaenge = g.gaenge || []).push(gang); L.wcBis = Math.max(L.wcBis || 0, gang.zurueckBis); };
 // Alte Belegungen vergessen
 function aufraeumen(z) { z.wc.belegt = z.wc.belegt.filter(b => b.bis > z.minuten - 60); }
@@ -162,7 +199,7 @@ export function gaengeBeimAnreisen(z, raeume, L, start, beginn, ende) {
   const wiese = liste.length ? wiesenKarte(z) : null;
   const plaene = [];
   L.gaeste.forEach((g, i) => {
-    const t0 = L.ankunft + i * ABSTAND;
+    const t0 = losZeit(L, g, i);
     g.wc0 = { t: t0, w: startWert(L.id, g.id) };
     g.gaenge = []; g.unfaelle = 0;
     if (!g.sitz) g.wcEnde = t0;   // kein Platz frei: geht gleich wieder heim
@@ -175,10 +212,12 @@ export function gaengeBeimAnreisen(z, raeume, L, start, beginn, ende) {
     const { g, i, t0 } = p;
     let sitztAb = p.amPlatz;
     if (toiletteWert(g, p.amPlatz) > TOILETTE.vorherAb) {
-      // nur, wenn beim Losgehen eine Kabine in der Nähe des Platzes frei ist – sonst direkt zum Platz
-      const gang = gangPlanen(z, liste, 'vorher', start(i), g.sitz, t0, wiese, undefined, undefined, true, { nah: g.sitz, bis: t0 });
+      // Auf dem Weg (27.11.): so früh los, dass er trotz Toilette pünktlich zum Beginn sitzt – nur mit einer Kabine in der Nähe
+      // des Platzes, die frei ist, wenn er hinkommt; sonst direkt zum Platz
+      const gang = gangAufDemWeg(z, liste, 'vorher', start(i), g.sitz, p.amPlatz, L.ankunft,
+        { belegt: z.wc.belegt, dauer: TOILETTE.dauer, nah: g.sitz, umkreis: TOILETTE.umkreis, wiese });
       gangDazu(L, g, gang);
-      if (gang) sitztAb = gang.zurueckBis;
+      if (gang) { g.los = gang.hinAb; g.wc0.t = gang.hinAb; sitztAb = gang.zurueckBis; }
     }
     // Am Platz (27.11.): ab 80 % losgehen, sobald eine Kabine in der Nähe frei ist – vor und während der Veranstaltung.
     // Wird bis 100 % keine frei: Unfall (−10 Haltung, 50 %), danach wieder ab 80 %.

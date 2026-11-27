@@ -3,8 +3,8 @@
 // Gilt für jeden Automaten aus inhalte/automaten.js (bisher: Getränkeautomat):
 //   • Wer auf dem Kirchengelände ist, kauft mit `chance` etwas – „gewürfelt“ fest aus Besuch und Person,
 //     damit sich kein anderer Zufall im Spiel verschiebt (wie beim Toilettenwert). 27.11.: je eine Chance vorher und nachher.
-//       – Gäste einer Veranstaltung: vorher irgendwann zwischen Ankunft am Platz und kurz vor Beginn, wenn dafür Zeit ist
-//         (sonst wird der Wunsch nachher erfüllt). Nachher: im Kirchkaffee (während sie dort sind) oder auf dem Heimweg.
+//       – Gäste einer Veranstaltung: vorher auf dem Weg zum Platz, pünktlich zum Beginn (27.11.; geht das nicht, wird der
+//         Wunsch nachher erfüllt). Nachher: im Kirchkaffee (während sie dort sind) oder auf dem Heimweg.
 //       – Seelsorge (27.11.): auf dem Weg zum Pastor und auf dem Rückweg zum Tor (seelsorge.js).
 //       – Kunden des Kirchkaffees zu den Öffnungszeiten: irgendwann während sie dort stehen oder sitzen (kirchkaffee.js).
 //   • Der Gang zum Automaten läuft wie ein Toilettengang (toiletten.js → gangZu): hin, evtl. anstehen, kurz am Automaten,
@@ -13,12 +13,12 @@
 //   • Aufgefüllt wird vom Kirchkaffee-Ehrenamtlichen, wenn das Kirchkaffee zu hat (kirchkaffee.js → Einkauf im Laden).
 //   • Verbesserungen (stufen) sind vorbereitet: Lager und Wert hängen schon an der Stufe des Automaten (m.stufe).
 import { AUTOMATEN, AUTOMAT } from '../inhalte/automaten.js';
-import { ABSTAND, LAUFTEMPO } from '../inhalte/zeit.js';
+import { ABSTAND } from '../inhalte/zeit.js';
 import { idx, LEER } from './karte.js';
 import { moebelBei, moebelImRaum } from './moebel.js';
 import { buchen } from './finanzen.js';
 import { zufriedenheitAendern } from './besucher.js';
-import { gangZu, belegungMerken, wegInfo } from './toiletten.js';
+import { gangZu, gangAufDemWeg } from './toiletten.js';
 import { wiesenKarte } from './wege.js';
 import { zahlZeigen } from './kirchkaffee.js';
 
@@ -76,33 +76,27 @@ function gangPlanen(z, raeume, art, von, nach, ab, merken = true) {
   if (gang) { gang.ware = art; gang.automat = { x: gang.kabine.ax, y: gang.kabine.ay }; }
   return gang;
 }
-const ueberschneidet = (gaenge, s) => (gaenge || []).find(x => x !== s && s.hinAb < x.zurueckBis - EPS && x.hinAb < s.zurueckBis - EPS) || null;
 
-// Gäste einer Veranstaltung (ablauf.js → gaesteAuslosen, nach den Toilettengängen): Wer kauft, geht irgendwann zwischen
-// Ankunft am Platz und kurz vor Beginn zum Automaten und zurück. Überschneidet es sich mit einem Toilettengang, geht er danach.
+// Gäste einer Veranstaltung (ablauf.js → gaesteAuslosen, nach den Toilettengängen). Lukas, 27.11.: Wer kauft, geht auf dem Weg
+// zum Platz über den Automaten und läuft so viel früher los, dass er trotzdem genau zum Beginn sitzt (g.los).
+// Nur ein Automat auf dem Weg; wer schon über die Toilette geht oder keinen passenden Moment findet, kauft nachher.
 export function automatenBeimAnreisen(z, raeume, L, start, beginn) {
   const arten = AUTOMATEN.filter(a => ziele(z, raeume, a.id).length);
   if (!arten.length || !L.gaeste) return;
-  const wiese = wiesenKarte(z), spaetestens = beginn - AUTOMAT.vorlauf;
+  automatenAnlegen(z); aufraeumen(z);
+  const wiese = wiesenKarte(z);
   L.gaeste.forEach((g, i) => {
     if (!g.sitz) return;
-    const vorher = (g.gaenge || []).find(s => s.art === 'vorher');
-    let amPlatz = vorher ? vorher.zurueckBis : null;
-    if (amPlatz === null) { const w = wegInfo(z, start(i), g.sitz, wiese); amPlatz = L.ankunft + i * ABSTAND + (w ? w.laenge : 0) / LAUFTEMPO; }
+    let unterwegs = (g.gaenge || []).some(s => s.art === 'vorher');   // geht schon über die Toilette
     for (const a of arten) {
       if (!willKaufen(a, L.id, g.id)) continue;
-      let ab = amPlatz + zeitpunktAnteil(a, L.id, g.id) * Math.max(0, spaetestens - amPlatz), geplant = false;
-      for (let versuch = 0; versuch < 4 && amPlatz < spaetestens; versuch++) {
-        const gang = gangPlanen(z, raeume, a.id, g.sitz, g.sitz, ab, false);
-        if (!gang || gang.zurueckBis > spaetestens) break;
-        const im = ueberschneidet(g.gaenge, gang);
-        if (im) { ab = im.zurueckBis; continue; }
-        belegungMerken(z.automaten.belegt, gang);
-        (g.gaenge = g.gaenge || []).push(gang);
-        geplant = true;
-        break;
-      }
-      if (!geplant) (g.automatOffen = g.automatOffen || []).push(a.id);   // keine Zeit vorher: danach (Kirchkaffee oder Heimweg)
+      const gang = unterwegs ? null : gangAufDemWeg(z, ziele(z, raeume, a.id), 'vorher', start(i), g.sitz, beginn, L.ankunft,
+        { belegt: z.automaten.belegt, dauer: AUTOMAT.kaufMinuten, wiese });
+      if (!gang) { (g.automatOffen = g.automatOffen || []).push(a.id); continue; }   // danach (Kirchkaffee oder Heimweg)
+      gang.ware = a.id; gang.automat = { x: gang.kabine.ax, y: gang.kabine.ay };
+      (g.gaenge = g.gaenge || []).push(gang);
+      g.los = gang.hinAb;
+      unterwegs = true;
     }
     // Zweite Chance nachher (Lukas, 27.11.): wer nachher will, kauft im Kirchkaffee oder auf dem Heimweg (einmal je Automat)
     for (const a of arten) {
