@@ -42,10 +42,10 @@ export function parkplaetzeAuswerten(z, gruppe = erkenneRaeume(z).gruppe) {
   return { angeschlossen, parkplaetze: z.moebel.filter(m => m.art === 'parkplatz').length, verbunden };
 }
 
-// Wie viele Menschen die Gemeinde schon kennt: Besucher + Passanten im Ort + Ehrenamtliche aus Besuchern
+// Wie viele Menschen die Gemeinde schon kennt: Besucher + Passanten im Ort.
+// Ehrenamtliche zählen seit 27.11. nicht mehr mit (Lukas): Wer Ehrenamtlicher wird, macht im Einzugsgebiet Platz für neue Menschen.
 export function erreicht(z) {
-  const ehrenamt = (z.personen || []).filter(p => p.daten && p.daten.art === 'ehrenamt' && !p.daten.start).length;   // Start-Ehrenamtliche zählen nicht
-  return (z.besucher || []).length + (z.ort ? z.ort.leute.length : 0) + ehrenamt;
+  return (z.besucher || []).length + (z.ort ? z.ort.leute.length : 0);
 }
 
 // Die Grenze und woraus sie sich zusammensetzt

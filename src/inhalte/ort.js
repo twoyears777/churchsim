@@ -12,7 +12,7 @@ export const NEUGIER = {
   grund: 0.05,              // Chance, neugierig zu werden: 5 % ...
   proBekanntheit: 0.005,    // ... + halbe Bekanntheit in % (Bekanntheit 20 → +10 %)
   kommChance: 0.75,         // ein Neugieriger kommt mit dieser Chance zum nächsten Gottesdienst (sonst wieder Passant)
-  haltMinuten: 15           // so lange (Spielminuten) bleibt er am Tor stehen
+  haltMinuten: 7.5          // so lange (Spielminuten) bleibt er am Tor stehen (27.11.: vorher 15, bei x1 weiter 3 Sekunden)
 };
 
 // Plakat an der Pforte (Spielprinzip vom 25.11.): kostet 5 €, hängt bis zum nächsten Gottesdienst.

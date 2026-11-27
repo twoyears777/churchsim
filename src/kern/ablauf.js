@@ -12,7 +12,7 @@
 //                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
 import { VERANSTALTUNGEN, SONNTAG, PLAETZE, ZWEITER_PLATZ_STANDARD, DRITTER_PLATZ_STANDARD, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
 import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN, HEIMWEG } from '../inhalte/zeit.js';
-import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE } from '../inhalte/besucher.js';
+import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
@@ -20,7 +20,7 @@ import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum
 import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
-import { einladungPasst, werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, beduerfnisErfuellt } from './besucher.js';
+import { einladungPasst, werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, ehrenamtFrei, ehrenamtFaellig, ehrenamtGemerkt, beduerfnisErfuellt } from './besucher.js';
 import { beduerfnisSchritt } from './beduerfnisse.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
 import { zeitpunkt, slotBeginn, WOCHE_MIN } from './zeit.js';
@@ -574,7 +574,7 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
   if (istKonfirmation(L)) konfirmieren(z);   // Ende des Konfirmations-Gottesdienstes: alle Konfirmanden werden erwachsen
   const werden = ehrenamtWerden(z, anwesend, zufall);
   // Erster Gottesdienst (26.11.): mindestens ERSTER_GOTTESDIENST.ehrenamt neue Ehrenamtliche, danach ist er erledigt
-  if (L.erster) { werden.push(...ehrenamtSicher(z, anwesend, werden, zufall)); z.erster.erledigt = true; }
+  if (L.erster) { const dazu = ehrenamtSicher(z, anwesend, werden, zufall); werden.push(...dazu); ehrenamtGemerkt(z, dazu.length); z.erster.erledigt = true; }
   const neueEA = werden.map(b =>
     personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
       herkunft: { jugend: istJugend(b), besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: b.level || 1, kaffee: kaffeeVorliebe(b), zuletzt: b.zuletzt } }));
@@ -629,7 +629,9 @@ function prognoseFuer(z, raeume, g, p, termin, platz) {
     kirchenjahr, wegenFest: wegenFest ? festAusSchluessel(wegenFest).fest.name : null };
   if (wegenFest) return { ...grund, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0 };
   if (!bereit) return { ...grund, sitzend: 0, geld: 0, kollekte: 0, ehrenamt: 0, tassen: 0 };
-  const ehrenamt = z.besucher.filter(b => b.besuche + 1 >= EHRENAMT_AB_BESUCHEN).reduce((s, b) => s + chance(b) * anteil * EHRENAMT_QUOTE, 0);
+  // Erwartete neue Ehrenamtliche (27.11.): höchstens proVeranstaltung und nur, solange die Bremse es zulässt; ist einer fällig, kommt er sicher
+  const eaWuerfel = z.besucher.filter(b => b.besuche + 1 >= EHRENAMT_AB_BESUCHEN).reduce((s, b) => s + chance(b) * anteil * EHRENAMT_QUOTE, 0);
+  const ehrenamt = ehrenamtFaellig(z) && sitzend > 0 ? 1 : Math.min(eaWuerfel, EHRENAMT.proVeranstaltung, ehrenamtFrei(z));
   if (saal) {   // Gemeindesaal: statt Kollekte und Kaffee nur die erwartete spontane Spende
     const spende = v.spendeImmer ? sitzend * (v.spendeImmer.min + v.spendeImmer.max) / 2
       : v.spende ? sitzend * SPONTANE_SPENDE.chance * (SPONTANE_SPENDE.min + SPONTANE_SPENDE.max) / 2 : 0;

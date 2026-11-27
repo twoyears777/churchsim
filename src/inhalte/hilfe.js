@@ -142,7 +142,7 @@ export const HILFE = {
       id: 'einzugsgebiet',
       titel: 'Einzugsgebiet',
       inhalt: [
-        `Die Gemeinde kann nur so viele Menschen erreichen, wie ihr **Einzugsgebiet** hergibt – am Anfang ${EINZUGSGEBIET.start}. Mitgezählt werden Besucher, Passanten im Ort und Ehrenamtliche. Ist es voll, kommen keine neuen Menschen dazu. Den Stand siehst du im Bekanntheit-Fenster.`,
+        `Die Gemeinde kann nur so viele Menschen erreichen, wie ihr **Einzugsgebiet** hergibt – am Anfang ${EINZUGSGEBIET.start}. Mitgezählt werden Besucher und Passanten im Ort. Ist es voll, kommen keine neuen Menschen dazu. Den Stand siehst du im Bekanntheit-Fenster.`,
         { punkte: [
           `**Parkplätze** (ab Bekanntheit ${PARKPLATZ.abBekanntheit}): unter Bauen → Außen. Ein Parkplatz zählt nur, wenn er an einer Straße liegt, die bis zum Tor führt. Nicht angeschlossene Teile sind rot.`,
           '**Bushaltestelle:** am Gehweg neben dem Tor, in drei Stufen ausbaubar. Klick auf die Haltestelle oder über das Bekanntheit-Fenster.',
@@ -173,7 +173,7 @@ export const HILFE = {
       id: 'zeit',
       titel: 'Zeit und Kirchenjahr',
       inhalt: [
-        'Oben steuerst du die Zeit: Pause, x1, x2, x5, x10, x25. Rechts oben stehen Woche, Tag und Uhrzeit, wie lange es bis Sonntag ist und welcher Sonntag im Kirchenjahr ansteht. Das Rad zeigt die Zeit im Kirchenjahr. Das Spiel beginnt am 1. Advent.',
+        'Oben steuerst du die Zeit: Pause, x1, x2, x10, x25, x50. Rechts oben stehen Woche, Tag und Uhrzeit, wie lange es bis Sonntag ist und welcher Sonntag im Kirchenjahr ansteht. Das Rad zeigt die Zeit im Kirchenjahr. Das Spiel beginnt am 1. Advent.',
         // ENTWURF (25.11., Kirchenjahr-Fenster) – Lukas formuliert selbst
         'Klickst du auf das Kirchenjahr, siehst du die kommenden Feste und Zeiten. An großen Festen wie Heiligabend kommen viel mehr Besucher, die Kollekte ist höher. Vor großen Festen öffnet sich das Fest-Menü: Dort planst du ein besonderes Fest mit Raum und Leitung. An Feiertagen sind mehr Leute unterwegs.'
       ]

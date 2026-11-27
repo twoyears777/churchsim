@@ -1,6 +1,6 @@
 // Inhaltsdatei: die Zeit im Spiel (Echtzeit statt Runden).
-export const SEKUNDEN_PRO_STUNDE = 12;         // 1 Spielstunde dauert bei x1 so viele echte Sekunden (Lukas, 25.11.: vorher 3)
-export const TEMPI = [0, 1, 2, 5, 10, 25];     // Zeit-Knöpfe: Pause, x1, x2, x5, x10, x25 (x10/x25 seit 25.11.)
+export const SEKUNDEN_PRO_STUNDE = 24;         // 1 Spielstunde dauert bei x1 so viele echte Sekunden (Lukas, 27.11.: vorher 12, davor 3)
+export const TEMPI = [0, 1, 2, 10, 25, 50];    // Zeit-Knöpfe: Pause, x1, x2, x10, x25, x50 (Lukas, 27.11.: x50 dazu, x5 raus)
 
 // Slots im Wochenplan: Beginn der Veranstaltung (volle Stunde)
 export const SLOTS = [
@@ -14,8 +14,10 @@ export const DAUER = { gottesdienst: 60, kirchkaffee: 120 };  // Spielminuten; K
 
 // Laufen der Besucher (in Spielminuten, damit es mit den Zeit-Knöpfen schneller und langsamer wird)
 export const ANREISE_VORLAUF = 180;   // so viele Minuten vor Beginn machen sich die Besucher auf den Weg
-export const LAUFTEMPO = 0.25;        // Kästchen pro Spielminute (25.11.: halbiert, damit man Figuren besser anklicken kann)
-export const ABSTAND = 2;             // Spielminuten zwischen zwei Besuchern
+// Lukas, 27.11.: Die Spielstunde dauert doppelt so lange, die Figuren bleiben auf dem Bildschirm so schnell wie bisher –
+// deshalb sind alle Figuren-Zeiten in Spielminuten halbiert (Laufen, Abstand, Kaffeemaschine, Automat, Toilette, Halt am Tor, Umherlaufen).
+export const LAUFTEMPO = 0.5;         // Kästchen pro Spielminute (27.11.: verdoppelt, siehe oben; bei x1 weiter 1,25 Kästchen pro Sekunde)
+export const ABSTAND = 1;             // Spielminuten zwischen zwei Besuchern (27.11.: vorher 2)
 export const HEIMWEG = 120;           // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause (stand bis 26.11. in kern/ablauf.js)
 
 // Meldungen unten rechts (Ort, Kirchkaffee, Konfi): so lange (Spielminuten) bleiben sie stehen.

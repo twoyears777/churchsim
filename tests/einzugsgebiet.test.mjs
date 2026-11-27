@@ -19,9 +19,9 @@ const torY = G.y + G.h - 1, torX = G.tor.x;
   const e = einzugsgebiet(z);
   assert.equal(e.grenze, EINZUGSGEBIET.start);
   assert.equal(e.erreicht, 4);
-  // Ehrenamtliche aus Besuchern zählen mit
+  // Ehrenamtliche zählen nicht mehr mit (Lukas, 27.11.)
   z.personen.push({ id: 'ea9', x: 0, y: 0, daten: { name: 'X', art: 'ehrenamt' } });
-  assert.equal(erreicht(z), 5);
+  assert.equal(erreicht(z), 4);
 }
 // Voll: keine neuen Passanten im Ort und keine ganz neuen Besucher über die Bekanntheit
 {

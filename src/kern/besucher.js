@@ -8,8 +8,8 @@ import { ZWEITER_BESUCH, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { istJugend, jugendFaktor, jugendZuteilen } from './konfi.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, BEKANNTHEIT,
-  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, LOBPREIS_MUSIK, HALTUNGSLEVEL, KOMMCHANCE, BEDUERFNISSE } from '../inhalte/besucher.js';
-import { zeitpunkt } from './zeit.js';
+  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT, LOBPREIS_MUSIK, HALTUNGSLEVEL, KOMMCHANCE, BEDUERFNISSE } from '../inhalte/besucher.js';
+import { zeitpunkt, WOCHE_MIN } from './zeit.js';
 
 export function namenZiehen(anzahl, zufall = Math.random) {
   const toepfe = { a: [], w: [] }, ergebnis = [];
@@ -213,9 +213,30 @@ export function bekanntheitAendern(z, wert, quelle = null, anzahl = null) {
   z.bekanntheitLog.length = Math.min(z.bekanntheitLog.length, BEKANNTHEIT.protokoll);
 }
 
+// ---- Ehrenamtlicher werden (Balancing von Lukas, 27.11.; Zahlen EHRENAMT in inhalte/besucher.js) ----
+const anzahlEA = z => (z.personen || []).filter(p => p.daten && p.daten.art === 'ehrenamt').length;
+// Bremse: Wie viele Ehrenamtliche dürfen über den Würfel noch dazukommen? (höchstens 1 je besucherJeEA Besucher)
+export function ehrenamtFrei(z) { return Math.max(0, Math.floor(z.besucher.length / EHRENAMT.besucherJeEA) - anzahlEA(z)); }
+// Ist ein sicherer Ehrenamtlicher fällig? (wenige Ehrenamtliche und seit sicher.wochen Wochen kein neuer)
+export function ehrenamtFaellig(z) {
+  if (typeof z.letzterEA !== 'number') z.letzterEA = z.minuten;   // neues Spiel / alter Spielstand: die Wochen zählen ab jetzt
+  return anzahlEA(z) < EHRENAMT.sicher.bisAnzahl && z.minuten - z.letzterEA >= EHRENAMT.sicher.wochen * WOCHE_MIN;
+}
 // Wer aus den Anwesenden wird Ehrenamtlicher? Wird aus den Besuchern genommen und zurückgegeben.
+// Gewürfelt wird für jeden ab EHRENAMT_AB_BESUCHEN Besuchen; es werden aber höchstens proVeranstaltung und nur, solange die Bremse
+// es zulässt. Ist einer fällig und der Würfel hat niemanden gebracht, wird ein Anwesender genommen (am liebsten einer mit genug Besuchen).
 export function ehrenamtWerden(z, anwesende, zufall = Math.random) {
-  const werden = anwesende.filter(b => b.besuche >= EHRENAMT_AB_BESUCHEN && zufall() < EHRENAMT_QUOTE);
+  const faellig = ehrenamtFaellig(z);
+  const gewuerfelt = anwesende.filter(b => b.besuche >= EHRENAMT_AB_BESUCHEN && zufall() < EHRENAMT_QUOTE);
+  const werden = [], grenze = Math.min(EHRENAMT.proVeranstaltung, ehrenamtFrei(z));
+  while (werden.length < grenze && gewuerfelt.length) werden.push(gewuerfelt.splice(Math.floor(zufall() * gewuerfelt.length), 1)[0]);
+  if (faellig && !werden.length) {
+    const da = anwesende.filter(b => z.besucher.includes(b)), oft = da.filter(b => b.besuche >= EHRENAMT_AB_BESUCHEN), pool = oft.length ? oft : da;
+    if (pool.length) werden.push(pool[Math.floor(zufall() * pool.length)]);
+  }
+  ehrenamtGemerkt(z, werden.length);
   z.besucher = z.besucher.filter(b => !werden.includes(b));
   return werden;
 }
+// Merken, wann zuletzt jemand Ehrenamtlicher wurde (für „sicher“)
+export function ehrenamtGemerkt(z, anzahl) { if (anzahl > 0) z.letzterEA = z.minuten; }

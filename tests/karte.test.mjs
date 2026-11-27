@@ -109,9 +109,9 @@ import { zeitpunkt, tageBisSonntag, slotBeginn, startMinuten, spielMinuten, TAG_
   assert.equal(tageBisSonntag(6 * TAG_MIN + 9 * 60), null);         // Sonntag → heute
   assert.equal(slotBeginn({ tag: 6, slot: 'vormittag' }, 0), 6 * TAG_MIN + 600);
   assert.equal(slotBeginn({ tag: 2, slot: 'abend' }, 1), 7 * TAG_MIN + 2 * TAG_MIN + 19 * 60);
-  assert.equal(spielMinuten(12, 1), 60);                             // 12 Sekunden = 1 Spielstunde (seit 25.11.)
-  assert.equal(spielMinuten(12, 5), 300);
-  assert.equal(spielMinuten(1, 1), 5);                               // 1 Sekunde = 5 Spielminuten
+  assert.equal(spielMinuten(24, 1), 60);                             // 24 Sekunden = 1 Spielstunde (seit 27.11., vorher 12)
+  assert.equal(spielMinuten(24, 50), 3000);
+  assert.equal(spielMinuten(1, 1), 2.5);                             // 1 Sekunde = 2,5 Spielminuten
 }
 console.log('Zeit-Tests bestanden.');
 
@@ -168,18 +168,19 @@ import { personHinzufuegen } from '../src/kern/personen.js';
     zeitVorruecken(z, aus(), 121, () => 0);                           // Heimweg (2 Stunden) vorbei
     assert.equal(z.laeufe.length, 0);
   }
-  // Neue Besucher über die Bekanntheit, neue Ehrenamtliche ab 3 Besuchen
+  // Neue Besucher über die Bekanntheit, neue Ehrenamtliche ab 2 Besuchen (27.11.: höchstens 1 pro Veranstaltung, höchstens 1 je 5 Besucher)
   {
     assert.equal(neueBesucherZahl(15, () => 0.4), 2); assert.equal(neueBesucherZahl(15, () => 0.6), 1);
     assert.equal(neueBesucherZahl(0, () => 0), 0);
     const { z, aus } = aufbau();
     versetzen(z, z.personen[0], G.x + 4, G.y + 5);
     z.bekanntheit = 20; z.besucher.forEach(b => { b.besuche = 2; });
+    z.personen = z.personen.filter(p => (p.daten || {}).art !== 'ehrenamt');   // ohne Frau des Pastors: 7 Besucher erlauben genau 1 Ehrenamtlichen
     zeitVorruecken(z, aus(), SONNTAG_10 + 181 - z.minuten, () => 0);
     assert.equal(z.laeufe[0].gaeste.length, 7);                           // 4 bekannte + 3 neue (20 ÷ 10 × 1,2 Adventszeit = 2,4)
-    assert.equal(z.laeufe[0].neueEhrenamtliche.length, 3);                 // die 3 mit Sitzplatz und 3. Besuch
-    assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 4);   // 3 neue + Frau des Pastors
-    assert.equal(z.besucher.length, 4);   // 1 bekannter + 3 neue (3 wurden Ehrenamtliche)
+    assert.equal(z.laeufe[0].neueEhrenamtliche.length, 1);                 // 3 hätten gewürfelt, aber nur 1 wird es
+    assert.equal(z.personen.filter(p => (p.daten || {}).art === 'ehrenamt').length, 1);
+    assert.equal(z.besucher.length, 6);   // 3 bekannte + 3 neue (1 wurde Ehrenamtlicher)
   }
   // Wochenplan: Mittwochabend
   {
@@ -297,12 +298,13 @@ import { spielStarten } from './hilfen/ohne-erster.mjs';   // ohne ersten Gottes
   spiel.tempoSetzen(7); assert.equal(spiel.lage().tempo, 1);
   // Tick-System: Bau-Modus und Pause halten die Zeit an
   spiel.bauModus(true); assert.equal(spiel.tick(0.2), false); assert.equal(spiel.lage().minute, 0);
-  spiel.bauModus(false); assert.equal(spiel.tick(0.24), true); assert.equal(spiel.lage().minute, 1);   // 0,24 s = 1,2 Spielminuten
-  spiel.tempoSetzen(25); assert.equal(spiel.lage().tempo, 25); spiel.tempoSetzen(10); assert.equal(spiel.lage().tempo, 10); spiel.tempoSetzen(1);
+  spiel.bauModus(false); spiel.tick(0.24); assert.equal(spiel.tick(0.24), true); assert.equal(spiel.lage().minute, 1);   // 2 × 0,24 s = 1,2 Spielminuten
+  spiel.tempoSetzen(25); assert.equal(spiel.lage().tempo, 25); spiel.tempoSetzen(10); assert.equal(spiel.lage().tempo, 10);
+  spiel.tempoSetzen(50); assert.equal(spiel.lage().tempo, 50); spiel.tempoSetzen(5); assert.equal(spiel.lage().tempo, 50); spiel.tempoSetzen(1);   // 27.11.: x50 dazu, x5 gibt es nicht mehr
   spiel.tempoSetzen(0); assert.equal(spiel.tick(1), false);
   for (let i = 0; i < 5; i++) assert.equal(spiel.moebelKaufen('stuhl', G.x + 7 + i, G.y + 4), 'ok');
   // Bis Mittwochabend laufen lassen: Besucher sind unterwegs, Kärtchen hat Bedürfnisse
-  spiel.tempoSetzen(5);
+  spiel.tempoSetzen(10);
   for (let i = 0; i < 2000 && spiel.lage().status.phase !== 'gottesdienst'; i++) spiel.tick(0.25);
   assert.equal(spiel.lage().tag, 2); assert.equal(spiel.lage().status.phase, 'gottesdienst');
   const b = spiel.karte().besucher[0];

@@ -49,8 +49,15 @@ export const JUGEND = { anteil: 0.2, faktor: { gottesdienst: 0.5, lobpreis: 0.5,
 // Konfirmandenunterricht (Lukas, 25.11.): so viele Teilnahmen in einem Jahrgang (von Konfirmation zu Konfirmation) → Konfirmand
 export const KONFI = { teilnahmen: 7 };
 
-export const EHRENAMT_AB_BESUCHEN = 3;  // ab so vielen Gottesdienstbesuchen ...
-export const EHRENAMT_QUOTE = 0.05;     // ... wird man mit dieser Wahrscheinlichkeit pro Woche Ehrenamtlicher
+export const EHRENAMT_AB_BESUCHEN = 2;  // ab so vielen Besuchen ... (Lukas, 27.11.: vorher 3)
+export const EHRENAMT_QUOTE = 0.05;     // ... wird man mit dieser Wahrscheinlichkeit pro Besuch Ehrenamtlicher
+// Balancing (Lukas, 27.11.), damit Ehrenamtliche gleichmäßiger kommen und nicht alle Besucher zu Ehrenamtlichen werden:
+//   besucherJeEA      Bremse: höchstens 1 Ehrenamtlicher je so viele Besucher (alle Ehrenamtlichen zählen, auch die vom Spielstart).
+//                     Ist die Grenze erreicht, wird über den Würfel niemand mehr Ehrenamtlicher.
+//   proVeranstaltung  höchstens so viele neue Ehrenamtliche pro Veranstaltung
+//   sicher            Solange es weniger als bisAnzahl Ehrenamtliche gibt: War seit wochen Wochen kein neuer dabei,
+//                     wird bei der nächsten Veranstaltung sicher ein Anwesender Ehrenamtlicher (auch über die Bremse hinweg).
+export const EHRENAMT = { besucherJeEA: 5, proVeranstaltung: 1, sicher: { wochen: 3, bisAnzahl: 5 } };
 
 // Erster Gottesdienst (Lukas, 26.11.): Beim ersten normalen Gottesdienst, der wirklich stattfindet, kommen neueLeute zusätzlich
 // (fest, aus dem Ort bzw. ganz neue Menschen), und danach werden mindestens ehrenamt Anwesende Ehrenamtliche

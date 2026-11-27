@@ -80,6 +80,7 @@ console.log('Steckbrief-Tests bestanden.');
 {
   const { z, aus, automat, kk } = gemeinde();
   assert.equal(schichtHinzufuegen(z, kk(), 0, 'vormittag'), 'ok');   // Montag 10–15 Uhr
+  automat().fuellung = 30;                                  // voll, damit vor der Öffnung niemand einkaufen geht (27.11.: der Weg ist kürzer, er käme sonst mittendrin zurück)
   bis(z, aus, 10 * 60 + 5);
   automat().fuellung = 0;
   bis(z, aus, 14 * 60 + 50);

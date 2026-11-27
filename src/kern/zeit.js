@@ -1,6 +1,6 @@
 // Spiellogik der Zeit. Die Spielzeit wird in Spielminuten seit Montag 0:00 der ersten Woche gezählt.
 // Woche 0 endet mit dem 1. Advent (siehe kalender.js).
-import { SEKUNDEN_PRO_STUNDE, SLOTS, SPIELBEGINN, STANDARD_PLAN } from '../inhalte/zeit.js';
+import { SEKUNDEN_PRO_STUNDE, SLOTS, SPIELBEGINN, STANDARD_PLAN, TEMPI } from '../inhalte/zeit.js';
 
 export const TAG_MIN = 24 * 60, WOCHE_MIN = 7 * TAG_MIN;
 
@@ -10,7 +10,7 @@ export function zeitAnlegen(z) {
   if (typeof z.minuten !== 'number') z.minuten = startMinuten();
   if (!z.plan) z.plan = { ...STANDARD_PLAN };
   if (typeof z.letzterLauf !== 'number') z.letzterLauf = -1;   // Woche, in der zuletzt ein Gottesdienst-Termin war
-  if (typeof z.tempo !== 'number') z.tempo = 1;
+  if (typeof z.tempo !== 'number' || !TEMPI.includes(z.tempo)) z.tempo = 1;   // z. B. alter Spielstand mit x5 (seit 27.11. kein Knopf mehr)
   if (typeof z.buchWoche !== 'number') z.buchWoche = zeitpunkt(z.minuten).woche;   // Woche des Wochenbuchs
 }
 

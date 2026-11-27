@@ -8,7 +8,7 @@ export const MAX_SCHICHTEN = 3;
 export const SCHICHT_ENDE = { vormittag: 15, nachmittag: 19, abend: 23 };   // Uhrzeit, zu der die Schicht endet
 
 // Bedienung: Kunde bestellt an der Theke → Mitarbeiter geht zur Maschine → Maschine lädt → zurück → Kaffee.
-export const LADEN_MINUTEN = 5;                      // so lange lädt die Maschine (bei x1 = 1 Sekunde)
+export const LADEN_MINUTEN = 2.5;                    // so lange lädt die Maschine (bei x1 = 1 Sekunde; 27.11.: vorher 5, weil die Spielstunde doppelt so lange dauert)
 
 // Einkauf im Laden: wenn das Kirchkaffee zu hat und die Maschine nicht voll ist
 export const EINKAUF = {

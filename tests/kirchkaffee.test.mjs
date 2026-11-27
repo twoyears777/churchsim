@@ -134,11 +134,11 @@ console.log('Einkaufs-Tests bestanden.');
     zeitVorruecken(z, aus(), 1, () => 0);
     const a = z.kaffee.ma[eas[0].id].aufgabe, s = a && a.art === 'bedienen' ? a.phase : null;
     if (s && s !== schritte.at(-1)) schritte.push(s);
-    if (s === 'laden') assert.equal(z.konto, konto + PREIS_TASSE * z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE).length);   // die Tasse in Arbeit ist noch nicht bezahlt
+    if (s === 'laden') assert.equal(z.konto, konto + PREIS_TASSE * z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE && e.zeit > SO + 660).length);   // die Tasse in Arbeit ist noch nicht bezahlt (27.11.: ohne die Kollekte-Zahlen vom Gottesdienst, die jetzt noch zu sehen sind)
   }
   assert.deepEqual(schritte.slice(0, 3), ['hin', 'laden', 'zurueck']);
   assert.equal(z.konto, konto + 3 * PREIS_TASSE); assert.equal(maschinen()[0].fuellung, 27);
-  assert.equal(z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE).length, 3);   // „+2 €“ über jedem Kunden
+  assert.equal(z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE && e.zeit > SO + 660).length, 3);   // „+2 €“ über jedem Kunden
   assert.ok(z.kaffee.kunden.every(k => k.phase === 'steht' || (k.phase === 'heim' && z.minuten >= SO + 600 + 180)));   // bleiben stehen (bis das Kirchkaffee zu ist)
   assert.deepEqual(L.gaeste.map(g => g.kaffee.ergebnis), ['ja', 'ja', 'ja']);
   assert.ok(z.besucher.every(b => b.erfuellt && b.erfuellt.ids.includes('kaffee')));   // Bedürfnis Kaffee diese Woche erfüllt (25.11.)
@@ -343,7 +343,7 @@ console.log('Kirchkaffee-Schnittstellen-Tests bestanden.');
       for (const k of z.kaffee.kunden) if (k.phase === 'sitzt') {
         sassen.set(k.id, k.trinkgeld);
         if (!geprueft) {                                                        // beim Sitzen noch kein Trinkgeld gebucht
-          const tassen = z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE && !e.art).length;
+          const tassen = z.kaffee.zahlen.filter(e => e.betrag === PREIS_TASSE && !e.art && e.zeit > SO + 660).length;   // ohne die Kollekte-Zahlen (27.11.)
           assert.equal(z.wochenbuch.einnahmen.kirchkaffee, tassen * PREIS_TASSE);
           geprueft = true;
         }

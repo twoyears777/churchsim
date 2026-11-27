@@ -242,7 +242,9 @@ console.log('Seelsorge-Zeitablauf-Tests bestanden.');
   const schnitt = neue / durchgaenge;
   // 25.11.: Untergrenze 1,5 → 1,2. Über 200 Durchgänge liegt der Schnitt vor und nach dem Kirchkaffee-Umbau bei ~1,5;
   // die 20 festen Zufallsfolgen hier schwanken nur anders, weil beim Anlegen einer Person kein Kaffee-Würfel mehr fällt.
-  assert.ok(schnitt >= 1.2 && schnitt <= 4, `neue Besucher in Woche 1: ${schnitt}`);
+  // 27.11.: Obergrenze 4 → 5. Die Figuren laufen pro Spielstunde doppelt so weit, die Frau des Pastors steht deshalb länger
+  // bei der Evangelisation und lädt mehr Leute ein (Schnitt jetzt ca. 4,2).
+  assert.ok(schnitt >= 1.2 && schnitt <= 5, `neue Besucher in Woche 1: ${schnitt}`);
 }
 console.log('Spielanfang-Test bestanden.');
 

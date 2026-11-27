@@ -15,7 +15,7 @@ assert.deepEqual(S1.kosten, { geld: 100, heiligkeit: 100 });
 assert.equal(S1.dauer, 60);
 assert.deepEqual(FORSCHUNGEN.map(f => f.id), ['schulungen1', 'slot3gottesdienst', 'slot3saal']);   // 26.11.: dazu der 3. Slot je Raumtyp
 assert.equal(HEILIGKEIT.proBesucher, 1);
-assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minute bei x1 = 300 Spielminuten
+assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minute bei x1 = 150 Spielminuten (27.11.: vorher 300)
 
 // Heiligkeit: Gottesdienst, Lobpreisgottesdienst ja; Gemeindesaal nein
 {
@@ -44,8 +44,8 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
   assert.equal(z.wochenbuch.ausgaben.forschung, 100);          // erscheint in den Finanzen unter „Forschung“
   assert.equal(forschungStarten(z, 'schulungen1'), 'laeuft');   // nicht doppelt
   const s = forschungSchritt(z);
-  assert.equal(s.zeit, start + 300);
-  z.minuten = start + 150;
+  assert.equal(s.zeit, start + 150);
+  z.minuten = start + 75;
   const l = forschungListe(z)[0];
   assert.equal(l.zustand, 'laeuft'); assert.equal(l.anteil, 0.5); assert.equal(l.restSekunden, 30);
   z.minuten = s.zeit; s.tun(z);

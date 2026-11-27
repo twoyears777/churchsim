@@ -1,5 +1,5 @@
 // Inhaltsdatei: Einzugsgebiet – wie viele Menschen die Gemeinde überhaupt erreichen kann (Spielprinzip vom 25.11.).
-// Mitgezählt werden Besucher, Passanten im Ort und Ehrenamtliche, die aus Besuchern geworden sind.
+// Mitgezählt werden Besucher und Passanten im Ort (Ehrenamtliche seit 27.11. nicht mehr – Lukas).
 // Ist das Gebiet voll, kommen keine neuen Menschen dazu. Maßnahmen machen es größer.
 // Zahlen von Lukas freigegeben (25.11.), nach dem Testen leicht anpassbar.
 export const EINZUGSGEBIET = { start: 40 };

@@ -21,7 +21,7 @@ export const TEXTE = {
   },
   eventLaeuft: 'Läuft gerade',
   keinEvent: 'Kein Event geplant',
-  tempo: { 0: 'Pause', 1: 'x1', 2: 'x2', 5: 'x5', 10: 'x10', 25: 'x25' },
+  tempo: { 0: 'Pause', 1: 'x1', 2: 'x2', 10: 'x10', 25: 'x25', 50: 'x50' },
   kontostand: 'Kontostand',
   bekanntheit: 'Bekanntheit',
 
@@ -691,7 +691,7 @@ export const TEXTE = {
     titel: 'Einzugsgebiet',
     stand: (erreicht, grenze) => `${erreicht} von ${grenze} Menschen erreichbar`,
     voll: 'Einzugsgebiet voll – mehr Menschen erreichst du über Maßnahmen',
-    info: 'So viele Menschen kann die Gemeinde erreichen. Mitgezählt: Besucher, Passanten im Ort und Ehrenamtliche.',
+    info: 'So viele Menschen kann die Gemeinde erreichen. Mitgezählt: Besucher und Passanten im Ort.',   // 27.11.: „und Ehrenamtliche“ gestrichen (ENTWURF, Lukas prüft)
     teile: {
       start: n => `Ort: ${n}`,
       parkplatz: (n, anzahl) => `Parkplätze: +${n} (${anzahl} angeschlossen)`,

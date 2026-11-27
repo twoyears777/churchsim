@@ -30,7 +30,7 @@ export const AUTOMATEN = [
 
 // Für alle Automaten gleich
 export const AUTOMAT = {
-  kaufMinuten: 5,   // PLATZHALTER von Claude: so lange steht ein Kunde am Automaten (wie die Kaffeemaschine lädt; bei x1 = 1 Sekunde)
+  kaufMinuten: 2.5, // PLATZHALTER von Claude: so lange steht ein Kunde am Automaten (wie die Kaffeemaschine lädt; bei x1 = 1 Sekunde; 27.11.: vorher 5)
   tragen: 10,       // PLATZHALTER von Claude (wie beim Kaffee): so viele Waren trägt der Ehrenamtliche auf einmal
   vorlauf: 10       // Gäste einer Veranstaltung sind spätestens so viele Spielminuten vor Beginn vom Automaten zurück
 };
