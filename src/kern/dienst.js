@@ -14,7 +14,9 @@
 //   • Ob eine Veranstaltung stattfinden kann, richtet sich nach dem Dienstplan (nicht danach, wer gerade wo steht).
 //   • Während seiner Schicht steht der Ehrenamtliche an seiner Stelle (p.x, p.y) – dann gelten alle bisherigen Regeln
 //     (Kirchkaffee-Station, Lager, Musiker am Instrument …). Ohne Schicht ist er daheim (p.daheim, nicht auf der Karte).
-//     Hin und zurück läuft er sichtbar vom bzw. zum Tor (nur fürs Auge; für die Regeln ist er sofort da bzw. weg).
+//     Hin und zurück läuft er sichtbar vom bzw. zum Tor (nur fürs Auge; für die Regeln ist er ab Schichtbeginn da bzw. ab
+//     Schichtende weg). Pünktlich (Lukas, 27.11.): Er bricht so früh auf, dass er genau zum Schichtbeginn an seiner Stelle
+//     steht – Weglänge geteilt durch LAUFTEMPO. Kommt er gerade aus einer anderen Schicht, läuft er von dort direkt hin.
 //   • Wer noch Kunden in der Schlange hat oder gerade etwas einkauft, macht das erst fertig.
 //   • Sonntagvormittags kommt jeder Ehrenamtliche, der dann keine Schicht hat, mit DIENST.besuch.chance als Besucher
 //     in den Gottesdienst (egal welche Art, nur im Gottesdienstraum).
@@ -273,6 +275,43 @@ function zielVon(z, raeume, p, s) {
   return r ? platzImRaum(z, r, s.ort, p) : null;
 }
 
+// Ist das Kästchen frei (keine andere Person, die gerade da ist)?
+const frei = (z, o, p) => !hindernisBei(z, o.x, o.y) && !z.personen.some(q => q !== p && !q.daheim && q.x === o.x && q.y === o.y);
+// Wo ist er gerade auf seinem Weg? (null: steht nicht auf einem Weg)
+const unterwegsPunkt = (m, t) => m.bew && t < ankunft(m.bew) - EPS ? punktAufWeg(m.bew, Math.max(0, t - m.bew.t0) * LAUFTEMPO) : null;
+
+// ---- Pünktlich zur Schicht (Lukas, 27.11.) ----
+// So weit im Voraus wird der Weg zur nächsten Schicht ausgerechnet (Spielminuten; länger dauert kein Weg über das Gelände)
+const VORAUS = 6 * 60;
+// Nächste Schicht von p nach t (absolute Minuten) → { t, s, von } | null
+function naechsteSchicht(z, raeume, p, t) {
+  const w = zeitpunkt(t).woche;
+  let beste = null;
+  for (const x of termineVon(z, raeume, p)) for (const woche of [w, w + 1]) {
+    const von = woche * WOCHE_MIN + x.t.von;
+    if (von > t + EPS && (!beste || von < beste.von)) beste = { ...x, von };
+  }
+  return beste;
+}
+// Daheim (oder auf dem Heimweg) und bald Schicht: Weg ausrechnen und genau so früh loslaufen, dass er zum Beginn da ist.
+// Merkt sich in m.vor, wann er los muss (für dienstSchritt), und in m.hin, wohin er gerade unterwegs ist.
+// Für die Regeln bleibt er bis zum Schichtbeginn daheim. → true, wenn er gerade losgelaufen ist
+function aufbrechen(z, raeume, p, m, t) {
+  if (m.hin) return false;
+  const n = naechsteSchicht(z, raeume, p, t);
+  if (!n || n.von - t > VORAUS) { m.vor = null; return false; }
+  const ziel = zielVon(z, raeume, p, n.s);
+  if (!ziel) { m.vor = null; return false; }
+  const b = gehen(z, unterwegsPunkt(m, t) || TOR(), ziel, t), los = n.von - b.laenge / LAUFTEMPO;
+  if (t < los - EPS) { m.vor = { key: n.t.key, los }; return false; }
+  b.t0 = los;   // genau zum Schichtbeginn am Ziel
+  if (los < t - EPS) {   // zu spät dran (z. B. direkt aus der vorigen Schicht): so schnell es geht hin
+    b.t0 = t;
+  }
+  m.bew = b; m.hin = { key: n.t.key, ziel }; m.vor = null;
+  return true;
+}
+
 // ---- Alles bis jetzt Fällige: Ehrenamtliche kommen zu ihrer Schicht oder gehen heim ----
 export function dienstAktualisieren(z, raeume) {
   if (!schichtbetrieb(z)) return false;
@@ -286,10 +325,13 @@ export function dienstAktualisieren(z, raeume) {
       if (!p.daheim && kaffeeBeschaeftigt(z, p.id)) continue;   // erst die Schlange fertig bedienen
       const ziel = zielVon(z, raeume, p, jetzt.s);
       if (!ziel) continue;
+      // Schon unterwegs hierher (pünktlich losgelaufen) und der Platz ist noch frei: einfach weiterlaufen
+      const hin = p.daheim && m.hin && m.hin.key === jetzt.t.key && m.bew ? m.hin.ziel : null;
+      if (hin && frei(z, hin, p)) { p.x = hin.x; p.y = hin.y; p.daheim = false; m.hin = null; geaendert = true; continue; }
       let start;
-      if (p.daheim) start = m.bew && t < ankunft(m.bew) - EPS ? punktAufWeg(m.bew, Math.max(0, t - m.bew.t0) * LAUFTEMPO) : TOR();   // war gerade auf dem Heimweg: kehrt um
+      if (p.daheim) start = unterwegsPunkt(m, t) || TOR();   // war gerade auf dem Heimweg (oder auf dem Hinweg zu einem besetzten Platz)
       else { start = { x: p.x, y: p.y }; evangelisationVerlassen(z, p); }
-      m.bew = gehen(z, start, ziel, t);
+      m.bew = gehen(z, start, ziel, t); m.hin = null;
       p.x = ziel.x; p.y = ziel.y; p.daheim = false;
       geaendert = true;
     } else if (!p.daheim) {
@@ -299,6 +341,7 @@ export function dienstAktualisieren(z, raeume) {
       p.x = WEG; p.y = WEG; p.daheim = true;
       geaendert = true;
     }
+    if (p.daheim && !jetzt && aufbrechen(z, raeume, p, m, t)) geaendert = true;
   }
   for (const id of Object.keys(M)) if (!z.personen.some(p => p.id === id)) delete M[id];
   return geaendert;
@@ -312,6 +355,12 @@ export function dienstSchritt(z, raeume) {
   for (const x of dienstTermine(z, raeume)) {
     if (!x.stellen.some(s => personAuf(z, x, s.id))) continue;
     for (const woche of [w, w + 1]) for (const g of [x.von, x.bis]) { const a = woche * WOCHE_MIN + g; if (a > t + EPS) zeiten.push(a); }
+  }
+  // Pünktlich zur Schicht: Weg rechtzeitig ausrechnen (VORAUS vor Beginn) und genau dann loslaufen
+  for (const p of ehrenamtliche(z)) {
+    const m = z.dienst.ma[p.id];
+    if (m && m.vor && m.vor.los > t + EPS) zeiten.push(m.vor.los);
+    else if (p.daheim && !(m && m.hin)) { const n = naechsteSchicht(z, raeume, p, t); if (n && n.von - VORAUS > t + EPS) zeiten.push(n.von - VORAUS); }
   }
   // Wer ohne Schicht noch da ist (z. B. Schlange bedient), wird beim nächsten Schritt des Kirchkaffees heimgeschickt
   if (ehrenamtliche(z).some(p => !p.daheim && !aktiveSchicht(z, raeume, p, t) && !kaffeeBeschaeftigt(z, p.id))) zeiten.push(t + 1);

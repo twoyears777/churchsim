@@ -8,9 +8,10 @@
 //   • Ohne Schicht sind sie daheim. Sonntagvormittags kommen sie mit besuch.chance als Besucher in den Gottesdienst.
 export const DIENST = {
   schichten: 3,          // Schichten pro Woche je Ehrenamtlichem (Lukas, 27.11.); Ausnahmen über `schichten` in den Daten der Person
-  // Bei Veranstaltungen ist der Ehrenamtliche so viele Spielminuten vor Beginn an seiner Stelle (Platzhalter von Claude).
+  // Bei Veranstaltungen ist der Ehrenamtliche so viele Spielminuten vor Beginn an seiner Stelle.
+  // Lukas, 27.11.: exakt pünktlich zum Beginn (vorher 30, Platzhalter von Claude). Losgelaufen wird so früh, wie der Weg dauert.
   // Gezählt wird er für die Veranstaltung schon vorher, sobald er im Dienstplan steht.
-  vorlauf: 30,
+  vorlauf: 0,
   // Gottesdienstbesuch ohne Schicht (Lukas, 27.11.): nur sonntagvormittags, egal welcher Gottesdienst im Gottesdienstraum
   besuch: { chance: 0.9, tag: 6, slot: 'vormittag' }
 };

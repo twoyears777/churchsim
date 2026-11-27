@@ -12,7 +12,7 @@ import { neuesSpiel, spielStarten, SPEICHER_VERSION } from '../src/kern/spiel.js
 import { zeitVorruecken, veranstaltungEinstellen, terminEinstellen, terminStand, termineDerWoche } from '../src/kern/ablauf.js';
 import { moebelSetzen, moebelKaufen } from '../src/kern/moebel.js';
 import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
-import { dienstTermine, stelleSetzen, aktiveSchicht, schichtenMax, schichtenBelegt, dienstplanInfo } from '../src/kern/dienst.js';
+import { dienstTermine, stelleSetzen, aktiveSchicht, schichtenMax, schichtenBelegt, dienstplanInfo, dienstAnkunft, dienstPosition } from '../src/kern/dienst.js';
 import { vorOrt } from '../src/kern/evangelisation.js';
 import { schichtHinzufuegen, offenBei } from '../src/kern/kirchkaffee.js';
 import { evangelisationLevel } from '../src/kern/skills.js';
@@ -243,5 +243,23 @@ console.log('Schalterwand-Tests bestanden.');
   stelleSetzen(z, aus(), termin('veranstaltung').key, 'musik0', ea[0].id);
   bis(z, aus, WOCHE_MIN + SO + 10 * 60);
   assert.ok(imRaum(z, aus, ea[0], gd()), 'auch in Woche 2 da');
+}
+// Pünktlich (Lukas, 27.11.): Bei jedem Dienst steht der Ehrenamtliche genau zum Beginn an seiner Stelle –
+// er läuft so früh am Tor los, wie sein Weg dauert, und ist vorher schon sichtbar unterwegs. Veranstaltung: ohne Vorlauf.
+{
+  assert.equal(DIENST.vorlauf, 0);
+  const { z, aus, ea, termin, block, kk } = gemeinde({ eas: 4 });
+  assert.equal(schichtHinzufuegen(z, kk(), 2, 'nachmittag'), 'ok');
+  const v = termin('veranstaltung'), ko = dienstTermine(z, aus()).find(t => t.art === 'kaffee');
+  const lg = block('logistik', 1, 'nachmittag'), ev = block('evangelisation', 3, 'abend');
+  const faelle = [[v, 'musik0', ea[0]], [ko, 'theke0', ea[1]], [lg, 'regal0', ea[2]], [ev, 'platz0', ea[3]]];
+  for (const [t, stelle, p] of faelle) assert.equal(stelleSetzen(z, aus(), t.key, stelle, p.id), 'ok');
+  for (const [t, , p] of [...faelle].sort((a, b) => a[0].von - b[0].von)) {
+    bis(z, aus, t.von - 2);
+    assert.ok(p.daheim && dienstPosition(z, p), `${t.art}: kurz vor Beginn schon unterwegs, für die Regeln noch daheim`);
+    assert.ok(Math.abs(dienstAnkunft(z, p) - t.von) < 1e-6, `${t.art}: kommt genau zum Beginn an`);
+    bis(z, aus, t.von);
+    assert.ok(!p.daheim && aktiveSchicht(z, aus(), p) && !dienstPosition(z, p), `${t.art}: zu Beginn an seiner Stelle`);
+  }
 }
 console.log('Alle Dienstplan-Tests bestanden.');
