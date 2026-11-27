@@ -32,7 +32,7 @@ export const TEXTE = {
     weiter: 'Weiter'
   },
 
-  // Pop-up „Jugendpastor ist da“ (27.11.2026) – ENTWURF von Claude, Lukas formuliert selbst
+  // Pop-up „Jugendpastor ist da“ (Entwurf von Claude, von Lukas freigegeben 27.11.2026: „passt alles“)
   jugendpastor: {
     titel: 'Verstärkung für die Gemeinde!',
     text: 'Ab heute ist Jugendpastor Jimmy bei euch. Er kann Jugendgottesdienste, Lobpreisgottesdienste und den Konfirmandenunterricht leiten. Teile ihn im Menü „Mitarbeiter“ unter „Hauptamt“ ein.',
@@ -1040,7 +1040,7 @@ export const TEXTE = {
       voll: name => `${name} hat schon alle Schichten dieser Woche.`,
       zeit: name => `${name} arbeitet zu dieser Zeit schon bei einem anderen Termin.`,
       person: (_, art) => art === 'hauptamt' ? 'Diese Stelle ist nur für Ehrenamtliche.' : 'Diese Stelle ist nur für Hauptamtliche.',   // ENTWURF 27.11.
-      leitet: name => `${name} kann diese Veranstaltung nicht leiten.`,   // Jugendpastor – ENTWURF von Claude, 27.11.
+      leitet: name => `${name} kann diese Veranstaltung nicht leiten.`,   // Jugendpastor – von Lukas freigegeben 27.11.
       keine: () => 'Diese Stelle gibt es nicht mehr.',
       auswahl: tab => tab === 'hauptamt' ? 'Wähle zuerst einen Hauptamtlichen aus.' : 'Wähle zuerst einen Ehrenamtlichen aus.',   // HA: ENTWURF 27.11.
       schulung: name => `${name} ist gerade auf Schulung.`   // Schulungen (27.11.): Text von Claude
