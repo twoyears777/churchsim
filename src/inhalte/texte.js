@@ -958,12 +958,16 @@ export const TEXTE = {
   // Aufbau (Kalender, Ziehen und Klicken) von Lukas mit „das sieht super aus“ freigegeben; die Texte sind noch Entwürfe.
   dienstplan: {
     knopf: 'Dienstplan',
-    titel: 'Mitarbeiter · Ehrenamtliche',
+    titel: 'Mitarbeiter',
+    tab: { ehrenamt: 'Ehrenamt', hauptamt: 'Hauptamt' },   // Tab-Namen von Lukas (27.11.)
     schritt1: '1. Ehrenamtlichen anklicken oder mit gedrückter Maustaste auf eine Stelle ziehen',
+    schritt1HA: '1. Hauptamtlichen anklicken oder mit gedrückter Maustaste auf eine Stelle ziehen',   // ENTWURF 27.11.
     schritt2: '2. Freie Stelle anklicken (Klick auf einen Namen nimmt ihn wieder heraus)',
     info: 'Ohne Schicht sind Ehrenamtliche daheim. Sonntagvormittags kommen sie mit 90 % in den Gottesdienst.',
     schichten: (belegt, max) => `${belegt}/${max}`,
+    infoHA: 'Ohne Schicht bleiben Hauptamtliche auf dem Gelände. Die Leitung eines Fests zählt nicht als Schicht.',   // ENTWURF 27.11.
     keineEA: 'Noch keine Ehrenamtlichen.',
+    keineHA: 'Noch keine Hauptamtlichen.',   // ENTWURF 27.11.
     frei: n => `${n} frei`,
     voll: 'voll',
     keinTermin: 'Kein Termin',
@@ -975,6 +979,7 @@ export const TEXTE = {
     stelle: {
       musik: ding => ding,                     // Name des Instruments, z. B. „Gitarre“
       leitung: () => 'Leitung',
+      leitungHA: () => 'Leitung',              // Leitung durch einen Hauptamtlichen (27.11.)
       chorleitung: () => 'Chorleitung · Klavier',
       mitarbeit: (_, n) => `Mitarbeit ${n}`,
       begruessung: (_, n, raum) => raum ? `Begrüßung · ${raum}` : 'Begrüßung',
@@ -986,9 +991,9 @@ export const TEXTE = {
       doppelt: name => `${name} hat bei diesem Termin schon eine Stelle.`,
       voll: name => `${name} hat schon alle Schichten dieser Woche.`,
       zeit: name => `${name} arbeitet zu dieser Zeit schon bei einem anderen Termin.`,
-      person: () => 'Nur Ehrenamtliche können eingeteilt werden.',
+      person: (_, art) => art === 'hauptamt' ? 'Diese Stelle ist nur für Ehrenamtliche.' : 'Diese Stelle ist nur für Hauptamtliche.',   // ENTWURF 27.11.
       keine: () => 'Diese Stelle gibt es nicht mehr.',
-      auswahl: () => 'Wähle zuerst einen Ehrenamtlichen aus.'
+      auswahl: tab => tab === 'hauptamt' ? 'Wähle zuerst einen Hauptamtlichen aus.' : 'Wähle zuerst einen Ehrenamtlichen aus.'   // HA: ENTWURF 27.11.
     }
   },
   // Schichtbetrieb (27.11.) – ENTWÜRFE von Claude: geänderte Texte, wo Ehrenamtliche über den Dienstplan kommen

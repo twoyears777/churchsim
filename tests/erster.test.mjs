@@ -11,7 +11,7 @@ import { neuesSpiel, spielStarten, SPEICHER_VERSION } from '../src/kern/spiel.js
 import { zeitVorruecken, veranstaltungEinstellen, prognose } from '../src/kern/ablauf.js';
 import { wochenberichtOffen, wochenberichtSchliessen } from '../src/kern/wochenbericht.js';
 import { moebelSetzen } from '../src/kern/moebel.js';
-import { versetzen } from '../src/kern/personen.js';
+import { dienstTermine, stelleSetzen } from '../src/kern/dienst.js';
 import { ersterAnlegen, zeitungOffen, zeitungSchliessen } from '../src/kern/erster.js';
 import { TAG_MIN, WOCHE_MIN, zeitpunkt } from '../src/kern/zeit.js';
 
@@ -24,14 +24,19 @@ const raumBei = z => { const a = aus(z); return a.liste[a.gruppe[G.x + 5 + (G.y 
 const SA = 5 * TAG_MIN, SO = 6 * TAG_MIN;
 const ea = z => z.personen.filter(p => p.daten && p.daten.art === 'ehrenamt').length;
 
-// Neues Spiel mit Gottesdienstraum (20 Stühle), Pastor im Raum, Gottesdienst Sonntag vormittags
+// Pastor Harder im Dienstplan als Leitung des Gottesdienstes (27.11.: Hauptamtliche über den Dienstplan)
+function pastorEinteilen(z) {
+  const t = dienstTermine(z, aus(z)).find(x => x.art === 'veranstaltung');
+  assert.equal(stelleSetzen(z, aus(z), t.key, 'hauptamt', z.personen[0].id), 'ok');
+}
+// Neues Spiel mit Gottesdienstraum (20 Stühle), Pastor als Leitung eingeteilt, Gottesdienst Sonntag vormittags
 function gemeinde(pastor = true) {
   const z = neuesSpiel(() => 0.5);
   wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
   typZuweisen(z, raumBei(z), 'gottesdienst');
   moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 4);
-  if (pastor) versetzen(z, z.personen[0], G.x + 4, G.y + 5);
   veranstaltungEinstellen(z, raumBei(z), 'gottesdienst');
+  if (pastor) pastorEinteilen(z);
   z.ortRuhig = true; z.konto = 1000;
   return z;
 }
@@ -81,7 +86,7 @@ function bis(z, ziel, zufall = () => 0.5) {
 }
 console.log('Erster Gottesdienst: Zeitung, +10 Leute, 1 Ehrenamtlicher bestanden.');
 
-// Fällt der erste Gottesdienst aus (kein Pastor im Raum), gilt der nächste; die Zeitung kommt nur einmal
+// Fällt der erste Gottesdienst aus (kein Pastor eingeteilt), gilt der nächste; die Zeitung kommt nur einmal
 {
   const z = gemeinde(false);
   bis(z, SA + 12 * 60);
@@ -89,7 +94,7 @@ console.log('Erster Gottesdienst: Zeitung, +10 Leute, 1 Ehrenamtlicher bestanden
   bis(z, SO + 23 * 60);
   assert.equal(z.erster.erledigt, false);
   assert.equal(ea(z), 1);
-  versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+  pastorEinteilen(z);
   bis(z, WOCHE_MIN + SO + 23 * 60);
   assert.equal(z.erster.zeitung, true); assert.equal(zeitungOffen(z), false);   // keine zweite Zeitung
   assert.equal(z.erster.erledigt, true);

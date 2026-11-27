@@ -45,6 +45,9 @@ function gemeinde({ lager = true, eas = 3, stuehle = 10 } = {}) {
   for (let i = 0; i < eas; i++) ea.push(personHinzufuegen(z, { name: `Helfer ${i + 1}`, kuerzel: 'H', art: 'ehrenamt' }));
   for (const b of z.besucher) b.kaffeeWert = 1;
   const gd = () => raumBei(G.x + 5, G.y + 5), kk = () => raumBei(G.x + 20, G.y + 5);
+  // Hauptamt im Dienstplan (27.11.): Pastor Harder leitet den Gottesdienst laut Dienstplan
+  const v0 = dienstTermine(z, aus()).find(t => t.art === 'veranstaltung');
+  assert.equal(stelleSetzen(z, aus(), v0.key, 'hauptamt', z.personen[0].id), 'ok');
   const termin = art => dienstTermine(z, aus()).find(t => t.art === art);
   const block = (art, tag, slot) => dienstTermine(z, aus()).find(t => t.art === art && t.tag === tag && t.slot === slot);
   return { z, aus, gd, kk, ea, termin, block, raumBei };
@@ -71,8 +74,9 @@ console.log('Grundeinstellung-Tests bestanden.');
 {
   const { z, aus, termin, block } = gemeinde();
   const v = termin('veranstaltung');
-  assert.deepEqual(v.stellen.map(s => s.code), ['musik', 'musik']);
-  assert.deepEqual(v.stellen.map(s => s.ding), ['gitarre', 'keyboard']);
+  assert.deepEqual(v.stellen.map(s => s.code), ['leitungHA', 'musik', 'musik']);
+  assert.deepEqual(v.stellen.map(s => s.wer), ['hauptamt', 'ehrenamt', 'ehrenamt']);
+  assert.deepEqual(v.stellen.map(s => s.ding), [null, 'gitarre', 'keyboard']);
   assert.equal(v.von, SO + 10 * 60 - DIENST.vorlauf); assert.equal(v.bis, SO + 11 * 60);
   const kn = termin('kaffeeNach');
   assert.equal(kn.stellen.length, 1); assert.equal(kn.von, SO + 11 * 60); assert.equal(kn.bis, SO + 13 * 60);
@@ -108,7 +112,8 @@ console.log('Stellen-Tests bestanden.');
   assert.equal(schichtenBelegt(z, aus(), b), 0);
   // Abfrage fürs Menü
   const info = dienstplanInfo(z, aus());
-  assert.equal(info.personen.length, 3 + 1);   // drei Helfer und die Frau des Pastors
+  assert.equal(info.personen.filter(p => p.art === 'ehrenamt').length, 3 + 1);   // drei Helfer und die Frau des Pastors
+  assert.equal(info.personen.filter(p => p.art === 'hauptamt').length, 1);       // Pastor Harder (27.11.)
   assert.ok(info.termine.some(t => t.art === 'kaffeeNach' && t.stellen[0].person && t.stellen[0].person.id === a.id));
 }
 console.log('Einteilen-Tests bestanden.');
@@ -219,7 +224,7 @@ console.log('Evangelisation-Tests bestanden.');
 }
 console.log('Gottesdienstbesuch-Tests bestanden.');
 
-// Ehrenamtliche lassen sich im Schichtbetrieb nicht mehr in Räume ziehen; der Pastor schon
+// Ehrenamtliche und (seit 27.11. abends) auch der Pastor lassen sich im Schichtbetrieb nicht mehr in Räume ziehen
 {
   const { z } = gemeinde();
   const s = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
@@ -227,13 +232,13 @@ console.log('Gottesdienstbesuch-Tests bestanden.');
   assert.ok(s.karte().personen.every(p => p.art !== 'ehrenamt' || p.daheim), 'ohne Schicht: auf dem Heimweg oder schon weg');
   const eaId = z.personen.find(p => p.daten && p.daten.art === 'ehrenamt').id;
   assert.equal(s.personVersetzen(eaId, G.x + 5, G.y + 5), false);
-  assert.ok(s.personVersetzen('pastor', G.x + 6, G.y + 5));
+  assert.equal(s.personVersetzen('pastor', G.x + 6, G.y + 5), false);
   assert.equal(s.lage().schichtbetrieb, true);
   assert.ok(s.dienstplan().termine.length > 0);
   // Befehl über die Schalterwand
   const t = s.dienstplan().termine.find(x => x.art === 'veranstaltung');
   assert.equal(s.stelleSetzen(t.key, 'musik0', eaId), 'ok');
-  assert.equal(s.dienstplan().termine.find(x => x.key === t.key).stellen[0].person.id, eaId);
+  assert.equal(s.dienstplan().termine.find(x => x.key === t.key).stellen.find(x => x.id === 'musik0').person.id, eaId);
 }
 console.log('Schalterwand-Tests bestanden.');
 

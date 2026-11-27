@@ -377,8 +377,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     personVersetzen(id, x, y) {
       const p = z.personen.find(q => q.id === id);
       if (!p || (p.x === x && p.y === y)) return false;
-      // Schichtbetrieb (27.11.): Ehrenamtliche werden im Menü „Mitarbeiter“ eingeteilt, nicht in Räume gezogen
-      if (z.schichtbetrieb && daten(p) && daten(p).art === 'ehrenamt') return false;
+      // Schichtbetrieb (27.11.): Ehren- und Hauptamtliche werden im Menü „Mitarbeiter“ eingeteilt, nicht in Räume gezogen
+      if (z.schichtbetrieb && daten(p) && (daten(p).art === 'ehrenamt' || daten(p).art === 'hauptamt')) return false;
       // Wer gerade zur Evangelisation oder für das Kirchkaffee unterwegs ist, bricht das sofort ab (27.11.) –
       // sonst würde er bis zur nächsten Kontrolle noch am alten Ort gezeichnet.
       return aendern(() => {
@@ -563,7 +563,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const zp = zeitpunkt(z.minuten), lg = z.letzterGottesdienst;
       // daheim/schichten (27.11.): im Schichtbetrieb ist ein Ehrenamtlicher ohne Schicht daheim; schichten = belegt/max pro Woche
       const personen = z.personen.map(p => { const d = daten(p), r = eingesetztIn(z, raeume, p); return d && { id: p.id, art: d.art, name: d.name, einsatz: r ? r.typ.name : null,
-        daheim: !!p.daheim, schichten: z.schichtbetrieb && d.art === 'ehrenamt' ? { belegt: schichtenBelegt(z, raeume, p), max: schichtenMax(p) } : null }; }).filter(Boolean);
+        daheim: !!p.daheim, schichten: z.schichtbetrieb && (d.art === 'ehrenamt' || d.art === 'hauptamt') ? { belegt: schichtenBelegt(z, raeume, p), max: schichtenMax(p) } : null }; }).filter(Boolean);
       return {
         woche: zp.woche + 1, tag: zp.tag, datum: tagAnzeige(Math.floor(z.minuten / TAG_MIN)).datum, stunde: zp.stunde, minute: zp.minute, tageBisSonntag: tageBisSonntag(z.minuten),
         naechstesEvent: naechstesEvent(z, raeume),   // läuft gerade eins / das nächste mit Minuten bis Beginn / null

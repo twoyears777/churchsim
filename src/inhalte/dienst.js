@@ -8,6 +8,7 @@
 //   • Ohne Schicht sind sie daheim. Sonntagvormittags kommen sie mit besuch.chance als Besucher in den Gottesdienst.
 export const DIENST = {
   schichten: 3,          // Schichten pro Woche je Ehrenamtlichem (Lukas, 27.11.); Ausnahmen über `schichten` in den Daten der Person
+  schichtenHauptamt: 3,  // Schichten pro Woche je Hauptamtlichem (Lukas, 27.11.: „erstmal“ 3; später kosten Hauptamtliche Geld)
   // Bei Veranstaltungen ist der Ehrenamtliche so viele Spielminuten vor Beginn an seiner Stelle.
   // Lukas, 27.11.: exakt pünktlich zum Beginn (vorher 30, Platzhalter von Claude). Losgelaufen wird so früh, wie der Weg dauert.
   // Gezählt wird er für die Veranstaltung schon vorher, sobald er im Dienstplan steht.

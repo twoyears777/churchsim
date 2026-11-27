@@ -3,6 +3,8 @@
 // drei Zeitblöcke mit allen Terminen und ihren Stellen. Einteilen per Ziehen (gedrückte Maustaste) oder per Klick
 // (erst Ehrenamtlichen, dann Stelle). Klick auf eine besetzte Stelle nimmt ihn wieder heraus.
 // Die Regeln (Schichten, Überschneidungen) prüft das Spiel – hier wird nur angezeigt und der Befehl geschickt.
+// Zwei Tabs (Lukas, 27.11.): „Ehrenamt“ und „Hauptamt“ – gleicher Aufbau, oben die Leute dieser Art, unten nur die Stellen,
+// die sie übernehmen dürfen (s.wer aus dienst.js). f.tab merkt sich den offenen Tab.
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, esc } from './ui.js';
 
@@ -17,15 +19,19 @@ function stelleName(s, stellen) {
 }
 
 export function dienstplanFenster(f) {
-  const T = TEXTE.dienstplan, d = ui.spiel.dienstplan(), l = ui.spiel.lage();
+  const T = TEXTE.dienstplan, alles = ui.spiel.dienstplan(), l = ui.spiel.lage();
   if (f.tag === undefined) f.tag = l.tag;
+  if (f.tab !== 'hauptamt') f.tab = 'ehrenamt';
+  const ha = f.tab === 'hauptamt', passt = s => s.wer === 'alle' || s.wer === f.tab;
+  const d = { personen: alles.personen.filter(p => p.art === f.tab),
+    termine: alles.termine.map(t => ({ ...t, stellen: t.stellen.filter(passt) })).filter(t => t.stellen.length) };
   if (f.auswahl && !d.personen.some(p => p.id === f.auswahl)) delete f.auswahl;
   if (!f.auswahl && d.personen.length) f.auswahl = d.personen[0].id;
   const punkte = p => Array.from({ length: p.max }, (_, i) => `<span class="dp-punkt${i < p.belegt ? ' an' : ''}"></span>`).join('');
   const leute = d.personen.length
     ? d.personen.map(p => `<button class="dp-ea${p.id === f.auswahl ? ' gewaehlt' : ''}${p.jugend ? ' jugend' : ''}" draggable="true" data-dp-ea="${esc(p.id)}">
         <span class="dp-griff" aria-hidden="true">⋮⋮</span><b>${esc(p.name)}</b><span class="dp-punkte">${punkte(p)}</span><small>${T.schichten(p.belegt, p.max)}</small></button>`).join('')
-    : `<p class="unter">${T.keineEA}</p>`;
+    : `<p class="unter">${ha ? T.keineHA : T.keineEA}</p>`;
   const tage = TEXTE.tageKurz.map((name, tag) => {
     const st = d.termine.filter(t => t.tag === tag && ZAEHLT.includes(t.art)).flatMap(t => t.stellen);
     const frei = st.filter(s => !s.person).length;
@@ -51,28 +57,31 @@ export function dienstplanFenster(f) {
       </div>`).join('') : `<p class="unter">${T.keinTermin}</p>`;
     return `<div class="dp-block"><div class="dp-block-kopf">${TEXTE.tage[f.tag]} · ${TEXTE.kaffeeFenster.slot[slot]}</div>${termine}</div>`;
   }).join('');
+  const tabs = ['ehrenamt', 'hauptamt'].map(t => `<button class="tab${t === f.tab ? ' an' : ''}" data-dp-tab="${t}">${T.tab[t]}</button>`).join('');
   return `<h2>${T.titel}</h2>
-    <p class="unter">${T.schritt1}</p>
+    <div class="tabs dp-tabs">${tabs}</div>
+    <p class="unter">${ha ? T.schritt1HA : T.schritt1}</p>
     <div class="dp-leute">${leute}</div>
     ${meine}
     <div class="dp-tage">${tage}</div>
     <p class="unter">${T.schritt2}</p>
     <div class="dp-bloecke">${bloecke}</div>
     <p class="warnung dp-fehler">${f.fehler ? esc(f.fehler) : ''}</p>
-    <p class="unter">${T.info}</p>`;
+    <p class="unter">${ha ? T.infoHA : T.info}</p>`;
 }
 
 // Befehl schicken und die Antwort als Hinweis zeigen
 function setzen(f, wert, personId) {
   const T = TEXTE.dienstplan, [key, stelle] = wert.split('|');
-  if (!personId) { f.fehler = T.fehler.auswahl(); return; }
+  if (!personId) { f.fehler = T.fehler.auswahl(f.tab); return; }
   const e = ui.spiel.stelleSetzen(key, stelle, personId);
   const p = ui.spiel.dienstplan().personen.find(x => x.id === personId);
-  f.fehler = e === 'ok' ? '' : (T.fehler[e] || T.fehler.keine)(p ? p.name : '');
+  f.fehler = e === 'ok' ? '' : (T.fehler[e] || T.fehler.keine)(p ? p.name : '', p ? p.art : f.tab);
 }
 // Klicks im Fenster (aus fensterEinrichten) → true, wenn es ein Knopf des Dienstplans war
 export function dienstplanKlick(b, f) {
   if (f.art !== 'dienstplan') return false;
+  if (b.dataset.dpTab) { if (f.tab !== b.dataset.dpTab) { f.tab = b.dataset.dpTab; delete f.auswahl; } f.fehler = ''; return true; }
   if (b.dataset.dpEa) { f.auswahl = b.dataset.dpEa; f.fehler = ''; return true; }
   if (b.dataset.dpTag !== undefined) { f.tag = Number(b.dataset.dpTag); f.fehler = ''; return true; }
   if (b.dataset.dpStelle) { setzen(f, b.dataset.dpStelle, f.auswahl); return true; }

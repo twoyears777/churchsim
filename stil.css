@@ -347,6 +347,10 @@ table.menschen .zahl { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---- Menü „Mitarbeiter“: Dienstplan der Ehrenamtlichen (27.11.) – ENTWURF-Aussehen von Claude nach der freigegebenen Vorschau ---- */
 .dienstplan-knopf { width: 100%; margin-top: 2px; }
+/* Tabs „Ehrenamt“ / „Hauptamt“ (27.11., Aussehen: Entwurf von Claude) */
+.dp-tabs { display: flex; gap: 4px; margin: 2px 0 10px; border-bottom: 2px solid #d6d0c2; }
+.inhalt .dp-tabs .tab { height: auto; padding: 6px 16px; border-radius: 8px 8px 0 0; background: #e7e1d4; color: #6b665b; font-weight: 600; margin-bottom: -2px; border: 2px solid transparent; }
+.inhalt .dp-tabs .tab.an { background: #fff; color: #2b2a27; border-color: #d6d0c2; border-bottom-color: #fff; }
 .dp-leute { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
 .inhalt .dp-ea { display: flex; align-items: center; gap: 6px; padding: 6px 10px; height: auto; border-radius: 8px; background: #fff; color: #2b2a27;
   border: 1px solid #cfc9bb; font-size: 13px; cursor: grab; }

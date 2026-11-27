@@ -45,6 +45,8 @@ export function evangelisationAnlegen(z) {
 // Ist dieser Ehrenamtliche jugendlich? (Wer als Jugendlicher Ehrenamtlicher wurde – seit 26.11. gemerkt in herkunft.jugend)
 export const istJugendEA = p => { const d = daten(p); return !!(d && d.herkunft && d.herkunft.jugend); };
 const ehrenamtliche = z => z.personen.filter(p => { const d = daten(p); return d && d.art === 'ehrenamt'; });
+// Schichtbetrieb (27.11.): auch Hauptamtliche können für die Evangelisation eingeteilt werden
+const imDienstplan = z => z.personen.filter(p => { const d = daten(p); return d && (d.art === 'ehrenamt' || (z.schichtbetrieb && d.art === 'hauptamt')); });
 
 // ---- Bewegung ----
 function laenge(pfad) { let l = 0; for (let i = 0; i < pfad.length - 1; i++) l += Math.hypot(pfad[i + 1].x - pfad[i].x, pfad[i + 1].y - pfad[i].y); return l; }
@@ -139,7 +141,7 @@ export function evangelisationVerlassen(z, p) {
   delete z.evangelisation.gezaehlt[p.id];
 }
 function vorOrtDienst(z) {
-  return ehrenamtliche(z).filter(p => !p.daheim && standplatzDienst(p) && dienstAngekommen(z, p));
+  return imDienstplan(z).filter(p => !p.daheim && standplatzDienst(p) && dienstAngekommen(z, p));
 }
 
 // ---- Alles bis jetzt Fällige ausführen ----
@@ -186,9 +188,9 @@ export function evangelisationAktualisieren(z, raeume) {
 
 // Nächster Zeitpunkt, zu dem bei der Evangelisation etwas passiert (für das Tick-System)
 export function evangelisationSchritt(z) {
-  if (!z.evangelisation || !z.personen.some(p => { const d = daten(p); return d && d.art === 'ehrenamt'; })) return null;
+  if (!z.evangelisation || !imDienstplan(z).length) return null;
   if (z.schichtbetrieb) {   // nur zum Gutschreiben der Erfahrung, solange jemand vor Ort ist
-    if (!ehrenamtliche(z).some(p => !p.daheim && standplatzDienst(p))) return null;
+    if (!imDienstplan(z).some(p => !p.daheim && standplatzDienst(p))) return null;
     return { zeit: (Math.floor(z.minuten / E.pruefen + EPS) + 1) * E.pruefen, tun: (zz, rr) => evangelisationAktualisieren(zz, rr) };
   }
   const A = z.evangelisation, t = z.minuten, f = fenster(t), zeiten = [];
@@ -264,7 +266,7 @@ export function evangelisationInfo(z, raeume) {
     max: E.plaetze, jugendgottesdienst: jugo, maxChance: Math.round(E.maxChance * 100),
     // Schichtbetrieb (27.11.): keine feste Uhrzeit mehr – es zählt der Dienstplan (zeiten: null)
     zeiten: z.schichtbetrieb ? null : { von: E.von, bis: E.bis, jetzt: t >= f.von && t < f.bis },
-    unterwegs: z.schichtbetrieb ? ehrenamtliche(z).filter(p => !p.daheim && imEvangelisationDienst(z, raeume, p) && !dienstAngekommen(z, p)).length
+    unterwegs: z.schichtbetrieb ? imDienstplan(z).filter(p => !p.daheim && imEvangelisationDienst(z, raeume, p) && !dienstAngekommen(z, p)).length
       : Object.values(z.evangelisation ? z.evangelisation.ma : {}).filter(m => m.phase === 'hin' && t < ankunft(m.bew) - EPS).length,
     frei: freieEhrenamtliche(z, raeume),
     leute: leute.map(p => {

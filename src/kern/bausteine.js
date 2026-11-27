@@ -13,6 +13,8 @@ import { fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
 import { musikLevel, musikBonus, multiplikatorFaktor } from './skills.js';
 import { amTisch, STUEHLE_JE_TISCH } from './kirchkaffee.js';
+// Hauptamtlicher da? Im Schichtbetrieb (27.11.) laut Dienstplan (info.hauptamt aus gottesdienstRaeume/mitDienst), sonst im Raum
+const hauptamtDa = (info, imRaum) => info && Array.isArray(info.hauptamt) ? info.hauptamt.length > 0 : imRaum.some(p => daten(p).art === 'hauptamt');
 
 const MAX_MUSIKER = MOEBEL.filter(m => m.wirkung && m.wirkung.musik).length;   // so viele Instrumente gibt es
 const prozent = b => Math.round(b * 100);
@@ -36,7 +38,7 @@ function gottesdienstraum(z, raum, info, v) {
   const lobpreis = !!v.haltungNachVorliebe;
   const jugend = !!v.musikerMin, kollekte = KOLLEKTE_PRO_BESUCHER * (v.kollekteFaktor || 1);   // Jugendgottesdienst (26.11.)
   const imRaum = info ? info.imRaum : [];
-  const hauptamt = imRaum.some(p => daten(p).art === 'hauptamt');
+  const hauptamt = hauptamtDa(info, imRaum);
   const hat = art => moebelImRaum(z, raum, art).length > 0;
   const stuehle = moebelImRaum(z, raum, 'stuhl');
   const spieler = info ? info.spieler : [];
@@ -106,7 +108,7 @@ function gottesdienstraum(z, raum, info, v) {
 // Das Plus der Ehrenamtlichen steht in der Spalte „Ehrenamt“ (erste Veranstaltung, die sie nutzt).
 function konfi(z, raum, info, v) {
   const imRaum = info ? info.imRaum : [];
-  const hauptamt = imRaum.some(p => daten(p).art === 'hauptamt');
+  const hauptamt = hauptamtDa(info, imRaum);
   const stuehle = moebelImRaum(z, raum, 'stuhl');
   const ea = info ? (info.ehrenamtliche || []).length : 0, zaehlen = Math.min(v.ehrenamtMax || Infinity, ea);
   const zeilen = [
@@ -126,7 +128,7 @@ function konfi(z, raum, info, v) {
 // Spende 0 bis 3 € je Besucher. Plätze = Stühle am Tisch.
 function spielenachmittag(z, raum, info, v) {
   const imRaum = info ? info.imRaum : [];
-  const leitung = imRaum.some(p => daten(p).art === 'hauptamt') || (info ? (info.ehrenamtliche || []).length > 0 : false);
+  const leitung = hauptamtDa(info, imRaum) || (info ? (info.ehrenamtliche || []).length > 0 : false);
   const stuehle = moebelImRaum(z, raum, 'stuhl'), amTischListe = stuehle.filter(s => amTisch(z, s));
   const hatTisch = moebelImRaum(z, raum, 'tisch').length > 0;
   const S = v.spendeImmer, spende = (S.min + S.max) / 2;
@@ -148,7 +150,7 @@ function gemeindesaal(z, raum, info, v) {
   if (v.amTisch) return spielenachmittag(z, raum, info, v);
   const imRaum = info ? info.imRaum : [];
   const ea = imRaum.filter(p => daten(p).art === 'ehrenamt');
-  const hauptamt = imRaum.some(p => daten(p).art === 'hauptamt');
+  const hauptamt = hauptamtDa(info, imRaum);
   const hat = art => moebelImRaum(z, raum, art).length > 0;
   const stuehle = moebelImRaum(z, raum, 'stuhl');
   const spende = v.spende ? Math.round(spendeJeBesucher() * 100) / 100 : 0;

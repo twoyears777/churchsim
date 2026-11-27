@@ -141,24 +141,25 @@ export function gottesdienstRaeume(z, raeume) {
     // Ehrenamtliche der Veranstaltung: bisher wer im Raum steht (das geht nur, wenn mindestens ein Instrument im Raum steht);
     // im Schichtbetrieb (27.11.) wer im Dienstplan für diese Veranstaltung eingeteilt ist – egal, wo er gerade ist.
     const vorOrt = imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r), spielerVorOrt = spielerAus(vorOrt);
+    // Hauptamtliche (27.11.): im Schichtbetrieb wer im Dienstplan als Leitung eingeteilt ist, sonst wer im Raum steht
     const ehrenamtFuer = i => {
-      if (!z.schichtbetrieb) return { ehrenamtliche: vorOrt, spieler: spielerVorOrt };
+      if (!z.schichtbetrieb) return { ehrenamtliche: vorOrt, spieler: spielerVorOrt, haupt: hauptamt };
       const d = veranstaltungDienst(z, raeume, r, i);
-      return { ehrenamtliche: d.alle, spieler: spielerAus(d.musik) };
+      return { ehrenamtliche: d.alle, spieler: spielerAus(d.musik), haupt: d.hauptamt };
     };
     const programm = programmVon(z, r).map((e, i) => {
       const v = VERANSTALTUNGEN.find(x => x.id === e.art) || null, sperre = platzSperre(z, r, i), frei = !sperre;
-      const { ehrenamtliche, spieler } = ehrenamtFuer(i);
-      const pruefung = v ? voraussetzungen(z, r, v, imRaum, ehrenamtliche, spieler) : { leitung: null, fehlt: null };
+      const { ehrenamtliche, spieler, haupt } = ehrenamtFuer(i);
+      const pruefung = v ? voraussetzungen(z, r, v, haupt, ehrenamtliche, spieler) : { leitung: null, fehlt: null };
       const fehlt = !v ? 'keine' : !frei ? 'gesperrt' : pruefung.fehlt;
       return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, sperre, leitung: pruefung.leitung, fehlt, bereit: !fehlt,
         musikBonus: pruefung.musikBonus || 0, ehrenamtBonus: v ? ehrenamtBonus(v, ehrenamtliche) : 0,
-        dienst: { ehrenamtliche, spieler, musiker: spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)) } };
+        dienst: { ehrenamtliche, spieler, musiker: spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)), hauptamt: haupt, leitung: haupt[0] || null } };
     });
     // Für den Raum als Ganzes (Raum-Fenster, Übersichten) gelten die Ehrenamtlichen von Veranstaltung 1
     const d0 = programm[0].dienst;
-    return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt, ehrenamtliche: d0.ehrenamtliche,
-      leitung: hauptamt[0] || null, musiker: d0.musiker, spieler: d0.spieler, ausstattung: d0.ausstattung, bereit: programm.some(p => p.bereit) };
+    return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt: d0.hauptamt, ehrenamtliche: d0.ehrenamtliche,
+      leitung: d0.leitung, musiker: d0.musiker, spieler: d0.spieler, ausstattung: d0.ausstattung, bereit: programm.some(p => p.bereit) };
   });
 }
 // Raum-Eintrag mit den Ehrenamtlichen genau dieser Veranstaltung (Musiker, Ausstattung mit Lobpreisteam …)
@@ -169,13 +170,14 @@ export const mitDienst = (g, p) => p && p.dienst ? { ...g, ...p.dienst } : g;
 // | 'musiker' (Jugendgottesdienst: zu wenige Ehrenamtliche spielen ein Instrument)
 // | 'gitarrist' (Lobpreisgottesdienst: kein Ehrenamtlicher spielt die Gitarre)
 // leitung: wer die Veranstaltung leitet (der erste der verlangten Mitarbeiter, z. B. der Hauptamtliche beim Seniorennachmittag).
-function voraussetzungen(z, r, v, imRaum, ehrenamtliche, spieler = []) {
+// hauptamt: Hauptamtliche dieser Veranstaltung (im Raum bzw. im Schichtbetrieb laut Dienstplan)
+function voraussetzungen(z, r, v, hauptamt, ehrenamtliche, spieler = []) {
   let leitung = null, musik = 0;
   if (v.leitungOder) {   // Spielenachmittag: ein Hauptamtlicher ODER ein (eingesetzter) Ehrenamtlicher reicht
-    leitung = imRaum.find(p => daten(p).art === 'hauptamt') || ehrenamtliche[0] || null;
+    leitung = hauptamt[0] || ehrenamtliche[0] || null;
     if (!leitung) return { leitung: null, fehlt: 'mitarbeiter' };
   } else for (const art of [].concat(v.leitung)) {
-    let kandidaten = art === 'ehrenamt' ? ehrenamtliche : imRaum.filter(p => daten(p).art === art);
+    let kandidaten = art === 'ehrenamt' ? ehrenamtliche : art === 'hauptamt' ? hauptamt : [];
     if (art === 'ehrenamt' && v.musikLevelMin) {
       kandidaten = kandidaten.filter(p => musikLevel(p) >= v.musikLevelMin).sort((a, b) => musikLevel(b) - musikLevel(a));
       if (!kandidaten.length) return { leitung: null, fehlt: ehrenamtliche.length ? 'musikLevel' : 'ehrenamt' };
@@ -408,7 +410,9 @@ export function terminStand(z, raeume, t) {
 // Sonderevent: wie ein Eintrag im Programm des Raums, aber mit der im Fest-Menü gewählten Leitung
 function festProgramm(z, g, L) {
   const plan = z.feste && z.feste.plaene[L.fest], v = VERANSTALTUNGEN.find(x => x.id === (plan ? plan.art : L.art)) || null;
-  const leitung = plan ? g.imRaum.find(p => p.id === plan.leitung && daten(p).art === 'hauptamt') || null : null;
+  // Schichtbetrieb (27.11.): die im Fest-Menü gewählte Leitung kommt zur Festzeit von selbst (dienst.js) – zählt schon vorher
+  const leitung = !plan ? null : z.schichtbetrieb ? z.personen.find(p => p.id === plan.leitung && daten(p) && daten(p).art === 'hauptamt') || null
+    : g.imRaum.find(p => p.id === plan.leitung && daten(p).art === 'hauptamt') || null;
   const fehlt = !v || !plan || v.fest === false ? 'keine' : !leitung ? 'leitung' : v.braucht.some(a => !moebelImRaum(z, g.raum, a).length) ? 'gitarre'
     : v.gitarrist && !g.spieler.length ? 'gitarrist' : null;
   return { platz: 'fest', art: v ? v.id : null, tag: L.plan.tag, slot: L.plan.slot, veranstaltung: v, frei: true, leitung, fehlt, bereit: !fehlt };

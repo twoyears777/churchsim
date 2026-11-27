@@ -64,8 +64,11 @@ export function eingesetztIn(z, raeume, person) {
   const nr = raeume.gruppe[idx(z, person.x, person.y)];
   const r = nr >= 0 ? raeume.liste[nr] : null, d = daten(person);
   if (!r || !r.typ || r.probleme.length || !d) return null;
-  if (r.typ.einsatz && !r.typ.einsatz.includes(d.art)) return null;
-  const braucht = r.typ.einsatzBraucht && r.typ.einsatzBraucht[d.art];   // z. B. Ehrenamtliche im Gottesdienstraum: nur mit Instrument
+  // Schichtbetrieb (27.11.): Hauptamtliche dürfen im Dienstplan auch Stellen der Ehrenamtlichen übernehmen
+  // (Kirchkaffee, Begrüßung, Logistik) – dort zählen sie wie Ehrenamtliche. Nach der Schicht gehen sie zum Startplatz.
+  const art = z.schichtbetrieb && d.art === 'hauptamt' && r.typ.einsatz && !r.typ.einsatz.includes('hauptamt') && r.typ.einsatz.includes('ehrenamt') ? 'ehrenamt' : d.art;
+  if (r.typ.einsatz && !r.typ.einsatz.includes(art)) return null;
+  const braucht = r.typ.einsatzBraucht && r.typ.einsatzBraucht[art];   // z. B. Ehrenamtliche im Gottesdienstraum: nur mit Instrument
   if (!braucht) return r;
   return (braucht === 'instrument' ? instrumenteImRaum(z, r) : moebelImRaum(z, r, braucht).length) ? r : null;
 }
