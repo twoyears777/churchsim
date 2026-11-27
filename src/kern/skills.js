@@ -6,7 +6,7 @@
 import { SKILLS } from '../inhalte/skills.js';
 import { START_MITARBEITER } from '../inhalte/mitarbeiter.js';
 import { SEELSORGE } from '../inhalte/seelsorge.js';
-import { MUSIK } from '../inhalte/moebel.js';
+import { MUSIK, TON } from '../inhalte/moebel.js';
 import { HALTUNG_MULTIPLIKATOR } from '../inhalte/forschung.js';
 import { EVANGELISATION } from '../inhalte/evangelisation.js';
 
@@ -99,6 +99,22 @@ export function musikStand(person) {
   return { level, maxLevel: MUSIK.maxLevel, fortschritt };
 }
 
+// ── Tontechnik-Level (Ehrenamtliche, 27.11.): Level 0 … TON.maxLevel, Erfahrung nur durch Einsätze am Tontechnikpult ──
+const tonErfahrung = p => (hatSkill(p, 'tontechnik') && skillsVon(p).tontechnik) || 0;
+export function tontechnikLevel(person) {
+  return Math.min(TON.maxLevel, Math.floor(tonErfahrung(person) / TON.erfahrungProLevel + 1e-9));
+}
+// Nach einem Einsatz am Pult: etwas Erfahrung dazu (beim höchsten Level bleibt es stehen)
+export function tontechnikErfahrungDazu(person) {
+  if (!hatSkill(person, 'tontechnik')) return;
+  skillsVon(person).tontechnik = Math.min(TON.maxLevel * TON.erfahrungProLevel, tonErfahrung(person) + TON.erfahrungProEinsatz);
+}
+// Stand fürs Anzeigen (Karte, Dienstplan): Level und Fortschritt bis zum nächsten Level (0 … 1)
+export function tontechnikStand(person) {
+  const level = tontechnikLevel(person), e = tonErfahrung(person);
+  return { level, maxLevel: TON.maxLevel, fortschritt: level >= TON.maxLevel ? 1 : (e - level * TON.erfahrungProLevel) / TON.erfahrungProLevel };
+}
+
 // ── Haltungs-Multiplikator (Hauptamtliche): Erfahrung = geleitete Gottesdienste, Stufen mit Heiligkeit gekauft ──
 const MS = HALTUNG_MULTIPLIKATOR.stufen;
 const mult = p => (hatSkill(p, 'multiplikator') ? skillsVon(p).multiplikator : null);
@@ -161,7 +177,8 @@ export function evangelisationStand(person) {
 // Gibt dem Skill genau so viel Erfahrung, wie n Level brauchen (der Fortschritt im angefangenen Level bleibt), höchstens bis zum Höchst-Level.
 const LEVEL_SKILLS = {
   musik: { proLevel: () => MUSIK.erfahrungProLevel, max: () => MUSIK.maxLevel },
-  evangelisation: { proLevel: () => ES.erfahrungProLevel, max: () => ES.maxLevel }
+  evangelisation: { proLevel: () => ES.erfahrungProLevel, max: () => ES.maxLevel },
+  tontechnik: { proLevel: () => TON.erfahrungProLevel, max: () => TON.maxLevel }
 };
 export function skillLevelDazu(person, id, n) {
   const L = LEVEL_SKILLS[id];
@@ -173,5 +190,6 @@ export function skillLevelDazu(person, id, n) {
 export function skillAmMax(person, id) {
   if (id === 'musik') return musikLevel(person) >= MUSIK.maxLevel;
   if (id === 'evangelisation') return evangelisationLevel(person) >= ES.maxLevel;
+  if (id === 'tontechnik') return tontechnikLevel(person) >= TON.maxLevel;
   return false;
 }

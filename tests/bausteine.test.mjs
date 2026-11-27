@@ -39,8 +39,8 @@ function gottesdienstraum() {
 {
   const z = gottesdienstraum(), t = tabelle(z, ['gottesdienst', 'lobpreis']);
   const g = t.gottesdienst;
-  assert.deepEqual(g.zeilen.map(b => b.id), ['hauptamt', 'moebel', 'moebel', 'moebel', 'moebel', 'fenster', 'besserStuhl', 'instrumentOhne', 'musiker', 'musiker']);
-  assert.deepEqual(g.zeilen.map(b => b.imRaum), [true, true, false, true, false, false, false, true, true, false]);
+  assert.deepEqual(g.zeilen.map(b => b.id), ['hauptamt', 'moebel', 'moebel', 'moebel', 'moebel', 'fenster', 'besserStuhl', 'instrumentOhne', 'musiker', 'musiker', 'lautsprecher', 'tonpult', 'tontechniker', 'subwoofer']);
+  assert.deepEqual(g.zeilen.map(b => b.imRaum), [true, true, false, true, false, false, false, true, true, false, false, false, false, false]);
   assert.deepEqual(text(g.zeilen[0]), { name: 'Hauptamtlicher (Pflicht)', besucher: 'normal', haltung: '+5 Gottesdienst, +5 Platz', geld: '1 € je Besucher' });
   assert.equal(text(g.zeilen[3]).name, 'Blumen (2 von 4)');
   assert.equal(text(g.zeilen[4]).geld, 'Kollekte ×1,05 je Stück');

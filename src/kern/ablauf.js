@@ -17,8 +17,8 @@ import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
 import { idx, erkenneRaeume, raumTypVon, pruefeRaum } from './karte.js';
 import { imDurchgang } from './durchgang.js';
-import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum, hindernisBei } from './moebel.js';
-import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill, alleSeelsorger } from './skills.js';
+import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum, hindernisBei, tonWirkung, tonAnteil } from './moebel.js';
+import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill, alleSeelsorger, tontechnikLevel, tontechnikErfahrungDazu } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { bueroSchritt, konfiBriefVerbraucht, bueroAnlegen } from './buero.js';
@@ -147,24 +147,29 @@ export function gottesdienstRaeume(z, raeume) {
     // im Schichtbetrieb (27.11.) wer im Dienstplan für diese Veranstaltung eingeteilt ist – egal, wo er gerade ist.
     const vorOrt = imRaum.filter(p => daten(p).art === 'ehrenamt' && eingesetztIn(z, raeume, p) === r), spielerVorOrt = spielerAus(vorOrt);
     // Hauptamtliche (27.11.): im Schichtbetrieb wer im Dienstplan als Leitung eingeteilt ist, sonst wer im Raum steht
+    // Tontechniker (27.11.): im Schichtbetrieb laut Dienstplan; sonst der Ehrenamtliche im Raum mit dem höchsten Tontechnik-Level,
+    // der kein Instrument spielt – nur, wenn ein Tontechnikpult im Raum steht
+    const technikerVorOrt = moebelImRaum(z, r, 'tonpult').length
+      ? vorOrt.filter(p => !spielerVorOrt.includes(p)).sort((a, b) => tontechnikLevel(b) - tontechnikLevel(a))[0] || null : null;
     const ehrenamtFuer = i => {
-      if (!z.schichtbetrieb) return { ehrenamtliche: vorOrt, spieler: spielerVorOrt, haupt: hauptamt };
+      if (!z.schichtbetrieb) return { ehrenamtliche: vorOrt, spieler: spielerVorOrt, haupt: hauptamt, techniker: technikerVorOrt };
       const d = veranstaltungDienst(z, raeume, r, i);
-      return { ehrenamtliche: d.alle, spieler: spielerAus(d.musik), haupt: d.hauptamt };
+      return { ehrenamtliche: d.alle, spieler: spielerAus(d.musik), haupt: d.hauptamt, techniker: d.ton[0] || null };
     };
     const programm = programmVon(z, r).map((e, i) => {
       const v = VERANSTALTUNGEN.find(x => x.id === e.art) || null, sperre = platzSperre(z, r, i), frei = !sperre;
-      const { ehrenamtliche, spieler, haupt } = ehrenamtFuer(i);
+      const { ehrenamtliche, spieler, haupt, techniker } = ehrenamtFuer(i);
       const pruefung = v ? voraussetzungen(z, r, v, haupt, ehrenamtliche, spieler) : { leitung: null, fehlt: null };
       const fehlt = !v ? 'keine' : !frei ? 'gesperrt' : pruefung.fehlt;
       return { platz: i, art: e.art, tag: e.tag, slot: e.slot, veranstaltung: v, frei, sperre, leitung: pruefung.leitung, fehlt, bereit: !fehlt,
         musikBonus: pruefung.musikBonus || 0, ehrenamtBonus: v ? ehrenamtBonus(v, ehrenamtliche) : 0,
-        dienst: { ehrenamtliche, spieler, musiker: spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)), hauptamt: haupt, leitung: haupt[0] || null } };
+        dienst: { ehrenamtliche, spieler, musiker: spieler, ausstattung: raumAusstattung(z, r, spieler.map(musikLevel)), hauptamt: haupt, leitung: haupt[0] || null,
+          techniker, ton: tonWirkung(z, r, techniker, techniker ? tontechnikLevel(techniker) : 0) } };
     });
     // Für den Raum als Ganzes (Raum-Fenster, Übersichten) gelten die Ehrenamtlichen von Veranstaltung 1
     const d0 = programm[0].dienst;
     return { raum: r, typ: r.typ, programm, veranstaltung: programm[0].veranstaltung, stuehle: moebelImRaum(z, r, 'stuhl'), imRaum, hauptamt: d0.hauptamt, ehrenamtliche: d0.ehrenamtliche,
-      leitung: d0.leitung, musiker: d0.musiker, spieler: d0.spieler, ausstattung: d0.ausstattung, bereit: programm.some(p => p.bereit) };
+      leitung: d0.leitung, musiker: d0.musiker, spieler: d0.spieler, ausstattung: d0.ausstattung, techniker: d0.techniker, ton: d0.ton, bereit: programm.some(p => p.bereit) };
   });
 }
 // Raum-Eintrag mit den Ehrenamtlichen genau dieser Veranstaltung (Musiker, Ausstattung mit Lobpreisteam …)
@@ -407,7 +412,7 @@ export function terminInfo(z, raeume, L) {
   if (g && L.fest) {
     // Sonderevent: es spielen die Ehrenamtlichen, die zu dieser Zeit im selben Raum eingeteilt sind (sonst niemand)
     const gleich = g.programm.find(e => e.art && e.tag === L.plan.tag && e.slot === L.plan.slot);
-    const ohne = z.schichtbetrieb ? { ehrenamtliche: [], spieler: [], musiker: [], ausstattung: raumAusstattung(z, g.raum, []) } : null;
+    const ohne = z.schichtbetrieb ? { ehrenamtliche: [], spieler: [], musiker: [], ausstattung: raumAusstattung(z, g.raum, []), techniker: null, ton: tonWirkung(z, g.raum, null, 0) } : null;
     return { g: gleich ? mitDienst(g, gleich) : ohne ? { ...g, ...ohne } : g, p: festProgramm(z, g, L) };
   }
   return g ? { g: mitDienst(g, g.programm[L.platz]), p: g.programm[L.platz] } : null;
@@ -548,13 +553,18 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   let summeKollekte = 0;
   const faktor = zeitFaktor(L.plan) * terminFaktoren(L, z).kollekte * ((v && v.kollekteFaktor) || 1);   // Jugendgottesdienst: × 0,5
   // Über jedem Kopf erscheint kurz, was er gegeben hat (wie „+1 €“ beim Kaffee; auf Cent gerundet, gebucht wird die Summe auf ganze Euro).
+  // Ton-Technik (27.11.): Bonus auf Kollekte und Haltung, anteilig, wenn die Lautsprecher nicht für alle Sitzenden reichen
+  const ton = info && info.g.ton && info.g.ton.aktiv ? info.g.ton : null;
+  const tonBonus = ton ? ton.bonus * tonAnteil(ton, sitzend.length) : 0;
   for (const g of sitzend) {
-    const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte; g.bonus = w.haltung; g.musikHaltung = w.musikHaltung;
-    const gabe = Math.round(w.kollekte * faktor * 100) / 100;
+    const w = platzWirkung(z, raeume, g.sitz, liste); summeKollekte += w.kollekte * (1 + tonBonus); g.bonus = w.haltung; g.musikHaltung = w.musikHaltung; g.tonHaltung = tonBonus;
+    const gabe = Math.round(w.kollekte * (1 + tonBonus) * faktor * 100) / 100;
     if (gabe > 0) zahlZeigen(z, g.sitz, gabe);
   }
   // Lobpreisteam: Jeder, der ein Instrument gespielt hat, bekommt etwas Musik-Erfahrung.
   if (info && info.g.ausstattung.musik) for (const p of info.g.spieler) musikErfahrungDazu(p);
+  // Tontechniker: Erfahrung je Einsatz (nur, wenn die Ton-Technik wirklich lief)
+  if (ton && info.g.techniker) tontechnikErfahrungDazu(info.g.techniker);
   // Haltungs-Multiplikator (Skill des Hauptamtlichen, 26.11.): wer leitet, merken – wirkt beim Abschluss; +1 geleiteter Gottesdienst
   L.leitung = info && info.p && info.p.leitung ? info.p.leitung.id : null;
   if (info && info.p) multiplikatorErfahrung(info.p.leitung, L.art);
@@ -642,8 +652,9 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
     // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
     const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
+    const ton = Math.round(b.zufriedenheit * (g.tonHaltung || 0));   // Ton-Technik (27.11.): + Bonus × aktuelle Haltung, unabhängig von der Lobpreis-Vorliebe
     // Haltungs-Multiplikator der Leitung (Gottesdienst, Lobpreisgottesdienst): vervielfacht die Summe nach allen Boni, nur Pluswerte
-    const haltung = mitMultiplikator(leitung, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0));
+    const haltung = mitMultiplikator(leitung, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + ton + (g.foyer || 0));
     const levelVorher = levelVon(b);
     zufriedenheitAendern(b, haltung); berichtDazu(L, 'haltung', haltung);   // Bericht: Summe der Haltungspunkte aller Besucher
     // Haltung im Heft = dieselben Punkte wie im Bericht der Veranstaltung (ohne Kirchkaffee); Level nur, wenn es hoch ging
@@ -733,6 +744,7 @@ function prognoseFuer(z, raeume, g0, p, termin, platz) {
   let kollekteSumme = 0;
   for (let i = 0, rest = Math.min(sitzend, sitze.length); rest > 0; i++, rest--) kollekteSumme += sitze[i].wert * Math.min(1, rest);
   kollekteSumme *= faktor * kj.kollekte * ((v && v.kollekteFaktor) || 1);   // Jugendgottesdienst: × 0,5
+  if (g.ton && g.ton.aktiv) kollekteSumme *= 1 + g.ton.bonus * tonAnteil(g.ton, sitzend);   // Ton-Technik (27.11.), anteilig
   // Kaffee: erwartete Gäste × Kaffee-Wert (neue im Schnitt 50 %); höchstens so viele Tassen, wie in die Maschinen passen
   // (die Ehrenamtlichen füllen sie auf, wenn das Kirchkaffee zu hat)
   const kaffeeWunsch = (z.besucher.reduce((s, b) => s + chance(b) * kaffeeVorliebe(b), 0) + neu * VORLIEBE_SCHNITT

@@ -98,6 +98,11 @@ function personenKarte(f) {
     skills += `<p class="unter staerker">${TEXTE.evangelisation.karte(p.evangelisation.level)}</p>
       <div class="balken"><span style="width:${Math.round(p.evangelisation.fortschritt * 100)}%"></span></div>`;
   }
+  if (p.tontechnik) {
+    // Tontechnik-Level (27.11.) mit Fortschrittsbalken – Erfahrung durch Einsätze am Tontechnikpult
+    skills += `<p class="unter staerker">${TEXTE.ausstattung.tontechnikLevel(p.tontechnik.level)}</p>
+      <div class="balken"><span style="width:${Math.round(p.tontechnik.fortschritt * 100)}%"></span></div>`;
+  }
   if (p.seelsorge) {
     const s = p.seelsorge, T = TEXTE.seelsorge.karte;
     skills = `<p class="unter staerker">${T.titel(s.stufe, s.maxStufe)}</p>

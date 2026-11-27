@@ -27,6 +27,7 @@ function skillsZeile(id) {
   const chips = [];
   if (p.musik) chips.push([TEXTE.ausstattung.musikLevel(p.musik.level), p.musik.fortschritt]);
   if (p.evangelisation) chips.push([TEXTE.evangelisation.karte(p.evangelisation.level), p.evangelisation.fortschritt]);
+  if (p.tontechnik) chips.push([TEXTE.ausstattung.tontechnikLevel(p.tontechnik.level), p.tontechnik.fortschritt]);   // Ton-Technik (27.11.)
   if (p.seelsorge) { const s = p.seelsorge;
     chips.push([TEXTE.seelsorge.karte.titel(s.stufe, s.maxStufe), s.bis === null ? 1 : (s.punkte - s.von) / (s.bis - s.von)]); }
   if (p.multiplikator) { const m = p.multiplikator, n = m.naechste;

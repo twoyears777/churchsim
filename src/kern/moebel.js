@@ -1,7 +1,7 @@
 // Spiellogik der Möbel. Möbel stehen auf freiem Boden des Grundstücks, ein Möbel pro Kästchen.
 import { LEER, idx, aufGrundstueck, fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
-import { MOEBEL, STUHL_STUFEN, MUSIK } from '../inhalte/moebel.js';
+import { MOEBEL, STUHL_STUFEN, MUSIK, TON } from '../inhalte/moebel.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 import { musikBonus } from './skills.js';
 import { AUTOMATEN } from '../inhalte/automaten.js';
@@ -162,3 +162,21 @@ export function raumAusstattung(z, raum, musikerLevels = null) {
   if (musik) faktor *= 1 + bonus;
   return { haltung, faktor, instrument: instrumente > 0, instrumente, musik, musiker: levels.length, musikBonus: bonus, teile };
 }
+
+// ---- Ton-Technik (Lukas, 27.11.; Spielprinzip claude/spielprinzip-tontechnik.md) ----
+// Was an Ton-Technik im Raum steht: Lautsprecher (ihre Plätze zählen zusammen, egal wo sie stehen), Subwoofer, Pult.
+export function tonImRaum(z, raum) {
+  const n = id => { const t = MOEBEL.find(m => m.id === id); return Math.min(t.max || Infinity, moebelImRaum(z, raum, id).length); };
+  const lautsprecher = n('lautsprecher'), subwoofer = n('subwoofer');
+  return { lautsprecher, plaetze: lautsprecher * MOEBEL.find(m => m.id === 'lautsprecher').ton.plaetze, subwoofer, pult: n('tonpult') > 0 };
+}
+// Ton-Technik einer Veranstaltung. techniker = eingeteilter Tontechniker (oder null), level = sein Tontechnik-Level.
+// aktiv nur mit Pult + Lautsprecher + Tontechniker. bonus = voller Bonus (0.05 = 5 %), bevor die Abdeckung (plaetze) eingerechnet wird.
+export function tonWirkung(z, raum, techniker, level) {
+  const t = tonImRaum(z, raum), aktiv = !!(t.pult && t.lautsprecher && techniker);
+  const sub = MOEBEL.find(m => m.id === 'subwoofer').ton.subwoofer;
+  const bonus = aktiv ? Math.round((TON.start + TON.proLevel * level + sub * t.subwoofer) * 100) / 100 : 0;
+  return { ...t, aktiv, techniker: techniker ? techniker.id : null, level: techniker ? level : null, bonus };
+}
+// Anteil des Bonus bei so vielen Besuchern: 1, wenn die Lautsprecher alle abdecken, sonst Plätze / Besucher
+export const tonAnteil = (ton, besucher) => !ton || !ton.aktiv ? 0 : besucher <= ton.plaetze ? 1 : ton.plaetze / besucher;

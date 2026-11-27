@@ -114,6 +114,11 @@ function veranstaltungStellen(z, r, v, foyerListe) {
   const s = [];
   if (r.typ.einsatzBraucht && r.typ.einsatzBraucht.ehrenamt === 'instrument')
     instrumente(z, r).forEach((m, i) => s.push({ id: `musik${i}`, code: 'musik', wer: 'ehrenamt', ding: m.art, ort: { x: m.x, y: m.y }, raum: r.nr }));
+  // Ton-Technik (27.11.): steht ein Tontechnikpult im Gottesdienstraum, gibt es eine Stelle „Tontechnik“ am Pult (nur Ehrenamtliche)
+  if (r.typ.einsatzBraucht && r.typ.einsatzBraucht.ehrenamt === 'instrument') {
+    const pult = moebelImRaum(z, r, 'tonpult')[0];
+    if (pult) s.push({ id: 'ton', code: 'ton', wer: 'ehrenamt', ding: 'tonpult', ort: { x: pult.x, y: pult.y }, raum: r.nr });
+  }
   // Leitung durch einen Hauptamtlichen (Gottesdienste, Konfi, Seniorennachmittag): eigene Stelle, steht vorne
   if (!v.leitungOder && [].concat(v.leitung || []).includes('hauptamt')) s.unshift({ id: 'hauptamt', code: 'leitungHA', wer: 'hauptamt', veranstaltung: v.id, ding: null, ort: null, raum: r.nr });
   const leitet = v.leitungOder || [].concat(v.leitung || []).includes('ehrenamt');
@@ -241,12 +246,13 @@ export function stelleSetzen(z, raeume, key, stelleId, personId) {
 
 // ---- Für die Spielregeln ----
 // Eingeteilte Mitarbeiter einer Veranstaltung (Raum r, Platz i):
-// { alle: Ehrenamtliche (ohne Begrüßung im Foyer), musik, hauptamt: Hauptamtliche mit einer Leitungs-Stelle }
+// { alle: Ehrenamtliche (ohne Begrüßung im Foyer), musik, ton (Tontechniker, 27.11.), hauptamt: Hauptamtliche mit einer Leitungs-Stelle }
 export function veranstaltungDienst(z, raeume, r, platz) {
   const t = dienstTermine(z, raeume).find(x => x.key === `v:${raumKey(r)}:${platz}`);
-  if (!t) return { alle: [], musik: [], hauptamt: [] };
+  if (!t) return { alle: [], musik: [], ton: [], hauptamt: [] };
   const besetzt = t.stellen.map(s => ({ s, p: personAuf(z, t, s.id) })).filter(x => x.p);
   return { alle: besetzt.filter(x => x.s.code !== 'begruessung' && !istHA(x.p)).map(x => x.p), musik: besetzt.filter(x => x.s.code === 'musik').map(x => x.p),
+    ton: besetzt.filter(x => x.s.code === 'ton').map(x => x.p),
     hauptamt: besetzt.filter(x => istHA(x.p) && (x.s.code === 'leitungHA' || x.s.code === 'leitung')).map(x => x.p) };
 }
 // Foyers mit eingeteiltem Begrüßungsdienst für einen Termin (Raum-Nummern)

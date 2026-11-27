@@ -6,12 +6,12 @@
 import { VERANSTALTUNGEN, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
 import { AENDERUNG, LOBPREIS_MUSIK, JUGEND } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
-import { MOEBEL } from '../inhalte/moebel.js';
-import { moebelImRaum, stuhlStufe, instrumenteImRaum } from './moebel.js';
+import { MOEBEL, TON } from '../inhalte/moebel.js';
+import { moebelImRaum, stuhlStufe, instrumenteImRaum, tonImRaum } from './moebel.js';
 import { daten } from './personen.js';
 import { fensterAnRaum } from './karte.js';
 import { FENSTER } from '../inhalte/bau.js';
-import { musikLevel, musikBonus, multiplikatorFaktor } from './skills.js';
+import { musikLevel, musikBonus, multiplikatorFaktor, tontechnikLevel } from './skills.js';
 import { amTisch, STUEHLE_JE_TISCH } from './kirchkaffee.js';
 // Hauptamtlicher da? Im Schichtbetrieb (27.11.) laut Dienstplan (info.hauptamt aus gottesdienstRaeume/mitDienst), sonst im Raum
 const hauptamtDa = (info, imRaum) => info && Array.isArray(info.hauptamt) ? info.hauptamt.length > 0 : imRaum.some(p => daten(p).art === 'hauptamt');
@@ -86,6 +86,19 @@ function gottesdienstraum(z, raum, info, v) {
       besucher: nr === 1 && musikWirktAufBesucher ? { min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : null });
   }
 
+  // Ton-Technik (27.11.): Lautsprecher, Tontechnikpult, Tontechniker, Subwoofer. Bonus nur, wenn alle drei ersten da sind.
+  const ton = tonImRaum(z, raum), techniker = info ? info.techniker || null : null;
+  const tonLevel = techniker ? tontechnikLevel(techniker) : null;
+  const subJe = MOEBEL.find(m => m.id === 'subwoofer').ton.subwoofer, lsMax = MOEBEL.find(m => m.id === 'lautsprecher').max;
+  const tonAktiv = !!(ton.pult && ton.lautsprecher && techniker);
+  const tonGrund = prozent(TON.start + TON.proLevel * (tonLevel || 0));
+  zeilen.push({ id: 'lautsprecher', imRaum: ton.lautsprecher > 0, anzahl: ton.lautsprecher, max: lsMax, plaetze: ton.plaetze,
+    jeStueck: MOEBEL.find(m => m.id === 'lautsprecher').ton.plaetze });
+  zeilen.push({ id: 'tonpult', imRaum: ton.pult });
+  zeilen.push({ id: 'tontechniker', imRaum: !!techniker, level: tonLevel, bonus: tonGrund, bonusMin: prozent(TON.start), aktiv: tonAktiv, braucht: !ton.pult ? 'pult' : !ton.lautsprecher ? 'lautsprecher' : null });
+  zeilen.push({ id: 'subwoofer', imRaum: ton.subwoofer > 0, anzahl: ton.subwoofer, max: MOEBEL.find(m => m.id === 'subwoofer').max, bonus: prozent(subJe) });
+  const tonBonus = tonAktiv ? Math.round((TON.start + TON.proLevel * tonLevel + subJe * ton.subwoofer) * 100) / 100 : 0;
+
   // Haltungs-Multiplikator der Leitung (Skill des Hauptamtlichen): erst ab Stufe 1 eine Zeile
   const mult = multiplikatorFaktor(info ? info.leitung : null, v.id);
   if (mult > 1) zeilen.push({ id: 'multiplikator', imRaum: true, faktor: mult });
@@ -98,8 +111,9 @@ function gottesdienstraum(z, raum, info, v) {
     besucher: jugend ? { art: 'jugend', jugendProzent: prozent(JUGEND.faktor[v.id] ?? 1), erwachseneProzent: prozent(v.erwachsene ?? 1) }
       : lobpreis ? { art: 'vorliebe' } : levels.length ? { art: 'musik', min: LOBPREIS_MUSIK.mitMusik, max: LOBPREIS_MUSIK.mitMusik + 1 } : { art: 'normal' },
     haltung: { fest: AENDERUNG.sitzplatz + (lobpreis ? 0 : AENDERUNG.gottesdienst) + haltungFest, vorliebeMax: lobpreis ? v.haltungNachVorliebe : null,
-      prozent: prozent(bonus), faktor: mult },
-    geld: { jeBesucher: Math.round(kollekte * faktor * (levels.length ? 1 + bonus : 1) * 100) / 100, spende: false }
+      prozent: prozent(bonus), ton: prozent(tonBonus), faktor: mult },
+    geld: { jeBesucher: Math.round(kollekte * faktor * (levels.length ? 1 + bonus : 1) * (1 + tonBonus) * 100) / 100, spende: false },
+    tonPlaetze: tonAktiv ? ton.plaetze : null
   };
   return { zeilen, summe };
 }

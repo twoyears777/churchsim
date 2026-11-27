@@ -199,6 +199,14 @@ export const TEXTE = {
           : (b.imRaum ? `weitere +${b.bonus} %` : `weitere +${b.bonusMin} % oder mehr (je nach Level)`),
         geld: b.nr === 1 ? (b.imRaum ? `Kollekte +${b.bonus} %` : `Kollekte +${b.bonusMin} % oder mehr`)
           : (b.imRaum ? `weitere +${b.bonus} %` : `weitere +${b.bonusMin} % oder mehr`) }),
+      // Ton-Technik (27.11.) – Texte von Claude (Lukas: „texte können von dir sein“)
+      lautsprecher: b => ({ name: `Lautsprecher (${b.anzahl} von ${b.max})`, besucher: b.imRaum ? `reicht für ${b.plaetze} Personen` : `je Stück für ${b.jeStueck} Personen` }),
+      tonpult: () => ({ name: 'Tontechnikpult' }),
+      tontechniker: b => ({ name: 'Ehrenamtlicher am Tontechnikpult' + (b.level !== null ? ` (Level ${b.level})` : '')
+          + (b.braucht === 'pult' ? ' (braucht ein Tontechnikpult)' : b.braucht === 'lautsprecher' ? ' (braucht Lautsprecher)' : ''),
+        haltung: b.aktiv ? `+${b.bonus} %` : `+${b.bonusMin} % oder mehr (je nach Level)`,
+        geld: b.aktiv ? `Kollekte +${b.bonus} %` : `Kollekte +${b.bonusMin} % oder mehr` }),
+      subwoofer: b => ({ name: `Subwoofer (${b.anzahl} von ${b.max})`, haltung: `+${b.bonus} % je Stück`, geld: `Kollekte +${b.bonus} % je Stück` }),
       leitungSenioren: b => ({ name: 'Hauptamtlicher + Ehrenamtlicher (Pflicht)', besucher: 'normal',
         haltung: `+${b.veranstaltung} Event, +${b.platz} Platz`, geld: `Spende ca. ${geld(b.spende)} je Besucher` }),
       tischStuehle: b => ({ name: `Tisch, mind. ${b.stuehleMin} Stühle (Pflicht)` }),
@@ -226,8 +234,10 @@ export const TEXTE = {
       haltung: (s.haltung.vorliebeMax !== null
         ? `+${s.haltung.fest}, dazu 0 bis +${s.haltung.vorliebeMax}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` : '') + ' je nach Lobpreis-Vorliebe'
         : `+${s.haltung.fest}` + (s.haltung.prozent ? ` und +${s.haltung.prozent} %` + (s.art === 'gottesdienst' || s.art === 'jugend' ? ' je nach Lobpreis-Vorliebe' : '') : ''))
+        + (s.haltung.ton ? `, +${s.haltung.ton} % Ton-Technik` : '')   // Ton-Technik (27.11.), Text von Claude
         + (s.haltung.faktor > 1 ? `, dann alles ×${zahl(s.haltung.faktor)}` : ''),   // Multiplikator, freigegeben 25.11. abends
-      geld: s.geld.keins ? null : s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher` : `${geld(s.geld.jeBesucher)} je Besucher`,
+      geld: s.geld.keins ? null : s.geld.spende ? `Spende ca. ${geld(s.geld.jeBesucher)} je Besucher`
+        : `${geld(s.geld.jeBesucher)} je Besucher` + (s.tonPlaetze ? ` (Ton-Technik voll bis ${s.tonPlaetze} Besucher)` : ''),
       ...(s.ehrenamt ? { ehrenamt: `+${s.ehrenamt} Haltung` } : {})   // Konfirmandenunterricht: Plus durch die Ehrenamtlichen im Raum
     })
   },
@@ -570,6 +580,10 @@ export const TEXTE = {
     // ---- Ausstattung des Gottesdienstraums (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
     kanzel: 'Klicke, um eine Kanzel aufzustellen (Gottesdienstraum, 1 pro Raum).',
     altar: 'Klicke, um einen Altar aufzustellen (Gottesdienstraum, 1 pro Raum).',
+    // Ton-Technik (27.11.) – Texte von Claude
+    lautsprecher: 'Klicke, um einen Lautsprecher aufzustellen (Gottesdienstraum, bis 8 pro Raum). Jeder reicht für 15 Personen – egal, wo er steht.',
+    subwoofer: 'Klicke, um einen Subwoofer aufzustellen (Gottesdienstraum, bis 2 pro Raum) – bringt mehr, wenn die Ton-Technik läuft.',
+    tonpult: 'Klicke, um ein Tontechnikpult aufzustellen (Gottesdienstraum, 1 pro Raum) – braucht Lautsprecher und einen Ehrenamtlichen als Tontechniker.',
     blumen: 'Klicke, um Blumen aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
     gruenpflanze: 'Klicke, um eine Grünpflanze aufzustellen (Gottesdienstraum, bis 4 pro Raum).',
     // Instrumente (Muster von Lukas freigegeben 25.11.): jedes braucht einen eigenen Ehrenamtlichen
@@ -614,6 +628,9 @@ export const TEXTE = {
     blumen: 'In diesem Raum stehen schon 4 Blumen.',
     gruenpflanze: 'In diesem Raum stehen schon 4 Grünpflanzen.',
     gitarre: 'In diesem Raum steht schon eine Gitarre.',
+    lautsprecher: 'In diesem Raum stehen schon 8 Lautsprecher.',   // Ton-Technik (27.11.): Texte von Claude
+    subwoofer: 'In diesem Raum stehen schon 2 Subwoofer.',
+    tonpult: 'In diesem Raum steht schon ein Tontechnikpult.',
     // ENTWÜRFE von Claude nach demselben Muster (25.11.)
     keyboard: 'In diesem Raum steht schon ein Keyboard.',
     schlagzeug: 'In diesem Raum steht schon ein Schlagzeug.',
@@ -682,6 +699,7 @@ export const TEXTE = {
     lobpreisteam: (p, n) => `Lobpreisteam (${n} Musiker) – Kollekte +${p} %, Haltung +${p} %`,
     keinLobpreisteam: 'Lobpreisteam – kein Musiker eingeteilt',
     musikLevel: level => `Musik: Level ${level}`,
+    tontechnikLevel: level => `Tontechnik: Level ${level}`,   // Ton-Technik (27.11.): Text von Claude
     musiker: 'Musiker',
     ohneGitarre: 'ohne Instrument keine Musik'
   },
@@ -1033,6 +1051,7 @@ export const TEXTE = {
       theke: (_, n) => `Theke ${n}`,
       regal: (_, n) => `Regal ${n}`,
       schreibtisch: () => 'Schreibtisch',   // Büro: ENTWURF 27.11.
+      ton: () => 'Tontechnik',   // Ton-Technik (27.11.): Text von Claude
       evangelisation: (_, n) => `Platz ${n}`
     },
     fehler: {

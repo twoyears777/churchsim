@@ -70,7 +70,8 @@ export function eingesetztIn(z, raeume, person) {
   if (r.typ.einsatz && !r.typ.einsatz.includes(art)) return null;
   const braucht = r.typ.einsatzBraucht && r.typ.einsatzBraucht[art];   // z. B. Ehrenamtliche im Gottesdienstraum: nur mit Instrument
   if (!braucht) return r;
-  return (braucht === 'instrument' ? instrumenteImRaum(z, r) : moebelImRaum(z, r, braucht).length) ? r : null;
+  // Ton-Technik (27.11.): auch am Tontechnikpult kann ein Ehrenamtlicher eingesetzt sein
+  return (braucht === 'instrument' ? instrumenteImRaum(z, r) + moebelImRaum(z, r, 'tonpult').length : moebelImRaum(z, r, braucht).length) ? r : null;
 }
 
 export function verfuegbarkeit(z, raeume) {

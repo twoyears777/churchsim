@@ -28,6 +28,12 @@ export const MOEBEL = [
   { id: 'bass', kategorie: 'gottesdienst', name: 'Bass', kosten: 25, max: 1, wirkung: { musik: true } },
   { id: 'egitarre', kategorie: 'gottesdienst', name: 'E-Gitarre', kosten: 25, max: 1, wirkung: { musik: true } },
   { id: 'mikrofon', kategorie: 'gottesdienst', name: 'Mikrofon', kosten: 25, max: 1, wirkung: { musik: true } },
+  // Ton-Technik (Lukas, 27.11.; Spielprinzip claude/spielprinzip-tontechnik.md). Wirkt nur im Gottesdienstraum, Zahlen in TON unten.
+  // ton.plaetze: so viele Personen deckt ein Lautsprecher ab – alle Lautsprecher im Raum zählen zusammen, egal wo sie stehen.
+  // ton.subwoofer: Extra-Bonus je Subwoofer. ton.pult: Platz des Tontechnikers. Preise/Grenzen von Lukas freigegeben, Namen von Claude.
+  { id: 'lautsprecher', kategorie: 'gottesdienst', name: 'Lautsprecher', kosten: 40, max: 8, ton: { plaetze: 15 } },
+  { id: 'subwoofer', kategorie: 'gottesdienst', name: 'Subwoofer', kosten: 60, max: 2, ton: { subwoofer: 0.02 } },
+  { id: 'tonpult', kategorie: 'gottesdienst', name: 'Tontechnikpult', kosten: 80, max: 1, ton: { pult: true } },
 
   // Gemeindesaal (Lukas, 25.11.): Klavier für die Kirchenchorprobe, 1× pro Raum. Kein Instrument fürs Lobpreisteam.
   { id: 'klavier', kategorie: 'gemeindesaal', name: 'Klavier', kosten: 100, max: 1 },
@@ -81,3 +87,9 @@ export const STUHL_STUFEN = [
 // start: Bonus bei Musik-Level 0 (0.05 = 5 %); proLevel: dazu je Level; maxLevel: höchstes Level.
 // Erfahrung gibt es nur durchs Musikmachen in einer Veranstaltung: erfahrungProAuftritt, erfahrungProLevel → ca. 1 Level je 50 Auftritte.
 export const MUSIK = { start: 0.05, proLevel: 0.01, maxLevel: 10, erfahrungProAuftritt: 2, erfahrungProLevel: 100 };
+
+// Ton-Technik (Lukas, 27.11.): Bonus nur mit Tontechnikpult + mind. einem Lautsprecher + eingeteiltem Tontechniker (Ehrenamtlicher).
+// Bonus = start + proLevel × Tontechnik-Level + Subwoofer-Bonus; gilt für Kollekte (×(1 + Bonus)) und Haltung (+ Bonus × aktuelle Haltung).
+// Decken die Lautsprecher weniger Personen ab, als Besucher sitzen, gibt es den Bonus anteilig (z. B. 30 von 40 → 75 %).
+// Skill „Tontechnik“ wie Musik: Erfahrung nur durch Einsätze am Pult → ca. 1 Level je 50 Einsätze.
+export const TON = { start: 0.05, proLevel: 0.01, maxLevel: 10, erfahrungProEinsatz: 2, erfahrungProLevel: 100 };

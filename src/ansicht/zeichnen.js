@@ -20,7 +20,7 @@ export const FARBEN = {
   gitarre: '#c07a32', gitarreHals: '#4a3220',
   // Weitere Instrumente (25.11.) – PLATZHALTER von Claude, Lukas legt Aussehen fest
   keyTasten: '#f4f1ea', keySchwarz: '#2a2a2e', trommel: '#b8433a', trommelFell: '#ece6da', becken: '#d9b54a',
-  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', plakat: '#fff6d6', plakatRand: '#c23b2e', evangelisation: '#fff6d6', evangelisationRand: '#2d69be', standHolz: '#b98a55', standHolzDunkel: '#7a5632',
+  bass: '#3d5f8a', egitarre: '#c23b5a', metall: '#8d9096', mikroKopf: '#4a4d52', tonGehaeuse: '#2f3238', tonMembran: '#5b6068', tonPult: '#3a3f47', tonRegler: '#e0b84a', plakat: '#fff6d6', plakatRand: '#c23b2e', evangelisation: '#fff6d6', evangelisationRand: '#2d69be', standHolz: '#b98a55', standHolzDunkel: '#7a5632',
   // Außen (Einzugsgebiet) – Platzhalter
   strasse: '#6a6d72', strasseRand: '#55585c', parkLinie: '#f2efe6', nichtAngeschlossen: 'rgba(200,55,45,0.45)',
   busSchild: '#f2c230', busPfosten: '#5b5e63', busDach: '#4c5f74', busWand: '#8aa0b5', busBank: '#8a5a32', glas: 'rgba(170,215,240,0.55)', glasRahmen: '#d9e3ea',
@@ -452,7 +452,24 @@ function klavier(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.keySchwarz;
   for (let i = 1; i < 7; i++) ctx.fillRect(px + k * (0.1 + i * 0.114) - k * 0.02, py + k * 0.6, k * 0.04, k * 0.12);
 }
-const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon, klavier };
+// Ton-Technik (27.11.) – Platzhalter-Bilder von Claude
+function lautsprecher(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.tonGehaeuse; ctx.fillRect(px + k * 0.24, py + k * 0.08, k * 0.52, k * 0.84);
+  ctx.fillStyle = FARBEN.tonMembran;
+  ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.28, k * 0.1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.64, k * 0.18, 0, Math.PI * 2); ctx.fill();
+}
+function subwoofer(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.tonGehaeuse; ctx.fillRect(px + k * 0.1, py + k * 0.14, k * 0.8, k * 0.76);
+  ctx.fillStyle = FARBEN.tonMembran; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.52, k * 0.29, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = FARBEN.tonGehaeuse; ctx.beginPath(); ctx.arc(px + k / 2, py + k * 0.52, k * 0.1, 0, Math.PI * 2); ctx.fill();
+}
+function tonpult(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.tonPult; ctx.fillRect(px + k * 0.06, py + k * 0.2, k * 0.88, k * 0.62);
+  ctx.fillStyle = FARBEN.tonRegler;
+  for (let i = 0; i < 5; i++) ctx.fillRect(px + k * (0.16 + i * 0.15), py + k * (0.32 + (i % 3) * 0.12), k * 0.07, k * 0.1);
+}
+const INSTRUMENT_BILD = { keyboard, schlagzeug, bass, egitarre, mikrofon, klavier, lautsprecher, subwoofer, tonpult };
 // Plakat am Zaun links neben dem Tor (solange es hängt)
 // Stand „Evangelisation!“ (Lukas, 27.11.: „lieber so einen kleinen gebauten Stand“): Marktstand von vorn – zwei Pfosten,
 // gestreifte Markise, Holztheke mit Tuch, Heften und Kreuz; das Schild hängt rechts daneben an einem Pfosten.
