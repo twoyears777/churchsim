@@ -910,7 +910,11 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         wochenBeduerfnisse: besucher ? wochenBeduerfnisse(z, b) : null, status: statusVon(z, b), lobpreis: lobpreisVorliebe(b),
         kaffee: kaffeeVorliebe(b), jugend: istJugend(b), konfi: istJugend(b) ? konfiStand(z, b) : null,
         beduerfnisse: besucher ? beduerfnisse(z, b) : null, toilette: toiletteAktuell(z, b.id),
-        mitglied: b.mitglied ? b.mitglied.seit + 1 : null };   // Gemeindemitglied seit Woche (ab 1) oder null
+        mitglied: b.mitglied ? b.mitglied.seit + 1 : null,   // Gemeindemitglied seit Woche (ab 1) oder null
+        // Letzte Besuche (27.11.): neueste zuerst; tag 0 = Montag
+        letzteBesuche: (b.besuchsheft || []).map(e => { const t = zeitpunkt(e.beginn);
+          return { artName: artName(e.art), festName: festNameVon(e.fest), woche: t.woche + 1, tag: t.tag, stunde: t.stunde, minute: t.minute,
+            haltung: e.haltung, keinPlatz: !!e.keinPlatz, level: e.level || null }; }) };
     },
     seelsorgeOffen() { return anfrageOffen(z); },
     // Fenster „Menschen im Ort“: alle, die die Gemeinde kennt

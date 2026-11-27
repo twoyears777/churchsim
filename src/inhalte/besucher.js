@@ -57,6 +57,8 @@ export const EHRENAMT_QUOTE = 0.05;     // ... wird man mit dieser Wahrscheinlic
 //   proVeranstaltung  höchstens so viele neue Ehrenamtliche pro Veranstaltung
 //   sicher            Solange es weniger als bisAnzahl Ehrenamtliche gibt: War seit wochen Wochen kein neuer dabei,
 //                     wird bei der nächsten Veranstaltung sicher ein Anwesender Ehrenamtlicher (auch über die Bremse hinweg).
+// Besucherkarte „Letzte Besuche“ (Lukas, 27.11.): so viele Besuche merkt sich jede Person (neueste zuerst)
+export const BESUCHSHEFT = { eintraege: 5 };
 export const EHRENAMT = { besucherJeEA: 5, proVeranstaltung: 1, sicher: { wochen: 3, bisAnzahl: 5 } };
 
 // Erster Gottesdienst (Lukas, 26.11.): Beim ersten normalen Gottesdienst, der wirklich stattfindet, kommen neueLeute zusätzlich

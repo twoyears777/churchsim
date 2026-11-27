@@ -373,12 +373,19 @@ function besucherKarte(f) {
     <p class="unter">${T.kaffeeWert(Math.round(b.kaffee * 100))}</p>
     ${b.toilette === null ? '' : `<h3>${T.toilette}</h3><div class="balken"><span style="width:${b.toilette}%"></span></div><p class="unter">${b.toilette} %</p>`}`;
   if (!n) return `${kopf}`;   // Passant: keine Bedürfnisse
+  // Letzte Besuche (27.11.): Veranstaltung, Wochentag und Uhrzeit, Haltungsänderung; Heimgeschickte als eigene Zeile
+  const lb = b.letzteBesuche || [];
+  const plus = x => `${x > 0 ? '+' : ''}${x}`;
+  const besuche = `<h3>${T.letzteBesuche}</h3>
+    ${lb.length ? `<table class="finanzen hell">${lb.map(e => `<tr><td>${esc(e.festName || e.artName || '')}${e.keinPlatz ? ` <small>${T.keinPlatz}</small>` : ''}${e.level ? ` <small>${T.levelErreicht(e.level)}</small>` : ''}</td>
+      <td>${T.zeit(e.tag, e.stunde, e.minute)}</td><td class="zahl ${e.haltung > 0 ? 'ok' : e.haltung < 0 ? 'fehlt' : ''}">${plus(e.haltung)}</td></tr>`).join('')}</table>`
+      : `<p class="unter">${T.keineBesuche}</p>`}`;
   // Bedürfnisse am Ende der Woche (25.11.): entwickeln sich mit dem Level
   const wb = b.wochenBeduerfnisse || [];
   const woche = `<h3>${T.wochenBeduerfnisse}</h3>
     ${wb.length ? `<table class="finanzen hell">${wb.map(x => `<tr><td>${T.wochenBeduerfnis[x.id]}</td><td class="zahl ${x.erfuellt ? 'ok' : ''}">${x.erfuellt ? T.erfuelltWoche : T.offenWoche}</td></tr>`).join('')}</table>
       <p class="unter">${T.wochenInfo}</p>` : `<p class="unter">${T.keineWochenBeduerfnisse}</p>`}`;
-  return `${kopf}${woche}
+  return `${kopf}${besuche}${woche}
     <h3>${T.beduerfnisse}</h3>
     <table class="finanzen hell">
       <tr><td>${T.sitzplatz}</td>${status(n.sitzplatz)}</tr>

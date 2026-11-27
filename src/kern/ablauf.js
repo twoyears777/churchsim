@@ -21,7 +21,7 @@ import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum
 import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
-import { einladungPasst, werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, ehrenamtFrei, ehrenamtFaellig, ehrenamtGemerkt, beduerfnisErfuellt } from './besucher.js';
+import { einladungPasst, werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, ehrenamtFrei, ehrenamtFaellig, ehrenamtGemerkt, beduerfnisErfuellt, besuchMerken, levelVon } from './besucher.js';
 import { beduerfnisSchritt } from './beduerfnisse.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
 import { zeitpunkt, slotBeginn, WOCHE_MIN } from './zeit.js';
@@ -609,14 +609,22 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
   for (const g of L.gaeste) {
     const b = z.besucher.find(x => x.id === g.id);
     if (!b) continue;
-    if (!g.sitz) { zufriedenheitAendern(b, AENDERUNG.heimgeschickt); berichtDazu(L, 'haltung', AENDERUNG.heimgeschickt); berichtDazu(L, 'keinPlatz', 1); continue; }
+    const besuch = { art: L.art, fest: L.fest || null, beginn: L.beginn };   // Besuchsheft für die Besucherkarte (27.11.)
+    if (!g.sitz) {
+      zufriedenheitAendern(b, AENDERUNG.heimgeschickt); berichtDazu(L, 'haltung', AENDERUNG.heimgeschickt); berichtDazu(L, 'keinPlatz', 1);
+      besuchMerken(b, { ...besuch, haltung: AENDERUNG.heimgeschickt, keinPlatz: true });
+      continue;
+    }
     anwesend.push(b); b.besuche++; b.zuletzt = L.woche; b.besuchtWoche = L.woche;
     // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
     // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
     const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
     // Haltungs-Multiplikator der Leitung (Gottesdienst, Lobpreisgottesdienst): vervielfacht die Summe nach allen Boni, nur Pluswerte
     const haltung = mitMultiplikator(leitung, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0));
+    const levelVorher = levelVon(b);
     zufriedenheitAendern(b, haltung); berichtDazu(L, 'haltung', haltung);   // Bericht: Summe der Haltungspunkte aller Besucher
+    // Haltung im Heft = dieselben Punkte wie im Bericht der Veranstaltung (ohne Kirchkaffee); Level nur, wenn es hoch ging
+    besuchMerken(b, { ...besuch, haltung, keinPlatz: false, level: levelVon(b) > levelVorher ? levelVon(b) : null });
     if (v.konfiTeilnahme) konfiTeilnahme(z, b);   // zählt für die Konfirmation
     if (L.lobpreis) beduerfnisErfuellt(z, b, 'lobpreis', L.woche);   // Bedürfnisse am Ende der Woche (25.11.)
     if (v.spass && (v.spass !== 'jugend' || istJugend(b))) beduerfnisErfuellt(z, b, 'spass', L.woche);   // Jugendgottesdienst: nur Jugendliche

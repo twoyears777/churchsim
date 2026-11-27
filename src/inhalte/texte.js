@@ -286,7 +286,13 @@ export const TEXTE = {
     keineWochenBeduerfnisse: 'Noch keine – Bedürfnisse entwickeln sich mit höherem Level.',
     wochenBeduerfnis: { lobpreis: 'Lobpreis', kaffee: 'Kaffee', spass: 'Spaß' },
     erfuelltWoche: 'erfüllt',
-    offenWoche: 'noch offen'
+    offenWoche: 'noch offen',
+    // Letzte Besuche (von Lukas freigegeben, 27.11.)
+    letzteBesuche: 'Letzte Besuche',
+    keineBesuche: 'Noch keine Besuche',
+    keinPlatz: 'kein Platz',
+    levelErreicht: n => `Level ${n} erreicht`,
+    zeit: (tag, stunde, minute) => `${TEXTE.tageKurz[tag]} ${String(stunde).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
   },
 
   // ---- Fenster des Kirchkaffees: Öffnungszeiten (Lukas, 25.11.) ----

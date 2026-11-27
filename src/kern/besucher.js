@@ -8,7 +8,7 @@ import { ZWEITER_BESUCH, VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { istJugend, jugendFaktor, jugendZuteilen } from './konfi.js';
 import { platzImGebiet } from './einzugsgebiet.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, BEKANNTHEIT,
-  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT, LOBPREIS_MUSIK, HALTUNGSLEVEL, KOMMCHANCE, BEDUERFNISSE } from '../inhalte/besucher.js';
+  EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT, BESUCHSHEFT, LOBPREIS_MUSIK, HALTUNGSLEVEL, KOMMCHANCE, BEDUERFNISSE } from '../inhalte/besucher.js';
 import { zeitpunkt, WOCHE_MIN } from './zeit.js';
 import { MITGLIED } from '../inhalte/finanzen.js';
 
@@ -202,6 +202,14 @@ export function zufriedenheitAendern(b, wert) {
   if (h >= H.aufstiegBei && level < H.max) { b.level = level + 1; h = 0; beduerfnisDazu(b); }
   else if (h <= 0 && wert < 0 && level > 1) { b.level = level - 1; h = H.nachAbstieg; if (Array.isArray(b.beduerfnisse)) b.beduerfnisse.pop(); }
   b.zufriedenheit = Math.max(0, Math.min(100, h));
+}
+// Besuchsheft (Lukas, 27.11.): Jede Person merkt sich ihre letzten Besuche für die Besucherkarte.
+// eintrag: { art, fest, beginn, haltung, keinPlatz, level } – level nur, wenn der Besuch ein Level hoch gebracht hat.
+// Alte Spielstände haben noch kein Heft; es füllt sich ab dem ersten Besuch nach dem Update.
+export function besuchMerken(b, eintrag) {
+  if (!Array.isArray(b.besuchsheft)) b.besuchsheft = [];
+  b.besuchsheft.unshift(eintrag);
+  b.besuchsheft.length = Math.min(b.besuchsheft.length, BESUCHSHEFT.eintraege);
 }
 // Bekanntheit ändern und merken, woher es kam (fürs Bekanntheit-Fenster). quelle: 'gottesdienst' | 'zufrieden' | 'seelsorge'.
 // Auf eine Nachkommastelle gerundet, damit sich keine Rechenkrümel ansammeln.
