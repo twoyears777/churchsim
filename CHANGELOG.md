@@ -3,6 +3,34 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.19
+
+**Bauen**
+- Beim Abriss gibt es nur noch einen Teil zurück: anfangs die Hälfte, jede Woche 5 % weniger, nach 10 Wochen nichts („Rückgängig“ gibt weiter alles zurück)
+- Neu: Im Bau-Modus zeigt ein Spicker oben rechts die Mindestgröße jedes Raums
+
+**Ehrenamtliche**
+- Neue Ehrenamtliche kommen gleichmäßiger dazu – höchstens einer je 5 Besucher
+- Ehrenamtliche zählen nicht mehr zum Einzugsgebiet
+- Versetzte Mitarbeiter springen sofort an ihren neuen Platz
+
+**Evangelisation**
+- Statt eines Kästchens steht jetzt ein kleiner Marktstand vor dem Laden – größer anklickbar und nicht mehr hinter Namensschildern
+
+**Zeit**
+- x1 läuft halb so schnell, dafür passiert pro Spielstunde doppelt so viel; neue Stufen x1, x2, x10, x25, x50
+
+**Gemeindekalender**
+- Neu: Berichte zu vergangenen Veranstaltungen (Besucher, Geld, Haltung, Heiligkeit, Bekanntheit) und Knopf „Vorherige Woche“
+
+**Toiletten**
+- Kein Anstehen mehr vor der Kabine, man geht nur zu Toiletten in der Nähe
+- Ab 80 % zeigt ein rotes WC-Symbol, wer dringend muss; bei 100 % gibt es einen Unfall (−10 Haltung)
+
+**Finanzen**
+- Neu: Gemeindemitglieder – sie kommen öfter und zahlen einen Monatsbeitrag, den du im Finanz-Fenster einstellst
+- Dauerspender sind seltener, geben dafür mehr (20 € bis 100 €); ein neuer Dauerspender wird eingeblendet
+
 ## 0.1.18
 
 **Fehler behoben**
