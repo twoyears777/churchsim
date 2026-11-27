@@ -270,6 +270,7 @@ export const TEXTE = {
     lobpreis: prozent => `Mag Lobpreis: ${prozent} %`,  // Lukas, 25.11.
     kaffeeWert: prozent => `Mag Kaffee: ${prozent} %`,  // Lukas, 25.11.
     toilette: 'Toilette',   // Bedürfnis Toilette (26.11.) – ENTWURF von Claude, Lukas formuliert selbst
+    mitglied: woche => `Gemeindemitglied seit Woche ${woche}`,   // 27.11. – ENTWURF von Claude, Lukas formuliert selbst
     // Konfirmandenunterricht (von Lukas freigegeben, 25.11.)
     jugendlich: 'Jugendlich',
     konfi: (n, von) => `Konfirmandenunterricht: ${n} von ${von}`,
@@ -355,6 +356,15 @@ export const TEXTE = {
     dauerspenderSumme: 'Summe pro Woche',
     dauerspenderSpalten: { name: 'Name', betrag: 'Spende diese Woche', naechster: 'Nächsten Montag', seit: 'Seit Woche', haltung: 'Haltung' },
     dauerspenderHaltung: (level, haltung) => `Level ${level} · ${haltung}`,   // ENTWURF 25.11. (Haltungslevel)
+    // Gemeindemitglieder (27.11.): Überschrift von Lukas freigegeben, alles andere ENTWURF von Claude – Lukas formuliert selbst
+    mitglieder: 'Gemeindemitglieder',
+    mitgliederInfo: r => `Erwachsene ab Haltungslevel ${r.abLevel} werden nach jedem Gottesdienst mit ${r.chance} % Chance Mitglied. Mitglieder kommen öfter (+${r.kommBonus} %) und zahlen am 1. jedes Monats um ${r.stunde}:00 Uhr den Beitrag. Fällt ein Mitglied auf Level 2, kündigt es jede Woche mit ${r.kuendigung[2]} % Chance, auf Level 1 mit ${r.kuendigung[1]} %.`,   // ENTWURF
+    beitrag: 'Monatsbeitrag pro Mitglied',   // ENTWURF
+    beitragWeniger: '−', beitragMehr: '+',
+    beitragHaltung: (h, r) => `${h > 0 ? '+' : h < 0 ? '−' : '±'}${Math.abs(h)} Haltung für jedes Mitglied bei jeder Abbuchung. Bei ${r.neutral} € ändert sich nichts, je ${r.schritt} € mehr ${r.haltungMehr}, je ${r.schritt} € weniger +${r.haltungWeniger}.`,   // ENTWURF
+    mitgliederLeer: 'Noch keine Gemeindemitglieder.',   // ENTWURF
+    mitgliederSumme: 'Summe pro Monat',   // ENTWURF
+    mitgliederSpalten: { name: 'Name', seit: 'Seit Woche', haltung: 'Haltung' },   // ENTWURF
     was: { abriss: 'Abriss', verbessern: 'verbessert', rueckgaengig: 'Rückgängig gemacht', bus: 'Bushaltestelle', werbekampagne: 'Werbekampagne' }
   },
 
@@ -374,6 +384,7 @@ export const TEXTE = {
     unbekannt: '–', prozent: n => `${n} %`,
     woche: n => `Woche ${n}`,
     level: n => `L${n}`,   // ENTWURF 25.11.: Haltungslevel vor dem Balken
+    mitglied: 'Mitglied',   // ENTWURF 27.11.: Vermerk hinter dem Namen
     leer: 'Noch niemand bekannt.',
     status: { passant: 'Passant', neugierig: 'Neugierig', besucher: 'Besucher', stammgast: 'Stammgast', ehrenamtlich: 'Ehrenamtlich' },
     // ENTWURF 26.11. (Claude, wartet auf Freigabe von Lukas): Gruppen und gesammelte Statistiken
@@ -398,7 +409,8 @@ export const TEXTE = {
     konfirmand: name => `${name} war 7-mal im Konfirmandenunterricht und wird bei der nächsten Konfirmation konfirmiert.`,
     konfirmiert: n => n === 1 ? '1 Jugendlicher wurde konfirmiert und gehört jetzt zu den Erwachsenen.'
       : `${n} Jugendliche wurden konfirmiert und gehören jetzt zu den Erwachsenen.`,
-    keineKonfirmanden: () => 'In diesem Jahr gibt es keine Konfirmanden – die Konfirmation fällt aus.'
+    keineKonfirmanden: () => 'In diesem Jahr gibt es keine Konfirmanden – die Konfirmation fällt aus.',
+    neuerDauerspender: () => 'Herzlichen Glückwunsch! Deine Gemeinde konnte einen neuen Dauerspender gewinnen!'   // Text von Lukas, 27.11.
   },
 
   // Seelsorge-Fenster

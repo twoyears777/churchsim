@@ -359,6 +359,7 @@ function besucherKarte(f) {
   const kopf = `<h2>${esc(b.voll)}</h2>
     <p class="unter">${b.jugend ? `${T.jugendlich} · ` : ''}${b.status === 'passant' ? T.passant : b.status === 'neugierig' ? T.neugierig : b.besuche ? T.besuche(b.besuche) : T.neu}</p>
     ${b.konfi ? `<p class="unter">${T.konfi(b.konfi.anzahl, b.konfi.von)}</p>` : ''}
+    ${b.mitglied ? `<p class="unter">${T.mitglied(b.mitglied)}</p>` : ''}
     <h3>${T.zufriedenheit} · ${T.level(b.level, b.levelMax)}</h3>
     <div class="balken"><span style="width:${b.zufriedenheit}%"></span></div><p class="unter">${b.zufriedenheit} / 100</p>
     <p class="unter">${T.levelInfo}</p>
@@ -407,7 +408,7 @@ function menschenFenster(f) {
   const kopf = spalten.map(([id, name]) =>
     `<th><button class="sortieren${sort.spalte === id ? ' aktiv' : ''}" data-sort="${id}">${name}${sort.spalte === id ? (sort.ab ? ' ▼' : ' ▲') : ''}</button></th>`).join('');
   const zeile = m => `<tr data-mensch="${m.id}" data-mart="${m.art}">
-      <td>${esc(m.voll)}</td>
+      <td>${esc(m.voll)}${m.mitglied ? ` <small>${T.mitglied}</small>` : ''}</td>
       <td>${m.haltung === null ? T.unbekannt : `${m.level ? `<small>${T.level(m.level)}</small> ` : ''}<div class="balken mini"><span style="width:${m.haltung}%"></span></div>`}</td>
       <td class="zahl">${m.besuche ?? T.unbekannt}</td>
       <td>${m.zuletzt === null ? T.unbekannt : T.woche(m.zuletzt)}</td>
@@ -464,6 +465,18 @@ function finanzFenster() {
         ${ds.map(d => `<tr><td>${esc(d.name || '–')}</td><td class="zahl">${plus(d.betrag)}</td><td class="zahl">${plus(d.naechster)}</td><td class="zahl">${d.seit}</td><td class="zahl">${d.haltung === null ? '–' : T.dauerspenderHaltung(d.level, d.haltung)}</td></tr>`).join('')}
         <tr class="summe"><td>${T.dauerspenderSumme}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.betrag, 0))}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.naechster, 0))}</td><td></td><td></td></tr></table>`
     : `<p class="leer">${T.dauerspenderLeer}</p>`);
+  // Gemeindemitglieder (27.11.): Beitrag mit −/+ einstellen, Liste der Mitglieder
+  const MS = T.mitgliederSpalten, ms = f.mitglieder, mb = f.mitgliedsbeitrag;
+  const mitglieder = `<p class="unter">${T.mitgliederInfo(f.mitgliedRegeln)}</p>
+    <div class="zeile"><span>${T.beitrag}:</span>
+      <button data-beitrag="${mb.betrag - mb.schritt}"${mb.betrag <= mb.min ? ' disabled' : ''}>${T.beitragWeniger}</button>
+      <b>${geld(mb.betrag)}</b>
+      <button data-beitrag="${mb.betrag + mb.schritt}"${mb.betrag >= mb.max ? ' disabled' : ''}>${T.beitragMehr}</button></div>
+    <p class="unter">${T.beitragHaltung(mb.haltung, f.mitgliedRegeln)}</p>` + (ms.length
+    ? `<table class="finanzen hell verlauf"><tr><th>${MS.name}</th><th>${MS.seit}</th><th>${MS.haltung}</th></tr>
+        ${ms.map(m => `<tr><td>${esc(m.name || '–')}</td><td class="zahl">${m.seit}</td><td class="zahl">${T.dauerspenderHaltung(m.level, m.haltung)}</td></tr>`).join('')}
+        <tr class="summe"><td>${T.mitgliederSumme}</td><td></td><td class="zahl">${plus(ms.length * mb.betrag)}</td></tr></table>`
+    : `<p class="leer">${T.mitgliederLeer}</p>`);
   const zusatz = b => b.spenderName ? esc(b.spenderName) : b.anlass ? T.anlass[b.anlass] : b.moebelName ? b.moebelName + (b.was === 'verbessern' ? ' ' + T.was.verbessern : '')
     : b.veranstaltungName || (b.was ? T.was[b.was] : '');
   const uhr = b => b.tag === null ? '' : `${TEXTE.tageKurz[b.tag]} ${String(b.stunde).padStart(2, '0')}:${String(b.minute).padStart(2, '0')} · `;
@@ -477,6 +490,7 @@ function finanzFenster() {
   return `<h2>${T.titel}</h2><p class="unter staerker">${T.kontostand(geld(f.konto))}</p>
     <h3>${T.dieseWoche(w.woche)}</h3>${woche}
     <h3>${T.kaffee}</h3>${kaffee}
+    <h3>${T.mitglieder}</h3>${mitglieder}
     <h3>${T.dauerspender}</h3>${dauerspender}
     <h3>${T.verlauf}</h3><p class="unter">${T.verlaufInfo(f.verlaufWochen)}</p>${verlauf}
     <h3>${T.kassenbuch}</h3>${kassenbuch}`;
@@ -828,6 +842,7 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-forschung-abbrechen-ja')) { spiel.forschungAbbrechen(); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-bus-ausbauen')) spiel.busAusbauen();
     else if (b.hasAttribute('data-werbekampagne')) spiel.werbekampagneKaufen();
+    else if (b.dataset.beitrag !== undefined) spiel.mitgliedsbeitragSetzen(Number(b.dataset.beitrag));   // Finanz-Fenster: Monatsbeitrag
     else if (b.dataset.typ !== undefined) { spiel.raumTypSetzen(f.nr, b.dataset.typ); fensterSchliessen(); }
     ui.speichern(); ui.anzeigeErzwingen(); ui.malen();
   });

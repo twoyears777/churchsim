@@ -10,6 +10,7 @@ import { platzImGebiet } from './einzugsgebiet.js';
 import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, BEKANNTHEIT,
   EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT, LOBPREIS_MUSIK, HALTUNGSLEVEL, KOMMCHANCE, BEDUERFNISSE } from '../inhalte/besucher.js';
 import { zeitpunkt, WOCHE_MIN } from './zeit.js';
+import { MITGLIED } from '../inhalte/finanzen.js';
 
 export function namenZiehen(anzahl, zufall = Math.random) {
   const toepfe = { a: [], w: [] }, ergebnis = [];
@@ -71,7 +72,8 @@ export function ausDemOrt(z, p) {
 // Chance, dass jemand zu einer Veranstaltung kommt (25.11.): Grundwahrscheinlichkeit + Level + Haltung im Level, höchstens 100 %
 export function kommChance(b) {
   const K = KOMMCHANCE;
-  return Math.min(1, K.grund + K.jeLevel * (levelVon(b) - 1) + K.haltung * b.zufriedenheit / 100);
+  const mitglied = b.mitglied ? MITGLIED.kommBonus : 0;   // Gemeindemitglieder kommen öfter (Lukas, 27.11.)
+  return Math.min(1, K.grund + K.jeLevel * (levelVon(b) - 1) + K.haltung * b.zufriedenheit / 100 + mitglied);
 }
 
 // ---- Haltungslevel und Bedürfnisse (Lukas, 25.11.: claude/spielprinzip-beduerfnisse-wochenende.md) ----

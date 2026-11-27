@@ -1,5 +1,5 @@
-// Prüft die Dauerspender (Spielprinzip von Lukas, 25.11.2026): Montag 8:00, ab Haltungslevel 3 (bis 25.11.: Haltung 80), 75 % Chance,
-// 5 € sofort, +1 € pro Woche bis 20 €, Prüfung nur montags, Neubeginn bei 5 €, Anzeige über finanzInfo().
+// Prüft die Dauerspender (Spielprinzip von Lukas, 25.11.2026, Zahlen 27.11.): Montag 8:00, ab Haltungslevel 3, 5 % Chance,
+// 20 € sofort, +1 € pro Woche bis 100 €, Einblendung bei neuem Dauerspender, Prüfung nur montags, Neubeginn bei 5 €, Anzeige über finanzInfo().
 // Starten mit: node tests/dauerspender.test.mjs
 import assert from 'node:assert';
 import { DAUERSPENDE } from '../src/inhalte/finanzen.js';
@@ -10,7 +10,7 @@ import { erkenneRaeume, raumTypVon, pruefeRaum } from '../src/kern/karte.js';
 import { dauerspenderSchritt, dauerspenderListe } from '../src/kern/dauerspender.js';
 import { WOCHE_MIN, zeitpunkt } from '../src/kern/zeit.js';
 
-assert.deepEqual(DAUERSPENDE, { abLevel: 3, chance: 0.75, start: 5, steigerung: 1, max: 20, stunde: 8 });
+assert.deepEqual(DAUERSPENDE, { abLevel: 3, chance: 0.05, start: 20, steigerung: 1, max: 100, stunde: 8 });
 
 // Hilfen: Zufall aus einer Liste; nächster Montag 8:00 ausführen
 const folge = werte => { let i = 0; return () => werte[i++ % werte.length]; };
@@ -31,16 +31,17 @@ const spende = (z, id) => (z.dauerspende.spender[id] || {}).betrag ?? null;
   ];
   z.ort.leute.push({ id: 'p', voll: 'Paul P', level: 3, zufriedenheit: 40, besuche: 0 });   // Passanten zählen auch
   const konto = z.konto;
-  // Würfel: Anna 0,1 (wird), Cora 0,8 (wird nicht, ≥ 0,75), Paul 0,74 (wird)
-  montag(z, folge([0.1, 0.8, 0.74]));
-  assert.equal(spende(z, 'a'), 5); assert.equal(spende(z, 'b'), null); assert.equal(spende(z, 'c'), null); assert.equal(spende(z, 'p'), 5);
-  assert.equal(z.konto, konto + 10);                                     // erste Spende kommt sofort
-  assert.equal(z.wochenbuch.einnahmen.dauerspende, 10);
+  // Würfel: Anna 0,01 (wird), Cora 0,06 (wird nicht, ≥ 0,05), Paul 0,049 (wird)
+  montag(z, folge([0.01, 0.06, 0.049]));
+  assert.equal(spende(z, 'a'), 20); assert.equal(spende(z, 'b'), null); assert.equal(spende(z, 'c'), null); assert.equal(spende(z, 'p'), 20);
+  assert.equal(z.konto, konto + 40);                                     // erste Spende kommt sofort
+  assert.equal(z.wochenbuch.einnahmen.dauerspende, 40);
+  assert.equal(z.dauerspende.meldung.code, 'neuerDauerspender');        // Einblendung (27.11.)
   assert.equal(z.wochenbuch.buchungen.filter(b => b.kategorie === 'dauerspende').length, 2);
 
-  // Nächste Woche: Anna steigt auf 6 €, Cora bekommt eine neue Chance
+  // Nächste Woche: Anna steigt auf 21 €, Cora bekommt eine neue Chance
   montag(z, folge([0.0]));
-  assert.equal(spende(z, 'a'), 6); assert.equal(spende(z, 'p'), 6); assert.equal(spende(z, 'c'), 5);
+  assert.equal(spende(z, 'a'), 21); assert.equal(spende(z, 'p'), 21); assert.equal(spende(z, 'c'), 20);
 
   // Level sinkt unter der Woche kurz, ist montags aber wieder 3 → bleibt (nur montags geprüft)
   z.besucher[0].level = 2; z.besucher[0].level = 3;
@@ -48,22 +49,22 @@ const spende = (z, id) => (z.dauerspende.spender[id] || {}).betrag ?? null;
   z.ort.leute[0].level = 2;
   const vorher = z.konto;
   montag(z, folge([0.9]));                                               // 0,9: Paul würde ohnehin nicht neu würfeln (unter Level 3)
-  assert.equal(spende(z, 'a'), 7); assert.equal(spende(z, 'c'), 6); assert.equal(spende(z, 'p'), null);
-  assert.equal(z.konto, vorher + 13);
+  assert.equal(spende(z, 'a'), 22); assert.equal(spende(z, 'c'), 21); assert.equal(spende(z, 'p'), null);
+  assert.equal(z.konto, vorher + 43);
 
-  // Paul wieder auf Level 3 → beginnt wieder bei 5 €
+  // Paul wieder auf Level 3 → beginnt wieder bei 20 €
   z.ort.leute[0].level = 3;
   montag(z, folge([0.0]));
-  assert.equal(spende(z, 'p'), 5); assert.equal(spende(z, 'a'), 8);
+  assert.equal(spende(z, 'p'), 20); assert.equal(spende(z, 'a'), 23);
 
-  // Höchstens 20 €
-  for (let i = 0; i < 20; i++) montag(z, folge([0.0]));
-  assert.equal(spende(z, 'a'), 20); assert.equal(spende(z, 'c'), 20);
+  // Höchstens 100 €
+  for (let i = 0; i < 100; i++) montag(z, folge([0.0]));
+  assert.equal(spende(z, 'a'), 100); assert.equal(spende(z, 'c'), 100);
 
   // Liste: höchster Betrag zuerst, nächster Betrag, Haltung und Level
   const L = dauerspenderListe(z);
   assert.deepEqual(L.map(d => d.id), ['a', 'c', 'p']);
-  assert.equal(L[0].naechster, 20); assert.equal(L[2].naechster, Math.min(20, L[2].betrag + 1)); assert.equal(L[0].haltung, 0); assert.equal(L[0].level, 3);
+  assert.equal(L[0].naechster, 100); assert.equal(L[2].naechster, Math.min(100, L[2].betrag + 1)); assert.equal(L[0].haltung, 0); assert.equal(L[0].level, 3);
 }
 
 // Wer nicht mehr da ist (z. B. Ehrenamtlich geworden), spendet nicht mehr
@@ -71,7 +72,7 @@ const spende = (z, id) => (z.dauerspende.spender[id] || {}).betrag ?? null;
   const z = neuesSpiel(() => 0.5);
   z.ort.leute = []; z.besucher = [{ id: 'x', voll: 'Xaver X', level: 3, zufriedenheit: 90, besuche: 3 }];
   montag(z, () => 0);
-  assert.equal(spende(z, 'x'), 5);
+  assert.equal(spende(z, 'x'), 20);
   z.besucher = [];
   montag(z, () => 0);
   assert.equal(spende(z, 'x'), null);
@@ -89,15 +90,16 @@ const spende = (z, id) => (z.dauerspende.spender[id] || {}).betrag ?? null;
   zeitVorruecken(z, raeume, montag8 - 1 - z.minuten, () => 0);
   assert.equal(spende(z, 'k'), null);
   zeitVorruecken(z, raeume, 2, () => 0);
-  assert.equal(spende(z, 'k'), 5);
+  assert.equal(spende(z, 'k'), 20);
   const spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0);
   const f = spiel.finanzInfo();
   assert.equal(f.dauerspender.length, 1);
-  assert.deepEqual([f.dauerspender[0].name, f.dauerspender[0].betrag, f.dauerspender[0].naechster, f.dauerspender[0].seit], ['Karla K', 5, 6, w + 2]);
+  assert.deepEqual([f.dauerspender[0].name, f.dauerspender[0].betrag, f.dauerspender[0].naechster, f.dauerspender[0].seit], ['Karla K', 20, 21, w + 2]);
   const b = f.buchungen.find(x => x.kategorie === 'dauerspende');
-  assert.deepEqual([b.spenderName, b.betrag, b.tag, b.stunde], ['Karla K', 5, 0, 8]);
+  assert.deepEqual([b.spenderName, b.betrag, b.tag, b.stunde], ['Karla K', 20, 0, 8]);
   assert.equal(f.namen.einnahmen.dauerspende, 'Dauerspenden');
-  assert.equal(f.dauerspendeRegeln.chance, 75);
+  assert.equal(f.dauerspendeRegeln.chance, 5);
+  assert.equal(spiel.lage().meldung.code, 'neuerDauerspender');   // Einblendung unten rechts
 }
 
 // Alte Spielstände ohne Dauerspender: legen sich an, erster Montag ist der nächste

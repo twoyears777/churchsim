@@ -31,6 +31,7 @@ import { seelsorgeSchritt, anfrageOffen } from './seelsorge.js';
 import { kirchkaffeeZustand, kirchkaffeeOffen, gottesdienstKunden, kaffeeAktualisieren, kaffeeSchritt, naechsteSchicht, kaffeeAnlegen, zahlZeigen, amTisch } from './kirchkaffee.js';
 import { fassung } from './moebel.js';
 import { dauerspenderSchritt } from './dauerspender.js';
+import { mitgliederSchritt, mitgliedWerden } from './mitglieder.js';
 import { forschungSchritt, heiligkeitFuerGottesdienst, istErforscht } from './forschung.js';
 import { faktorAmTag } from './kalender.js';
 import { berichtDazu, berichtAblegen, berichteAufraeumen } from './berichte.js';
@@ -282,7 +283,7 @@ export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
@@ -585,6 +586,8 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
   const sehr = v.bekanntheit === false ? 0 : anwesend.filter(b => b.zufriedenheit >= BEKANNTHEIT.sehrZufrieden).length;
   bekanntheitMitBericht(z, L, sehr * BEKANNTHEIT.proSehrZufriedenem, 'zufrieden', sehr);
   if (istKonfirmation(L)) konfirmieren(z);   // Ende des Konfirmations-Gottesdienstes: alle Konfirmanden werden erwachsen
+  // Gemeindemitglieder (27.11.): nach jedem Gottesdienst (Gottesdienstraum) können Anwesende ab Level 3 Mitglied werden
+  if ((v.raumtypen || []).includes('gottesdienst')) mitgliedWerden(z, anwesend, L.woche, zufall);
   const werden = ehrenamtWerden(z, anwesend, zufall);
   // Erster Gottesdienst (26.11.): mindestens ERSTER_GOTTESDIENST.ehrenamt neue Ehrenamtliche, danach ist er erledigt
   if (L.erster) { const dazu = ehrenamtSicher(z, anwesend, werden, zufall); werden.push(...dazu); ehrenamtGemerkt(z, dazu.length); z.erster.erledigt = true; }

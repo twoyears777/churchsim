@@ -37,11 +37,12 @@ import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { berichtVon, berichteDerWoche } from './berichte.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
-import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
+import { dauerspenderAnlegen, dauerspenderListe, dauerspenderMeldung } from './dauerspender.js';
 import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
 import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo, hatSkill } from './skills.js';
 import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
-import { DAUERSPENDE } from '../inhalte/finanzen.js';
+import { DAUERSPENDE, MITGLIED } from '../inhalte/finanzen.js';
+import { mitgliederAnlegen, mitgliederListe, beitragSetzen, beitragHaltung } from './mitglieder.js';
 import { zeitungOffen, zeitungSchliessen } from './erster.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
@@ -77,7 +78,7 @@ export const SPEICHER_VERSION = 3;          // Spielstand-Format (3 = Echtzeit, 
 // ---- Spielstand anlegen ----
 export function spielAnlegen(z, zufall = Math.random) {
   personenAnlegen(z); moebelAnlegen(z); finanzenAnlegen(z); besucherAnlegen(z, zufall); zeitAnlegen(z);
-  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); beduerfnisseAnlegen(z); forschungAnlegen(z);
+  ortAnlegen(z); seelsorgeAnlegen(z); ablaufAnlegen(z); einzugsgebietAnlegen(z); kaffeeAnlegen(z); festeAnlegen(z); dauerspenderAnlegen(z); mitgliederAnlegen(z); beduerfnisseAnlegen(z); forschungAnlegen(z);
   jugendAnlegen(z);   // alte Spielstände: 20 % der Besucher und Passanten werden Jugendliche
   baukostenAnlegen(z);
   tuerkostenAnlegen(z);   // Türpreis (26.11.): schon gebaute Türen bleiben kostenlos
@@ -187,7 +188,7 @@ function statusVon(z, b) {
 // Neueste Meldung: jemand neugierig am Tor, zu wenig Geld für den Kaffee-Einkauf, Konfirmand/Konfirmation
 function neuesteMeldung(z) {
   const o = ortMeldung(z), oz = z.ort && z.ort.meldung ? z.ort.meldung.zeit : -Infinity;
-  const liste = [o && { ...o, zeit: oz }, kaffeeMeldung(z), konfiMeldung(z)].filter(Boolean).sort((a, b) => b.zeit - a.zeit);
+  const liste = [o && { ...o, zeit: oz }, kaffeeMeldung(z), konfiMeldung(z), dauerspenderMeldung(z)].filter(Boolean).sort((a, b) => b.zeit - a.zeit);
   if (!liste.length) return null;
   const m = { code: liste[0].code, name: liste[0].name };
   if (liste[0].ware) m.ware = liste[0].ware;   // Automat, der nicht aufgefüllt werden konnte (26.11.)
@@ -354,6 +355,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     busAusbauen() { return busAusbauen(z); },
     // Überregionale Werbekampagne → 'ok' | 'gekauft' | 'bekanntheit' | 'geld'
     werbekampagneKaufen() { return werbekampagneKaufen(z); },
+    // Gemeindemitglieder (27.11.): monatlichen Beitrag festlegen (0–50 € in 5-€-Schritten) → 'ok' | 'ungueltig'
+    mitgliedsbeitragSetzen(betrag) { return beitragSetzen(z, betrag); },
     personVersetzen(id, x, y) {
       const p = z.personen.find(q => q.id === id);
       if (!p || (p.x === x && p.y === y)) return false;
@@ -570,6 +573,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         // Dauerspender: wer spendet wie viel (diesen Montag), was nächsten Montag kommt, seit welcher Woche (ab 1); Regeln zum Anzeigen
         dauerspender: dauerspenderListe(z).map(d => ({ ...d, seit: d.seit + 1 })),
         dauerspendeRegeln: { ...DAUERSPENDE, chance: Math.round(DAUERSPENDE.chance * 100) },
+        // Gemeindemitglieder: Liste (seit Woche ab 1), Beitrag, was er an Haltung bewirkt, Regeln zum Anzeigen (Prozent)
+        mitglieder: mitgliederListe(z).map(m => ({ ...m, seit: m.seit + 1 })),
+        mitgliedsbeitrag: { betrag: z.mitglieder.beitrag, haltung: beitragHaltung(z.mitglieder.beitrag), min: MITGLIED.beitragMin, max: MITGLIED.beitragMax, schritt: MITGLIED.beitragSchritt },
+        mitgliedRegeln: { abLevel: MITGLIED.abLevel, chance: Math.round(MITGLIED.chance * 100), kommBonus: Math.round(MITGLIED.kommBonus * 100), stunde: MITGLIED.stunde,
+          kuendigung: Object.fromEntries(Object.entries(MITGLIED.kuendigung).map(([l, c]) => [l, Math.round(c * 100)])),
+          neutral: MITGLIED.neutral, schritt: MITGLIED.beitragSchritt, haltungMehr: MITGLIED.haltungMehr, haltungWeniger: MITGLIED.haltungWeniger },
         verlauf: f.verlauf.map(w => ({ ...w, woche: w.woche + 1 }))
       };
     },
@@ -842,14 +851,15 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return { id: b.id, voll: b.voll, besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: levelVon(b), levelMax: HALTUNGSLEVEL.max,
         wochenBeduerfnisse: besucher ? wochenBeduerfnisse(z, b) : null, status: statusVon(z, b), lobpreis: lobpreisVorliebe(b),
         kaffee: kaffeeVorliebe(b), jugend: istJugend(b), konfi: istJugend(b) ? konfiStand(z, b) : null,
-        beduerfnisse: besucher ? beduerfnisse(z, b) : null, toilette: toiletteAktuell(z, b.id) };
+        beduerfnisse: besucher ? beduerfnisse(z, b) : null, toilette: toiletteAktuell(z, b.id),
+        mitglied: b.mitglied ? b.mitglied.seit + 1 : null };   // Gemeindemitglied seit Woche (ab 1) oder null
     },
     seelsorgeOffen() { return anfrageOffen(z); },
     // Fenster „Menschen im Ort“: alle, die die Gemeinde kennt
     menschen() {
       const zeile = b => ({ id: b.id, art: 'besucher', voll: b.voll, haltung: b.zufriedenheit, level: levelVon(b), besuche: b.besuche,
         zuletzt: typeof b.zuletzt === 'number' ? b.zuletzt + 1 : null, kaffee: b.besuche || b.stamm ? kaffeeVorliebe(b) : null, status: statusVon(z, b),
-        jugend: istJugend(b), konfirmand: !!b.konfirmand });
+        jugend: istJugend(b), konfirmand: !!b.konfirmand, mitglied: !!b.mitglied });
       const ea = z.personen.map(p => ({ p, d: daten(p) })).filter(x => x.d && x.d.art === 'ehrenamt').map(({ p, d }) => {
         const h = d.herkunft || {};
         return { id: p.id, art: 'person', voll: d.name, haltung: h.zufriedenheit ?? null, level: h.level ?? null, besuche: h.besuche ?? null,
