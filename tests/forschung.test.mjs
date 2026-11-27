@@ -36,7 +36,9 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
   assert.equal(forschungStarten(z, 'schulungen1'), 'heiligkeit');
   z.heiligkeit = 120; z.konto = 99;
   assert.equal(forschungStarten(z, 'schulungen1'), 'geld');
-  z.konto = 150;
+  z.heiligkeit = 99;
+  assert.equal(forschungStarten(z, 'schulungen1'), 'beides');   // fehlt beides, werden beide Gründe genannt
+  z.heiligkeit = 120; z.konto = 150;
   assert.equal(forschungStarten(z, 'gibtsnicht'), 'keine');
   const start = z.minuten;
   assert.equal(forschungStarten(z, 'schulungen1'), 'ok');
@@ -95,10 +97,10 @@ assert.equal(dauerMinuten(S1), 60 * 60 / SEKUNDEN_PRO_STUNDE);  // 1 echte Minut
 {
   const d = JSON.parse(spielStarten(null, () => 0.5).speicherText());
   delete d.zustand.heiligkeit; delete d.zustand.forschung;
-  d.zustand.konto = 0;   // seit dem Startgeld von 1.000 € (25.11.): ohne Geld bleibt die Forschung „geld“
+  d.zustand.konto = 0;   // seit dem Startgeld von 1.000 € (25.11.): ohne Geld und ohne Heiligkeit fehlt „beides“
   const sp = spielStarten(JSON.stringify(d), () => 0.5);
   assert.equal(sp.lage().heiligkeit, 0);
-  assert.equal(sp.forschungInfo().forschungen[0].zustand, 'geld');
+  assert.equal(sp.forschungInfo().forschungen[0].zustand, 'beides');
 }
 
 // Haltungs-Multiplikator (Lukas, 25.11. abends; seit 26.11. Skill des Hauptamtlichen): Stufe 0 = ×1, dann ×1,3 / 1,6 / 2,0 / 2,5 / 3,0

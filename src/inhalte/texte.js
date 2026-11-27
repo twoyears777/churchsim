@@ -842,7 +842,7 @@ export const TEXTE = {
     abbrechenFrage: 'Wirklich abbrechen? Geld und Heiligkeit sind dann weg.',
     abbrechenJa: 'Ja, abbrechen',
     abbrechenNein: 'Weiterforschen',
-    zustand: { gesperrt: 'Erst die vorherige Forschung abschließen', besetzt: 'Es läuft schon eine andere Forschung', geld: 'Zu wenig Geld', heiligkeit: 'Zu wenig Heiligkeit' },
+    zustand: { gesperrt: 'Erst die vorherige Forschung abschließen', besetzt: 'Es läuft schon eine andere Forschung', geld: 'Zu wenig Geld', heiligkeit: 'Zu wenig Heiligkeit', beides: 'Zu wenig Geld und Heiligkeit' },   // „beides“: ENTWURF von Claude (27.11.)
     schliessen: 'Schließen'
   },
   // Gemeindekalender (ENTWÜRFE von Claude, 26.11. – Lukas formuliert selbst)

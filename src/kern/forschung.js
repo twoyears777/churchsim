@@ -29,7 +29,7 @@ export const dauerMinuten = f => spielMinuten(f.dauer, 1);
 export const istErforscht = (z, id) => !!(z.forschung && z.forschung.fertig.includes(id));
 
 // Zustand einer Forschung: 'erforscht' | 'laeuft' | 'gesperrt' (Voraussetzung fehlt) | 'besetzt' (eine andere läuft)
-//   | 'geld' | 'heiligkeit' | 'bereit'
+//   | 'beides' (zu wenig Geld UND zu wenig Heiligkeit) | 'geld' | 'heiligkeit' | 'bereit'
 export function forschungZustand(z, f) {
   forschungAnlegen(z);
   const F = z.forschung;
@@ -37,8 +37,10 @@ export function forschungZustand(z, f) {
   if (F.laeuft && F.laeuft.id === f.id) return 'laeuft';
   if (f.braucht.some(id => !F.fertig.includes(id))) return 'gesperrt';
   if (F.laeuft) return 'besetzt';
-  if (!kannBezahlen(z, f.kosten.geld)) return 'geld';
-  if (z.heiligkeit < f.kosten.heiligkeit) return 'heiligkeit';
+  const geldFehlt = !kannBezahlen(z, f.kosten.geld), heiligkeitFehlt = z.heiligkeit < f.kosten.heiligkeit;
+  if (geldFehlt && heiligkeitFehlt) return 'beides';
+  if (geldFehlt) return 'geld';
+  if (heiligkeitFehlt) return 'heiligkeit';
   return 'bereit';
 }
 
