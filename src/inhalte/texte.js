@@ -845,6 +845,49 @@ export const TEXTE = {
       tisch: 'Tisch fehlt', klavier: 'Klavier fehlt', stuehle: 'zu wenige Stühle', stuehleTisch: 'zu wenige Stühle am Tisch' }
   },
 
+  // Wochenzusammenfassung (27.11.): jeden Montag 8:00, Spiel pausiert bis „Weiter“.
+  // ENTWURF von Claude (alle Texte in diesem Block) – noch nicht von Lukas formuliert
+  wochenbericht: {
+    titel: n => `Wochenzusammenfassung · Woche ${n}`,
+    unter: 'Was letzte Woche lief und was es gebracht hat. Klick auf einen Bereich zeigt die Einzelheiten.',
+    weiter: 'Weiter',
+    kacheln: { ergebnis: 'Ergebnis', besucher: 'Besucher', bekanntheit: 'Bekanntheit', heiligkeit: 'Heiligkeit' },
+    zurVorwoche: d => `${d} zur Vorwoche`,
+    vorwoche: d => `Vorwoche ${d}`,
+    ersteWoche: 'erste Woche',
+    jetzt: n => `jetzt ${n}`,
+    bereiche: { geld: 'Geld', veranstaltungen: 'Veranstaltungen', gemeinde: 'Gemeinde', werte: 'Bekanntheit & Heiligkeit', monat: 'Monatsblick' },
+    // Kurzzeilen (auch zugeklappt sichtbar)
+    geldKurz: (ergebnis, konto) => `${ergebnis} · Kontostand ${konto}`,
+    veranstaltungenKurz: (n, aus) => `${n === 1 ? '1 Veranstaltung' : `${n} Veranstaltungen`}${aus ? ` · ${aus} ausgefallen` : ''}`,
+    gemeindeKurz: (m, dm, s, ds) => `Mitglieder ${m}${dm} · Dauerspender ${s}${ds}`,
+    werteKurz: (b, h) => `Bekanntheit ${b} · Heiligkeit ${h}`,
+    monatKurz: (monat, summe) => `Mitgliedsbeiträge ${monat}: ${summe}`,
+    // Geld
+    spalten: { posten: '', woche: 'Letzte Woche', vorwoche: 'Vorwoche' },
+    einnahmen: 'Einnahmen', ausgaben: 'Ausgaben', summe: 'Summe', ergebnis: 'Ergebnis',
+    kaffeeTassen: 'Kirchkaffee: verkaufte Tassen', kaffeeGewinn: 'Kirchkaffee: Gewinn',
+    heute: 'Heute früh eingegangen (zählt schon zur neuen Woche)',
+    heuteDauerspende: 'Dauerspenden', heuteMitglied: 'Mitgliedsbeiträge',
+    keine: 'keine',
+    // Veranstaltungen
+    vSpalten: { tag: 'Tag', was: 'Veranstaltung', besucher: 'Besucher', geld: 'Geld', haltung: 'Haltung', bekanntheit: 'Bekanntheit' },
+    ausgefallen: grund => `Ausgefallen${grund ? ` – ${grund}` : ''}`,
+    keineVeranstaltungen: 'Letzte Woche gab es keine Veranstaltungen.',
+    // Gemeinde
+    neueMitglieder: 'Neue Gemeindemitglieder', ehemaligeMitglieder: 'Nicht mehr Mitglied',
+    neueSpender: 'Neue Dauerspender', ehemaligeSpender: 'Keine Dauerspender mehr',
+    aufgestiegen: 'Im Haltungslevel aufgestiegen', abgestiegen: 'Im Haltungslevel abgestiegen',
+    levelWechsel: (name, vorher, jetzt) => `${name} (Level ${vorher} → ${jetzt})`,
+    unbekannt: 'Unbekannt',
+    keineAenderung: 'Diese Woche hat sich in der Gemeinde nichts verändert.',
+    // Bekanntheit & Heiligkeit
+    wSpalten: { wert: '', start: 'Montag vor einer Woche', ende: 'Jetzt', aenderung: 'Veränderung' },
+    // Monatsblick
+    monatZeilen: { anzahl: 'Mitglieder', beitrag: 'Beitrag pro Mitglied', summe: 'Zusammen', vormonat: 'Vormonat' },
+    monate: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+  },
+
   // ---- Texte, die bis 26.11. direkt im Code standen (index.html, fenster.js, anzeigen.js, zeichnen.js) – Wortlaut unverändert ----
   // Feste Beschriftungen der Seite (in index.html über data-text="seite.…" eingesetzt)
   seite: {

@@ -53,12 +53,15 @@ export function beitragSetzen(z, betrag) {
 }
 
 function monatAbrechnen(z, key) {
-  const beitrag = z.mitglieder.beitrag, h = beitragHaltung(beitrag);
-  for (const b of mitgliederVon(z)) {
+  const beitrag = z.mitglieder.beitrag, h = beitragHaltung(beitrag), liste = mitgliederVon(z);
+  for (const b of liste) {
     if (beitrag > 0) buchen(z, 'einnahmen', 'mitglied', beitrag, { spender: b.id });
     if (h) zufriedenheitAendern(b, h);
   }
   z.mitglieder.monat = key;
+  // Für den Monatsblick der Wochenzusammenfassung (27.11.): diese und die vorige Abbuchung merken
+  if (z.mitglieder.letzte) z.mitglieder.vorletzte = z.mitglieder.letzte;
+  z.mitglieder.letzte = { key, anzahl: liste.length, beitrag, summe: beitrag > 0 ? Math.round(beitrag * liste.length * 100) / 100 : 0 };
 }
 
 function wocheKuendigen(z, woche, zufall) {

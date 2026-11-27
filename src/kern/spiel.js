@@ -25,7 +25,7 @@ import { HALTUNGSLEVEL } from '../inhalte/besucher.js';
 import { zeitAnlegen, zeitpunkt, tageBisSonntag, spielMinuten, TAG_MIN } from './zeit.js';
 import { zeitVorruecken, gottesdienstRaeume, kirchkaffeeZustand, moeglicheVeranstaltungen, programmVon,
   veranstaltungEinstellen, terminEinstellen, prognose, finanzPrognose, terminDieseWoche, ablaufAnlegen, laufVon,
-  naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon, naechstesEvent, plaetzeVon, platzSperre, terminStand } from './ablauf.js';
+  naechsteKaffeeOeffnung, termineDerWoche, verdraengtVon, naechstesEvent, plaetzeVon, platzSperre, terminStand, berichtPause } from './ablauf.js';
 import { kaffeeAnlegen, kaffeeKundenPositionen, sitzplaetzeVon, kaffeeMitarbeiterPosition, kaffeeLaden, kaffeeZahlen, kaffeeMeldung, schichtenVon,
   schichtHinzufuegen, schichtEntfernen, offenBei, kaffeeVersetzt } from './kirchkaffee.js';
 import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
@@ -44,6 +44,7 @@ import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
 import { DAUERSPENDE, MITGLIED } from '../inhalte/finanzen.js';
 import { mitgliederAnlegen, mitgliederListe, beitragSetzen, beitragHaltung } from './mitglieder.js';
 import { zeitungOffen, zeitungSchliessen } from './erster.js';
+import { wochenberichtAnlegen, wochenberichtOffen, wochenberichtSchliessen, wochenberichtVon } from './wochenbericht.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
 import { ZEITEN, ZEIT_FAKTOREN, FESTE_GESPERRT, FEST_MENUE } from '../inhalte/kirchenjahr.js';
 import { besucherPositionen } from './bewegung.js';
@@ -85,6 +86,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   skillsAnlegen(z);   // Skill-Fächer der Mitarbeiter (26.11.); zieht alte Spielstände um
   evangelisationAnlegen(z);   // Evangelisation vor dem Laden (26.11.)
   abrissAnlegen(z);   // Abriss-Wert (27.11.): schon Gebautes zählt wie heute gebaut
+  wochenberichtAnlegen(z);   // Wochenzusammenfassung (27.11.): erstes „Foto“ der Gemeinde (nach Dauerspendern und Mitgliedern)
   return z;
 }
 // Alte Spielstände (vor den Baukosten, 25.11.): einmalig der Startgeld-Ausgleich; ihre schon gebauten Wände bleiben kostenlos
@@ -245,11 +247,22 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     return { gebaut, ergebnis: geld ? 'geld' : gebaut ? 'ok' : 'platz' };
   }
 
+  // Raum-Namen für Kalender und Wochenzusammenfassung: gibt es einen Raumtyp mehrmals, bekommt er eine Nummer („Gemeindesaal 2“).
+  // raumAus: Raum zu einem gespeicherten Raum-Schlüssel (Berichte merken sich den Raum so).
+  function raumNamen() {
+    const schluessel = r => Math.min(...r.zellen), nr = new Map(), zaehler = {};
+    for (const r of raeume.liste.filter(r => r.typ)) { zaehler[r.typ.id] = (zaehler[r.typ.id] || 0) + 1; nr.set(schluessel(r), zaehler[r.typ.id]); }
+    const raumName = r => r && r.typ ? { name: r.typ.name, nummer: zaehler[r.typ.id] > 1 ? nr.get(schluessel(r)) : null } : { name: null, nummer: null };
+    const raumAus = k => { const i = raeume.gruppe[k]; return i === undefined || i < 0 ? null : raeume.liste[i] || null; };
+    return { raumName, raumAus };
+  }
+  const festNameVon = k => k ? (festAusSchluessel(k) || { fest: {} }).fest.name || null : null;
+
   const spiel = {
     // ---------- Befehle ----------
     // Tick-System: echte Sekunden seit dem letzten Bild → Spielzeit rückt vor. Im Editor und bei Pause steht die Zeit.
     tick(sekunden) {
-      if (z.tempo <= 0 || bauModus || anfrageOffen(z) || festAnfrageOffen(z) || zeitungOffen(z)) return false;   // offene Seelsorge-Anfrage / Fest-Menü / Zeitung: Zeit steht
+      if (z.tempo <= 0 || bauModus || anfrageOffen(z) || festAnfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) return false;   // offene Seelsorge-Anfrage / Fest-Menü / Zeitung / Wochenzusammenfassung: Zeit steht
       const vorher = z.personen.length;
       zeitVorruecken(z, raeume, spielMinuten(Math.min(0.25, sekunden), z.tempo), zufall);
       if (z.personen.length !== vorher) raeume = raeumeAuswerten(z);   // neue Ehrenamtliche
@@ -258,6 +271,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     },
     // Zeitungsartikel vor dem ersten Gottesdienst weggeklickt: die Zeit läuft weiter
     zeitungWeiter() { return zeitungSchliessen(z); },
+    // Wochenzusammenfassung (27.11.) geschlossen: die Zeit läuft weiter
+    wochenberichtWeiter() { return wochenberichtSchliessen(z); },
     tempoSetzen(t) { if (TEMPI.includes(t)) z.tempo = t; },
     bauModus(an) { bauModus = !!an; },
     zuruecksetzen() { z = neuesSpiel(zufall); raeume = raeumeAuswerten(z); verlauf.length = 0; wegSpeicher.clear(); },
@@ -551,6 +566,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         seelsorge: seelsorgeLage(z),   // offene Seelsorge-Anfrage mit Status der Person (sonst null)
         festAnfrage: z.feste ? z.feste.anfrage : null,   // Fest-Menü steht an (Schlüssel des Fests; Zeit steht, bis beantwortet)
         zeitung: zeitungOffen(z),   // Zeitungsartikel vor dem ersten Gottesdienst ist offen (Zeit steht, bis weitergeklickt)
+        wochenbericht: wochenberichtOffen(z),   // Wochenzusammenfassung ist offen (Zeit steht, bis sie geschlossen wird)
         meldung: neuesteMeldung(z)   // z. B. jemand ist neugierig am Tor stehen geblieben, zu wenig Geld für den Kaffee-Einkauf
       };
     },
@@ -795,16 +811,11 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     kalenderInfo(versatz = 0) {
       const v = versatz === 1 ? 1 : versatz === -1 ? -1 : 0;
       const woche = zeitpunkt(z.minuten).woche + v, heute = Math.floor(z.minuten / TAG_MIN);
-      // Raum-Namen: gibt es einen Raumtyp mehrmals, bekommt er eine Nummer („Gemeindesaal 2“)
-      const schluessel = r => Math.min(...r.zellen), nr = new Map(), zaehler = {};
-      for (const r of raeume.liste.filter(r => r.typ)) { zaehler[r.typ.id] = (zaehler[r.typ.id] || 0) + 1; nr.set(schluessel(r), zaehler[r.typ.id]); }
-      const raumName = r => r && r.typ ? { name: r.typ.name, nummer: zaehler[r.typ.id] > 1 ? nr.get(schluessel(r)) : null } : { name: null, nummer: null };
-      const raumAus = k => { const i = raeume.gruppe[k]; return i === undefined || i < 0 ? null : raeume.liste[i] || null; };
+      const { raumName, raumAus } = raumNamen();
       const tage = Array.from({ length: 7 }, (_, tag) => {
         const tagNr = woche * 7 + tag, f = festAmTag(tagNr), a = tagAnzeige(tagNr);
         return { tag, datum: a.datum, heute: tagNr === heute, fest: f && festAktiv(z, f) ? f.name : null, feiertag: feiertagAmTag(tagNr) };
       });
-      const festNameVon = k => k ? (festAusSchluessel(k) || { fest: {} }).fest.name || null : null;
       const bericht = id => { const b = berichtVon(z, id); return b ? { ...b, geld: b.kollekte + b.spende } : null; };
       const termine = v === -1
         ? berichteDerWoche(z, woche).map(b => ({ id: b.id, tag: b.tag, slot: b.slot, platz: b.platz, art: b.art, artName: artName(b.art), festName: festNameVon(b.fest),
@@ -817,6 +828,23 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const kaffee = v === -1 ? [] : raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee')
         .flatMap(r => schichtenVon(z, r).map(s => ({ tag: s.tag, slot: s.slot, ende: SCHICHT_ENDE[s.slot], ...raumName(r) })));
       return { versatz: v, woche: woche + 1, tage, termine, kaffee, slots: SLOTS.map(s => ({ ...s })) };
+    },
+    // Wochenzusammenfassung (27.11.): der zuletzt gebaute Bericht oder null. Wochen ab 1 wie überall in der Anzeige.
+    // kennzahlen/vergleich: { ergebnis, besucher, bekanntheit, heiligkeit } (vergleich = Kennzahlen der Vorwoche oder null)
+    // geld: { einnahmen, ausgaben (je Kategorie), summeEinnahmen, summeAusgaben, saldo, kaffee: { tassen, verkauft, einkauf, gewinn },
+    //         konto (jetzt), heuteDauerspende, heuteMitglied (heute früh eingegangen), vorher (dasselbe für die Vorwoche oder null) }, namen der Kategorien
+    // veranstaltungen[]: wie die Berichte im Kalender, dazu artName, festName, Raum-Name; gemeinde: Zahlen und Listen { id, name };
+    // monat: { jahr, monat (1–12), anzahl, beitrag, summe, vorher } oder null (nur nach einem Monatsersten)
+    wochenberichtInfo() {
+      const b = wochenberichtVon(z);
+      if (!b) return null;
+      const { raumName, raumAus } = raumNamen();
+      const monatTeil = m => m ? { jahr: Number(m.key.slice(0, 4)), monat: Number(m.key.slice(5, 7)), anzahl: m.anzahl, beitrag: m.beitrag, summe: m.summe } : null;
+      return {
+        ...b, woche: b.woche + 1, offen: wochenberichtOffen(z), namen: { einnahmen: EINNAHMEN, ausgaben: AUSGABEN },
+        veranstaltungen: b.veranstaltungen.map(v => ({ ...v, artName: artName(v.art), festName: festNameVon(v.fest), ...raumName(v.raum === null ? null : raumAus(v.raum)) })),
+        monat: b.monat ? { ...monatTeil(b.monat), vorher: monatTeil(b.monat.vorher) } : null
+      };
     },
     // Menü der Kaffeemaschine (nachgefüllt wird vom Ehrenamtlichen im Laden)
     maschineInfo(x, y) {
@@ -879,7 +907,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     }
   };
   // Abfragen liefern Kopien – die Oberfläche kann den Spielstand nicht aus Versehen verändern.
-  for (const name of ['lage', 'kalenderInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'automatInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
+  for (const name of ['lage', 'kalenderInfo', 'wochenberichtInfo', 'kirchenjahrInfo', 'festMenueInfo', 'raumtypWahl', 'raumInfo', 'kaffeeRaumInfo', 'maschineInfo', 'automatInfo', 'besucherInfo', 'personInfo', 'evangelisationInfo', 'moebelArten', 'menschen', 'menschenStatistik', 'torInfo', 'stuhlInfo', 'einzugsgebietInfo', 'moebelVorschau']) {
     const f = spiel[name]; spiel[name] = (...a) => { const e = f(...a); return e == null ? e : kopie(e); };
   }
   return Object.freeze(spiel);

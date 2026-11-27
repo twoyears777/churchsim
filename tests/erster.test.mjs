@@ -9,6 +9,7 @@ import { TEXTE } from '../src/inhalte/texte.js';
 import { wandRechteck, tuerUmschalten, erkenneRaeume, raumTypVon, pruefeRaum, typZuweisen } from '../src/kern/karte.js';
 import { neuesSpiel, spielStarten, SPEICHER_VERSION } from '../src/kern/spiel.js';
 import { zeitVorruecken, veranstaltungEinstellen, prognose } from '../src/kern/ablauf.js';
+import { wochenberichtOffen, wochenberichtSchliessen } from '../src/kern/wochenbericht.js';
 import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 import { ersterAnlegen, zeitungOffen, zeitungSchliessen } from '../src/kern/erster.js';
@@ -36,7 +37,10 @@ function gemeinde(pastor = true) {
 }
 // In kleinen Schritten bis zur Zielzeit (bleibt stehen, wenn die Zeitung aufgeht)
 function bis(z, ziel, zufall = () => 0.5) {
-  for (let i = 0; i < 2000 && z.minuten < ziel; i++) { const vor = z.minuten; zeitVorruecken(z, aus(z), Math.min(30, ziel - z.minuten), zufall); if (z.minuten === vor) break; }
+  for (let i = 0; i < 2000 && z.minuten < ziel; i++) {
+    if (wochenberichtOffen(z)) wochenberichtSchliessen(z);   // Wochenzusammenfassung (27.11.) wegklicken – sie prüft tests/wochenbericht.test.mjs
+    const vor = z.minuten; zeitVorruecken(z, aus(z), Math.min(30, ziel - z.minuten), zufall); if (z.minuten === vor && !wochenberichtOffen(z)) break;
+  }
 }
 
 // Zeitung am Samstag 8:00, Zeit steht, danach +10 Leute und 1 neuer Ehrenamtlicher

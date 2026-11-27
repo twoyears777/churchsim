@@ -90,6 +90,8 @@ export function anzeigenAktualisieren() {
   else if (l.festAnfrage && (!ui.fenster || ui.fenster.art !== 'fest' || ui.fenster.schluessel !== l.festAnfrage)) ui.fenster = { art: 'fest', schluessel: l.festAnfrage };
   // Zeitungsartikel vor dem ersten Gottesdienst: nach vorn holen (die Zeit steht, bis man weiterklickt)
   else if (l.zeitung && (!ui.fenster || ui.fenster.art !== 'zeitung')) ui.fenster = { art: 'zeitung' };
+  // Wochenzusammenfassung (27.11.): montags 8:00 nach vorn holen (die Zeit steht, bis man „Weiter“ klickt); Bereiche starten zugeklappt
+  else if (l.wochenbericht && (!ui.fenster || ui.fenster.art !== 'wochenbericht')) ui.fenster = { art: 'wochenbericht', offen: [] };
   fensterAktualisieren();
 }
 

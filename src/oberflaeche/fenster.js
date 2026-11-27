@@ -18,6 +18,7 @@ function schliessbar(f) {
   if (f.art === 'seelsorge' && ui.spiel.seelsorgeOffen()) return false;   // Seelsorge erst beantworten
   if (f.art === 'fest' && ui.spiel.lage().festAnfrage === f.schluessel) return false;   // Fest-Menü erst beantworten
   if (f.art === 'zeitung') return false;   // Zeitung: nur über „Weiter“
+  if (f.art === 'wochenbericht' && ui.spiel.lage().wochenbericht) return false;   // Wochenzusammenfassung: nur über „Weiter“
   return true;
 }
 export function fensterSchliessen() {
@@ -29,7 +30,7 @@ export function fensterOffen() { return !maske().hidden; }
 function fensterInhalt(f) {
   return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster }[f.art](f);
 }
 // Wird bei jeder Anzeige-Aktualisierung aufgerufen; baut das Fenster nur neu, wenn sich der Inhalt geändert hat.
 export function fensterAktualisieren() {
@@ -45,6 +46,7 @@ export function fensterAktualisieren() {
   if (schliessbar(f)) inhalt = `<button class="fenster-x" data-zu aria-label="Schließen" title="Schließen">✕</button>` + inhalt;
   m.classList.toggle('zeitung', f.art === 'zeitung');
   m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen');
+  m.classList.toggle('wochenbericht', f.art === 'wochenbericht');   // Wochenzusammenfassung (27.11.): in der Mitte wie die Zeitung
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
   m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
@@ -792,6 +794,81 @@ function zeitungFenster() {
   return `<div class="zeitungsartikel"><h2>${T.schlagzeile}</h2><p>${T.text}</p></div>
     <div class="zeile"><button data-zeitung-weiter>${T.weiter}</button></div>`;
 }
+// Wochenzusammenfassung (27.11.): Kopf mit 4 Kennzahlen (mit Vorwoche), darunter Bereiche zum Aufklappen (alle zu), unten „Weiter“.
+// Alle Zahlen kommen fertig vom Spiel (wochenberichtInfo); hier wird nur HTML daraus.
+function wochenberichtFenster(f) {
+  const b = ui.spiel.wochenberichtInfo();
+  if (!b) return null;
+  const T = TEXTE.wochenbericht, K = TEXTE.kalender, offen = f.offen || [], k = b.kennzahlen, v = b.vergleich;
+  const zahlVz = n => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${Math.abs(n).toLocaleString('de-DE', { maximumFractionDigits: 1 })}`;
+  const geldVz = n => n === 0 ? geld(0) : mitVorzeichen(n);
+  // Kopf: Ergebnis und Besucher mit Veränderung zur Vorwoche, Bekanntheit und Heiligkeit mit Stand und Veränderung der Vorwoche
+  const kachel = (titel, wert, klasse, klein) => `<div class="wb-kachel"><small>${titel}</small><b class="${klasse}">${wert}</b><small>${klein}</small></div>`;
+  const kacheln = `<div class="wb-kacheln">
+    ${kachel(T.kacheln.ergebnis, geldVz(k.ergebnis), vorzeichenKlasse(k.ergebnis), v ? T.zurVorwoche(geldVz(Math.round((k.ergebnis - v.ergebnis) * 100) / 100)) : T.ersteWoche)}
+    ${kachel(T.kacheln.besucher, String(k.besucher), '', v ? T.zurVorwoche(zahlVz(k.besucher - v.besucher)) : T.ersteWoche)}
+    ${kachel(T.kacheln.bekanntheit, zahlVz(k.bekanntheit), vorzeichenKlasse(k.bekanntheit), `${T.jetzt(zahl1(b.bekanntheit.ende))}${v ? ` · ${T.vorwoche(zahlVz(v.bekanntheit))}` : ''}`)}
+    ${kachel(T.kacheln.heiligkeit, zahlVz(k.heiligkeit), vorzeichenKlasse(k.heiligkeit), `${T.jetzt(Math.floor(b.heiligkeit.ende))}${v ? ` · ${T.vorwoche(zahlVz(v.heiligkeit))}` : ''}`)}
+  </div>`;
+  const bereich = (id, kurz, inhalt) => {
+    const auf = offen.includes(id);
+    return `<div class="menschengruppe${auf ? ' offen' : ''}"><button class="gruppenkopf" data-gruppe="${id}"><span>${auf ? '▾' : '▸'} ${T.bereiche[id]}</span><small>${kurz}</small></button>${auf ? `<div class="wb-inhalt">${inhalt}</div>` : ''}</div>`;
+  };
+
+  // Geld: Kategorien der letzten Woche neben der Vorwoche, Kirchkaffee, Ergebnis; was heute früh schon eingegangen ist
+  const g = b.geld, gv = g.vorher, N = b.namen, S = T.spalten;
+  const posten = (seite, vz) => {
+    const ids = [...new Set([...Object.keys(g[seite]), ...Object.keys(gv ? gv[seite] : {})])].filter(id => g[seite][id] || (gv && gv[seite][id]));
+    if (!ids.length) return `<tr><td colspan="${gv ? 3 : 2}" class="leer">${T.keine}</td></tr>`;
+    return ids.map(id => `<tr><td>${esc(N[seite][id] || id)}</td><td class="zahl">${vz(g[seite][id] || 0)}</td>${gv ? `<td class="zahl ausgegraut">${vz(gv[seite][id] || 0)}</td>` : ''}</tr>`).join('');
+  };
+  const zeile = (text, jetzt, vorher, klasse = '') => `<tr class="${klasse}"><td>${text}</td><td class="zahl">${jetzt}</td>${gv ? `<td class="zahl ausgegraut">${vorher}</td>` : ''}</tr>`;
+  const kopfZeile = titel => `<tr><th>${titel}</th><th>${S.woche}</th>${gv ? `<th>${S.vorwoche}</th>` : ''}</tr>`;
+  const heute = [g.heuteDauerspende ? `<tr><td>${T.heuteDauerspende}</td><td class="zahl">${plus(g.heuteDauerspende)}</td></tr>` : '',
+    g.heuteMitglied ? `<tr><td>${T.heuteMitglied}</td><td class="zahl">${plus(g.heuteMitglied)}</td></tr>` : ''].join('');
+  const geldInhalt = `<table class="finanzen hell">${kopfZeile(T.einnahmen)}${posten('einnahmen', plus)}${zeile(T.summe, plus(g.summeEinnahmen), gv ? plus(gv.summeEinnahmen) : '', 'summe')}</table>
+    <table class="finanzen hell abstand">${kopfZeile(T.ausgaben)}${posten('ausgaben', minus)}${zeile(T.summe, minus(g.summeAusgaben), gv ? minus(gv.summeAusgaben) : '', 'summe')}</table>
+    <table class="finanzen hell abstand">${zeile(T.kaffeeTassen, String(g.kaffee.tassen), gv ? String(gv.kaffee.tassen) : '')}${zeile(T.kaffeeGewinn, geldVz(g.kaffee.gewinn), gv ? geldVz(gv.kaffee.gewinn) : '')}
+      ${zeile(T.ergebnis, `<span class="${vorzeichenKlasse(g.saldo)}">${geldVz(g.saldo)}</span>`, gv ? geldVz(gv.saldo) : '', 'summe')}</table>
+    ${heute ? `<h4>${T.heute}</h4><table class="finanzen hell">${heute}</table>` : ''}`;
+
+  // Veranstaltungen: eine Zeile je Veranstaltung, Ausgefallene mit Grund
+  const VS = T.vSpalten, ve = b.veranstaltungen, aus = ve.filter(x => x.ausgefallen).length;
+  const raum = x => x.name ? (x.nummer ? `${esc(x.name)} ${x.nummer}` : esc(x.name)) : '';
+  const vName = x => x.festName ? K.fest(esc(x.festName), esc(x.artName || '')) : esc(x.artName || TEXTE.keineVeranstaltung);
+  const vZeile = x => `<tr><td>${TEXTE.tageKurz[x.tag]} · ${TEXTE.raum.slots[x.slot] || ''}</td><td><b>${vName(x)}</b>${raum(x) ? `<br><small>${raum(x)}</small>` : ''}</td>${x.ausgefallen
+    ? `<td colspan="4" class="fehlt">${T.ausgefallen(K.grund[x.grund] || '')}</td>`
+    : `<td class="zahl">${x.besucher}</td><td class="zahl">${plus(Math.round((x.kollekte + x.spende) * 100) / 100)}</td><td class="zahl">${zahlVz(x.haltung)}</td><td class="zahl">${zahlVz(x.bekanntheit)}</td>`}</tr>`;
+  const vInhalt = ve.length ? `<table class="finanzen hell verlauf"><tr><th>${VS.tag}</th><th>${VS.was}</th><th>${VS.besucher}</th><th>${VS.geld}</th><th>${VS.haltung}</th><th>${VS.bekanntheit}</th></tr>${ve.map(vZeile).join('')}</table>`
+    : `<p class="leer">${T.keineVeranstaltungen}</p>`;
+
+  // Gemeinde: nur Listen, in denen jemand steht
+  const G = b.gemeinde, nm = x => esc(x.name || T.unbekannt);
+  const liste = (titel, leute, text = nm) => leute.length ? `<p class="unter"><b>${titel}:</b> ${leute.map(text).join(', ')}</p>` : '';
+  const gInhalt = [liste(T.neueMitglieder, G.neueMitglieder), liste(T.ehemaligeMitglieder, G.ehemaligeMitglieder), liste(T.neueSpender, G.neueSpender), liste(T.ehemaligeSpender, G.ehemaligeSpender),
+    liste(T.aufgestiegen, G.aufgestiegen, x => T.levelWechsel(nm(x), x.vorher, x.jetzt)), liste(T.abgestiegen, G.abgestiegen, x => T.levelWechsel(nm(x), x.vorher, x.jetzt))].join('')
+    || `<p class="leer">${T.keineAenderung}</p>`;
+  const dz = (jetzt, vorher) => jetzt === vorher ? '' : ` (${zahlVz(jetzt - vorher)})`;
+
+  // Bekanntheit & Heiligkeit: Stand vor einer Woche, jetzt, Veränderung
+  const WS = T.wSpalten, wz = (titel, w, fmt) => `<tr><td>${titel}</td><td class="zahl">${fmt(w.start)}</td><td class="zahl">${fmt(w.ende)}</td><td class="zahl ${vorzeichenKlasse(w.ende - w.start)}">${zahlVz(Math.round((w.ende - w.start) * 10) / 10)}</td></tr>`;
+  const wInhalt = `<table class="finanzen hell verlauf"><tr><th>${WS.wert}</th><th>${WS.start}</th><th>${WS.ende}</th><th>${WS.aenderung}</th></tr>
+    ${wz(T.kacheln.bekanntheit, b.bekanntheit, zahl1)}${wz(T.kacheln.heiligkeit, b.heiligkeit, n => String(Math.floor(n)))}</table>`;
+
+  // Monatsblick: nur nach einem Monatsersten
+  const mo = b.monat, MZ = T.monatZeilen, monatName = m => `${T.monate[m.monat - 1]} ${m.jahr}`;
+  const mInhalt = mo ? `<table class="finanzen hell"><tr><td>${MZ.anzahl}</td><td class="zahl">${mo.anzahl}</td></tr><tr><td>${MZ.beitrag}</td><td class="zahl">${geld(mo.beitrag)}</td></tr>
+      <tr class="summe"><td>${MZ.summe}</td><td class="zahl">${plus(mo.summe)}</td></tr>
+      ${mo.vorher ? `<tr><td>${MZ.vormonat} (${monatName(mo.vorher)})</td><td class="zahl ausgegraut">${plus(mo.vorher.summe)}</td></tr>` : ''}</table>` : '';
+
+  return `<h2>${T.titel(b.woche)}</h2><p class="unter">${T.unter}</p>${kacheln}
+    ${bereich('geld', T.geldKurz(geldVz(g.saldo), geld(g.konto)), geldInhalt)}
+    ${bereich('veranstaltungen', T.veranstaltungenKurz(ve.length, aus), vInhalt)}
+    ${bereich('gemeinde', T.gemeindeKurz(G.mitglieder, dz(G.mitglieder, G.mitgliederVorher), G.spender, dz(G.spender, G.spenderVorher)), gInhalt)}
+    ${bereich('werte', T.werteKurz(zahlVz(k.bekanntheit), zahlVz(k.heiligkeit)), wInhalt)}
+    ${mo ? bereich('monat', T.monatKurz(monatName(mo), plus(mo.summe)), mInhalt) : ''}
+    ${b.offen ? `<div class="zeile wb-weiter"><button data-wochenbericht-weiter>${T.weiter}</button></div>` : ''}`;
+}
 // Knöpfe in den Fenstern → Befehle ans Spiel
 export function fensterEinrichten() {
   maske().addEventListener('click', e => {
@@ -801,6 +878,7 @@ export function fensterEinrichten() {
     const b = e.target.closest('button'), f = ui.fenster, spiel = ui.spiel;
     if (!b || b.disabled || !f) return;
     if (b.hasAttribute('data-zu')) return fensterSchliessen();
+    if (b.hasAttribute('data-wochenbericht-weiter')) { spiel.wochenberichtWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
     if (b.hasAttribute('data-zeitung-weiter')) { spiel.zeitungWeiter(); ui.speichern(); ui.fenster = null; maske().hidden = true; letzterInhalt = ''; ui.anzeigeErzwingen(); return ui.malen(); }
     if (b.dataset.gruppe) { const o = f.offen || []; f.offen = o.includes(b.dataset.gruppe) ? o.filter(x => x !== b.dataset.gruppe) : [...o, b.dataset.gruppe]; }
     else if (b.dataset.sort) { const s = f.sort || { spalte: 'name', ab: false }; f.sort = { spalte: b.dataset.sort, ab: s.spalte === b.dataset.sort ? !s.ab : true }; }

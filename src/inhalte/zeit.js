@@ -23,3 +23,7 @@ export const HEIMWEG = 120;           // so lange (Spielminuten) laufen die Besu
 // Meldungen unten rechts (Ort, Kirchkaffee, Konfi): so lange (Spielminuten) bleiben sie stehen.
 // Stand bis 26.11. dreimal einzeln im Code (ort.js, kirchkaffee.js, konfi.js) – jetzt nur noch hier.
 export const MELDUNG_DAUER = 120;
+
+// Wochenzusammenfassung (Lukas, 27.11.): jeden Montag um diese Stunde – gleich nach den Dauerspenden; das Spiel pausiert, bis man sie schließt.
+// pause: nur für die automatischen Tests abschaltbar (tests/hilfen/ohne-erster.mjs), im Spiel immer an.
+export const WOCHENBERICHT = { stunde: 8, pause: true };

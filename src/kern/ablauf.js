@@ -11,7 +11,7 @@
 //   Beginn + 180 Ende des Kirchkaffees (2 Stunden): Zufriedenheit ändert sich, manche werden Ehrenamtliche.
 //                Wer noch beim Kaffee ansteht, wird fertig bedient und geht danach.
 import { VERANSTALTUNGEN, SONNTAG, PLAETZE, ZWEITER_PLATZ_STANDARD, DRITTER_PLATZ_STANDARD, SPONTANE_SPENDE } from '../inhalte/veranstaltungen.js';
-import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN, HEIMWEG } from '../inhalte/zeit.js';
+import { DAUER, ANREISE_VORLAUF, SLOTS, STANDARD_PLAN, HEIMWEG, WOCHENBERICHT } from '../inhalte/zeit.js';
 import { AENDERUNG, BEKANNTHEIT, EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT } from '../inhalte/besucher.js';
 import { KOLLEKTE_PRO_BESUCHER } from '../inhalte/finanzen.js';
 import { PREIS_TASSE } from '../inhalte/kirchkaffee.js';
@@ -32,6 +32,7 @@ import { kirchkaffeeZustand, kirchkaffeeOffen, gottesdienstKunden, kaffeeAktuali
 import { fassung } from './moebel.js';
 import { dauerspenderSchritt } from './dauerspender.js';
 import { mitgliederSchritt, mitgliedWerden } from './mitglieder.js';
+import { wochenberichtSchritt, wochenberichtOffen } from './wochenbericht.js';
 import { forschungSchritt, heiligkeitFuerGottesdienst, istErforscht } from './forschung.js';
 import { faktorAmTag } from './kalender.js';
 import { berichtDazu, berichtAblegen, berichteAufraeumen } from './berichte.js';
@@ -274,24 +275,27 @@ function platzWirkung(z, raeume, sitz, liste) {
   return { kollekte: KOLLEKTE_PRO_BESUCHER * st.kollekte * a.faktor, haltung: st.haltung + a.haltung, musikHaltung: a.musikBonus || 0 };
 }
 
+// Wochenzusammenfassung offen (27.11.): Zeit steht, bis sie geschlossen ist (in Tests abschaltbar, siehe WOCHENBERICHT.pause)
+export const berichtPause = z => WOCHENBERICHT.pause && wochenberichtOffen(z);
+
 // ---- Zeit vorrücken ----
 // Prüft, welcher Schritt als Nächstes ansteht (Veranstaltungen, Passanten im Ort, Seelsorge-Anfrage),
 // und führt alle Schritte bis zur Zielzeit aus. Kommt eine Seelsorge-Anfrage, bleibt die Zeit genau dort stehen.
 export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) {
   ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z);
-  if (anfrageOffen(z) || zeitungOffen(z)) return;
+  if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) return;
   const ziel = z.minuten + minuten, gesperrt = zz => seelsorgeGesperrt(zz, raeume);
   kaffeeAktualisieren(z, raeume, zufall);
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), wochenberichtSchritt(z), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
     s.tun(z, raeume, zufall);
     kaffeeAktualisieren(z, raeume, zufall);   // z. B. nach dem Gottesdienst: Kaffeegäste stellen sich an
-    if (anfrageOffen(z) || zeitungOffen(z)) { wochenbuchPruefen(z); return; }   // Seelsorge-Anfrage / Zeitung: Zeit steht genau hier
+    if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) { wochenbuchPruefen(z); return; }   // Seelsorge-Anfrage / Zeitung / Wochenzusammenfassung: Zeit steht genau hier
   }
   z.minuten = ziel;
   kaffeeAktualisieren(z, raeume, zufall);

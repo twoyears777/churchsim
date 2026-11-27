@@ -73,6 +73,31 @@ function oeffnen(f, name) {
   oeffnen({ art: 'kalender', versatz: -1, bericht: id }, 'Kalender „Vorherige Woche“ mit Bericht');
   oeffnen({ art: 'kalender', versatz: 1 }, 'Kalender „Nächste Woche“');
 }
+// Wochenzusammenfassung (27.11.): zugeklappt und mit allen Bereichen offen, mit echter Veranstaltung und Vergleich zur Vorwoche
+{
+  const { zeitVorruecken } = await import('../src/kern/ablauf.js');
+  const { WOCHE_MIN } = await import('../src/kern/zeit.js');
+  const { WOCHENBERICHT } = await import('../src/inhalte/zeit.js');
+  const { wochenberichtOffen, wochenberichtSchliessen } = await import('../src/kern/wochenbericht.js');
+  WOCHENBERICHT.pause = true;
+  const z = neuesSpiel(() => 0.5);
+  wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
+  typZuweisen(z, raumBei(z), 'gottesdienst');
+  moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 3);
+  versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+  z.besucher = Array.from({ length: 5 }, (_, i) => ({ id: 'w' + i, vorname: 'W' + i, nachname: 'X', voll: 'W' + i + ' X', level: 5, zufriedenheit: 50, kaffeeWert: 0, besuche: 0, lobpreis: 0, mitglied: i ? undefined : { seit: 0 } }));
+  z.ortRuhig = true;
+  const raeume = () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
+  for (let i = 0; i < 5000 && z.minuten < 6 * WOCHE_MIN; i++) { if (wochenberichtOffen(z)) wochenberichtSchliessen(z); zeitVorruecken(z, raeume(), 60, () => 0); }
+  for (let i = 0; i < 500 && !wochenberichtOffen(z); i++) zeitVorruecken(z, raeume(), 60, () => 0);
+  assert.ok(wochenberichtOffen(z), 'Wochenzusammenfassung ist offen');
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  const info = ui.spiel.wochenberichtInfo();
+  assert.ok(info.vergleich && info.veranstaltungen.length, 'mit Vorwoche und Veranstaltungen');
+  oeffnen({ art: 'wochenbericht', offen: [] }, 'Wochenzusammenfassung zugeklappt');
+  oeffnen({ art: 'wochenbericht', offen: ['geld', 'veranstaltungen', 'gemeinde', 'werte', 'monat'] }, 'Wochenzusammenfassung aufgeklappt');
+  WOCHENBERICHT.pause = false;
+}
 // Sicherung: Stürzt ein Fenster beim Aufbau ab, geht es nur zu – kein Fehler nach außen (sonst bleibt die Uhr stehen)
 {
   const echt = console.error; console.error = () => {};
