@@ -3,6 +3,29 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.22
+
+**Mitarbeiter**
+- Neu: Raum „Büro“ mit Schreibtisch – ein Ehrenamtlicher im Büro bringt pro Schicht 1 Orga-Token; damit lässt sich der „Einladungsbrief für Konfis“ freischalten (jeden Montag 2 neue Jugendliche bis zur Konfirmation)
+- Klick aufs Lager: Logistik-Zeiten festlegen wie die Öffnungszeiten im Kirchkaffee – nur dann gibt es Logistik-Stellen im Dienstplan
+- Im Dienstplan siehst du unter den Diensten einer Person jetzt auch ihre Skills
+- Behoben: Die Logistik meldete beim Getränkeautomaten „Nicht genug Geld“, obwohl genug Geld da war
+
+**Figuren**
+- Alle Figuren laufen 1,7-mal so schnell; wer läuft, ist leichter anklickbar
+
+**Besucher**
+- Auf der Besucherkarte stehen jetzt die letzten 5 Besuche mit Veranstaltung, Zeit und Haltung
+
+**Forschung**
+- Fehlen Geld und Heiligkeit, werden jetzt beide Gründe genannt
+
+**Foyer**
+- Der Hinweis „Niemand im Foyer …“ ist weg
+
+**Technik**
+- Deutlich flüssiger bei hoher Geschwindigkeit (x50) – im Spiel ändert sich nichts
+
 ## 0.1.21
 
 **Mitarbeiter**

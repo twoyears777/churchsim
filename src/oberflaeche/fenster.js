@@ -317,7 +317,7 @@ function foyerFenster(f) {
     ${r.fertig ? '' : `<p class="warnung">${T.nichtFertig}</p>`}
     <p class="unter staerker">${T.zusammen(r.haltung)}</p>
     <ul class="quellen">${zeilen.map(z => `<li>${z}</li>`).join('')}</ul>
-    <h3>${T.mitarbeiter}</h3>${leute}`;
+    ${leute ? `<h3>${T.mitarbeiter}</h3>${leute}` : ''}`;   // ohne Leute auch keine Überschrift (27.11., 0.1.22)
 }
 
 // Büro-Fenster (27.11.): Orga-Tokens (nur hier zu sehen), wer gerade im Büro arbeitet, Boni zum Freischalten
