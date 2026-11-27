@@ -3,6 +3,17 @@
 Alle Änderungen am Churchsim. Neueste Version oben.
 Versionsschema: 0.1.x – jede Veröffentlichung zählt die letzte Stelle hoch.
 
+## 0.1.21
+
+**Mitarbeiter**
+- Neu: Im Dienstplan gibt es einen zweiten Tab „Hauptamt“ – auch Pastor Harder wird jetzt in 3 Schichten eingeteilt, mit der neuen Stelle „Leitung“
+- Klickst du einen Ehrenamtlichen an, siehst du darunter alle seine Dienste der Woche; in der Wochenleiste ist „voll“ grün und „frei“ rot
+- Ehrenamtliche kommen jetzt pünktlich zu jedem Dienst und stehen genau zu Beginn an ihrer Stelle
+
+**Mitglieder**
+- Neu: Eigenes Menü „Mitglieder“ oben mit Beitrag, Liste aller Mitglieder samt Kündigungsgefahr und Verlauf der letzten Wochen
+- Im Finanz-Fenster stehen die Dauerspender jetzt als eine aufklappbare Zeile
+
 ## 0.1.20
 
 **Ehrenamtliche**
