@@ -57,6 +57,15 @@ function oeffnen(f, name) {
   assert.equal(ui.spiel.kaffeeRaumInfo(nr).mindestgaeste.summe, 2);
   oeffnen({ art: 'kaffee', nr }, 'Kirchkaffee-Fenster mit Mindestgästen');
 }
+// Büro-Fenster (27.11.): ohne und mit Schreibtisch
+{
+  ui.spiel = spielMit('buero');
+  const nr = ui.spiel.bueroBei(G.x + 5, G.y + 5);
+  assert.notStrictEqual(nr, null, 'Büro wird beim Klick gefunden');
+  oeffnen({ art: 'buero', nr }, 'Büro-Fenster ohne Schreibtisch');
+  ui.spiel.moebelKaufen('schreibtisch', G.x + 10, G.y + 4);
+  oeffnen({ art: 'buero', nr }, 'Büro-Fenster mit Schreibtisch');
+}
 // Menü „Mitglieder“ (27.11.): leer, mit Mitgliedern (eins mit Kündigungsgefahr) und Verlauf; Finanz-Fenster mit Dauerspender-Zeile zu und auf
 {
   const z = neuesSpiel(() => 0.5);

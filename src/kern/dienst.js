@@ -16,7 +16,8 @@
 //       - Kirchkaffee nach jedem Gottesdienst (je Kirchkaffee so viele Stellen wie Stationen aus Maschine + Theke),
 //       - eigene Öffnungszeiten des Kirchkaffees (gleich viele Stellen),
 //       - Logistik im Lager je Zeitblock (so viele Stellen wie Regale),
-//       - Evangelisation je Zeitblock (so viele Stellen wie Standplätze).
+//       - Evangelisation je Zeitblock (so viele Stellen wie Standplätze),
+//       - Büro je Zeitblock (je Schreibtisch eine Stelle, höchstens BUERO.plaetze; nur Ehrenamtliche – 27.11.).
 //   • Jeder Termin, bei dem ein Ehrenamtlicher eine Stelle hat, ist eine Schicht. Pro Woche höchstens DIENST.schichten
 //     (die Frau des Pastors 5). Zwei Schichten derselben Person dürfen sich zeitlich nicht überschneiden.
 //   • Ob eine Veranstaltung stattfinden kann, richtet sich nach dem Dienstplan (nicht danach, wer gerade wo steht).
@@ -31,12 +32,14 @@
 //
 // Der Plan wird gespeichert in z.dienst.plan: { [Termin-Schlüssel]: { [Stelle]: Person-id } } – jede Woche gleich.
 // Termin-Schlüssel: v:<Raum>:<Platz> (Veranstaltung), kn:<Kirchkaffee>:<Raum>:<Platz> (Kirchkaffee danach),
-// ko:<Kirchkaffee>:<Tag>:<Slot> (Öffnungszeit), lg:<Tag>:<Slot> (Logistik), ev:<Tag>:<Slot> (Evangelisation).
+// ko:<Kirchkaffee>:<Tag>:<Slot> (Öffnungszeit), lg:<Tag>:<Slot> (Logistik), ev:<Tag>:<Slot> (Evangelisation),
+// bu:<Tag>:<Slot> (Büro).
 // <Raum> ist wie überall das kleinste Kästchen des Raums – so übersteht der Plan Umbauten.
 import { DIENST } from '../inhalte/dienst.js';
 import { SLOTS, DAUER, LAUFTEMPO } from '../inhalte/zeit.js';
 import { VERANSTALTUNGEN } from '../inhalte/veranstaltungen.js';
 import { EVANGELISATION } from '../inhalte/evangelisation.js';
+import { BUERO } from '../inhalte/buero.js';
 import { MOEBEL } from '../inhalte/moebel.js';
 import { GRUNDSTUECK, GEHWEGE } from '../inhalte/umgebung.js';
 import { LEER, idx } from './karte.js';
@@ -145,10 +148,14 @@ export function dienstTermine(z, raeume) {
     }
   }
   const regale = lager.flatMap(r => moebelImRaum(z, r, 'regal').map(m => ({ m, r })));
+  // Büro (27.11.): je Schreibtisch eine Stelle, vorerst höchstens BUERO.plaetze im ganzen Spiel
+  const tische = raeume.liste.filter(r => fertig(r, 'buero')).flatMap(r => moebelImRaum(z, r, 'schreibtisch').map(m => ({ m, r }))).slice(0, BUERO.plaetze);
   for (let tag = 0; tag < 7; tag++) for (const sl of SLOTS) {
     const f = blockZeit(tag, sl.id);
     if (regale.length) liste.push({ key: `lg:${tag}:${sl.id}`, art: 'logistik', tag, slot: sl.id, raum: null, von: f.von, bis: f.bis,
       stellen: regale.map(({ m, r }, i) => ({ id: `regal${i}`, code: 'regal', wer: 'alle', ding: 'regal', ort: { x: m.x, y: m.y }, raum: r.nr })) });
+    if (tische.length) liste.push({ key: `bu:${tag}:${sl.id}`, art: 'buero', tag, slot: sl.id, raum: null, von: f.von, bis: f.bis,
+      stellen: tische.map(({ m, r }, i) => ({ id: `tisch${i}`, code: 'schreibtisch', wer: 'ehrenamt', ding: 'schreibtisch', ort: { x: m.x, y: m.y }, raum: r.nr })) });
     liste.push({ key: `ev:${tag}:${sl.id}`, art: 'evangelisation', tag, slot: sl.id, raum: null, von: f.von, bis: f.bis,
       stellen: EVANGELISATION.standplaetze.map((o, i) => ({ id: `platz${i}`, code: 'evangelisation', wer: 'alle', ding: null, ort: { ...o }, raum: null })) });
   }
@@ -232,6 +239,12 @@ export function naechsteKaffeeSchicht(z, raeume, raum, t = z.minuten) {
 // Hat dieses Kirchkaffee überhaupt jemanden im Dienstplan?
 export function kaffeeGeplant(z, raeume, raum) {
   return dienstTermine(z, raeume).some(x => x.raum === raum.nr && (x.art === 'kaffee' || x.art === 'kaffeeNach') && x.stellen.some(s => personAuf(z, x, s.id)));
+}
+
+// Büro (27.11.): alle besetzten Büro-Schichten der Woche → [{ key, von, bis, raum, person }] (von/bis: Minuten ab Montag 0:00)
+export function bueroSchichten(z, raeume) {
+  return dienstTermine(z, raeume).filter(t => t.art === 'buero').flatMap(t => t.stellen.map(s => ({ s, p: personAuf(z, t, s.id) })).filter(x => x.p)
+    .map(x => ({ key: t.key, von: t.von, bis: t.bis, raum: x.s.raum, person: x.p })));
 }
 
 // Feste, die p leitet (nur Hauptamtliche), in den Wochen w-1 bis w+1 – absolute Minuten. Zählen nicht als Schicht.

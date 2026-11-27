@@ -12,7 +12,7 @@ export const FARBEN = {
   asphalt: '#5d6064', markierung: '#e9e6dc', gehweg: '#c9c5ba', gehwegFuge: 'rgba(0,0,0,0.10)',
   zaun: '#f4efe2', zaunPfosten: '#8b7b62', baum: '#4f8a3a', baumHell: '#6aa64f', schatten: 'rgba(0,0,0,0.18)',
   raster: 'rgba(30,70,10,0.10)', stuhlSitz: '#9a6b3f', stuhlLehne: '#6e4a2a', theke: '#8a5a32', thekeHell: '#b98451', tisch: '#8a5a32', tischHell: '#c99a6b', klavier: '#3b2a20', maschine: '#45464b', maschineKaffee: '#7a4a24', automat: '#2f5d8a', automatGlas: '#cfe3f2', automatFlasche: ['#d9483b', '#3f9b4f', '#f0b429'], besucher: '#5b8a72', jugend: '#2fae3c', veranstaltung: '#5a5470', konflikt: 'rgba(200,40,30,0.75)', boden: '#efe8d8',
-  wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878', glas: '#a9d3ea', glasHell: '#dff0f9', garderobe: '#6b4f36', jacke1: '#8a3b3b', jacke2: '#3b5f8a', infotisch: '#7c6a54', infoBlatt: '#f4f0e4', wcWand: '#9fb3bd', wcSchuessel: '#f7f9fa', wcDeckel: '#c9d6dc', becken: '#e9eef0', hahn: '#8c979c', regal: '#7a5432', regalBrett: '#a37548', kiste1: '#d9b26f', kiste2: '#c8d3d9',   // Fenster, Garderobe, Infotisch: PLATZHALTER
+  wand: '#3a3935', tuer: '#a8794a', tuerHell: '#d2a878', glas: '#a9d3ea', glasHell: '#dff0f9', garderobe: '#6b4f36', jacke1: '#8a3b3b', jacke2: '#3b5f8a', infotisch: '#7c6a54', infoBlatt: '#f4f0e4', wcWand: '#9fb3bd', wcSchuessel: '#f7f9fa', wcDeckel: '#c9d6dc', becken: '#e9eef0', hahn: '#8c979c', regal: '#7a5432', regalBrett: '#a37548', kiste1: '#d9b26f', kiste2: '#c8d3d9', tischplatte: '#9c6b3f', tischKante: '#6f4a2a', papier: '#f6f2e8', bildschirm: '#3d4a5c', bildschirmHell: '#8fb3d9',   // Fenster, Garderobe, Infotisch: PLATZHALTER
   // Stuhlstufen 1–4 (Sitz, Lehne) und Ausstattung des Gottesdienstraums – Platzhalter
   stuhlStufen: [['#9a6b3f', '#6e4a2a'], ['#b5473f', '#7d2c26'], ['#3f6fb5', '#284a7d'], ['#c99a2e', '#8a6516']],
   kanzel: '#6b4a2c', kanzelHell: '#a07445', altar: '#efeae0', altarTuch: '#7b3b8c', vase: '#6d7fa3',
@@ -122,6 +122,7 @@ export function zeichne(ctx, z, ansicht, extra = {}) {
     else if (m.art === 'wc') wc(ctx, px, py, k);
     else if (m.art === 'waschbecken') waschbecken(ctx, px, py, k);
     else if (m.art === 'regal') regal(ctx, px, py, k);
+    else if (m.art === 'schreibtisch') schreibtisch(ctx, px, py, k);
     else if (m.art === 'kanzel') kanzel(ctx, px, py, k);
     else if (m.art === 'altar') altar(ctx, px, py, k);
     else if (m.art === 'blumen') blumen(ctx, px, py, k);
@@ -571,6 +572,15 @@ function regal(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.kiste2; ctx.fillRect(px + k * 0.52, py + k * 0.26, k * 0.26, k * 0.18); ctx.fillRect(px + k * 0.2, py + k * 0.64, k * 0.22, k * 0.2);
 }
 
+// Schreibtisch im Büro (27.11.) – ENTWURF-Aussehen von Claude, Lukas entscheidet: Holztisch mit Bildschirm und Papierstapel
+function schreibtisch(ctx, px, py, k) {
+  ctx.fillStyle = FARBEN.tischKante; ctx.fillRect(px + k * 0.06, py + k * 0.16, k * 0.88, k * 0.7);
+  ctx.fillStyle = FARBEN.tischplatte; ctx.fillRect(px + k * 0.1, py + k * 0.2, k * 0.8, k * 0.62);
+  ctx.fillStyle = FARBEN.bildschirm; ctx.fillRect(px + k * 0.18, py + k * 0.26, k * 0.36, k * 0.26);
+  ctx.fillStyle = FARBEN.bildschirmHell; ctx.fillRect(px + k * 0.21, py + k * 0.29, k * 0.3, k * 0.2);
+  ctx.fillStyle = FARBEN.papier; ctx.fillRect(px + k * 0.6, py + k * 0.3, k * 0.22, k * 0.28); ctx.fillRect(px + k * 0.24, py + k * 0.6, k * 0.3, k * 0.12);
+}
+
 function theke(ctx, px, py, k) {
   ctx.fillStyle = FARBEN.theke; ctx.fillRect(px, py, k, k);
   ctx.fillStyle = FARBEN.thekeHell; ctx.fillRect(px, py + k * 0.15, k, k * 0.35);
@@ -705,7 +715,7 @@ const AUSSENDEKO = {
 export function symbolZeichnen(ctx, id, g) {
   ctx.clearRect(0, 0, g, g);
   const k = g * 0.72, p = (g - k) / 2;
-  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, garderobe, infotisch, wc, waschbecken, regal, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
+  const moebel = { stuhl: () => stuhl(ctx, p, p, k, 2), theke, tisch, garderobe, infotisch, wc, waschbecken, regal, schreibtisch, kanzel, altar, blumen, gruenpflanze, gitarre, ...INSTRUMENT_BILD,
     kaffeemaschine: () => kaffeemaschine(ctx, p, p, k, 0.7), strasse };
   if (AUTOMAT_BILD[id]) return AUTOMAT_BILD[id](ctx, p, p, k, 0.8);
   if (id === 'parkplatz') { const kk = g * 0.44; parkplatz(ctx, (g - 2 * kk) / 2, (g - kk) / 2, kk, false); return; }

@@ -440,6 +440,7 @@ export const TEXTE = {
     konfirmiert: n => n === 1 ? '1 Jugendlicher wurde konfirmiert und gehört jetzt zu den Erwachsenen.'
       : `${n} Jugendliche wurden konfirmiert und gehören jetzt zu den Erwachsenen.`,
     keineKonfirmanden: () => 'In diesem Jahr gibt es keine Konfirmanden – die Konfirmation fällt aus.',
+    konfiBrief: () => 'Der Einladungsbrief für Konfis ist verschickt. Bis zur Konfirmation kommen neue Jugendliche.',   // ENTWURF von Claude (27.11.)
     neuerDauerspender: () => 'Herzlichen Glückwunsch! Deine Gemeinde konnte einen neuen Dauerspender gewinnen!'   // Text von Lukas, 27.11.
   },
 
@@ -570,7 +571,9 @@ export const TEXTE = {
     wc: 'Klicke, um eine WC-Kabine aufzustellen (Toiletten, eine Person gleichzeitig).',
     waschbecken: 'Klicke, um ein Waschbecken aufzustellen (Toiletten).',
     // ---- Lager (27.11.) – ENTWURF von Claude, Lukas formuliert selbst ----
-    regal: 'Klicke, um ein Regal aufzustellen (Lager). Je Regal kann pro Zeitblock ein Ehrenamtlicher für die Logistik eingeteilt werden.'
+    regal: 'Klicke, um ein Regal aufzustellen (Lager). Je Regal kann pro Zeitblock ein Ehrenamtlicher für die Logistik eingeteilt werden.',
+    // ---- Büro (27.11.) – ENTWURF von Claude, Lukas formuliert selbst ----
+    schreibtisch: 'Klicke, um einen Schreibtisch aufzustellen (Büro). Dann kann pro Zeitblock ein Ehrenamtlicher im Büro eingeteilt werden.'
   },
   // ---- Baukosten, Fenster, Foyer (25.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst ----
   bauGeld: {
@@ -671,7 +674,7 @@ export const TEXTE = {
   // Spicker rechts im Bau-Modus: Mindestgröße je Raum. ENTWURF von Claude (27.11.) – Lukas formuliert selbst
   raumSpicker: { titel: 'Mindestgröße', groesse: (b, h) => `${b} × ${h}` },
   bauleiste: {
-    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', lager: 'Lager', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“: ENTWURF
+    kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', lager: 'Lager', buero: 'Büro', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“, „Büro“: ENTWURF
     werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF
     jeStueck: preis => `${preis} je Stück`,   // Preis der Wand (ENTWURF von Claude, 25.11.)
     abBekanntheit: n => `ab Bekanntheit ${n}`,
@@ -830,6 +833,27 @@ export const TEXTE = {
     zuWenig: 'Zu wenig Heiligkeit',
     fertig: 'Höchste Stufe erreicht'
   },
+  // Büro-Fenster (27.11.) – ENTWÜRFE von Claude, Lukas formuliert selbst
+  buero: {
+    info: n => `Pro Büro-Schicht gibt es ${n === 1 ? '1 Orga-Token' : n + ' Orga-Tokens'}.`,
+    tokens: n => `Orga-Tokens: ${n}`,
+    nichtFertig: 'Das Büro ist noch nicht fertig – es braucht mindestens 2 × 2 Kästchen und eine Tür.',
+    keinTisch: 'Stell einen Schreibtisch auf, dann kannst du im Menü „Mitarbeiter“ einen Ehrenamtlichen fürs Büro einteilen.',
+    mitarbeiter: 'Gerade im Büro',
+    niemand: 'Gerade arbeitet niemand im Büro.',
+    boni: 'Freischalten',
+    preis: n => n === 1 ? '1 Orga-Token' : `${n} Orga-Tokens`,
+    freischalten: 'Freischalten',
+    aktivBis: datum => `Aktiv bis zur Konfirmation (${datum})`,
+    zuWenig: 'Noch nicht genug Orga-Tokens.',
+    bonus: {
+      einladungKonfi: {
+        name: 'Einladungsbrief für Konfis',
+        wirkung: (n, chance) => `Jede Woche kommen ${n} neue Jugendliche in die Gemeinde. Zum nächsten Konfirmandenunterricht kommen sie mit ${chance} %. Gilt bis zur nächsten Konfirmation.`,
+        ohneKonfi: 'Bringt nur etwas, wenn im Gemeindesaal Konfirmandenunterricht stattfindet.'
+      }
+    }
+  },
   forschung: {
     knopf: 'Forschung',
     titel: 'Forschung',
@@ -980,7 +1004,7 @@ export const TEXTE = {
     meineDienste: name => `Dienste von ${name}:`,
     keineDienste: name => `${name} hat diese Woche noch keinen Dienst.`,
     daheim: 'daheim',
-    termin: { kaffeeNach: 'Kirchkaffee danach', kaffee: 'Kirchkaffee-Schicht', logistik: 'Logistik · Lager', evangelisation: 'Evangelisation' },
+    termin: { kaffeeNach: 'Kirchkaffee danach', kaffee: 'Kirchkaffee-Schicht', logistik: 'Logistik · Lager', evangelisation: 'Evangelisation', buero: 'Büro' },   // „Büro“: ENTWURF 27.11.
     stelle: {
       musik: ding => ding,                     // Name des Instruments, z. B. „Gitarre“
       leitung: () => 'Leitung',
@@ -990,6 +1014,7 @@ export const TEXTE = {
       begruessung: (_, n, raum) => raum ? `Begrüßung · ${raum}` : 'Begrüßung',
       theke: (_, n) => `Theke ${n}`,
       regal: (_, n) => `Regal ${n}`,
+      schreibtisch: () => 'Schreibtisch',   // Büro: ENTWURF 27.11.
       evangelisation: (_, n) => `Platz ${n}`
     },
     fehler: {

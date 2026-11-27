@@ -11,6 +11,7 @@ import { START_STAMMGAESTE, START_ZUFRIEDENHEIT, NEU_ZUFRIEDENHEIT, BEKANNTHEIT,
   EHRENAMT_AB_BESUCHEN, EHRENAMT_QUOTE, EHRENAMT, BESUCHSHEFT, LOBPREIS_MUSIK, HALTUNGSLEVEL, KOMMCHANCE, BEDUERFNISSE } from '../inhalte/besucher.js';
 import { zeitpunkt, WOCHE_MIN } from './zeit.js';
 import { MITGLIED } from '../inhalte/finanzen.js';
+import { BONI } from '../inhalte/buero.js';
 
 export function namenZiehen(anzahl, zufall = Math.random) {
   const toepfe = { a: [], w: [] }, ergebnis = [];
@@ -122,8 +123,11 @@ export function kaffeeVorliebe(b) {
 // × 0,5 beim 2. Besuch derselben Woche, × Besucher-Faktor des Kirchenjahres (o.faktor, z. B. Heiligabend ×3), höchstens 100 %.
 // Jugendliche: × Faktor der Veranstaltung (JUGEND); Erwachsene kommen nicht, wenn nur Jugendliche kommen (Konfirmandenunterricht).
 // o.konfirmation: Konfirmations-Gottesdienst – Konfirmanden kommen sicher.
+// Über den Einladungsbrief gekommene Jugendliche (b.konfiBrief): beim nächsten Konfirmandenunterricht 75 %.
 export function besuchChance(b, o = {}) {
   if (o.konfirmation && b.konfirmand && istJugend(b)) return 1;
+  // Einladungsbrief für Konfis (Büro, 27.11.): wer über den Brief kam, kommt mit 75 % zum nächsten Konfirmandenunterricht
+  if (o.art === 'konfi' && b.konfiBrief && istJugend(b)) return BONI.find(x => x.id === 'einladungKonfi').ersterKonfi;
   const v = o.art ? VERANSTALTUNGEN.find(x => x.id === o.art) : null;
   let c = Math.min(1, kommChance(b) * artFaktor(b, o.art));   // Jugendgottesdienst: Jugendliche × 2,5 (höchstens 100 %)
   if (o.art === 'lobpreis') c *= lobpreisVorliebe(b);

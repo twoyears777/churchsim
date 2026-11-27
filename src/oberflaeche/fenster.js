@@ -32,7 +32,7 @@ export function fensterOffen() { return !maske().hidden; }
 function fensterInhalt(f) {
   return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster, mitglieder: mitgliederFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster, mitglieder: mitgliederFenster, buero: bueroFenster }[f.art](f);
 }
 // Wird bei jeder Anzeige-Aktualisierung aufgerufen; baut das Fenster nur neu, wenn sich der Inhalt geändert hat.
 export function fensterAktualisieren() {
@@ -294,6 +294,29 @@ function foyerFenster(f) {
     <p class="unter staerker">${T.zusammen(r.haltung)}</p>
     <ul class="quellen">${zeilen.map(z => `<li>${z}</li>`).join('')}</ul>
     <h3>${T.mitarbeiter}</h3>${leute}`;
+}
+
+// Büro-Fenster (27.11.): Orga-Tokens (nur hier zu sehen), wer gerade im Büro arbeitet, Boni zum Freischalten
+function bueroFenster(f) {
+  const r = ui.spiel.bueroInfo(f.nr);
+  if (!r) return null;
+  const T = TEXTE.buero;
+  const leute = r.imRaum.length ? r.imRaum.map(m => `<div class="kachel klein-kachel"><b>${esc(m.name)}</b><small>${ART_TEXT[m.art]}</small></div>`).join('')
+    : `<p class="unter">${T.niemand}</p>`;
+  const boni = r.boni.map(b => {
+    const t = T.bonus[b.id] || { name: b.id, wirkung: () => '' };
+    const knopf = b.aktiv ? `<p class="unter staerker">${T.aktivBis(b.bisDatum)}</p>`
+      : `<div class="typen"><button data-bonus="${esc(b.id)}" ${b.leistbar ? '' : 'disabled'}>${T.freischalten} · ${T.preis(b.preis)}</button></div>${b.leistbar ? '' : `<p class="unter">${T.zuWenig}</p>`}`;
+    const hinweis = b.id === 'einladungKonfi' && !r.konfiGeplant && t.ohneKonfi ? `<p class="warnung">${t.ohneKonfi}</p>` : '';
+    return `<div class="kachel${b.aktiv ? ' aktiv' : ''}"><b>${t.name}</b><span>${t.wirkung(b.proWoche, Math.round(b.ersterKonfi * 100))}</span>${hinweis}${knopf}</div>`;
+  }).join('');
+  return `<h2>${esc(r.typName)}</h2>
+    <p class="unter staerker">${T.tokens(r.tokens)}</p>
+    <p class="unter">${T.info(r.proSchicht)}</p>
+    ${r.fertig ? '' : `<p class="warnung">${T.nichtFertig}</p>`}
+    ${r.fertig && !r.schreibtische ? `<p class="warnung">${T.keinTisch}</p>` : ''}
+    <h3>${T.mitarbeiter}</h3>${leute}
+    <h3>${T.boni}</h3><div class="kacheln">${boni}</div>`;
 }
 
 // Stuhl verbessern (Editor): Stufe, Wirkung, nächste Stufe, alle Stühle im Raum
@@ -916,6 +939,7 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);
     else if (b.dataset.kalender !== undefined) { f.versatz = Number(b.dataset.kalender); delete f.bericht; }   // Gemeindekalender: vorherige / diese / nächste Woche
     else if (b.dataset.bericht !== undefined) { if (f.bericht === b.dataset.bericht) delete f.bericht; else f.bericht = b.dataset.bericht; }   // Bericht auf- und zuklappen
+    else if (b.dataset.bonus) spiel.bonusFreischalten(b.dataset.bonus);   // Büro (27.11.): Bonus mit Orga-Tokens freischalten
     else if (b.dataset.forschung) { spiel.forschungStarten(b.dataset.forschung); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-forschung-abbrechen')) f.abbrechenFragen = true;
     else if (b.dataset.multiplikator) spiel.multiplikatorKaufen(b.dataset.multiplikator);

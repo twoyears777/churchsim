@@ -73,5 +73,17 @@ export const RAUMTYPEN = [
     kosten: null,
     moebel: [],
     erweiterungen: []
+  },
+  {
+    // Büro (Lukas, 27.11.): mind. 2 × 2, braucht eine Tür, Farbe orange. Mit Schreibtisch kann pro Zeitblock ein Ehrenamtlicher
+    // eingeteilt werden; jede Schicht bringt ein Orga-Token für Boni (siehe inhalte/buero.js und kern/buero.js).
+    id: 'buero',
+    name: 'Büro',
+    minGroesse: [2, 2],
+    farbe: '#f2b46d',               // orange (Lukas); genauer Farbton: Entwurf von Claude
+    einsatz: ['ehrenamt'],
+    kosten: null,
+    moebel: [],
+    erweiterungen: []
   }
 ];

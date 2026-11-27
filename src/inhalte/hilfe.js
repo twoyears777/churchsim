@@ -86,7 +86,9 @@ export const HILFE = {
         ] },
         // ENTWURF von Claude (27.11.): Dienstplan und Lager – Lukas formuliert selbst
         '**Dienstplan:** Ehrenamtliche ziehst du nicht in Räume, sondern teilst sie im Menü „Mitarbeiter“ (Knopf „Dienstplan“ links) für Stellen ein: Musik, Leitung, Begrüßung im Foyer, Kirchkaffee, Logistik oder Evangelisation. Jede Stelle bei einem Termin ist eine Schicht; jeder kann 3 Schichten pro Woche übernehmen (die Frau des Pastors 5). Ohne Schicht ist er daheim – sonntagvormittags kommt er mit 90 % in den Gottesdienst.',
-        '**Lager** (mindestens 3 × 2 Kästchen, mit Tür): Für jedes Regal kann pro Zeitblock ein Ehrenamtlicher die Logistik übernehmen. Er kauft im Laden Kaffee und Ware für die Automaten ein und füllt auf. Ohne Logistik füllt niemand auf.'
+        '**Lager** (mindestens 3 × 2 Kästchen, mit Tür): Für jedes Regal kann pro Zeitblock ein Ehrenamtlicher die Logistik übernehmen. Er kauft im Laden Kaffee und Ware für die Automaten ein und füllt auf. Ohne Logistik füllt niemand auf.',
+        // ENTWURF von Claude (27.11.): Büro – Lukas formuliert selbst
+        '**Büro** (mindestens 2 × 2 Kästchen, mit Tür, mit Schreibtisch): Hier kann pro Zeitblock ein Ehrenamtlicher arbeiten. Jede Büro-Schicht bringt 1 Orga-Token. Mit Orga-Tokens schaltest du im Büro-Fenster Boni frei, z. B. den Einladungsbrief für Konfis: Bis zur nächsten Konfirmation kommen jede Woche neue Jugendliche in die Gemeinde.'
       ]
     },
     {

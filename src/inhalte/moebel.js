@@ -43,6 +43,8 @@ export const MOEBEL = [
   { id: 'waschbecken', kategorie: 'toiletten', name: 'Waschbecken', kosten: 15 },
   // Lager (Lukas, 27.11.): 1 Regal pro Logistik-Mitarbeiter und Zeitblock
   { id: 'regal', kategorie: 'lager', name: 'Regal', kosten: 50 },
+  // Büro (Lukas, 27.11.): ein Schreibtisch = Platz für einen Ehrenamtlichen im Büro (vorerst höchstens 1, siehe inhalte/buero.js)
+  { id: 'schreibtisch', kategorie: 'buero', name: 'Schreibtisch', kosten: 50 },
 
   // Außen (Spielprinzip Einzugsgebiet, 25.11.): nur draußen auf dem Grundstück, nicht in Räumen. Man kann darüber laufen.
   // groesse: [Breite, Länge] in Kästchen (lässt sich drehen). Preise sind PLATZHALTER von Claude.

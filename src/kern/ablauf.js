@@ -21,6 +21,7 @@ import { moebelImRaum, moebelBei, raumAusstattung, stuhlStufe, instrumenteImRaum
 import { musikLevel, musikBonus, musikErfahrungDazu, mitMultiplikator, multiplikatorErfahrung, hatSkill } from './skills.js';
 import { buchen, summe, wocheWechseln } from './finanzen.js';
 import { platzImGebiet } from './einzugsgebiet.js';
+import { bueroSchritt, konfiBriefVerbraucht, bueroAnlegen } from './buero.js';
 import { einladungPasst, werKommt, kommChance, besuchChance, artFaktor, lobpreisVorliebe, kaffeeVorliebe, musikWirkung, zufriedenheitAendern, bekanntheitAendern, ehrenamtWerden, ehrenamtFrei, ehrenamtFaellig, ehrenamtGemerkt, beduerfnisErfuellt, besuchMerken, levelVon } from './besucher.js';
 import { beduerfnisSchritt } from './beduerfnisse.js';
 import { eingesetztIn, personHinzufuegen, daten } from './personen.js';
@@ -300,7 +301,7 @@ export const berichtPause = z => WOCHENBERICHT.pause && wochenberichtOffen(z);
 // Leistung (27.11.): Ein Aufruf ist ein Durchgang (durchgang.js) – solange die Zeit läuft, wird nicht gebaut.
 export function zeitVorruecken(z, raeume, minuten, zufall = Math.random) { imDurchgang(() => zeitVorrueckenInnen(z, raeume, minuten, zufall)); }
 function zeitVorrueckenInnen(z, raeume, minuten, zufall) {
-  ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z); dienstAnlegen(z);
+  ablaufAnlegen(z); kaffeeAnlegen(z); ersterAnlegen(z); dienstAnlegen(z); bueroAnlegen(z);
   if (anfrageOffen(z) || zeitungOffen(z) || berichtPause(z)) return;
   dienstMerken(z, raeume);   // Dienstplan-Termine für diesen Durchgang nur einmal ausrechnen
   try {
@@ -311,7 +312,7 @@ function zeitVorrueckenInnen(z, raeume, minuten, zufall) {
   for (let sicherung = 0; sicherung < 20000; sicherung++) {
     wochenbuchPruefen(z);
     let s = null;
-    for (const k of [naechsterSchritt(z, raeume), dienstSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), wochenberichtSchritt(z), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
+    for (const k of [naechsterSchritt(z, raeume), dienstSchritt(z, raeume), ortSchritt(z, zufall), seelsorgeSchritt(z, gesperrt, zufall, raeume), kaffeeSchritt(z, raeume), festSchritt(z), beduerfnisSchritt(z), mitgliederSchritt(z, zufall), dauerspenderSchritt(z, zufall), bueroSchritt(z, raeume), wochenberichtSchritt(z), forschungSchritt(z), evangelisationSchritt(z), zeitungSchritt(z, naechsterGottesdienst(z, raeume)), automatenSchritt(z), unfallSchritt(z)])
       if (k && (!s || k.zeit < s.zeit)) s = k;
     if (!s || s.zeit > ziel) break;
     z.minuten = Math.max(z.minuten, s.zeit);
@@ -457,6 +458,7 @@ function gaesteAuslosen(z, raeume, zufall, L, info) {
   // Konfirmandenunterricht: keine neuen Besucher über die Bekanntheit. Konfirmation: Konfirmanden kommen sicher.
   const kommen = werKommt(z, zufall, { art: L.art, woche: L.woche, ausschluss: woanders, neuAnteil: 1 / anzahl, faktor: terminFaktoren(L, z).besucher,
     musik: info.g.typ.id === 'gottesdienst' ? info.g.ausstattung.musik : undefined, keineNeuen: !zaehltFuerNeue(L.art), konfirmation: istKonfirmation(L) });
+  if (L.art === 'konfi') konfiBriefVerbraucht(z, woanders);   // Einladungsbrief (27.11.): die 75-%-Chance gilt nur für den nächsten Konfi
   // Erster Gottesdienst (26.11.): zusätzlich fest ERSTER_GOTTESDIENST.neueLeute Menschen
   if (istErster(z, L)) { L.erster = true; kommen.push(...zusatzLeute(z, zufall)); }
   // Schichtbetrieb (27.11.): Ehrenamtliche ohne Schicht kommen sonntagvormittags mit 90 % in den Gottesdienst – wie Besucher

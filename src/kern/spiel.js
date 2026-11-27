@@ -38,6 +38,8 @@ import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
 import { berichtVon, berichteDerWoche } from './berichte.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { dauerspenderAnlegen, dauerspenderListe, dauerspenderMeldung } from './dauerspender.js';
+import { bueroAnlegen, bonusFreischalten, boniListe, bueroTokens, bueroMeldung } from './buero.js';
+import { BUERO } from '../inhalte/buero.js';
 import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
 import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo, hatSkill } from './skills.js';
 import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
@@ -88,6 +90,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   skillsAnlegen(z);   // Skill-Fächer der Mitarbeiter (26.11.); zieht alte Spielstände um
   evangelisationAnlegen(z);   // Evangelisation vor dem Laden (26.11.)
   abrissAnlegen(z);   // Abriss-Wert (27.11.): schon Gebautes zählt wie heute gebaut
+  bueroAnlegen(z);   // Büro und Orga-Tokens (27.11.)
   wochenberichtAnlegen(z);   // Wochenzusammenfassung (27.11.): erstes „Foto“ der Gemeinde (nach Dauerspendern und Mitgliedern)
   dienstAnlegen(z);   // Dienstplan der Ehrenamtlichen (27.11.): Schichtbetrieb für neue und alte Spielstände
   return z;
@@ -193,7 +196,7 @@ function statusVon(z, b) {
 // Neueste Meldung: jemand neugierig am Tor, zu wenig Geld für den Kaffee-Einkauf, Konfirmand/Konfirmation
 function neuesteMeldung(z) {
   const o = ortMeldung(z), oz = z.ort && z.ort.meldung ? z.ort.meldung.zeit : -Infinity;
-  const liste = [o && { ...o, zeit: oz }, kaffeeMeldung(z), konfiMeldung(z), dauerspenderMeldung(z)].filter(Boolean).sort((a, b) => b.zeit - a.zeit);
+  const liste = [o && { ...o, zeit: oz }, kaffeeMeldung(z), konfiMeldung(z), dauerspenderMeldung(z), bueroMeldung(z)].filter(Boolean).sort((a, b) => b.zeit - a.zeit);
   if (!liste.length) return null;
   const m = { code: liste[0].code, name: liste[0].name };
   if (liste[0].ware) m.ware = liste[0].ware;   // Automat, der nicht aufgefüllt werden konnte (26.11.)
@@ -489,6 +492,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     festAbsagen(schluessel) { return festAbsagen(z, schluessel); },
     // Forschungsbaum: starten → 'ok' | 'keine' | 'erforscht' | 'laeuft' | 'gesperrt' | 'besetzt' | 'geld' | 'heiligkeit'
     forschungStarten(id) { return forschungStarten(z, id); },
+    // Büro (27.11.): Bonus mit Orga-Tokens freischalten → 'ok' | 'keine' | 'aktiv' | 'tokens'
+    bonusFreischalten(id) { return bonusFreischalten(z, id); },
     // Laufende Forschung abbrechen (Geld und Heiligkeit sind weg) → 'ok' | 'keine'
     forschungAbbrechen() { return forschungAbbrechen(z); },
     // Haltungs-Multiplikator (Skill des Hauptamtlichen): nächste Stufe sofort mit Heiligkeit kaufen
@@ -701,6 +706,18 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       return { nr, typName: r.typ.name, fertig: !r.probleme.length, probleme: [...r.probleme], haltung: w.haltung,
         begruessung: { da: w.begruessung, haltung: FOYER.begruessung }, teile: w.teile.map(t => ({ ...t })),
         imRaum: z.personen.filter(p => raeume.gruppe[idx(z, p.x, p.y)] === nr && daten(p)).map(p => ({ name: daten(p).name, art: daten(p).art })) };
+    },
+    // Büro-Fenster (27.11.): Orga-Tokens, wer im Büro arbeitet, Boni. bis: Spieltag der Konfirmation, bis zu der ein Bonus gilt
+    bueroBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && r.typ && r.typ.id === 'buero' ? nr : null; },
+    bueroInfo(nr) {
+      const r = raeume.liste[nr];
+      if (!r || !r.typ || r.typ.id !== 'buero') return null;
+      const tische = moebelImRaum(z, r, 'schreibtisch').length;
+      const konfiGeplant = raeume.liste.some(x => x.typ && moeglicheVeranstaltungen(x.typ).length && programmVon(z, x).some(e => e.art === 'konfi'));
+      return { nr, typName: r.typ.name, fertig: !r.probleme.length, probleme: [...r.probleme], schreibtische: tische, plaetze: BUERO.plaetze,
+        tokens: bueroTokens(z), proSchicht: BUERO.tokensProSchicht, konfiGeplant,
+        imRaum: z.personen.filter(p => !p.daheim && raeume.gruppe[idx(z, p.x, p.y)] === nr && daten(p)).map(p => ({ name: daten(p).name, art: daten(p).art })),
+        boni: boniListe(z).map(b => ({ ...b, bisTag: b.bis === null ? null : Math.floor(b.bis / TAG_MIN), bisDatum: b.bis === null ? null : tagAnzeige(Math.floor(b.bis / TAG_MIN)).datum })) };
     },
     kirchkaffeeBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && r.typ && r.typ.id === 'kirchkaffee' ? nr : null; },
     veranstaltungsraumBei(x, y) { const nr = raumNr(x, y), r = raeume.liste[nr]; return r && moeglicheVeranstaltungen(r.typ).length ? nr : null; },
