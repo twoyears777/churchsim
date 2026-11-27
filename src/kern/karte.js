@@ -46,17 +46,18 @@ export function wandRechteck(z, x0, y0, x1, y1) {
   return neu;
 }
 // Reißt alles im Rechteck ab. → was weg ist (fürs Erstatten): { waende: Wandstücke inkl. Türen/Fenster, fenster, tueren, gratis }
+// wandBei/fensterBei/tuerBei: die Kästchen dazu (ohne die kostenlosen) – daraus rechnet spiel.js den Abriss-Wert nach Alter.
 // gratis: Wandstücke aus alten Spielständen, die nichts gekostet haben (z.gratisWaende) – dafür gibt es kein Geld zurück.
 // Genauso Türen aus Spielständen vor dem Türpreis (z.gratisTueren): für sie gibt es den Türpreis nicht zurück.
 export function abriss(z, x0, y0, x1, y1) {
   [x0, y0, x1, y1] = begrenzen(x0, y0, x1, y1);
   const [ax, bx] = [Math.min(x0, x1), Math.max(x0, x1)], [ay, by] = [Math.min(y0, y1), Math.max(y0, y1)];
-  const gratis = new Set(z.gratisWaende || []), gratisTueren = new Set(z.gratisTueren || []), weg = { waende: 0, fenster: 0, tueren: 0, gratis: 0 };
+  const gratis = new Set(z.gratisWaende || []), gratisTueren = new Set(z.gratisTueren || []), weg = { waende: 0, fenster: 0, tueren: 0, gratis: 0, wandBei: [], fensterBei: [], tuerBei: [] };
   for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) {
     const i = idx(z, x, y), t = z.zellen[i];
-    if (istWandStueck(t)) { if (gratis.delete(i)) weg.gratis++; else weg.waende++; }
-    if (t === FENSTER) weg.fenster++;
-    if (t === TUER && !gratisTueren.delete(i)) weg.tueren++;
+    if (istWandStueck(t)) { if (gratis.delete(i)) weg.gratis++; else { weg.waende++; weg.wandBei.push(i); } }
+    if (t === FENSTER) { weg.fenster++; weg.fensterBei.push(i); }
+    if (t === TUER && !gratisTueren.delete(i)) { weg.tueren++; weg.tuerBei.push(i); }
     z.zellen[i] = LEER;
   }
   if (z.gratisWaende) z.gratisWaende = [...gratis];

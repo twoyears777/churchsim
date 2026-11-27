@@ -10,6 +10,7 @@ import { neuerZustand, LEER, WAND, TUER, FENSTER, idx, erkenneRaeume, pruefeRaum
   abriss, tuerUmschalten as tuerSchalten, fensterUmschalten as fensterSchalten, neueWandStuecke, istWandStueck } from './karte.js';
 import { BAUKOSTEN, STARTGELD_AUSGLEICH, FENSTER as FENSTER_WERT, FOYER } from '../inhalte/bau.js';
 import { foyerWert } from './foyer.js';
+import { abrissAnlegen, abrissWert } from './abriss.js';
 import { personenAnlegen, personHinzufuegen, personenPruefen, versetzen, verfuegbarkeit, daten, eingesetztIn } from './personen.js';
 import { moebelAnlegen, moebelPruefen, moebelBei as moebelAuf, moebelKaufen as kaufen, moebelAbreissen,
   fassung, grenzeErreicht, stuhlStufe, naechsteStufe, stuhlVerbessern as verbessern,
@@ -78,6 +79,7 @@ export function spielAnlegen(z, zufall = Math.random) {
   tuerkostenAnlegen(z);   // Türpreis (26.11.): schon gebaute Türen bleiben kostenlos
   skillsAnlegen(z);   // Skill-Fächer der Mitarbeiter (26.11.); zieht alte Spielstände um
   evangelisationAnlegen(z);   // Evangelisation vor dem Laden (26.11.)
+  abrissAnlegen(z);   // Abriss-Wert (27.11.): schon Gebautes zählt wie heute gebaut
   return z;
 }
 // Alte Spielstände (vor den Baukosten, 25.11.): einmalig der Startgeld-Ausgleich; ihre schon gebauten Wände bleiben kostenlos
@@ -209,7 +211,7 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
 
   // Bauen mit Rückgängig. Gemerkt wird nur das Gebaute (Wände, Räume, Möbel, wo Mitarbeiter stehen) und das Geld dafür –
   // die Zeit, die Besucher und das Kaffeegeld laufen beim Rückgängigmachen nicht zurück.
-  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende', 'gratisTueren'];
+  const BAU = ['zellen', 'raumTyp', 'veranstaltung', 'moebel', 'personen', 'kaffeeZeiten', 'gratisWaende', 'gratisTueren', 'bauzeit', 'zusatzzeit'];
   function aendern(fn) {
     const vorher = JSON.stringify(BAU.map(k => z[k])), kontoVor = z.konto;
     const alteBuchungen = new Set(z.wochenbuch ? z.wochenbuch.buchungen : []);
@@ -262,14 +264,25 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (wandKonflikte(z, x0, y0, x1, y1).length) return 'konflikt';
       const stuecke = neueWandStuecke(z, x0, y0, x1, y1), kosten = stuecke * BAUKOSTEN.wand;
       if (!kannBezahlen(z, kosten)) return 'geld';
-      aendern(() => { bauen(z, x0, y0, x1, y1); if (kosten) buchen(z, 'ausgaben', 'bau', kosten, { was: 'wand', stuecke }); });
+      aendern(() => {
+        const vor = z.zellen.slice();
+        bauen(z, x0, y0, x1, y1);
+        z.zellen.forEach((t, i) => { if (istWandStueck(t) && !istWandStueck(vor[i])) z.bauzeit[i] = z.minuten; });   // Bauzeit für den Abriss-Wert
+        if (kosten) buchen(z, 'ausgaben', 'bau', kosten, { was: 'wand', stuecke });
+      });
       return 'ok';
     },
-    // Abriss: Möbel und Wände (inkl. Türen und Fenster) gibt es voll zurück – außer Wände, die in alten Spielständen nichts gekostet haben
+    // Abriss (27.11.): Für Möbel und Wände (inkl. Türen und Fenster) gibt es den Abriss-Wert zurück – anfangs die Hälfte,
+    // jede volle Woche seit dem Bauen weniger (abriss.js). Nichts gibt es für Wände, die in alten Spielständen nichts gekostet haben.
     abreissen(x0, y0, x1, y1) {
       aendern(() => {
         const weg = abriss(z, x0, y0, x1, y1);
-        const betrag = weg.waende * BAUKOSTEN.wand + weg.fenster * BAUKOSTEN.fenster + weg.tueren * BAUKOSTEN.tuer;
+        let betrag = 0;
+        for (const i of weg.wandBei) betrag += abrissWert(z, BAUKOSTEN.wand, z.bauzeit[i]);
+        for (const i of weg.fensterBei) betrag += abrissWert(z, BAUKOSTEN.fenster, z.zusatzzeit[i]);
+        for (const i of weg.tuerBei) betrag += abrissWert(z, BAUKOSTEN.tuer, z.zusatzzeit[i]);
+        betrag = Math.round(betrag * 100) / 100;
+        for (const i of [...weg.wandBei, ...weg.fensterBei, ...weg.tuerBei]) { delete z.bauzeit[i]; delete z.zusatzzeit[i]; }
         if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag, { was: 'abriss', stuecke: weg.waende, fenster: weg.fenster, tueren: weg.tueren });
         moebelAbreissen(z, x0, y0, x1, y1);
       });
@@ -283,11 +296,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       if (t === WAND && !kannBezahlen(z, BAUKOSTEN.tuer)) return 'geld';
       const e = aendern(() => {
         const r = tuerSchalten(z, x, y);
-        if (r === 'gesetzt') buchen(z, 'ausgaben', 'bau', BAUKOSTEN.tuer, { was: 'tuer' });
+        if (r === 'gesetzt') { buchen(z, 'ausgaben', 'bau', BAUKOSTEN.tuer, { was: 'tuer' }); z.zusatzzeit[i] = z.minuten; }
         if (r === 'entfernt') {
           const gratis = z.gratisTueren ? z.gratisTueren.indexOf(i) : -1;
           if (gratis >= 0) z.gratisTueren.splice(gratis, 1);
-          else buchen(z, 'einnahmen', 'rueckerstattung', BAUKOSTEN.tuer, { was: 'tuer' });
+          else { const wert = abrissWert(z, BAUKOSTEN.tuer, z.zusatzzeit[i]); if (wert) buchen(z, 'einnahmen', 'rueckerstattung', wert, { was: 'tuer' }); }
+          delete z.zusatzzeit[i];
         }
         return r;
       });
@@ -297,13 +311,17 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     // → 'ok' | 'geld' | 'keine' (keine Wand bzw. kein Fenster an der Stelle, z. B. eine Tür)
     fensterUmschalten(x, y) {
       if (x < 0 || y < 0 || x >= z.w || y >= z.h) return 'keine';
-      const t = z.zellen[idx(z, x, y)];
+      const i = idx(z, x, y), t = z.zellen[i];
       if (t !== WAND && t !== FENSTER) return 'keine';
       if (t === WAND && !kannBezahlen(z, BAUKOSTEN.fenster)) return 'geld';
       const e = aendern(() => {
         const r = fensterSchalten(z, x, y);
-        if (r === 'gesetzt') buchen(z, 'ausgaben', 'bau', BAUKOSTEN.fenster, { was: 'fenster' });
-        if (r === 'entfernt') buchen(z, 'einnahmen', 'rueckerstattung', BAUKOSTEN.fenster, { was: 'fenster' });
+        if (r === 'gesetzt') { buchen(z, 'ausgaben', 'bau', BAUKOSTEN.fenster, { was: 'fenster' }); z.zusatzzeit[i] = z.minuten; }
+        if (r === 'entfernt') {
+          const wert = abrissWert(z, BAUKOSTEN.fenster, z.zusatzzeit[i]);
+          if (wert) buchen(z, 'einnahmen', 'rueckerstattung', wert, { was: 'fenster' });
+          delete z.zusatzzeit[i];
+        }
         return r;
       });
       return e ? 'ok' : 'keine';
@@ -409,11 +427,12 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
     rueckgaengig() {
       const e = verlauf.pop();
       if (!e) return false;
-      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende, gratisTueren] = JSON.parse(e.bau);
+      const [zellen, raumTyp, veranstaltung, moebel, personen, kaffeeZeiten, gratisWaende, gratisTueren, bauzeit, zusatzzeit] = JSON.parse(e.bau);
       for (const m of moebel) { const jetzt = moebelAuf(z, m.x, m.y); if (jetzt && jetzt.art === m.art && 'fuellung' in jetzt) m.fuellung = jetzt.fuellung; }
       Object.assign(z, { zellen, raumTyp, veranstaltung, moebel, kaffeeZeiten: kaffeeZeiten || {} });
       if (gratisWaende) z.gratisWaende = gratisWaende; else delete z.gratisWaende;
       if (gratisTueren) z.gratisTueren = gratisTueren; else delete z.gratisTueren;
+      z.bauzeit = bauzeit || {}; z.zusatzzeit = zusatzzeit || {};
       for (const p of z.personen) { const alt = personen.find(a => a.id === p.id); if (alt) { p.x = alt.x; p.y = alt.y; } }
       stornieren(z, e.buchungen, e.woche);   // Buchungen des Schritts zurücknehmen (dieselbe Woche: ganz weg, sonst Gegenbuchung)
       personenPruefen(z); raeume = raeumeAuswerten(z);

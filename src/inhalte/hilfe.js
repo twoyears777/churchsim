@@ -8,7 +8,7 @@
 // Ein paar Zahlen (Raumgrößen, Besuche bis zum Ehrenamt) kommen direkt aus den Spielwerten, damit die Hilfe nicht veraltet.
 import { GELAENDE, SCHAUKASTEN } from './gelaende.js';
 import { RAUMTYPEN } from './raumtypen.js';
-import { BAUKOSTEN, FENSTER, FOYER } from './bau.js';
+import { BAUKOSTEN, FENSTER, FOYER, ABRISS } from './bau.js';
 import { EHRENAMT_AB_BESUCHEN } from './besucher.js';
 import { EINZUGSGEBIET, PARKPLATZ } from './einzugsgebiet.js';
 
@@ -38,7 +38,8 @@ export const HILFE = {
           '**Tür:** Klicke auf eine Wand, um eine Tür zu setzen oder wieder zu entfernen. Jeder Raum braucht eine Tür.',
           // ENTWURF von Claude (Fenster, 25.11.) – Lukas formuliert selbst
           `**Fenster:** Klicke auf eine Wand, um ein Fenster einzusetzen (${BAUKOSTEN.fenster} €) oder wieder zu entfernen. Jedes Fenster bringt in den angrenzenden Räumen +${FENSTER.haltung} Haltung pro Gottesdienst.`,
-          '**Abriss:** Zieh über einen Bereich, um Wände und Möbel abzureißen. Möbel, Wände und Fenster bekommst du voll erstattet.',   // ergänzt 25.11.
+          // ENTWURF von Claude (Abriss-Wert, 27.11.) – Lukas formuliert selbst
+          `**Abriss:** Zieh über einen Bereich, um Wände und Möbel abzureißen. Zurück gibt es anfangs ${Math.round(ABRISS.anteil * 100)} % des Preises, mit jeder Woche seit dem Bauen ${Math.round(ABRISS.anteil * 100 / ABRISS.wochen)} % weniger – nach ${ABRISS.wochen} Wochen nichts mehr.`,
           '**Außen:** Straße, Parkplätze und Bushaltestelle (siehe „Einzugsgebiet“). Parkplätze dreht man mit R. Dazu Wege und Außendeko (siehe „Bekanntheit, Passanten und Pforte“).',   // Zusatz ENTWURF 25.11.
           'Unter der Maus zeigt ein grüner oder roter Umriss, ob ein Möbel dort passt.',
           '**Rückgängig** nimmt den letzten Schritt zurück, **Neu** fängt das Grundstück neu an.',

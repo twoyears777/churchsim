@@ -4,7 +4,7 @@
 // Leerwerden, Auffüllen durch den Ehrenamtlichen und die Finanz-Kategorie gelten dann automatisch auch für ihn.
 //
 //   id, name      Kennung und Name (Name erscheint in Bauleiste und Finanzen)
-//   kosten        Baupreis in € (Abriss erstattet ihn wie bei allen Möbeln)
+//   kosten        Baupreis in € (Abriss erstattet einen Teil wie bei allen Möbeln)
 //   kategorie     Reiter der Bauleiste
 //   raum          nur in einem fertigen Raum dieses Typs wird verkauft und aufgefüllt
 //   preis         € pro verkaufter Ware

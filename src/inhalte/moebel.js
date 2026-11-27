@@ -1,5 +1,5 @@
 // Inhaltsdatei: Möbel, die man im Editor aufstellen kann. Jedes Möbel belegt 1 Kästchen.
-// kosten: Kaufpreis in €, wird sofort vom Konto abgezogen; beim Abriss volle Rückerstattung.
+// kosten: Kaufpreis in €, wird sofort vom Konto abgezogen; beim Abriss gibt es einen Teil zurück (siehe ABRISS in bau.js).
 // Namen sind Platzhalter – Lukas legt sie fest.
 import { AUTOMATEN } from './automaten.js';
 // kategorie: unter welchem Reiter der Bauleiste es steht (Namen der Reiter in texte.js → bauleiste).

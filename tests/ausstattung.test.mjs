@@ -199,7 +199,7 @@ const kollekte = z => z.wochenbuch.einnahmen.kollekte || 0;
   assert.strictEqual(stuhlVerbessern(z, m), 'max');
   assert.strictEqual(z.konto, 1000 - 20 - 60 - 150);
   const erstattet = moebelAbreissen(z, m.x, m.y, m.x, m.y);
-  assert.strictEqual(erstattet, 5 + 20 + 60 + 150);
+  assert.strictEqual(erstattet, (5 + 20 + 60 + 150) / 2);   // Abriss-Wert (27.11.): anfangs die Hälfte von Kauf + Verbesserungen
 }
 console.log('Stuhl- und Möbel-Tests bestanden.');
 

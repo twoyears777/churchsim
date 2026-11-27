@@ -5,6 +5,7 @@ import { MOEBEL, STUHL_STUFEN, MUSIK } from '../inhalte/moebel.js';
 import { kannBezahlen, buchen } from './finanzen.js';
 import { musikBonus } from './skills.js';
 import { AUTOMATEN } from '../inhalte/automaten.js';
+import { abrissWert } from './abriss.js';
 
 export function moebelAnlegen(z) { if (!Array.isArray(z.moebel)) z.moebel = []; }
 const typVon = art => MOEBEL.find(t => t.id === art) || {};
@@ -45,6 +46,7 @@ export function moebelKaufen(z, art, x, y, istBesetzt = () => false, dreh = fals
   if (!felderVon(art, x, y, dreh).every(f => aufGrundstueck(f.x, f.y) && z.zellen[idx(z, f.x, f.y)] === LEER && !moebelBei(z, f.x, f.y) && !istBesetzt(f.x, f.y))) return 'platz';
   if (!kannBezahlen(z, preis)) return 'geld';
   const m = { art, x, y };
+  if (typeof z.minuten === 'number') m.gebaut = z.minuten;   // Bauzeit: daraus wird der Abriss-Wert berechnet (abriss.js)
   if (typ.groesse && dreh) m.dreh = true;
   if (typeof typ.fassung === 'number') m.fuellung = typ.startFuellung || 0;   // Kaffeemaschine: Füllstand in Tassen
   if (typ.automat) m.fuellung = 0;                                           // Automat: kommt leer, der Ehrenamtliche füllt ihn auf
@@ -60,10 +62,11 @@ export function moebelWert(m) {
   if (m.art !== 'stuhl') return kauf;
   return kauf + STUHL_STUFEN.filter(s => s.stufe <= (m.stufe || 1)).reduce((a, s) => a + s.upgrade, 0);
 }
-// Abriss mit voller Rückerstattung (Kauf + Verbesserungen)
+// Abriss (27.11.): zurück gibt es den Abriss-Wert von Kauf + Verbesserungen – anfangs die Hälfte, jede Woche weniger (abriss.js).
+// Verbesserungen zählen mit dem Alter des Möbels.
 export function moebelAbreissen(z, x0, y0, x1, y1) {
   const weg = moebelEntfernen(z, x0, y0, x1, y1);
-  const betrag = weg.reduce((s, m) => s + moebelWert(m), 0);
+  const betrag = Math.round(weg.reduce((s, m) => s + abrissWert(z, moebelWert(m), m.gebaut), 0) * 100) / 100;
   if (betrag) buchen(z, 'einnahmen', 'rueckerstattung', betrag, { was: 'abriss' });
   return betrag;
 }

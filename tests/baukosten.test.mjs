@@ -27,14 +27,14 @@ assert.equal(STARTGELD, 1000);
   assert.equal(s.lage().konto, 880);
   // Raum daneben teilt sich eine Wand: nur die neuen Stücke kosten
   assert.equal(s.wandVorschau(G.x + 9, G.y + 2, G.x + 14, G.y + 8).stuecke, 17);   // 24 Stücke, 7 davon stehen schon
-  // Tür (26.11.): 10 € zusätzlich zur Wand, wieder zur Wand → Geld zurück; auf leerem Feld oder Fenster nicht
+  // Tür (26.11.): 10 € zusätzlich zur Wand, wieder zur Wand → die Hälfte zurück (27.11.); auf leerem Feld oder Fenster nicht
   assert.equal(BAUKOSTEN.tuer, 10);
   assert.equal(s.tuerUmschalten(G.x + 2, G.y + 5), 'ok');
   assert.equal(s.zelle(G.x + 2, G.y + 5), 'tuer');
   assert.equal(s.lage().konto, 870);
   assert.equal(s.tuerUmschalten(G.x + 5, G.y + 5), 'keine');   // leer
   assert.equal(s.tuerUmschalten(G.x + 2, G.y + 5), 'ok');
-  assert.equal(s.zelle(G.x + 2, G.y + 5), 'wand'); assert.equal(s.lage().konto, 880);
+  assert.equal(s.zelle(G.x + 2, G.y + 5), 'wand'); assert.equal(s.lage().konto, 875);   // Abriss-Wert (27.11.): die Hälfte
   assert.ok(s.rueckgaengig()); assert.equal(s.zelle(G.x + 2, G.y + 5), 'tuer'); assert.equal(s.lage().konto, 870);
   // Fenster: 10 €, wieder weg → Geld zurück; auf Tür oder leerem Feld nicht
   assert.equal(s.fensterUmschalten(G.x + 5, G.y + 2), 'ok');
@@ -44,26 +44,27 @@ assert.equal(STARTGELD, 1000);
   assert.equal(s.fensterUmschalten(G.x + 2, G.y + 5), 'keine');   // Tür
   assert.equal(s.fensterUmschalten(G.x + 5, G.y + 5), 'keine');   // leer
   assert.equal(s.fensterUmschalten(G.x + 5, G.y + 2), 'ok');
-  assert.equal(s.zelle(G.x + 5, G.y + 2), 'wand'); assert.equal(s.lage().konto, 870);
-  // Rückgängig gibt die 10 € wieder ab (Fenster ist zurück)
+  // Fenster wieder zur Wand: Abriss-Wert, anfangs die Hälfte (27.11.)
+  assert.equal(s.zelle(G.x + 5, G.y + 2), 'wand'); assert.equal(s.lage().konto, 865);
+  // Rückgängig gibt die 5 € wieder ab (Fenster ist zurück)
   assert.ok(s.rueckgaengig()); assert.equal(s.zelle(G.x + 5, G.y + 2), 'fenster'); assert.equal(s.lage().konto, 860);
-  // Abriss: 24 Wandstücke à 5 € + 1 Fenster à 10 € + 1 Tür à 10 € zurück
+  // Abriss (27.11.): die Hälfte von 24 Wandstücken à 5 € + 1 Fenster à 10 € + 1 Tür à 10 € = 70 €
   s.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
-  assert.equal(s.lage().konto, 1000);
-  // Rückgängig nach dem Bauen gibt das Geld zurück
-  s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(s.lage().konto, 880);
-  assert.ok(s.rueckgaengig()); assert.equal(s.lage().konto, 1000); assert.equal(s.zelle(G.x + 2, G.y + 2), 'leer');
+  assert.equal(s.lage().konto, 930);
+  // Rückgängig nach dem Bauen gibt weiter das ganze Geld zurück
+  s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(s.lage().konto, 810);
+  assert.ok(s.rueckgaengig()); assert.equal(s.lage().konto, 930); assert.equal(s.zelle(G.x + 2, G.y + 2), 'leer');
   // Kassenbuch: Kategorie „Bau“
   s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
   // Rückgängig nimmt die Buchungen ganz heraus: übrig bleiben zweimal Wände (120 €) + 1 Tür (10 €) + 1 Fenster (10 €);
-  // erstattet bleibt nur der Abriss (140 €) – die Erstattung der Tür hat „Rückgängig“ wieder herausgenommen
+  // erstattet bleibt nur der Abriss (70 €) – die Erstattung des Fensters hat „Rückgängig“ wieder herausgenommen
   assert.equal(s.finanzInfo().woche.ausgaben.bau, 2 * 120 + 10 + 10);
-  assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 140);
+  assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 70);
   // Abriss rückgängig: keine „Möbel“-Ausgabe, die Rückerstattung verschwindet wieder
-  s.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 260);
+  s.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(s.finanzInfo().woche.einnahmen.rueckerstattung, 130);
   assert.ok(s.rueckgaengig());
   const w = s.finanzInfo().woche;
-  assert.equal(w.einnahmen.rueckerstattung, 140); assert.equal(w.ausgaben.moebel, undefined); assert.equal(s.lage().konto, 880);
+  assert.equal(w.einnahmen.rueckerstattung, 70); assert.equal(w.ausgaben.moebel, undefined); assert.equal(s.lage().konto, 810);
   assert.ok(!s.finanzInfo().buchungen.some(b => b.was === 'rueckgaengig'));
 }
 
@@ -84,7 +85,7 @@ assert.equal(STARTGELD, 1000);
 }
 
 // Spielstand vor dem Türpreis (26.11.): schon stehende Türen bleiben kostenlos – zur Wand gemacht oder abgerissen gibt es
-// für sie keinen Türpreis zurück; neue Türen kosten und werden voll erstattet. Rückgängig stellt die Gratis-Tür wieder her.
+// für sie keinen Türpreis zurück; neue Türen kosten und bringen beim Abriss den Abriss-Wert (anfangs die Hälfte). Rückgängig stellt die Gratis-Tür wieder her.
 {
   const s = spielStarten(null, () => 0.5);
   s.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);                    // 880 €
@@ -98,11 +99,11 @@ assert.equal(STARTGELD, 1000);
   assert.equal(alt.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(alt.lage().konto, 880);   // nach Rückgängig weiterhin gratis
   assert.equal(alt.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(alt.lage().konto, 870);   // neu gesetzt: kostet
   alt.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
-  assert.equal(alt.lage().konto, 1000);                               // 24 × 5 € + neue Tür 10 €, alte Tür nichts
+  assert.equal(alt.lage().konto, 935);                                // Hälfte von 24 × 5 € + neuer Tür 10 € = 65 €, alte Tür nichts
   const wieder = spielStarten(alt.speicherText(), () => 0.5);         // beim nächsten Laden nichts Neues gemerkt
   wieder.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); wieder.tuerUmschalten(G.x + 2, G.y + 5);
-  assert.equal(wieder.lage().konto, 870);
-  assert.equal(wieder.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(wieder.lage().konto, 880);
+  assert.equal(wieder.lage().konto, 805);
+  assert.equal(wieder.tuerUmschalten(G.x + 2, G.y + 5), 'ok'); assert.equal(wieder.lage().konto, 810);
 }
 // Nicht genug Geld für eine Tür: bleibt Wand
 {
@@ -126,10 +127,10 @@ assert.equal(STARTGELD, 1000);
   alt.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8);
   assert.equal(alt.lage().konto, 1000);   // alte Wände: nichts zurück
   alt.wandBauen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(alt.lage().konto, 880);
-  alt.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(alt.lage().konto, 1000);   // neue Wände: voll zurück
+  alt.abreissen(G.x + 2, G.y + 2, G.x + 8, G.y + 8); assert.equal(alt.lage().konto, 940);   // neue Wände: die Hälfte zurück
   // Beim nächsten Laden kein zweiter Ausgleich
   const wieder = spielStarten(alt.speicherText(), () => 0.5);
-  assert.equal(wieder.lage().konto, 1000);
+  assert.equal(wieder.lage().konto, 940);
 }
 
 // Fenster sind Wand: schließen Räume ab, man läuft nicht hindurch, Tür bleibt nötig
