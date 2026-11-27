@@ -22,22 +22,48 @@ function feldAus(e) {
   const x = Math.floor((px - a.ox) / a.k), y = Math.floor((py - a.oy) / a.k);
   return { x: Math.max(0, Math.min(w - 1, x)), y: Math.max(0, Math.min(h - 1, y)) };
 }
-function naechste(e, liste, radius) {
-  const { px, py } = punktAus(e), { k, ox, oy } = ui.ansicht;
-  let beste = null, abstand = radius;
-  for (const p of liste) {
-    const d = Math.hypot(ox + (p.x + 0.5) * k - px, oy + (p.y + 0.5) * k - py);
-    if (d < abstand) { abstand = d; beste = p; }
-  }
-  return beste;
-}
 // Auf dem Stand „Evangelisation!“ gewinnt immer der Stand – sonst schnappt sich ein Ehrenamtlicher, der direkt daneben steht,
 // oder ein vorbeilaufender Passant den Klick und das Menü lässt sich nicht öffnen (Fehler, Lukas 26.11.).
 // Klick-Box = der ganze gezeichnete Stand mit Rand und Schild, nicht mehr nur ein Kästchen (Lukas, 27.11.).
 const aufEvangelisationsFeld = e => { const { px, py } = punktAus(e); return evangelisationsStandTrifft(px, py, ui.ansicht, ui.spiel.karte().evangelisation); };
-const figurBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().personen.filter(p => !p.daheim).map(p => ({ id: p.id, x: p.x, y: p.y, art: p.art })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
-  Math.max(22, ui.ansicht.k * 1.1));
-const besucherBei = e => aufEvangelisationsFeld(e) ? null : naechste(e, ui.spiel.karte().besucher, Math.max(24, ui.ansicht.k * 1.2));
+// Klickfläche je nach Zustand (Lukas, 27.11.: seit die Figuren 1,7-mal so schnell laufen): wer läuft, ist größer anklickbar,
+// wer sitzt, kleiner – sonst schnappt sich der Nachbar in der Stuhlreihe den Klick. Faktoren und Mindestgrößen: Entwurf von Claude.
+const KLICK = {
+  mitarbeiter: { steht: [22, 1.1], laeuft: [37, 1.9], sitzt: [12, 0.6] },   // [mindestens Pixel, sonst × Kästchengröße]
+  besucher: { steht: [24, 1.2], laeuft: [41, 2.0], sitzt: [12, 0.6] },
+  laeuftNoch: 400                                                          // so lange (echte Millisekunden) nach der letzten Bewegung gilt er als laufend
+};
+// Wer hat sich zuletzt wann bewegt? Wird bei jedem Bild aufgefrischt (figurenMerken, aus start.js) – reine Anzeige, kein Spielwert.
+const bewegt = new Map();
+export function figurenMerken(karte) {
+  const jetzt = performance.now(), gesehen = new Set();
+  for (const p of [...karte.personen, ...karte.besucher]) {
+    const key = (p.feldX !== undefined ? 'p:' : 'b:') + p.id, alt = bewegt.get(key);
+    gesehen.add(key);
+    if (!alt) bewegt.set(key, { x: p.x, y: p.y, am: -Infinity });
+    else if (alt.x !== p.x || alt.y !== p.y) bewegt.set(key, { x: p.x, y: p.y, am: jetzt });
+  }
+  for (const key of bewegt.keys()) if (!gesehen.has(key)) bewegt.delete(key);
+}
+function zustand(key, f) {
+  if (f.sitzt) return 'sitzt';
+  const b = bewegt.get(key);
+  return b && performance.now() - b.am < KLICK.laeuftNoch ? 'laeuft' : 'steht';
+}
+// Nächste Figur unter dem Mauszeiger, jede mit ihrer eigenen Klickfläche; bei mehreren gewinnt die, deren Mitte am nächsten ist
+function naechsteFigur(e, liste, art) {
+  const { px, py } = punktAus(e), { k, ox, oy } = ui.ansicht;
+  let beste = null, abstand = Infinity;
+  for (const f of liste) {
+    const [min, faktor] = KLICK[art][zustand((art === 'mitarbeiter' ? 'p:' : 'b:') + f.id, f)];
+    const d = Math.hypot(ox + (f.x + 0.5) * k - px, oy + (f.y + 0.5) * k - py);
+    if (d < Math.max(min, k * faktor) && d < abstand) { abstand = d; beste = f; }
+  }
+  return beste;
+}
+const figurBei = e => aufEvangelisationsFeld(e) ? null : naechsteFigur(e, ui.spiel.karte().personen.filter(p => !p.daheim).map(p => ({ id: p.id, x: p.x, y: p.y, art: p.art })),   // dort, wo man die Figur sieht (sie läuft etwas umher)
+  'mitarbeiter');
+const besucherBei = e => aufEvangelisationsFeld(e) ? null : naechsteFigur(e, ui.spiel.karte().besucher, 'besucher');
 const maschineBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'kaffeemaschine' ? m : null; };
 const automatBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && ui.spiel.automatInfo(m.x, m.y) ? m : null; };   // Automaten (26.11.)
 const stuhlBei = f => { const m = ui.spiel.moebelBei(f.x, f.y); return m && m.art === 'stuhl' ? m : null; };

@@ -70,9 +70,9 @@ console.log('Ehrenamts-Tests bestanden.');
 // Einzugsgebiet: Ehrenamtliche zählen nicht mit
 assert.equal(erreicht({ besucher: leute(7), ort: { leute: leute(3) }, personen: eas(9) }), 10);
 
-// Zeit: 24 Sekunden pro Spielstunde, Knöpfe ohne x5 und mit x50; Figuren bei x1 weiter 1,25 Kästchen pro Sekunde
+// Zeit: 24 Sekunden pro Spielstunde, Knöpfe ohne x5 und mit x50; Figuren bei x1 2,125 Kästchen pro Sekunde (Lukas, 27.11.: 1,7-mal so schnell wie vorher 1,25)
 assert.equal(SEKUNDEN_PRO_STUNDE, 24); assert.deepEqual(TEMPI, [0, 1, 2, 10, 25, 50]);
 assert.deepEqual(Object.keys(TEXTE.tempo).map(Number).sort((a, b) => a - b), TEMPI);
-assert.equal(LAUFTEMPO * 60 / SEKUNDEN_PRO_STUNDE, 1.25);
+assert.ok(Math.abs(LAUFTEMPO * 60 / SEKUNDEN_PRO_STUNDE - 2.125) < 1e-9);
 { const z = { tempo: 5 }; zeitAnlegen(z); assert.equal(z.tempo, 1); const y = { tempo: 50 }; zeitAnlegen(y); assert.equal(y.tempo, 50); }
 console.log('Einzugsgebiet- und Zeit-Tests bestanden.');

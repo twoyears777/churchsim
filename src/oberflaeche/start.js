@@ -6,7 +6,7 @@ import { ui, $, euro } from './ui.js';
 import { ladenText, speichern } from './speicher.js';
 import { anzeigenEinrichten, anzeigenAktualisieren } from './anzeigen.js';
 import { fensterEinrichten } from './fenster.js';
-import { eingabenEinrichten } from './eingaben.js';
+import { eingabenEinrichten, figurenMerken } from './eingaben.js';
 import { aktualisierungStarten } from './aktualisieren.js';
 import { zeichne } from '../ansicht/zeichnen.js';
 import { bauleisteAktualisieren } from './bauleiste.js';
@@ -33,6 +33,7 @@ function zahlenAnzeigen(liste) {
 
 function malen() {
   const spiel = ui.spiel, karte = spiel.karte();
+  figurenMerken(karte);   // wer läuft gerade? (Klickfläche, 27.11.)
   ctx.clearRect(0, 0, leinwand.width, leinwand.height);
   const z = ui.ziehen;
   const vorschau = z && z.art === 'wand' ? { art: 'wand', ...spiel.wandVorschau(z.x0, z.y0, z.x1, z.y1) } : z;

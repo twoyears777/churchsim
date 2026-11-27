@@ -16,7 +16,7 @@ export const DAUER = { gottesdienst: 60, kirchkaffee: 120 };  // Spielminuten; K
 export const ANREISE_VORLAUF = 180;   // so viele Minuten vor Beginn machen sich die Besucher auf den Weg
 // Lukas, 27.11.: Die Spielstunde dauert doppelt so lange, die Figuren bleiben auf dem Bildschirm so schnell wie bisher –
 // deshalb sind alle Figuren-Zeiten in Spielminuten halbiert (Laufen, Abstand, Kaffeemaschine, Automat, Toilette, Halt am Tor, Umherlaufen).
-export const LAUFTEMPO = 0.5;         // Kästchen pro Spielminute (27.11.: verdoppelt, siehe oben; bei x1 weiter 1,25 Kästchen pro Sekunde)
+export const LAUFTEMPO = 0.85;        // Kästchen pro Spielminute (27.11.: verdoppelt, siehe oben; danach Lukas, 27.11.: alle Figuren 1,7-mal so schnell)
 export const ABSTAND = 1;             // Spielminuten zwischen zwei Besuchern (27.11.: vorher 2)
 export const HEIMWEG = 120;           // so lange (Spielminuten) laufen die Besucher nach dem Ende noch nach Hause (stand bis 26.11. in kern/ablauf.js)
 

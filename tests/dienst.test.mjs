@@ -181,7 +181,8 @@ console.log('Öffnungszeiten-Tests bestanden.');
   const voll = g => g.z.moebel.find(m => m.art === 'kaffeemaschine').fuellung || 0;
   assert.ok(voll(mit) >= 10, 'Logistik füllt die Maschine auf (je Gang höchstens 10)');
   const einkaeufe = mit.z.wochenbuch.buchungen.filter(b => b.kategorie === 'kaffee' && b.seite === 'ausgaben');
-  assert.ok(einkaeufe.length >= 1 && einkaeufe.every(b => b.minuten < 19 * 60), 'eingekauft nur während der Schicht');
+  // Bezahlt wird erst im Laden: ein Gang, der kurz vor 19 Uhr losgeht, wird danach noch bezahlt – aber nach 19 Uhr geht kein neuer los
+  assert.ok(einkaeufe.length >= 1 && einkaeufe.filter(b => b.minuten >= 19 * 60).length <= 1, 'eingekauft nur während der Schicht');
   assert.equal(voll(ohne), 0, 'ohne Logistik bleibt sie leer');
   assert.equal(mit.ea[0].daheim, true);
   assert.ok(!mit.z.kaffee.ma[mit.ea[0].id]);

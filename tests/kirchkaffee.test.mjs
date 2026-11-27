@@ -13,6 +13,7 @@ import { versetzen, personHinzufuegen } from '../src/kern/personen.js';
 import { kaffeeVorliebe } from '../src/kern/besucher.js';
 import { schichtHinzufuegen, schichtEntfernen, schichtenVon, offenBei, naechsteSchicht, passantKommt, kirchkaffeeOffen, amTisch, trinkgeldFuer, sitzplaetzeVon, kaffeeKundenPositionen, kaffeeZahlen } from '../src/kern/kirchkaffee.js';
 import { TAG_MIN } from '../src/kern/zeit.js';
+import { anfrageOffen, ablehnen, schliessen } from '../src/kern/seelsorge.js';
 import { LAUFTEMPO, DAUER } from '../src/inhalte/zeit.js';
 
 const SO = 6 * TAG_MIN, MI = 2 * TAG_MIN;
@@ -44,7 +45,9 @@ function gemeinde({ stationen = 1, stuehle = 3 } = {}) {
   const maschinen = () => z.moebel.filter(m => m.art === 'kaffeemaschine');
   return { z, aus, kk, eas, maschinen };
 }
-const bis = (z, aus, minute, zufall = () => 0) => { while (z.minuten < minute) zeitVorruecken(z, aus(), Math.min(1, minute - z.minuten), zufall); };
+// Seelsorge-Anfragen hält die Zeit an (so gewollt) – hier werden sie gleich abgelehnt, damit die Zeit weiterläuft
+// (27.11.: seit die Figuren 1,7-mal so schnell laufen, kommt in den Passanten-Tests eine Anfrage)
+const bis = (z, aus, minute, zufall = () => 0) => { while (z.minuten < minute) { if (anfrageOffen(z)) { ablehnen(z); schliessen(z); } zeitVorruecken(z, aus(), Math.min(1, minute - z.minuten), zufall); } };
 const besucherMitKaffee = (z, n, wert = 1) => {
   z.besucher = Array.from({ length: n }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', level: 5, zufriedenheit: 100, kaffeeWert: wert, besuche: 0, lobpreis: 0.5 }));   // (Lobpreis-Vorliebe 50 %: Musik ändert hier nichts; eigene Tests in veranstaltungen.test.mjs)
 };
