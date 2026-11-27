@@ -57,6 +57,24 @@ function oeffnen(f, name) {
   assert.equal(ui.spiel.kaffeeRaumInfo(nr).mindestgaeste.summe, 2);
   oeffnen({ art: 'kaffee', nr }, 'Kirchkaffee-Fenster mit Mindestgästen');
 }
+// Menü „Mitglieder“ (27.11.): leer, mit Mitgliedern (eins mit Kündigungsgefahr) und Verlauf; Finanz-Fenster mit Dauerspender-Zeile zu und auf
+{
+  const z = neuesSpiel(() => 0.5);
+  z.besucher = [{ id: 'm', voll: 'Mia M', vorname: 'Mia', level: 4, zufriedenheit: 30, besuche: 5, mitglied: { seit: 2 } },
+    { id: 'n', voll: 'Nils N', vorname: 'Nils', level: 2, zufriedenheit: 10, besuche: 5, mitglied: { seit: 3 } }];
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  const { mitgliederFenster } = await import('../src/oberflaeche/mitglieder.js');
+  let html = mitgliederFenster();
+  assert.ok(html.includes('mitglied-gefahr') && html.includes('30 %'), 'Kündigungsgefahr markiert');
+  assert.ok(!html.includes('<svg'), 'ohne Verlauf noch kein Diagramm');
+  z.mitglieder.verlauf = [{ woche: 0, anzahl: 1 }, { woche: 1, anzahl: 2 }];
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  html = mitgliederFenster();
+  assert.ok(html.includes('<svg') && html.includes('polyline'), 'Diagramm da');
+  oeffnen({ art: 'mitglieder' }, 'Mitglieder-Menü');
+  oeffnen({ art: 'finanzen' }, 'Finanz-Fenster, Dauerspender zugeklappt');
+  oeffnen({ art: 'finanzen', offen: ['dauerspender'] }, 'Finanz-Fenster, Dauerspender aufgeklappt');
+}
 // Gemeindekalender mit Bericht (27.11.): vergangene Veranstaltung, aufgeklappter Bericht und „Vorherige Woche“
 {
   const { zeitVorruecken, veranstaltungEinstellen } = await import('../src/kern/ablauf.js');

@@ -156,6 +156,8 @@ li.ok, td.ok { color: #2e7d32; } li.fehlt, td.fehlt { color: #b3261e; }
 
 /* Menschen, Passanten, Seelsorge – Platzhalter-Design */
 .menschen-knopf { min-height: 36px; padding: 0 14px; }
+/* Menü „Mitglieder“ (27.11., ENTWURF): Mitglieder mit Kündigungsgefahr (Level 2 oder 1) rot markiert */
+.inhalt tr.mitglied-gefahr td { color: #b3261e; background: #fbeae8; }
 table.menschen { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; }
 table.menschen th { text-align: left; padding: 0; }
 table.menschen td { padding: 6px 6px; border-bottom: 1px solid #e2dccd; white-space: nowrap; }

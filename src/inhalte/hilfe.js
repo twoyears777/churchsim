@@ -120,7 +120,7 @@ export const HILFE = {
       inhalt: [
         'Jeder Besucher hat eine **Haltung** zur Gemeinde. Je höher sie ist, desto wahrscheinlicher kommt er wieder.',
         // ENTWURF von Claude (0.1.11) – Lukas formuliert selbst
-        'Erreicht die Haltung 100, steigt der Besucher ein **Level** auf (bis Level 5) und die Haltung beginnt wieder bei 0. Mit jedem Level kommt er öfter – und er entwickelt ein neues **Bedürfnis** (Lobpreis, Kaffee oder Spaß). Am Sonntagabend wird geprüft: Jedes Bedürfnis, das in der Woche nicht erfüllt wurde, kostet 5 Haltung. Fällt die Haltung auf 0, geht es ein Level zurück. Ab Level 3 kann jemand Dauerspender oder Gemeindemitglied werden (siehe Finanzen).',   // ENTWURF 27.11. (vorher: „Ab Level 3 wird jemand Dauerspender.“)
+        'Erreicht die Haltung 100, steigt der Besucher ein **Level** auf (bis Level 5) und die Haltung beginnt wieder bei 0. Mit jedem Level kommt er öfter – und er entwickelt ein neues **Bedürfnis** (Lobpreis, Kaffee oder Spaß). Am Sonntagabend wird geprüft: Jedes Bedürfnis, das in der Woche nicht erfüllt wurde, kostet 5 Haltung. Fällt die Haltung auf 0, geht es ein Level zurück. Ab Level 3 kann jemand Dauerspender (siehe Finanzen) oder Gemeindemitglied (siehe Mitglieder) werden.',   // ENTWURF 27.11. (vorher: „Ab Level 3 wird jemand Dauerspender.“)
         { punkte: [
           'Mehr Haltung: Sitzplatz, guter Gottesdienst, Kaffee, gute Möbel, gute Seelsorge.',
           'Weniger Haltung: kein Stuhl frei, kein Kaffee, ausgefallene Veranstaltung.',

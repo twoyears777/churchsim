@@ -38,6 +38,8 @@ export function anzeigenEinrichten() {
   $('forschungAuf').addEventListener('click', () => fensterOeffnen({ art: 'forschung' }));
   $('dienstplanAuf').textContent = TEXTE.dienstplan.knopf;   // Menü „Mitarbeiter“ (27.11.): Dienstplan der Ehrenamtlichen
   $('dienstplanAuf').addEventListener('click', () => fensterOeffnen({ art: 'dienstplan' }));
+  $('mitgliederAuf').textContent = TEXTE.mitglieder.knopf;   // Menü „Mitglieder“ (27.11.)
+  $('mitgliederAuf').addEventListener('click', () => fensterOeffnen({ art: 'mitglieder' }));
   $('kalenderAuf').textContent = TEXTE.kalender.knopf;
   $('kalenderAuf').addEventListener('click', () => fensterOeffnen({ art: 'kalender', versatz: 0 }));
   $('bekanntheitAuf').addEventListener('click', () => fensterOeffnen({ art: 'bekanntheit' }));

@@ -364,15 +364,8 @@ export const TEXTE = {
     dauerspenderSumme: 'Summe pro Woche',
     dauerspenderSpalten: { name: 'Name', betrag: 'Spende diese Woche', naechster: 'Nächsten Montag', seit: 'Seit Woche', haltung: 'Haltung' },
     dauerspenderHaltung: (level, haltung) => `Level ${level} · ${haltung}`,   // ENTWURF 25.11. (Haltungslevel)
-    // Gemeindemitglieder (27.11.): Überschrift von Lukas freigegeben, alles andere ENTWURF von Claude – Lukas formuliert selbst
-    mitglieder: 'Gemeindemitglieder',
-    mitgliederInfo: r => `Erwachsene ab Haltungslevel ${r.abLevel} werden nach jedem Gottesdienst mit ${r.chance} % Chance Mitglied. Mitglieder kommen öfter (+${r.kommBonus} %) und zahlen am 1. jedes Monats um ${r.stunde}:00 Uhr den Beitrag. Fällt ein Mitglied auf Level 2, kündigt es jede Woche mit ${r.kuendigung[2]} % Chance, auf Level 1 mit ${r.kuendigung[1]} %.`,   // ENTWURF
-    beitrag: 'Monatsbeitrag pro Mitglied',   // ENTWURF
-    beitragWeniger: '−', beitragMehr: '+',
-    beitragHaltung: (h, r) => `${h > 0 ? '+' : h < 0 ? '−' : '±'}${Math.abs(h)} Haltung für jedes Mitglied bei jeder Abbuchung. Bei ${r.neutral} € ändert sich nichts, je ${r.schritt} € mehr ${r.haltungMehr}, je ${r.schritt} € weniger +${r.haltungWeniger}.`,   // ENTWURF
-    mitgliederLeer: 'Noch keine Gemeindemitglieder.',   // ENTWURF
-    mitgliederSumme: 'Summe pro Monat',   // ENTWURF
-    mitgliederSpalten: { name: 'Name', seit: 'Seit Woche', haltung: 'Haltung' },   // ENTWURF
+    // Dauerspender als eine Zeile zum Aufklappen (27.11., Lukas: „einfach als eine zeile und dann halt aufklappbar“) – ENTWURF von Claude
+    dauerspenderZeile: (n, summe) => n ? `${n} Dauerspender · ${summe} pro Woche` : 'Noch keine Dauerspender',
     was: { abriss: 'Abriss', verbessern: 'verbessert', rueckgaengig: 'Rückgängig gemacht', bus: 'Bushaltestelle', werbekampagne: 'Werbekampagne' }
   },
 
@@ -385,6 +378,29 @@ export const TEXTE = {
 
   // ---- Menschen, Passanten, Seelsorge (Entwürfe von Claude, von Lukas vorerst so übernommen, 25.11.) ----
   // Fenster „Menschen im Ort“
+  // Menü „Mitglieder“ (27.11.): eigener Knopf oben, alle Daten zu den Gemeindemitgliedern. Überschrift „Gemeindemitglieder“ von Lukas freigegeben,
+  // alles andere ENTWURF von Claude – Lukas formuliert selbst (die Sätze stammen zum Teil aus dem bisherigen Abschnitt im Finanz-Fenster)
+  mitglieder: {
+    knopf: 'Mitglieder',   // ENTWURF
+    titel: 'Gemeindemitglieder',
+    anzahl: (n, summe) => `${n} ${n === 1 ? 'Mitglied' : 'Mitglieder'} · ${summe} pro Monat`,   // ENTWURF
+    info: r => `Erwachsene ab Haltungslevel ${r.abLevel} werden nach jedem Gottesdienst mit ${r.chance} % Chance Mitglied. Mitglieder kommen öfter (+${r.kommBonus} %) und zahlen am 1. jedes Monats um ${r.stunde}:00 Uhr den Beitrag. Fällt ein Mitglied auf Level 2, kündigt es jede Woche mit ${r.kuendigung[2]} % Chance, auf Level 1 mit ${r.kuendigung[1]} %.`,   // ENTWURF
+    beitragTitel: 'Beitrag',   // ENTWURF
+    beitrag: 'Monatsbeitrag pro Mitglied',   // ENTWURF
+    beitragWeniger: '−', beitragMehr: '+',
+    beitragHaltung: (h, r) => `${h > 0 ? '+' : h < 0 ? '−' : '±'}${Math.abs(h)} Haltung für jedes Mitglied bei jeder Abbuchung. Bei ${r.neutral} € ändert sich nichts, je ${r.schritt} € mehr ${r.haltungMehr}, je ${r.schritt} € weniger +${r.haltungWeniger}.`,   // ENTWURF
+    listeTitel: 'Alle Mitglieder',   // ENTWURF
+    leer: 'Noch keine Gemeindemitglieder.',   // ENTWURF
+    summe: 'Summe pro Monat',   // ENTWURF
+    spalten: { name: 'Name', seit: 'Seit Woche', haltung: 'Haltung', gefahr: 'Kündigt diese Woche' },   // ENTWURF
+    haltung: (level, haltung) => `Level ${level} · ${haltung}`,   // ENTWURF
+    gefahr: c => c ? `${c} %` : '–',   // ENTWURF
+    gefahrInfo: 'Rot markiert: Mitglieder auf Level 2 oder 1, die kündigen könnten.',   // ENTWURF
+    verlaufTitel: 'Verlauf',   // ENTWURF
+    verlaufInfo: n => `Mitglieder am Ende der letzten ${n} Wochen, dazu der Stand jetzt.`,   // ENTWURF
+    verlaufLeer: 'Der Verlauf beginnt am Ende dieser Woche.',   // ENTWURF
+    woche: w => `Woche ${w}`
+  },
   menschen: {
     knopf: 'Menschen',
     titel: 'Menschen im Ort',

@@ -6,7 +6,8 @@
 //   Wer kündigt, ist wieder normaler Besucher und kann später wieder Mitglied werden.
 // • Beitrag: am 1. jedes Monats um 8:00 je Mitglied (Kassenbuch: eine Buchung pro Mitglied, Kategorie 'mitglied').
 //   Dabei wirkt die Höhe auf die Haltung jedes Mitglieds.
-// Gespeichert in z.mitglieder: { beitrag, monat (zuletzt abgerechneter Monat 'JJJJ-MM'), woche (zuletzt geprüfte Woche) }.
+// Gespeichert in z.mitglieder: { beitrag, monat (zuletzt abgerechneter Monat 'JJJJ-MM'), woche (zuletzt geprüfte Woche),
+//   verlauf: [{ woche, anzahl }] – Mitgliederzahl am Ende jeder Woche nach den Kündigungen, für das Diagramm im Menü „Mitglieder“ (27.11.) }.
 import { MITGLIED as M } from '../inhalte/finanzen.js';
 import { TAG_MIN, WOCHE_MIN, zeitpunkt } from './zeit.js';
 import { tagDatum } from './kalender.js';
@@ -70,6 +71,10 @@ function wocheKuendigen(z, woche, zufall) {
     if (c && zufall() < c) delete b.mitglied;
   }
   z.mitglieder.woche = woche;
+  // Verlauf (27.11.): Stand am Ende der Woche merken, nur so viele Wochen wie das Diagramm zeigt
+  const v = z.mitglieder.verlauf || (z.mitglieder.verlauf = []);
+  v.push({ woche, anzahl: mitgliederVon(z).length });
+  if (v.length > M.verlaufWochen) v.splice(0, v.length - M.verlaufWochen);
 }
 
 // Nächster 1. eines Monats (ab heute), der noch nicht abgerechnet ist
@@ -93,6 +98,17 @@ export function mitgliederSchritt(z, zufall) {
 // Abfrage: Liste der Mitglieder (Kopien, nur Zahlen), am längsten dabei zuerst
 export function mitgliederListe(z) {
   mitgliederAnlegen(z);
-  return mitgliederVon(z).map(b => ({ id: b.id, name: b.voll, seit: b.mitglied.seit, haltung: b.zufriedenheit, level: levelVon(b) }))
+  return mitgliederVon(z).map(b => ({ id: b.id, name: b.voll, seit: b.mitglied.seit, haltung: b.zufriedenheit, level: levelVon(b),
+      kuendigung: M.kuendigung[levelVon(b)] || 0 }))   // Kündigungschance diese Woche (0 ab Level 3)
     .sort((a, b) => a.seit - b.seit || a.name.localeCompare(b.name, 'de'));
 }
+
+// Für andere Bereiche (27.11.): nur das Nötigste – z. B. die Finanz-Prognose oder Anzeigen brauchen keine Mitgliederliste
+export function mitgliederKurz(z) {
+  mitgliederAnlegen(z);
+  const anzahl = mitgliederVon(z).length, beitrag = z.mitglieder.beitrag;
+  return { anzahl, beitrag, proMonat: Math.round(anzahl * beitrag * 100) / 100 };
+}
+
+// Verlauf für das Diagramm: abgeschlossene Wochen (älteste zuerst)
+export const mitgliederVerlauf = z => (mitgliederAnlegen(z), (z.mitglieder.verlauf || []).map(p => ({ ...p })));

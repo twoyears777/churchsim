@@ -25,4 +25,5 @@ export const DAUERSPENDE = { abLevel: 3, chance: 0.05, start: 20, steigerung: 1,
 // Beitrag: am 1. jedes Monats um `stunde` Uhr je Mitglied; einstellbar `beitragMin`–`beitragMax` in `beitragSchritt`-Schritten, Start `beitragStart`.
 // Haltung beim Abbuchen: bei `neutral` € nichts; je Schritt darüber `haltungMehr`, je Schritt darunter `haltungWeniger`.
 export const MITGLIED = { abLevel: 3, chance: 0.10, kommBonus: 0.20, kuendigung: { 1: 0.70, 2: 0.30 },
-  beitragStart: 10, beitragMin: 0, beitragMax: 50, beitragSchritt: 5, neutral: 10, haltungMehr: -3, haltungWeniger: 2, stunde: 8 };
+  beitragStart: 10, beitragMin: 0, beitragMax: 50, beitragSchritt: 5, neutral: 10, haltungMehr: -3, haltungWeniger: 2, stunde: 8,
+  verlaufWochen: 8 };   // Mitglieder-Menü (27.11.): so viele abgeschlossene Wochen zeigt das Diagramm (Vorschlag Claude)

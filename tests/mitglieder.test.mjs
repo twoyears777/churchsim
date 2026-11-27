@@ -1,6 +1,6 @@
 // Prüft die Gemeindemitglieder (Spielprinzip von Lukas, 27.11.2026): Mitglied werden nach dem Gottesdienst ab Level 3 (10 %),
 // höhere Chance zu kommen (+20 %), Beitrag am 1. des Monats um 8:00, Haltung je nach Beitragshöhe,
-// Kündigen Sonntag 24:00 (Level 2: 30 %, Level 1: 70 %), Anzeige über finanzInfo()/besucherInfo()/menschen().
+// Kündigen Sonntag 24:00 (Level 2: 30 %, Level 1: 70 %), Anzeige über mitgliederInfo() (Menü „Mitglieder“, 27.11.)/besucherInfo()/menschen().
 // Starten mit: node tests/mitglieder.test.mjs
 import assert from 'node:assert';
 import { MITGLIED } from '../src/inhalte/finanzen.js';
@@ -17,7 +17,7 @@ import { moebelSetzen } from '../src/kern/moebel.js';
 import { versetzen } from '../src/kern/personen.js';
 
 assert.deepEqual(MITGLIED, { abLevel: 3, chance: 0.10, kommBonus: 0.20, kuendigung: { 1: 0.70, 2: 0.30 },
-  beitragStart: 10, beitragMin: 0, beitragMax: 50, beitragSchritt: 5, neutral: 10, haltungMehr: -3, haltungWeniger: 2, stunde: 8 });
+  beitragStart: 10, beitragMin: 0, beitragMax: 50, beitragSchritt: 5, neutral: 10, haltungMehr: -3, haltungWeniger: 2, stunde: 8, verlaufWochen: 8 });
 
 const folge = werte => { let i = 0; return () => werte[i++ % werte.length]; };
 // Nächsten Schritt der Mitglieder ausführen und zurückgeben, wann er war
@@ -99,22 +99,42 @@ assert.equal(beitragHaltung(5), 2); assert.equal(beitragHaltung(0), 4);
   L1.level = 3; mitgliedWerden(z, [L1], 9, () => 0); assert.deepEqual(L1.mitglied, { seit: 9 });
 }
 
-// Anzeige: finanzInfo, besucherInfo, menschen; Befehl mitgliedsbeitragSetzen; alter Spielstand legt sich an
+// Anzeige: mitgliederInfo (Menü „Mitglieder“, 27.11.), besucherInfo, menschen; Befehl mitgliedsbeitragSetzen; alter Spielstand legt sich an.
+// Die Finanzen bekommen keine Mitglieder-Daten mehr – nur die Kategorie „Mitgliedsbeiträge“.
 {
   const z = neuesSpiel(() => 0.5);
   z.ort.leute = [];
-  z.besucher = [{ id: 'm', voll: 'Mia M', vorname: 'Mia', level: 4, zufriedenheit: 30, besuche: 5, mitglied: { seit: 2 } }];
+  z.besucher = [{ id: 'm', voll: 'Mia M', vorname: 'Mia', level: 4, zufriedenheit: 30, besuche: 5, mitglied: { seit: 2 } },
+    { id: 'n', voll: 'Nils N', vorname: 'Nils', level: 2, zufriedenheit: 10, besuche: 5, mitglied: { seit: 3 } }];
   delete z.mitglieder;
   const spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0);
-  let f = spiel.finanzInfo();
-  assert.deepEqual(f.mitglieder.map(m => [m.name, m.seit, m.level, m.haltung]), [['Mia M', 3, 4, 30]]);
-  assert.equal(f.mitgliedsbeitrag.betrag, 10); assert.equal(f.mitgliedsbeitrag.haltung, 0);
+  let m = spiel.mitgliederInfo();
+  assert.deepEqual(m.liste.map(x => [x.name, x.seit, x.level, x.haltung, x.kuendigung]), [['Mia M', 3, 4, 30, 0], ['Nils N', 4, 2, 10, 30]]);
+  assert.equal(m.anzahl, 2); assert.equal(m.proMonat, 20);
+  assert.equal(m.beitrag.betrag, 10); assert.equal(m.beitrag.haltung, 0);
+  assert.equal(m.regeln.kuendigung[1], 70); assert.equal(m.regeln.chance, 10);
+  assert.equal(m.verlauf.length, 1); assert.ok(m.verlauf[0].jetzt); assert.equal(m.verlauf[0].anzahl, 2);
+  const f = spiel.finanzInfo();
   assert.equal(f.namen.einnahmen.mitglied, 'Mitgliedsbeiträge');
-  assert.equal(f.mitgliedRegeln.kuendigung[1], 70); assert.equal(f.mitgliedRegeln.chance, 10);
+  assert.equal(f.mitglieder, undefined); assert.equal(f.mitgliedsbeitrag, undefined);
   assert.equal(spiel.mitgliedsbeitragSetzen(25), 'ok');
-  f = spiel.finanzInfo(); assert.equal(f.mitgliedsbeitrag.betrag, 25); assert.equal(f.mitgliedsbeitrag.haltung, -9);
+  m = spiel.mitgliederInfo(); assert.equal(m.beitrag.betrag, 25); assert.equal(m.beitrag.haltung, -9); assert.equal(m.proMonat, 50);
   assert.equal(spiel.besucherInfo('m').mitglied, 3);
-  assert.equal(spiel.menschen().find(m => m.id === 'm').mitglied, true);
+  assert.equal(spiel.menschen().find(x => x.id === 'm').mitglied, true);
+}
+
+// Verlauf (27.11.): am Ende jeder Woche (nach den Kündigungen) wird die Mitgliederzahl gemerkt, höchstens 8 Wochen
+{
+  const z = neuesSpiel(() => 0.5);
+  z.ort.leute = [];
+  z.besucher = [{ id: 'a', voll: 'A', level: 3, zufriedenheit: 50, mitglied: { seit: 0 } }, { id: 'b', voll: 'B', level: 1, zufriedenheit: 50, mitglied: { seit: 0 } }];
+  let t;
+  do { t = schritt(z, () => 0.5); } while (!(t.tag === 0 && t.stunde === 0 && t.minute === 0));   // B (Level 1, 0,5 < 0,7) kündigt
+  assert.deepEqual(z.mitglieder.verlauf.map(p => p.anzahl), [1]);
+  for (let i = 0; i < 40; i++) schritt(z, () => 0.99);
+  assert.equal(z.mitglieder.verlauf.length, 8);
+  const ws = z.mitglieder.verlauf.map(p => p.woche);
+  assert.deepEqual(ws, ws.map((_, i) => ws[0] + i), 'Wochen lückenlos');
 }
 
 // Im echten Ablauf: nach einem Gottesdienst werden Anwesende ab Level 3 Mitglied (Würfel 0,05 < 10 %), Level 2 nicht

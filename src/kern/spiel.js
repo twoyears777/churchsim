@@ -42,7 +42,7 @@ import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe 
 import { skillsAnlegen, musikStand, musikLevel, evangelisationStand, stufeInfo, multiplikatorKaufen, multiplikatorInfo, hatSkill } from './skills.js';
 import { HEILIGKEIT, FORSCHUNGEN } from '../inhalte/forschung.js';
 import { DAUERSPENDE, MITGLIED } from '../inhalte/finanzen.js';
-import { mitgliederAnlegen, mitgliederListe, beitragSetzen, beitragHaltung } from './mitglieder.js';
+import { mitgliederAnlegen, mitgliederListe, beitragSetzen, beitragHaltung, mitgliederKurz, mitgliederVerlauf } from './mitglieder.js';
 import { zeitungOffen, zeitungSchliessen } from './erster.js';
 import { wochenberichtAnlegen, wochenberichtOffen, wochenberichtSchliessen, wochenberichtVon } from './wochenbericht.js';
 import { festeAnlegen, festAnfrageOffen, festAusSchluessel, festSchluessel, festPlanSetzen, festAbsagen } from './feste.js';
@@ -606,13 +606,22 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
         // Dauerspender: wer spendet wie viel (diesen Montag), was nächsten Montag kommt, seit welcher Woche (ab 1); Regeln zum Anzeigen
         dauerspender: dauerspenderListe(z).map(d => ({ ...d, seit: d.seit + 1 })),
         dauerspendeRegeln: { ...DAUERSPENDE, chance: Math.round(DAUERSPENDE.chance * 100) },
-        // Gemeindemitglieder: Liste (seit Woche ab 1), Beitrag, was er an Haltung bewirkt, Regeln zum Anzeigen (Prozent)
-        mitglieder: mitgliederListe(z).map(m => ({ ...m, seit: m.seit + 1 })),
-        mitgliedsbeitrag: { betrag: z.mitglieder.beitrag, haltung: beitragHaltung(z.mitglieder.beitrag), min: MITGLIED.beitragMin, max: MITGLIED.beitragMax, schritt: MITGLIED.beitragSchritt },
-        mitgliedRegeln: { abLevel: MITGLIED.abLevel, chance: Math.round(MITGLIED.chance * 100), kommBonus: Math.round(MITGLIED.kommBonus * 100), stunde: MITGLIED.stunde,
+        verlauf: f.verlauf.map(w => ({ ...w, woche: w.woche + 1 }))
+      };
+    },
+    // Menü „Mitglieder“ (27.11.): alle Daten zu den Gemeindemitgliedern an einer Stelle. Andere Fenster (Finanzen) bekommen davon nichts –
+    // die Beiträge stehen dort nur als Buchungen im Kassenbuch. Wochen ab 1, Prozente als ganze Zahlen.
+    mitgliederInfo() {
+      const k = mitgliederKurz(z), zp = zeitpunkt(z.minuten);
+      return {
+        anzahl: k.anzahl, proMonat: k.proMonat, verlaufWochen: MITGLIED.verlaufWochen,
+        liste: mitgliederListe(z).map(m => ({ ...m, seit: m.seit + 1, kuendigung: Math.round(m.kuendigung * 100) })),
+        beitrag: { betrag: k.beitrag, haltung: beitragHaltung(k.beitrag), min: MITGLIED.beitragMin, max: MITGLIED.beitragMax, schritt: MITGLIED.beitragSchritt },
+        regeln: { abLevel: MITGLIED.abLevel, chance: Math.round(MITGLIED.chance * 100), kommBonus: Math.round(MITGLIED.kommBonus * 100), stunde: MITGLIED.stunde,
           kuendigung: Object.fromEntries(Object.entries(MITGLIED.kuendigung).map(([l, c]) => [l, Math.round(c * 100)])),
           neutral: MITGLIED.neutral, schritt: MITGLIED.beitragSchritt, haltungMehr: MITGLIED.haltungMehr, haltungWeniger: MITGLIED.haltungWeniger },
-        verlauf: f.verlauf.map(w => ({ ...w, woche: w.woche + 1 }))
+        // Diagramm: Stand am Ende der letzten Wochen, dazu der Stand jetzt (laufende Woche)
+        verlauf: [...mitgliederVerlauf(z).map(p => ({ woche: p.woche + 1, anzahl: p.anzahl })), { woche: zp.woche + 1, anzahl: k.anzahl, jetzt: true }]
       };
     },
     // Bekanntheit-Fenster: woher sie kommt, wie sie sich entwickelt hat und was sie bewirkt

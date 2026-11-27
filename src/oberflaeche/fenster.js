@@ -7,6 +7,7 @@ import { changelogHolen } from './changelog.js';
 import { HILFE } from '../inhalte/hilfe.js';
 import { VERSION } from '../version.js';
 import { dienstplanFenster, dienstplanKlick, dienstplanEinrichten } from './dienstplan.js';
+import { mitgliederFenster } from './mitglieder.js';   // Menü „Mitglieder“ (27.11.)
 
 const maske = () => $('maske');
 const ART_TEXT = TEXTE.personKarte.art;   // „Hauptamtlich“ / „Ehrenamtlich“ für die Mitarbeiter-Kacheln im Raum- und Foyer-Fenster (fehlte in 0.1.17: Raum-Fenster ging nicht mehr auf)
@@ -31,7 +32,7 @@ export function fensterOffen() { return !maske().hidden; }
 function fensterInhalt(f) {
   return { raumtyp: raumTypFenster, raum: raumFenster, kaffee: kaffeeFenster, maschine: maschinenFenster, automat: automatFenster, besucher: besucherKarte, person: personenKarte,
     menschen: menschenFenster, seelsorge: seelsorgeFenster, stuhl: stuhlFenster, tor: torFenster, evangelisation: evangelisationFenster, changelog: changelogFenster, bekanntheit: bekanntheitFenster, bus: busFenster, schaukasten: schaukastenFenster, hilfe: hilfeFenster, finanzen: finanzFenster,
-    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster }[f.art](f);
+    kirchenjahr: kirchenjahrFenster, fest: festFenster, forschung: forschungFenster, foyer: foyerFenster, kalender: kalenderFenster, zeitung: zeitungFenster, wochenbericht: wochenberichtFenster, dienstplan: dienstplanFenster, mitglieder: mitgliederFenster }[f.art](f);
 }
 // Wird bei jeder Anzeige-Aktualisierung aufgerufen; baut das Fenster nur neu, wenn sich der Inhalt geändert hat.
 export function fensterAktualisieren() {
@@ -49,7 +50,7 @@ export function fensterAktualisieren() {
   m.classList.toggle('sehr-breit', f.art === 'finanzen' || f.art === 'kalender' || f.art === 'menschen' || f.art === 'dienstplan');
   m.classList.toggle('wochenbericht', f.art === 'wochenbericht');   // Wochenzusammenfassung (27.11.): in der Mitte wie die Zeitung
   m.classList.toggle('mittel', f.art === 'raum' && f.platz !== undefined);   // Bausteintabelle braucht mehr Platz (640 px)
-  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender' || f.art === 'dienstplan');
+  m.classList.toggle('breit', f.art === 'finanzen' || f.art === 'raum' || f.art === 'kaffee' || f.art === 'menschen' || f.art === 'changelog' || f.art === 'bekanntheit' || f.art === 'hilfe' || f.art === 'kirchenjahr' || f.art === 'fest' || f.art === 'kalender' || f.art === 'dienstplan' || f.art === 'mitglieder');
   if (inhalt !== letzterInhalt) { letzterInhalt = inhalt; m.querySelector('.inhalt').innerHTML = inhalt; }
   m.hidden = false;
   amZeiger(m, f.zeiger);
@@ -466,23 +467,14 @@ function finanzFenster() {
       ${zeile({ ...w, konto: f.konto }, true)}${f.verlauf.map(x => zeile(x, false)).join('')}</table>
     ${f.verlauf.length ? '' : `<p class="leer">${T.verlaufLeer}</p>`}`;
   const DS = T.dauerspenderSpalten, ds = f.dauerspender;
-  const dauerspender = `<p class="unter">${T.dauerspenderInfo(f.dauerspendeRegeln)}</p>` + (ds.length
+  // Dauerspender (27.11.): nur eine Zeile, aufklappbar für Erklärung und Liste
+  const dsAuf = ((ui.fenster && ui.fenster.offen) || []).includes('dauerspender');
+  const dauerspenderInhalt = `<p class="unter">${T.dauerspenderInfo(f.dauerspendeRegeln)}</p>` + (ds.length
     ? `<table class="finanzen hell verlauf"><tr><th>${DS.name}</th><th>${DS.betrag}</th><th>${DS.naechster}</th><th>${DS.seit}</th><th>${DS.haltung}</th></tr>
         ${ds.map(d => `<tr><td>${esc(d.name || '–')}</td><td class="zahl">${plus(d.betrag)}</td><td class="zahl">${plus(d.naechster)}</td><td class="zahl">${d.seit}</td><td class="zahl">${d.haltung === null ? '–' : T.dauerspenderHaltung(d.level, d.haltung)}</td></tr>`).join('')}
         <tr class="summe"><td>${T.dauerspenderSumme}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.betrag, 0))}</td><td class="zahl">${plus(ds.reduce((a, d) => a + d.naechster, 0))}</td><td></td><td></td></tr></table>`
     : `<p class="leer">${T.dauerspenderLeer}</p>`);
-  // Gemeindemitglieder (27.11.): Beitrag mit −/+ einstellen, Liste der Mitglieder
-  const MS = T.mitgliederSpalten, ms = f.mitglieder, mb = f.mitgliedsbeitrag;
-  const mitglieder = `<p class="unter">${T.mitgliederInfo(f.mitgliedRegeln)}</p>
-    <div class="zeile"><span>${T.beitrag}:</span>
-      <button data-beitrag="${mb.betrag - mb.schritt}"${mb.betrag <= mb.min ? ' disabled' : ''}>${T.beitragWeniger}</button>
-      <b>${geld(mb.betrag)}</b>
-      <button data-beitrag="${mb.betrag + mb.schritt}"${mb.betrag >= mb.max ? ' disabled' : ''}>${T.beitragMehr}</button></div>
-    <p class="unter">${T.beitragHaltung(mb.haltung, f.mitgliedRegeln)}</p>` + (ms.length
-    ? `<table class="finanzen hell verlauf"><tr><th>${MS.name}</th><th>${MS.seit}</th><th>${MS.haltung}</th></tr>
-        ${ms.map(m => `<tr><td>${esc(m.name || '–')}</td><td class="zahl">${m.seit}</td><td class="zahl">${T.dauerspenderHaltung(m.level, m.haltung)}</td></tr>`).join('')}
-        <tr class="summe"><td>${T.mitgliederSumme}</td><td></td><td class="zahl">${plus(ms.length * mb.betrag)}</td></tr></table>`
-    : `<p class="leer">${T.mitgliederLeer}</p>`);
+  const dauerspender = `<div class="menschengruppe${dsAuf ? ' offen' : ''}"><button class="gruppenkopf" data-gruppe="dauerspender"><span>${dsAuf ? '▾' : '▸'} ${T.dauerspenderZeile(ds.length, plus(ds.reduce((a, d) => a + d.betrag, 0)))}</span></button>${dsAuf ? `<div class="wb-inhalt">${dauerspenderInhalt}</div>` : ''}</div>`;
   const zusatz = b => b.spenderName ? esc(b.spenderName) : b.anlass ? T.anlass[b.anlass] : b.moebelName ? b.moebelName + (b.was === 'verbessern' ? ' ' + T.was.verbessern : '')
     : b.veranstaltungName || (b.was ? T.was[b.was] : '');
   const uhr = b => b.tag === null ? '' : `${TEXTE.tageKurz[b.tag]} ${String(b.stunde).padStart(2, '0')}:${String(b.minute).padStart(2, '0')} · `;
@@ -496,7 +488,6 @@ function finanzFenster() {
   return `<h2>${T.titel}</h2><p class="unter staerker">${T.kontostand(geld(f.konto))}</p>
     <h3>${T.dieseWoche(w.woche)}</h3>${woche}
     <h3>${T.kaffee}</h3>${kaffee}
-    <h3>${T.mitglieder}</h3>${mitglieder}
     <h3>${T.dauerspender}</h3>${dauerspender}
     <h3>${T.verlauf}</h3><p class="unter">${T.verlaufInfo(f.verlaufWochen)}</p>${verlauf}
     <h3>${T.kassenbuch}</h3>${kassenbuch}`;
@@ -926,7 +917,7 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-forschung-abbrechen-ja')) { spiel.forschungAbbrechen(); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-bus-ausbauen')) spiel.busAusbauen();
     else if (b.hasAttribute('data-werbekampagne')) spiel.werbekampagneKaufen();
-    else if (b.dataset.beitrag !== undefined) spiel.mitgliedsbeitragSetzen(Number(b.dataset.beitrag));   // Finanz-Fenster: Monatsbeitrag
+    else if (b.dataset.beitrag !== undefined) spiel.mitgliedsbeitragSetzen(Number(b.dataset.beitrag));   // Menü „Mitglieder“: Monatsbeitrag
     else if (b.dataset.typ !== undefined) { spiel.raumTypSetzen(f.nr, b.dataset.typ); fensterSchliessen(); }
     ui.speichern(); ui.anzeigeErzwingen(); ui.malen();
   });
