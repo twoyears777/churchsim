@@ -168,3 +168,13 @@ function oeffnen(f, name) {
   console.error = echt;
 }
 console.log('fenster: alles ok');
+// Menü „Mitarbeiter“ (27.11.): im Kasten „Dienste von …“ stehen die Skills der gewählten Person – Ehrenamt und Hauptamt
+{
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: neuesSpiel(() => 0.5) }), () => 0.5);
+  const { dienstplanFenster } = await import('../src/oberflaeche/dienstplan.js');
+  const ea = dienstplanFenster({ art: 'dienstplan', tab: 'ehrenamt' });
+  assert.ok(ea.includes('dp-skills') && ea.includes('Musik: Level') && ea.includes('Evangelisation: Level'), 'Ehrenamt: Musik und Evangelisation');
+  const ha = dienstplanFenster({ art: 'dienstplan', tab: 'hauptamt' });
+  assert.ok(ha.includes('dp-skills') && ha.includes('Seelsorge – Stufe') && ha.includes('Haltungs-Multiplikator'), 'Hauptamt: Seelsorge und Multiplikator');
+  oeffnen({ art: 'dienstplan', tab: 'hauptamt' }, 'Mitarbeiter-Menü, Tab Hauptamt');
+}

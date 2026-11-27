@@ -18,6 +18,24 @@ function stelleName(s, stellen) {
   return f ? f(s.dingName || '', n, s.code === 'begruessung' ? raumText(s.raum) : null) : s.code;
 }
 
+// Skills der ausgewählten Person (Lukas, 27.11.): im Kasten „Dienste von …“, damit man beim Einteilen sieht, wer was kann.
+// Daten aus derselben Abfrage wie die Charakter-Karte (personInfo), Texte ebenfalls von dort – keine neuen Texte.
+const balken = anteil => `<span class="balken mini"><span style="width:${Math.round(Math.max(0, Math.min(1, anteil)) * 100)}%"></span></span>`;
+function skillsZeile(id) {
+  const p = ui.spiel.personInfo(id);
+  if (!p) return '';
+  const chips = [];
+  if (p.musik) chips.push([TEXTE.ausstattung.musikLevel(p.musik.level), p.musik.fortschritt]);
+  if (p.evangelisation) chips.push([TEXTE.evangelisation.karte(p.evangelisation.level), p.evangelisation.fortschritt]);
+  if (p.seelsorge) { const s = p.seelsorge;
+    chips.push([TEXTE.seelsorge.karte.titel(s.stufe, s.maxStufe), s.bis === null ? 1 : (s.punkte - s.von) / (s.bis - s.von)]); }
+  if (p.multiplikator) { const m = p.multiplikator, n = m.naechste;
+    chips.push([TEXTE.multiplikatorKarte.titel(m.stufe, m.maxStufe, m.faktor), !n ? 1 : n.ab ? m.geleitet / n.ab : 0]); }
+  return `<div class="dp-skills"><b>${TEXTE.personKarte.skills}</b>${chips.length
+    ? chips.map(([text, anteil]) => `<span class="dp-skill"><span>${esc(text)}</span>${balken(anteil)}</span>`).join('')
+    : `<span class="unter">${TEXTE.personKarte.skillsSpaeter}</span>`}</div>`;
+}
+
 export function dienstplanFenster(f) {
   const T = TEXTE.dienstplan, alles = ui.spiel.dienstplan(), l = ui.spiel.lage();
   if (f.tag === undefined) f.tag = l.tag;
@@ -46,7 +64,7 @@ export function dienstplanFenster(f) {
   const meine = !gewaehlt ? '' : `<div class="dp-meine"><b>${esc(T.meineDienste(gewaehlt.name))}</b>${dienste.length
     ? dienste.map(({ t, s }) => `<button class="dp-dienst${t.tag === f.tag ? ' offen' : ''}" data-dp-tag="${t.tag}">
         <small>${TEXTE.tageKurz[t.tag]} · ${TEXTE.kaffeeFenster.slot[t.slot]}</small><b>${esc(terminName(t))}</b><span>${esc(stelleName(s, t.stellen))}</span></button>`).join('')
-    : `<span class="unter">${esc(T.keineDienste(gewaehlt.name))}</span>`}</div>`;
+    : `<span class="unter">${esc(T.keineDienste(gewaehlt.name))}</span>`}${skillsZeile(gewaehlt.id)}</div>`;
   const bloecke = Object.keys(TEXTE.kaffeeFenster.slot).map(slot => {
     const hier = d.termine.filter(t => t.tag === f.tag && t.slot === slot);
     const termine = hier.length ? hier.map(t => `<div class="dp-termin ${t.art}"><b>${esc(terminName(t))}</b>
