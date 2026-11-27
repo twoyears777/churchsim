@@ -2,6 +2,7 @@
 // Eigener Knopf oben. Hier liegt alles zu den Gemeindemitgliedern: Anzahl, Monatsbeitrag (nur hier einstellbar),
 // Liste mit Kündigungsgefahr (Level 2 oder 1 rot markiert) und ein kleines Diagramm der Mitgliederzahl über die Wochen.
 // Alle Zahlen kommen über die Abfrage mitgliederInfo vom Spiel; hier wird nur HTML daraus.
+// Zeile anklicken (27.11.) öffnet die Karte der Person – derselbe Weg wie in der Menschen-Liste (tr[data-mensch] in fenster.js).
 // Der Beitrags-Knopf (data-beitrag) wird in fenster.js an den Befehl mitgliedsbeitragSetzen weitergegeben.
 import { TEXTE } from '../inhalte/texte.js';
 import { ui, esc } from './ui.js';
@@ -30,8 +31,8 @@ export function mitgliederFenster() {
       <button data-beitrag="${b.betrag + b.schritt}"${b.betrag >= b.max ? ' disabled' : ''}>${T.beitragMehr}</button></div>
     <p class="unter">${T.beitragHaltung(b.haltung, m.regeln)}</p>`;
   const liste = m.liste.length
-    ? `<table class="finanzen hell verlauf"><tr><th>${S.name}</th><th>${S.seit}</th><th>${S.haltung}</th><th>${S.gefahr}</th></tr>
-        ${m.liste.map(x => `<tr${x.kuendigung ? ' class="mitglied-gefahr"' : ''}><td>${esc(x.name || '–')}</td><td class="zahl">${x.seit}</td>
+    ? `<table class="finanzen hell verlauf mitglieder-liste"><tr><th>${S.name}</th><th>${S.seit}</th><th>${S.haltung}</th><th>${S.gefahr}</th></tr>
+        ${m.liste.map(x => `<tr data-mensch="${esc(String(x.id))}" data-mart="besucher"${x.kuendigung ? ' class="mitglied-gefahr"' : ''}><td>${esc(x.name || '–')}</td><td class="zahl">${x.seit}</td>
           <td class="zahl">${T.haltung(x.level, x.haltung)}</td><td class="zahl">${T.gefahr(x.kuendigung)}</td></tr>`).join('')}
         <tr class="summe"><td>${T.summe}</td><td></td><td></td><td class="zahl">${geld(m.proMonat)}</td></tr></table>
       ${m.liste.some(x => x.kuendigung) ? `<p class="unter">${T.gefahrInfo}</p>` : ''}`

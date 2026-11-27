@@ -921,7 +921,7 @@ function wochenberichtFenster(f) {
 export function fensterEinrichten() {
   dienstplanEinrichten(maske());   // Dienstplan: Ehrenamtliche mit gedrückter Maustaste auf Stellen ziehen (27.11.)
   maske().addEventListener('click', e => {
-    // Zeile in der Menschen-Liste → Kärtchen der Person
+    // Zeile in der Menschen- oder Mitglieder-Liste → Kärtchen der Person
     const zeile = e.target.closest('tr[data-mensch]');
     if (zeile) return fensterOeffnen(zeile.dataset.mart === 'person' ? { art: 'person', id: zeile.dataset.mensch } : { art: 'besucher', id: zeile.dataset.mensch });
     const b = e.target.closest('button'), f = ui.fenster, spiel = ui.spiel;

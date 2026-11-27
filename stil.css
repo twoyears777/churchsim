@@ -161,8 +161,8 @@ li.ok, td.ok { color: #2e7d32; } li.fehlt, td.fehlt { color: #b3261e; }
 table.menschen { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; }
 table.menschen th { text-align: left; padding: 0; }
 table.menschen td { padding: 6px 6px; border-bottom: 1px solid #e2dccd; white-space: nowrap; }
-table.menschen tr[data-mensch] { cursor: pointer; }
-table.menschen tr[data-mensch]:hover td { background: #ebe5d6; }
+table.menschen tr[data-mensch], table.mitglieder-liste tr[data-mensch] { cursor: pointer; }
+table.menschen tr[data-mensch]:hover td, table.mitglieder-liste tr[data-mensch]:hover td { background: #ebe5d6; }
 /* Menschen im Ort: Überblick und aufklappbare Gruppen (26.11.) */
 table.menschen.statistik th { padding: 4px 6px; font-weight: 600; }
 table.menschen.statistik tr.summe td { font-weight: 600; border-top: 2px solid #c9c0aa; }
