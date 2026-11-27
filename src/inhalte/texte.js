@@ -625,6 +625,8 @@ export const TEXTE = {
   nichtGenugGeld: (name, preis) => `Nicht genug Geld für ${name} (${preis}).`,
 
   // ---- Bauleiste unten (25.11.; Reiter von Lukas freigegeben, übrige Texte ENTWÜRFE von Claude) ----
+  // Spicker rechts im Bau-Modus: Mindestgröße je Raum. ENTWURF von Claude (27.11.) – Lukas formuliert selbst
+  raumSpicker: { titel: 'Mindestgröße', groesse: (b, h) => `${b} × ${h}` },
   bauleiste: {
     kategorien: { bauen: 'Bauen', gottesdienst: 'Gottesdienst', kirchkaffee: 'Kirchkaffee', gemeindesaal: 'Gemeindesaal', foyer: 'Foyer', toiletten: 'Toiletten', deko: 'Deko', aussen: 'Außen' },   // „Foyer“, „Toiletten“: ENTWURF
     werkzeuge: { wand: 'Wand', tuer: 'Tür', fenster: 'Fenster', abriss: 'Abriss', bushaltestelle: 'Bushaltestelle' },   // „Fenster“: ENTWURF

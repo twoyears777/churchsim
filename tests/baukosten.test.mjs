@@ -237,3 +237,11 @@ assert.equal(STARTGELD, 1000);
 }
 
 console.log('Baukosten, Fenster und Foyer: alle Tests bestanden');
+
+// Spicker im Bau-Modus (27.11.): die Abfrage liefert jede Raumart mit Name, Farbe und Mindestgröße – als Kopie
+{
+  const s = spielStarten(null, () => 0.5), liste = s.raumtypen();
+  const { RAUMTYPEN } = await import('../src/inhalte/raumtypen.js');
+  assert.deepEqual(liste.map(t => [t.id, t.name, t.minGroesse]), RAUMTYPEN.map(t => [t.id, t.name, t.minGroesse]));
+  liste[0].minGroesse[0] = 99; assert.notEqual(s.raumtypen()[0].minGroesse[0], 99);
+}

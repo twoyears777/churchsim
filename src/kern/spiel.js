@@ -725,6 +725,8 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       const stuecke = neueWandStuecke(z, x0, y0, x1, y1), kosten = stuecke * BAUKOSTEN.wand;   // Baukosten (25.11.)
       return { x0, y0, x1, y1, konflikte: wandKonflikte(z, x0, y0, x1, y1), stuecke, kosten, leistbar: kannBezahlen(z, kosten) };
     },
+    // Spicker im Bau-Modus (27.11.): alle Raumarten mit ihrer Mindestgröße – sichtbar, bevor man baut
+    raumtypen() { return RAUMTYPEN.map(t => ({ id: t.id, name: t.name, farbe: t.farbe, minGroesse: [...t.minGroesse] })); },
     // Fenster „Raumfunktion“ im Editor
     raumtypWahl(nr) {
       const r = raeume.liste[nr];

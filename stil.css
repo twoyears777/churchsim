@@ -74,6 +74,14 @@ button.haupt { background: #2d69be; border-color: #2d69be; color: #fff; }
 .spielHinweis:empty { display: none; }
 .datum { cursor: pointer; }
 .datum:hover { filter: brightness(1.06); }
+/* Spicker im Bau-Modus (27.11.): Mindestgröße je Raum, dezent am rechten Rand. Aussehen: PLATZHALTER von Claude */
+.raum-spicker { position: absolute; top: 10px; right: 12px; display: flex; flex-direction: column; gap: 3px; padding: 7px 10px;
+  background: rgba(43,42,39,.72); border: 1px solid rgba(255,255,255,.10); border-radius: 8px; font-size: 12px; color: #c9c4b8; pointer-events: none; z-index: 5; }
+.raum-spicker b { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #9d988c; margin-bottom: 2px; }
+.raum-spicker .zeile { display: flex; align-items: center; gap: 7px; }
+.raum-spicker i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.raum-spicker .name { flex: 1; }
+.raum-spicker .mass { color: #f3efe6; font-variant-numeric: tabular-nums; margin-left: 12px; white-space: nowrap; }
 .modus-editor .datum, .modus-editor .unten-links, .modus-editor .unten-mitte, .modus-editor .unten-rechts { display: none; }
 .modus-spiel .maske { bottom: 72px; }
 .finanzen .konto td { font-weight: 600; padding-bottom: 8px; }

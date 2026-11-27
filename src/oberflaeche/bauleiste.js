@@ -92,8 +92,17 @@ export function bauleisteAktualisieren() {
   for (const b of document.querySelectorAll('.bauleiste [data-werkzeug]')) b.setAttribute('aria-pressed', b.dataset.werkzeug === ui.werkzeug);
 }
 
+// Spicker am rechten Rand (Lukas, 27.11.): welcher Raum wie groß sein muss – man sieht es, bevor man die Wände zieht.
+// Nur im Bau-Modus sichtbar (Klasse „editor“); Klicks gehen hindurch auf die Karte.
+function spickerBauen() {
+  const S = TEXTE.raumSpicker;
+  $('raumSpicker').innerHTML = `<b>${esc(S.titel)}</b>` + ui.spiel.raumtypen().map(t =>
+    `<span class="zeile"><i style="background:${t.farbe}"></i><span class="name">${esc(t.name)}</span><span class="mass">${esc(S.groesse(t.minGroesse[0], t.minGroesse[1]))}</span></span>`).join('');
+}
+
 export function bauleisteEinrichten({ beiWahl, beiBus, beiMenue }) {
   aufWahl = beiWahl; aufBus = beiBus; aufMenue = beiMenue || (() => {});
+  spickerBauen();
   $('textAbriss').textContent = T.werkzeuge.abriss;
   symboleMalen(document.querySelector('.bau-rechts'));
   reiterBauen(); kartenBauen();
