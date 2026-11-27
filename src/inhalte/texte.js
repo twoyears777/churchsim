@@ -579,8 +579,7 @@ export const TEXTE = {
     begruessung: (da, n) => `Begrüßungsdienst (ein Ehrenamtlicher im Foyer): ${da ? `+${n}` : `fehlt – würde +${n} bringen`}`,
     teil: (name, anzahl, n) => `${name} (${anzahl}): ${anzahl ? `+${anzahl * n}` : `je Stück +${n}`}`,
     nichtFertig: 'Das Foyer ist noch nicht fertig (Tür oder Größe fehlt) – es bringt noch nichts.',
-    mitarbeiter: 'Im Foyer',
-    keiner: 'Niemand im Foyer – zieh einen Ehrenamtlichen hierher für den Begrüßungsdienst.'
+    mitarbeiter: 'Im Foyer'
   },
   // Kauf gesperrt, weil schon genug davon im Raum steht
   grenze: {

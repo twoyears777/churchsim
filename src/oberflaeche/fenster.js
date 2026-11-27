@@ -286,9 +286,8 @@ function foyerFenster(f) {
   if (!r) return null;
   const T = TEXTE.foyerFenster;
   const zeilen = [T.begruessung(r.begruessung.da, r.begruessung.haltung), ...r.teile.map(t => T.teil(esc(t.name), t.anzahl, t.haltung))];
-  const leute = r.imRaum.length
-    ? r.imRaum.map(m => `<div class="kachel klein-kachel"><b>${esc(m.name)}</b><small>${ART_TEXT[m.art]}</small></div>`).join('')
-    : `<p class="warnung">${T.keiner}</p>`;
+  // Kein Hinweis, wenn niemand da ist – wie man Ehrenamtliche einteilt, steht im EA-Menü (Lukas, 27.11.)
+  const leute = r.imRaum.map(m => `<div class="kachel klein-kachel"><b>${esc(m.name)}</b><small>${ART_TEXT[m.art]}</small></div>`).join('');
   return `<h2>${esc(r.typName)}</h2>
     <p class="unter">${T.info}</p>
     ${r.fertig ? '' : `<p class="warnung">${T.nichtFertig}</p>`}
