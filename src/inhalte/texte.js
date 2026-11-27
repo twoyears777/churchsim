@@ -814,6 +814,10 @@ export const TEXTE = {
     titel: 'Gemeindekalender',
     diese: 'Diese Woche',
     naechste: 'Nächste Woche',
+    vorherige: 'Vorherige Woche',   // Wortlaut von Lukas, 27.11.
+    // Bericht einer vergangenen Veranstaltung (Wörter von Lukas freigegeben, 27.11.)
+    bericht: { besucher: 'Besucher', keinPlatz: 'Kein Platz', kollekte: 'Kollekte', spende: 'Spende', haltung: 'Haltung', heiligkeit: 'Heiligkeit', bekanntheit: 'Bekanntheit' },
+    leerVorher: 'Für diese Woche gibt es keine Berichte.',   // ENTWURF von Claude, 27.11. – noch nicht von Lukas freigegeben
     woche: n => `Woche ${n} · alle Veranstaltungen in allen Räumen`,
     fest: (fest, art) => art ? `${fest} (${art})` : fest,
     kaffee: 'Kirchkaffee geöffnet',

@@ -35,6 +35,7 @@ import { jugendAnlegen, istJugend, konfiStand, konfiMeldung, konfirmandenZahl, f
 import { FESTE } from '../inhalte/kirchenjahr.js';
 import { START_EHRENAMTLICHE } from '../inhalte/mitarbeiter.js';
 import { wandBauen as bauen, wandKonflikte, wandAnpassen } from './bauen.js';
+import { berichtVon, berichteDerWoche } from './berichte.js';
 import { sonntagDerWoche, kirchenjahrStand, kommendeFeste, tagAnzeige, zeitAmTag, festAmTag, feiertagAmTag, faktorAmTag } from './kalender.js';
 import { dauerspenderAnlegen, dauerspenderListe } from './dauerspender.js';
 import { forschungAnlegen, forschungStarten, forschungAbbrechen, forschungListe } from './forschung.js';
@@ -768,27 +769,36 @@ export function spielStarten(gespeichert = null, zufall = Math.random) {
       };
     },
     // Gemeindekalender (Lukas, 26.11.): Wochenüberblick über alle Veranstaltungen in allen Räumen, Feste aus dem Kirchenjahr
-    // und die Öffnungszeiten des Kirchkaffees. versatz: 0 = diese Woche, 1 = nächste Woche.
+    // und die Öffnungszeiten des Kirchkaffees. versatz: 0 = diese Woche, 1 = nächste Woche, -1 = vorherige Woche (27.11.).
     // termine[].zustand: 'geplant' | 'faelltAus' | 'laeuft' | 'vorbei' | 'ausgefallen'; fehlt: Code wie im Raum-Fenster
+    // termine[].bericht (27.11.): was die Veranstaltung gebracht hat – { besucher, keinPlatz, kollekte, spende, geld, haltung,
+    // heiligkeit, bekanntheit } oder null (noch nicht vorbei, ausgefallen oder aus der Zeit vor den Berichten). Ohne Kirchkaffee.
+    // Die vorherige Woche kommt ganz aus den gespeicherten Berichten (der Plan von heute kann inzwischen anders sein).
     kalenderInfo(versatz = 0) {
-      const woche = zeitpunkt(z.minuten).woche + (versatz === 1 ? 1 : 0), heute = Math.floor(z.minuten / TAG_MIN);
+      const v = versatz === 1 ? 1 : versatz === -1 ? -1 : 0;
+      const woche = zeitpunkt(z.minuten).woche + v, heute = Math.floor(z.minuten / TAG_MIN);
       // Raum-Namen: gibt es einen Raumtyp mehrmals, bekommt er eine Nummer („Gemeindesaal 2“)
       const schluessel = r => Math.min(...r.zellen), nr = new Map(), zaehler = {};
       for (const r of raeume.liste.filter(r => r.typ)) { zaehler[r.typ.id] = (zaehler[r.typ.id] || 0) + 1; nr.set(schluessel(r), zaehler[r.typ.id]); }
-      const raumName = r => r ? { name: r.typ.name, nummer: zaehler[r.typ.id] > 1 ? nr.get(schluessel(r)) : null } : { name: null, nummer: null };
+      const raumName = r => r && r.typ ? { name: r.typ.name, nummer: zaehler[r.typ.id] > 1 ? nr.get(schluessel(r)) : null } : { name: null, nummer: null };
       const raumAus = k => { const i = raeume.gruppe[k]; return i === undefined || i < 0 ? null : raeume.liste[i] || null; };
       const tage = Array.from({ length: 7 }, (_, tag) => {
         const tagNr = woche * 7 + tag, f = festAmTag(tagNr), a = tagAnzeige(tagNr);
         return { tag, datum: a.datum, heute: tagNr === heute, fest: f && festAktiv(z, f) ? f.name : null, feiertag: feiertagAmTag(tagNr) };
       });
-      const termine = termineDerWoche(z, raeume, woche).filter(t => t.raum !== null).map(t => {
-        const st = terminStand(z, raeume, t), r = raumAus(t.raum);
-        const festName = t.fest ? (festAusSchluessel(t.fest) || { fest: {} }).fest.name || null : null;
-        return { tag: t.plan.tag, slot: t.plan.slot, platz: t.platz, art: t.art, artName: artName(t.art), festName, ...raumName(r), ...st };
-      });
-      const kaffee = raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee')
+      const festNameVon = k => k ? (festAusSchluessel(k) || { fest: {} }).fest.name || null : null;
+      const bericht = id => { const b = berichtVon(z, id); return b ? { ...b, geld: b.kollekte + b.spende } : null; };
+      const termine = v === -1
+        ? berichteDerWoche(z, woche).map(b => ({ id: b.id, tag: b.tag, slot: b.slot, platz: b.platz, art: b.art, artName: artName(b.art), festName: festNameVon(b.fest),
+          ...raumName(b.raum === null ? null : raumAus(b.raum)), zustand: b.ausgefallen ? 'ausgefallen' : 'vorbei', fehlt: b.grund, bericht: bericht(b.id) }))
+        : termineDerWoche(z, raeume, woche).filter(t => t.raum !== null).map(t => {
+          const st = terminStand(z, raeume, t), r = raumAus(t.raum);
+          return { id: t.id, tag: t.plan.tag, slot: t.plan.slot, platz: t.platz, art: t.art, artName: artName(t.art), festName: festNameVon(t.fest), ...raumName(r), ...st,
+            bericht: st.zustand === 'vorbei' ? bericht(t.id) : null };
+        });
+      const kaffee = v === -1 ? [] : raeume.liste.filter(r => r.typ && r.typ.id === 'kirchkaffee')
         .flatMap(r => schichtenVon(z, r).map(s => ({ tag: s.tag, slot: s.slot, ende: SCHICHT_ENDE[s.slot], ...raumName(r) })));
-      return { versatz: versatz === 1 ? 1 : 0, woche: woche + 1, tage, termine, kaffee, slots: SLOTS.map(s => ({ ...s })) };
+      return { versatz: v, woche: woche + 1, tage, termine, kaffee, slots: SLOTS.map(s => ({ ...s })) };
     },
     // Menü der Kaffeemaschine (nachgefüllt wird vom Ehrenamtlichen im Laden)
     maschineInfo(x, y) {

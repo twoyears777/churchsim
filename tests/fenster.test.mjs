@@ -49,6 +49,30 @@ function oeffnen(f, name) {
   assert.notStrictEqual(nr, null, 'Foyer wird beim Klick gefunden');
   oeffnen({ art: 'foyer', nr }, 'Foyer-Fenster mit Mitarbeiter');
 }
+// Gemeindekalender mit Bericht (27.11.): vergangene Veranstaltung, aufgeklappter Bericht und „Vorherige Woche“
+{
+  const { zeitVorruecken, veranstaltungEinstellen } = await import('../src/kern/ablauf.js');
+  const { TAG_MIN, WOCHE_MIN } = await import('../src/kern/zeit.js');
+  const z = neuesSpiel(() => 0.5);
+  wandRechteck(z, G.x + 2, G.y + 2, G.x + 18, G.y + 8); tuerUmschalten(z, G.x + 2, G.y + 5);
+  typZuweisen(z, raumBei(z), 'gottesdienst');
+  moebelSetzen(z, 'stuhl', G.x + 6, G.y + 3, G.x + 15, G.y + 3);
+  versetzen(z, z.personen[0], G.x + 4, G.y + 5);
+  z.besucher = Array.from({ length: 5 }, (_, i) => ({ id: 't' + i, vorname: 'T' + i, nachname: 'X', voll: 'T' + i + ' X', level: 5, zufriedenheit: 50, kaffeeWert: 0, besuche: 0, lobpreis: 0 }));
+  z.ortRuhig = true;
+  veranstaltungEinstellen(z, raumBei(z), 'gottesdienst', 0);
+  const raeume = () => { const { raeume, gruppe } = erkenneRaeume(z); for (const r of raeume) { r.typ = raumTypVon(z, r); r.probleme = pruefeRaum(z, r, r.typ); } return { liste: raeume, gruppe }; };
+  zeitVorruecken(z, raeume(), 6 * TAG_MIN + 16 * 60 - z.minuten, () => 0);
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  const id = ui.spiel.kalenderInfo(0).termine[0].id;
+  assert.ok(ui.spiel.kalenderInfo(0).termine[0].bericht, 'Bericht ist da');
+  oeffnen({ art: 'kalender', versatz: 0 }, 'Kalender mit vergangener Veranstaltung');
+  oeffnen({ art: 'kalender', versatz: 0, bericht: id }, 'Kalender mit aufgeklapptem Bericht');
+  zeitVorruecken(z, raeume(), WOCHE_MIN + 60 - z.minuten, () => 0);
+  ui.spiel = spielStarten(JSON.stringify({ version: SPEICHER_VERSION, zustand: z }), () => 0.5);
+  oeffnen({ art: 'kalender', versatz: -1, bericht: id }, 'Kalender „Vorherige Woche“ mit Bericht');
+  oeffnen({ art: 'kalender', versatz: 1 }, 'Kalender „Nächste Woche“');
+}
 // Sicherung: Stürzt ein Fenster beim Aufbau ab, geht es nur zu – kein Fehler nach außen (sonst bleibt die Uhr stehen)
 {
   const echt = console.error; console.error = () => {};

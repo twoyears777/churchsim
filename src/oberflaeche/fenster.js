@@ -744,18 +744,32 @@ function kalenderFenster(f) {
     const name = e.festName ? T.fest(esc(e.festName), esc(e.artName || '')) : esc(e.artName || TEXTE.keineVeranstaltung);
     const grund = e.zustand === 'faelltAus' || e.zustand === 'ausgefallen' ? `<small class="fehlt">${T.zustand[e.zustand]}${T.grund[e.fehlt] ? ` – ${T.grund[e.fehlt]}` : ''}</small>`
       : T.zustand[e.zustand] ? `<small>${T.zustand[e.zustand]}</small>` : '';
+    // Bericht (27.11.): vergangene Veranstaltung zeigt Besucher und Geld; Klick öffnet alle Werte unter dem Kalender
+    if (e.bericht) {
+      const kurz = [`${e.bericht.besucher} ${T.bericht.besucher}`, ...(e.bericht.geld ? [geld(e.bericht.geld)] : [])].join(' · ');
+      return `<button class="termin ${e.zustand}${f.bericht === e.id ? ' gewaehlt' : ''}" data-bericht="${esc(e.id)}"><b>${name}</b><small>${raum(e)}</small><small class="werte">${kurz}</small></button>`;
+    }
     return `<div class="termin ${e.zustand}"><b>${name}</b><small>${raum(e)}</small>${grund}</div>`;
   };
+  // Alle Werte der angeklickten Veranstaltung; was 0 ist, wird nicht gezeigt
+  const plus = n => `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toLocaleString('de-DE', { maximumFractionDigits: 1 })}`;
+  const gewaehlt = k.termine.find(e => e.bericht && e.id === f.bericht);
+  const berichtZeilen = b => [['besucher', String(b.besucher)], ['keinPlatz', String(b.keinPlatz)], ['kollekte', geld(b.kollekte)], ['spende', geld(b.spende)],
+    ['haltung', plus(b.haltung)], ['heiligkeit', plus(b.heiligkeit)], ['bekanntheit', plus(b.bekanntheit)]]
+    .filter(([w]) => b[w]).map(([w, text]) => `<tr><td>${T.bericht[w]}</td><td class="zahl">${text}</td></tr>`).join('');
+  const bericht = gewaehlt ? `<div class="kalender-bericht"><b>${gewaehlt.festName ? T.fest(esc(gewaehlt.festName), esc(gewaehlt.artName || '')) : esc(gewaehlt.artName || '')}</b>
+      <small>${TEXTE.tageKurz[gewaehlt.tag]} ${k.tage[gewaehlt.tag].datum} · ${raum(gewaehlt)}</small><table>${berichtZeilen(gewaehlt.bericht)}</table></div>` : '';
   const reihen = k.slots.map(s => `<tr><th class="slot">${TEXTE.raum.slots[s.id]}<small>${uhr(s)}</small></th>${k.tage.map(t => {
     const hier = k.termine.filter(e => e.tag === t.tag && e.slot === s.id).map(eintrag).join('');
     const kaffee = k.kaffee.filter(e => e.tag === t.tag && e.slot === s.id).map(e => `<div class="termin kaffee"><b>${T.kaffee}</b><small>${raum(e)} · ${T.bis(e.ende)}</small></div>`).join('');
     return `<td class="${t.heute ? 'heute' : ''}">${hier}${kaffee}</td>`;
   }).join('')}</tr>`).join('');
   return `<h2>${T.titel}</h2>
-    <div class="eventtypen"><button class="${k.versatz === 0 ? 'aktiv' : ''}" data-kalender="0">${T.diese}</button><button class="${k.versatz === 1 ? 'aktiv' : ''}" data-kalender="1">${T.naechste}</button></div>
+    <div class="eventtypen"><button class="${k.versatz === -1 ? 'aktiv' : ''}" data-kalender="-1">${T.vorherige}</button><button class="${k.versatz === 0 ? 'aktiv' : ''}" data-kalender="0">${T.diese}</button><button class="${k.versatz === 1 ? 'aktiv' : ''}" data-kalender="1">${T.naechste}</button></div>
     <p class="unter">${T.woche(k.woche)}</p>
     <table class="wochenplan kalender"><tr><th></th>${kopf}</tr>${reihen}</table>
-    ${k.termine.length || k.kaffee.length ? '' : `<p class="unter">${T.leer}</p>`}`;
+    ${bericht}
+    ${k.termine.length || k.kaffee.length ? '' : `<p class="unter">${k.versatz === -1 ? T.leerVorher : T.leer}</p>`}`;
 }
 // Zeitungsartikel vor dem ersten Gottesdienst (Text von Lukas, 26.11.): Schlagzeile, Text, „Weiter“
 function zeitungFenster() {
@@ -805,7 +819,8 @@ export function fensterEinrichten() {
     else if (b.hasAttribute('data-plakat')) spiel.plakatKaufen();
     else if (b.dataset.aushang) { const [nr, platz] = b.dataset.aushang.split(':').map(Number); spiel.aushangSetzen(f.x, f.y, nr, platz); }
     else if (b.hasAttribute('data-aushang-weg')) spiel.aushangSetzen(f.x, f.y, null);
-    else if (b.dataset.kalender !== undefined) f.versatz = Number(b.dataset.kalender);   // Gemeindekalender: diese / nächste Woche
+    else if (b.dataset.kalender !== undefined) { f.versatz = Number(b.dataset.kalender); delete f.bericht; }   // Gemeindekalender: vorherige / diese / nächste Woche
+    else if (b.dataset.bericht !== undefined) { if (f.bericht === b.dataset.bericht) delete f.bericht; else f.bericht = b.dataset.bericht; }   // Bericht auf- und zuklappen
     else if (b.dataset.forschung) { spiel.forschungStarten(b.dataset.forschung); delete f.abbrechenFragen; }
     else if (b.hasAttribute('data-forschung-abbrechen')) f.abbrechenFragen = true;
     else if (b.dataset.multiplikator) spiel.multiplikatorKaufen(b.dataset.multiplikator);

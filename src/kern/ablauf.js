@@ -33,6 +33,7 @@ import { fassung } from './moebel.js';
 import { dauerspenderSchritt } from './dauerspender.js';
 import { forschungSchritt, heiligkeitFuerGottesdienst, istErforscht } from './forschung.js';
 import { faktorAmTag } from './kalender.js';
+import { berichtDazu, berichtAblegen, berichteAufraeumen } from './berichte.js';
 import { FESTE, ZEITEN } from '../inhalte/kirchenjahr.js';
 import { festSchritt, festPlaeneDerWoche, festeAufraeumen, festAusSchluessel } from './feste.js';
 import { festAktiv, konfiTeilnahme, konfirmieren, istJugend } from './konfi.js';
@@ -323,6 +324,7 @@ function wochenbuchPruefen(z) {
   if (w > 0 && !V.some(p => p.woche === w - 1)) V.push({ woche: w - 1, wert: z.bekanntheit });
   // Erledigte Termine nur für diese und letzte Woche merken
   if (z.termineErledigt) z.termineErledigt = z.termineErledigt.filter(id => Number(id.split(':')[0]) >= w - 1);
+  berichteAufraeumen(z, w);   // Berichte der Veranstaltungen: diese und vorherige Woche
   festeAufraeumen(z);
 }
 
@@ -451,6 +453,7 @@ function beginnen(z, raeume, zufall, L) {
     // (ohne Abzug bei der Haltung – die Besucher können ja zum Fest kommen).
     gaengeAbsagen(z, L);
     Object.assign(L, { phase: 'ende', ausgefallen: true, grund: 'fest', wegenFest: fest, ende: z.minuten });
+    berichtAblegen(z, L);
     return;
   }
   const info = terminInfo(z, raeume, L);
@@ -460,6 +463,7 @@ function beginnen(z, raeume, zufall, L) {
     const grund = info ? info.p.fehlt : 'raum';
     gaengeAbsagen(z, L);   // Toilettengänge am Platz fallen weg, alle gehen heim
     Object.assign(L, { phase: 'ende', ausgefallen: true, grund, ende: z.minuten });
+    berichtAblegen(z, L);
     if (mitKirchkaffee(L.art)) z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: true, grund, besucher: 0, heim: 0 };
     return;
   }
@@ -492,8 +496,8 @@ function gottesdienstEnde(z, raeume, L, zufall = Math.random) {
   // Bedürfnis Lobpreis (25.11.): erfüllt beim Lobpreisgottesdienst und bei jedem Gottesdienst, bei dem ein Lobpreisteam spielt
   L.lobpreis = L.art === 'lobpreis' || !!(info && info.g.ausstattung.musik);
   const betrag = Math.round(summeKollekte * faktor);
-  if (betrag > 0) buchen(z, 'einnahmen', 'kollekte', betrag, { veranstaltung: L.art || 'gottesdienst' });
-  bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
+  if (betrag > 0) { buchen(z, 'einnahmen', 'kollekte', betrag, { veranstaltung: L.art || 'gottesdienst' }); berichtDazu(L, 'kollekte', betrag); }
+  bekanntheitMitBericht(z, L, BEKANNTHEIT.proGottesdienst, 'gottesdienst');
   // Wer will Kaffee? Chance = Kaffee-Wert. Die stellen sich im Kirchkaffee an (ohne Kirchkaffee: kein Kaffee, −10 am Ende).
   const wollen = [];
   L.gaeste.forEach((g, i) => {
@@ -528,9 +532,9 @@ function saalEnde(z, raeume, L, v, zufall) {
       spende += betrag; zahlZeigen(z, g.sitz, betrag);
     }
   }
-  if (spende > 0) buchen(z, 'einnahmen', 'spende', spende, { veranstaltung: L.art });
+  if (spende > 0) { buchen(z, 'einnahmen', 'spende', spende, { veranstaltung: L.art }); berichtDazu(L, 'spende', spende); }
   if (info && v.musikLevelMin && info.p.leitung) musikErfahrungDazu(info.p.leitung);
-  if (v.bekanntheit !== false) bekanntheitAendern(z, BEKANNTHEIT.proGottesdienst, 'gottesdienst');   // Konfirmandenunterricht: nur Haltung
+  if (v.bekanntheit !== false) bekanntheitMitBericht(z, L, BEKANNTHEIT.proGottesdienst, 'gottesdienst');   // Konfirmandenunterricht: nur Haltung
   L.gottesdienstEnde = z.minuten;
   gaengeBeimHeimgehen(z, raeume, L, strasse);   // ab 80 % vorher noch zur Toilette
   automatenBeimHeimgehen(z, raeume, L, strasse);   // wer vorher keine Zeit hatte: über den Automaten nach Hause (26.11.)
@@ -546,6 +550,13 @@ function haltungFuer(art, b, L = {}) {
   return v && v.haltungNachVorliebe ? Math.round(lobpreisVorliebe(b) * v.haltungNachVorliebe) : AENDERUNG.gottesdienst;
 }
 
+// Bekanntheit ändern und die wirkliche Änderung im Bericht der Veranstaltung mitzählen
+function bekanntheitMitBericht(z, L, wert, quelle, anzahl = null) {
+  const vorher = z.bekanntheit;
+  bekanntheitAendern(z, wert, quelle, anzahl);
+  berichtDazu(L, 'bekanntheit', z.bekanntheit - vorher);
+}
+
 function abschliessen(z, raeume, zufall = Math.random, L) {
   const anwesend = [], v = VERANSTALTUNGEN.find(x => x.id === L.art) || {};
   const sitzplatz = v.sitzplatzHaltung === false ? 0 : AENDERUNG.sitzplatz;   // Konfirmandenunterricht: Sitzplatz ist nur Bedingung
@@ -555,22 +566,24 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
   for (const g of L.gaeste) {
     const b = z.besucher.find(x => x.id === g.id);
     if (!b) continue;
-    if (!g.sitz) { zufriedenheitAendern(b, AENDERUNG.heimgeschickt); continue; }
+    if (!g.sitz) { zufriedenheitAendern(b, AENDERUNG.heimgeschickt); berichtDazu(L, 'haltung', AENDERUNG.heimgeschickt); berichtDazu(L, 'keinPlatz', 1); continue; }
     anwesend.push(b); b.besuche++; b.zuletzt = L.woche; b.besuchtWoche = L.woche;
     // bonus: Stuhl, Kanzel, Blumen; Lobpreisteam: musikHaltung (z. B. 5 %) der aktuellen Haltung × Wirkung nach Lobpreis-Vorliebe
     // (100 % Vorliebe → +5 %, 50 % → 0, 0 % → −5 %)
     const musik = Math.round(b.zufriedenheit * (g.musikHaltung || 0) * musikWirkung(b));
     // Haltungs-Multiplikator der Leitung (Gottesdienst, Lobpreisgottesdienst): vervielfacht die Summe nach allen Boni, nur Pluswerte
-    zufriedenheitAendern(b, mitMultiplikator(leitung, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0)));
+    const haltung = mitMultiplikator(leitung, L.art, sitzplatz + haltungFuer(L.art, b, L) + (g.bonus || 0) + musik + (g.foyer || 0));
+    zufriedenheitAendern(b, haltung); berichtDazu(L, 'haltung', haltung);   // Bericht: Summe der Haltungspunkte aller Besucher
     if (v.konfiTeilnahme) konfiTeilnahme(z, b);   // zählt für die Konfirmation
     if (L.lobpreis) beduerfnisErfuellt(z, b, 'lobpreis', L.woche);   // Bedürfnisse am Ende der Woche (25.11.)
     if (v.spass && (v.spass !== 'jugend' || istJugend(b))) beduerfnisErfuellt(z, b, 'spass', L.woche);   // Jugendgottesdienst: nur Jugendliche
     if (g.kaffee && g.kaffee.ergebnis === 'keinPlatz') zufriedenheitAendern(b, AENDERUNG.kaffeeNein);   // sonst: beim Bedienen (kirchkaffee.js)
     g.zufriedenheit = b.zufriedenheit;
   }
-  heiligkeitFuerGottesdienst(z, L.art, anwesend.length);   // Forschungsbaum: 1 Heiligkeit pro Gottesdienstbesucher
+  berichtDazu(L, 'besucher', anwesend.length);
+  berichtDazu(L, 'heiligkeit', heiligkeitFuerGottesdienst(z, L.art, anwesend.length));   // Forschungsbaum: 1 Heiligkeit pro Gottesdienstbesucher
   const sehr = v.bekanntheit === false ? 0 : anwesend.filter(b => b.zufriedenheit >= BEKANNTHEIT.sehrZufrieden).length;
-  bekanntheitAendern(z, sehr * BEKANNTHEIT.proSehrZufriedenem, 'zufrieden', sehr);
+  bekanntheitMitBericht(z, L, sehr * BEKANNTHEIT.proSehrZufriedenem, 'zufrieden', sehr);
   if (istKonfirmation(L)) konfirmieren(z);   // Ende des Konfirmations-Gottesdienstes: alle Konfirmanden werden erwachsen
   const werden = ehrenamtWerden(z, anwesend, zufall);
   // Erster Gottesdienst (26.11.): mindestens ERSTER_GOTTESDIENST.ehrenamt neue Ehrenamtliche, danach ist er erledigt
@@ -579,6 +592,7 @@ function abschliessen(z, raeume, zufall = Math.random, L) {
     personHinzufuegen(z, { name: b.voll, kuerzel: b.vorname[0], art: 'ehrenamt', ausbildung: null, skill: null, charakter: null,
       herkunft: { jugend: istJugend(b), besuche: b.besuche, zufriedenheit: b.zufriedenheit, level: b.level || 1, kaffee: kaffeeVorliebe(b), zuletzt: b.zuletzt } }));
   Object.assign(L, { phase: 'ende', ende: z.minuten, neueEhrenamtliche: neueEA.map(p => p.daten.name) });
+  berichtAblegen(z, L);
   if (mitKirchkaffee(L.art)) z.letzterGottesdienst = { woche: L.woche, platz: L.platz, ausgefallen: false, besucher: anwesend.length, heim: L.gaeste.filter(g => !g.sitz).length };
 }
 

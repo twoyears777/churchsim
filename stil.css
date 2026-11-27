@@ -139,6 +139,15 @@ li.ok, td.ok { color: #2e7d32; } li.fehlt, td.fehlt { color: #b3261e; }
 .kalender .termin.vorbei { opacity: .6; }
 .kalender .termin.laeuft { border-left-color: #2e7d32; }
 .kalender .termin.kaffee { border-left-color: #8d6e63; }
+/* Bericht einer vergangenen Veranstaltung (27.11., ENTWURF von Claude – Design legt Lukas fest) */
+.kalender button.termin { display: block; width: 100%; text-align: left; font: inherit; font-size: 12px; border-top: 0; border-right: 0; border-bottom: 0; cursor: pointer; color: inherit; }
+.kalender button.termin.vorbei { opacity: .85; }
+.kalender button.termin:hover, .kalender button.termin.gewaehlt { opacity: 1; background: #fff8e1; }
+.kalender .termin small.werte { color: #2b2a26; font-weight: 600; }
+.kalender-bericht { margin-top: 8px; padding: 8px 10px; background: #fff8e1; border-radius: 4px; max-width: 320px; }
+.kalender-bericht small { display: block; color: #6b665b; margin-bottom: 4px; }
+.kalender-bericht table { width: 100%; }
+.kalender-bericht td.zahl { text-align: right; font-weight: 600; }
 .planfeld { min-height: 30px; width: 38px; padding: 0; border-radius: 6px; }
 .inhalt .planfeld.aktiv { background: #2d69be; border-color: #2d69be; }
 .balken { height: 12px; border-radius: 6px; background: #e2dccd; overflow: hidden; margin: 4px 0; }
